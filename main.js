@@ -1724,7 +1724,88 @@ Ele voltará a ser aluno normal.`)) return;
             }
         }
 
+        html += `
+            <div style="margin-top:20px; border-top:1px solid #334155; padding-top:15px;">
+                <button onclick="academia.toggleHistoricoAulas()" style="width:100%; padding:12px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:10px; font-weight:800; font-size:0.75rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                    <span><i class="fas fa-history" style="color:#8b5cf6; margin-right:8px;"></i> HISTÓRICO DE AULAS MINISTRADAS</span>
+                    <i class="fas fa-chevron-down" id="icon-historico-aulas"></i>
+                </button>
+                <div id="historico-aulas-container" class="hidden" style="margin-top:10px;"></div>
+            </div>`;
+
         container.innerHTML = html;
+    },
+
+    async toggleHistoricoAulas() {
+        const container = document.getElementById('historico-aulas-container');
+        const icon = document.getElementById('icon-historico-aulas');
+        if (!container) return;
+        if (!container.classList.contains('hidden')) {
+            container.classList.add('hidden');
+            if (icon) icon.className = 'fas fa-chevron-down';
+            return;
+        }
+        container.classList.remove('hidden');
+        if (icon) icon.className = 'fas fa-chevron-up';
+        await this.renderHistoricoAulas();
+    },
+
+    async renderHistoricoAulas() {
+        const container = document.getElementById('historico-aulas-container');
+        if (!container) return;
+        container.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="color:#8b5cf6; font-size:1.2rem;"></i></div>';
+
+        try {
+            const snap = await db.collection('plano_aula')
+                .orderBy(firebase.firestore.FieldPath.documentId(), 'desc')
+                .limit(60)
+                .get();
+
+            if (snap.empty) {
+                container.innerHTML = '<p style="color:#64748b; text-align:center; font-size:0.8rem; padding:15px;">Nenhum histórico registrado ainda.</p>';
+                return;
+            }
+
+            const diasNomes = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+            const dataHoje = this._getDataHoje();
+
+            let html = '';
+            snap.docs.forEach(doc => {
+                const dataId = doc.id; // YYYY-MM-DD
+                const planos = doc.data();
+                const isHoje = dataId === dataHoje;
+
+                // Converte YYYY-MM-DD para Date (usa noon para evitar problema de fuso)
+                const dataObj = new Date(dataId + 'T12:00:00');
+                const diaSemana = diasNomes[dataObj.getDay()];
+                const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+
+                // Filtra turmas que têm conteúdo
+                const turmasComConteudo = Object.entries(planos).filter(([, v]) => v && v.trim());
+                if (turmasComConteudo.length === 0) return;
+
+                html += `
+                    <div style="background:#0f172a; border:1px solid ${isHoje ? '#8b5cf6' : '#334155'}; border-radius:10px; padding:12px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #334155;">
+                            <span style="font-size:0.75rem; font-weight:800; color:${isHoje ? '#8b5cf6' : 'white'};">
+                                ${isHoje ? '📍 ' : ''}${diaSemana.toUpperCase()}${isHoje ? ' — HOJE' : ''}
+                            </span>
+                            <span style="font-size:0.65rem; color:#64748b; font-weight:700; background:#1e293b; padding:3px 8px; border-radius:6px;">${dataFormatada}</span>
+                        </div>
+                        ${turmasComConteudo.map(([turma, conteudo]) => `
+                            <div style="margin-bottom:8px; padding:8px 10px; background:#1e293b; border-radius:8px; border-left:2px solid #8b5cf644;">
+                                <small style="color:#8b5cf6; font-size:0.6rem; font-weight:800; display:block; margin-bottom:3px; letter-spacing:0.5px;">
+                                    <i class="fas fa-clock"></i> ${turma.toUpperCase()}
+                                </small>
+                                <div style="color:#cbd5e1; font-size:0.8rem; line-height:1.5;">${conteudo}</div>
+                            </div>`).join('')}
+                    </div>`;
+            });
+
+            container.innerHTML = html || '<p style="color:#64748b; text-align:center; font-size:0.8rem; padding:15px;">Nenhum conteúdo registrado ainda.</p>';
+        } catch(e) {
+            container.innerHTML = `<p style="color:#f43f5e; text-align:center; font-size:0.8rem; padding:15px;">Erro ao carregar histórico.</p>`;
+        }
     },
 
     toggleEdicaoHorarios() {

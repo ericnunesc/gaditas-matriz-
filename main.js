@@ -311,13 +311,39 @@ const academia = {
         await batch.commit();
     },
 
+    _parsarDataHistorico(dataStr) {
+        if (!dataStr) return null;
+        if (typeof dataStr === 'number') return new Date(dataStr);
+        // Formato: "25/05/2026, 10:30:00"
+        try {
+            const limpa = dataStr.replace(', ', ' ').trim();
+            const partes = limpa.split(' ');
+            const [dia, mes, ano] = partes[0].split('/');
+            const hora = partes[1] || '00:00:00';
+            return new Date(`${ano}-${mes.padStart(2,'0')}-${dia.padStart(2,'0')}T${hora}`);
+        } catch(e) { return null; }
+    },
+
     async carregarConquistas() {
         const snap = await db.collection("alunos").get();
+        const agora = Date.now();
+        const LIMITE_48H = 48 * 60 * 60 * 1000;
         const hoje = new Date(); const dH = hoje.getDate(); const mH = hoje.getMonth() + 1;
         let html = "";
         snap.forEach(doc => {
             const a = doc.data(); const s = this.verificarMeta(a);
-            if (s.pronto) html += `<div class="conquista-item" style="border-left:3px solid #10b981;">🎯 <b>${a.nome}</b> atingiu a meta de aulas!</div>`;
+            // Meta de aulas: só aparece se foi atingida nas últimas 48h
+            if (s.pronto) {
+                const metaIndex = (a.aulas || 0) - s.meta;
+                const hist = a.historico || [];
+                if (metaIndex >= 0 && metaIndex < hist.length) {
+                    const dataMeta = this._parsarDataHistorico(hist[metaIndex].data);
+                    if (dataMeta && (agora - dataMeta.getTime()) <= LIMITE_48H) {
+                        html += `<div class="conquista-item" style="border-left:3px solid #10b981;">🎯 <b>${a.nome}</b> atingiu a meta de aulas!</div>`;
+                    }
+                }
+            }
+            // Aniversário: aparece o dia inteiro (sem filtro)
             if (a.nascimento) {
                 const parts = a.nascimento.split('-');
                 if (parts.length === 3 && parseInt(parts[2]) === dH && parseInt(parts[1]) === mH) html += `<div class="conquista-item">🎂 Hoje é o aniversário de <b>${a.nome}</b>!</div>`;

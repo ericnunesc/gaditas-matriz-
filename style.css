@@ -1,0 +1,340 @@
+/* ==========================================================================
+   GADITAS MATRIZ - ESTILIZAÇÃO DO LOGIN PREMIUM + ACESSÓRIOS ORIGINAIS
+   ================================================================_========== */
+
+/* 🔐 TELA DE LOGIN PREMIUM (TOTALMENTE ISOLADA - ADICIONADA AO SEU DESIGN) */
+#screen-login {
+    background: radial-gradient(circle at center, #1e293b 0%, #020617 100%) !important;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+#screen-login .login-card {
+    background: rgba(30, 41, 59, 0.7) !important;
+    border: 1px solid rgba(59, 130, 246, 0.3) !important;
+    border-radius: 24px !important;
+    padding: 35px 25px !important;
+    backdrop-filter: blur(12px) !important;
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.15) !important;
+    width: 100%;
+    max-width: 380px;
+}
+
+#screen-login .login-logo {
+    width: 110px !important;
+    height: auto !important;
+    filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.4)) !important;
+    margin: 0 auto 15px auto !important;
+    display: block;
+}
+
+#screen-login h2 {
+    color: #f8fafc !important;
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.5px !important;
+    margin-bottom: 4px !important;
+    text-align: center;
+}
+
+#screen-login p {
+    color: #94a3b8 !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    text-align: center;
+}
+
+#screen-login .input-group {
+    background: #0f172a !important;
+    border: 1px solid #334155 !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    margin-bottom: 14px !important;
+    display: flex !important;
+    align-items: center;
+}
+
+#screen-login .input-group i {
+    color: #3b82f6 !important;
+    margin-right: 12px !important;
+}
+
+#screen-login .input-group input {
+    background: transparent !important;
+    border: none !important;
+    color: #f8fafc !important;
+    font-size: 0.9rem !important;
+    outline: none !important;
+    width: 100% !important;
+}
+
+#screen-login .btn-login {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+    border: none !important;
+    border-radius: 12px !important;
+    color: white !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    padding: 14px !important;
+    text-transform: uppercase !important;
+    width: 100% !important;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+}
+
+
+/* 📱 SEU LAYOUT ORIGINAL DO PAINEL INTERNO (PRESERVADO E INTOCADO) */
+:root {
+    --bg-main: #0f172a;          
+    --bg-card: #1e293b;          
+    --border-light: #334155;     
+    --text-primary: #f8fafc;     
+    --text-secondary: #94a3b8;   
+    --text-muted: #64748b;        
+    
+    --accent-blue: #3b82f6;      
+    --accent-red: #f43f5e;       
+    --accent-gold: #f59e0b;      
+    --accent-green: #10b981;     
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    margin: 0;
+    padding-bottom: 95px;
+    overflow-x: hidden;
+}
+
+.hidden { display: none !important; }
+
+.container {
+    padding: 20px;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+    width: 100%;
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 12px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--accent-blue);
+}
+
+label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.btn-save {
+    width: 100%;
+    background-color: var(--accent-blue);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    transition: opacity 0.2s;
+}
+
+.btn-save:active { opacity: 0.8; }
+.btn-dark { background-color: #0f172a; border: 1px solid var(--border-light); color: var(--text-secondary); }
+.btn-clean { background: transparent; border: none; color: var(--text-secondary); font-size: 0.8rem; cursor: pointer; margin-top: 10px; }
+
+.list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.item-card {
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--bg-card);
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    z-index: 100;
+}
+
+.nav-item {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex: 1;
+}
+
+.nav-item i { font-size: 1.2rem; }
+.nav-item.active { color: var(--accent-blue); }
+.logout-item { color: rgba(244, 63, 94, 0.6); }
+
+.ranking-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    margin-bottom: 6px;
+}
+
+.tabs-ranking-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.ranking-column h4 {
+    margin: 0 0 8px 2px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    max-height: 120px;
+    overflow-y: auto;
+    background: var(--bg-main);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+}
+
+.mural-urgente-neon {
+    background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.15);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+}
+
+.conquista-item {
+    padding: 10px;
+    background: #0f172a;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+}
+
+.btn-tecnica { background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); }
+
+.leao-icon-circle {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.3rem;
+    margin-bottom: 6px;
+    transition: all 0.25s ease-in-out;
+    position: relative;
+}
+
+.leao-icon-circle.leao-desativado {
+    background: #1e293b;
+    border: 2px solid #475569;
+    color: #64748b;
+    text-shadow: none;
+}
+
+.leao-icon-circle.bg-leao-verde { background: #064e3b !important; border: 2px solid #10b981 !important; color: white !important; text-shadow: 0 0 8px #10b981; }
+.leao-icon-circle.bg-leao-vermelho { background: #4c0519 !important; border: 2px solid #f43f5e !important; color: white !important; text-shadow: 0 0 8px #f43f5e; }
+.leao-icon-circle.bg-leao-azul { background: #1e3a8a !important; border: 2px solid #3b82f6 !important; color: white !important; text-shadow: 0 0 8px #3b82f6; }
+.leao-icon-circle.bg-leao-amarelo { background: #78350f !important; border: 2px solid #fbbf24 !important; color: white !important; text-shadow: 0 0 8px #fbbf24; }
+
+.leao-badge-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--accent-blue);
+    color: white;
+    font-size: 0.55rem;
+    font-weight: 800;
+    padding: 2px 5px;
+    border-radius: 10px;
+    border: 1px solid var(--bg-card);
+}
+/* Oculta permanentemente o link de cadastro para os alunos na tela de login */
+#screen-login .login-form p:last-child {
+    display: none !important;
+}

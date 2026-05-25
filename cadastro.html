@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gaditas Matriz - Pré-Cadastro</title>
+    <link rel="icon" type="image/png" href="gaditasstore.png?v=2">
+    <link rel="stylesheet" href="style.css?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body style="background-color: #0f172a; color: white; margin: 0; font-family: 'Inter', sans-serif;">
+
+    <div class="container" style="padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh;">
+        <div class="login-card" style="width: 100%; max-width: 450px; background: #1e293b; border: 1px solid #334155; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+            
+            <div class="login-header" style="text-align: center; margin-bottom: 20px;">
+                <img src="gaditasstore.png" alt="Logo Gaditas" class="login-logo" style="height: 60px; margin-bottom: 10px;"/>
+                <h2 style="margin: 0; font-size: 1.25rem; font-weight: 800;">Nova Matrícula Atleta</h2>
+                <p style="color: #94a3b8; font-size: 0.75rem; margin-top: 4px;">Preencha os seus dados oficiais para liberação</p>
+            </div>
+
+            <div class="login-form">
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">NOME COMPLETO:</small>
+                <div class="input-group" style="margin-bottom: 12px;">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="reg-nome" placeholder="Nome impresso no RG"/>
+                </div>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">E-MAIL DE ACESSO:</small>
+                <div class="input-group" style="margin-bottom: 12px;">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="reg-email" placeholder="seu-email@gmail.com"/>
+                </div>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">SENHA DE LOGIN:</small>
+                <div class="input-group" style="margin-bottom: 12px;">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres"/>
+                </div>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">CPF (APENAS NÚMEROS):</small>
+                <div class="input-group" style="margin-bottom: 12px;">
+                    <i class="fas fa-id-card"></i>
+                    <input type="text" id="reg-cpf" placeholder="000.000.000-00" maxlength="14"/>
+                </div>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">TELEFONE COM DDD:</small>
+                <div class="input-group" style="margin-bottom: 12px;">
+                    <i class="fas fa-phone"></i>
+                    <input type="text" id="reg-telefone" placeholder="(00) 00000-0000" maxlength="15"/>
+                </div>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">DATA DE NASCIMENTO:</small>
+                <div class="input-group" style="margin-bottom: 12px;">
+                    <i class="fas fa-calendar-day"></i>
+                    <input type="date" id="reg-nascimento" style="color: white; background: transparent; border: none; width: 100%; outline: none; font-size: 0.8rem;"/>
+                </div>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">CEP:</small>
+                <div class="input-group" style="margin-bottom: 12px;">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <input type="text" id="reg-cep" placeholder="00000-000" maxlength="9"/>
+                </div>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">RUA / LOGRADOURO:</small>
+                <div class="input-group" style="margin-bottom: 12px;">
+                    <i class="fas fa-road"></i>
+                    <input type="text" id="reg-rua" placeholder="Nome da rua ou avenida"/>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                    <div style="flex: 1;">
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">Nº:</small>
+                        <div class="input-group" style="margin: 0;"><input type="text" id="reg-numero" placeholder="Nº" style="padding-left: 10px;"/></div>
+                    </div>
+                    <div style="flex: 2;">
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">BAIRRO:</small>
+                        <div class="input-group" style="margin: 0;"><input type="text" id="reg-bairro" placeholder="Bairro" style="padding-left: 10px;"/></div>
+                    </div>
+                </div>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">COMPLEMENTO / EDIFÍCIO (OPCIONAL):</small>
+                <div class="input-group" style="margin-bottom: 12px;">
+                    <i class="fas fa-building"></i>
+                    <input type="text" id="reg-complemento" placeholder="Ex: Apt 104, Bloco A, Ed. Residencial"/>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <div style="flex: 3;">
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">CIDADE:</small>
+                        <div class="input-group" style="margin: 0;"><input type="text" id="reg-cidade" placeholder="Cidade" style="padding-left: 10px;"/></div>
+                    </div>
+                    <div style="flex: 1;">
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">UF:</small>
+                        <div class="input-group" style="margin: 0;"><input type="text" id="reg-estado" placeholder="UF" maxlength="2" style="text-align: center; text-transform: uppercase; padding: 0;"/></div>
+                    </div>
+                </div>
+
+                <!-- SELEÇÃO DE PLANO -->
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px;">ESCOLHA SEU PLANO:</small>
+                <div id="planos-container" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:20px;">
+                    <div style="text-align:center; color:#64748b; font-size:0.75rem; padding:20px; grid-column:1/-1;">
+                        <i class="fas fa-spinner fa-spin"></i> Carregando planos...
+                    </div>
+                </div>
+                <input type="hidden" id="reg-plano" value=""/>
+                <input type="hidden" id="reg-plano-valor" value=""/>
+                <input type="hidden" id="reg-plano-label" value=""/>
+
+                <!-- Campo Família -->
+                <div id="campo-familia" class="hidden" style="margin-bottom:12px;">
+                    <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px;">👨‍👩‍👧‍👦 QUANTAS PESSOAS VÃO TREINAR NA FAMÍLIA?</small>
+                    <div class="input-group">
+                        <i class="fas fa-users"></i>
+                        <input type="number" id="reg-qtd-familia" placeholder="Ex: 3" min="2" max="10"
+                               style="color:white; background:transparent; border:none; width:100%; outline:none; font-size:0.8rem;"/>
+                    </div>
+                </div>
+
+                <!-- Campo Livre -->
+                <div id="campo-livre" class="hidden" style="margin-bottom:12px;">
+                    <small style="color:#a78bfa; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px;">🥋 QUANTAS MODALIDADES DESEJA PRATICAR?</small>
+                    <div class="input-group">
+                        <i class="fas fa-layer-group"></i>
+                        <input type="number" id="reg-qtd-modalidades" placeholder="Ex: 2" min="1" max="10"
+                               style="color:white; background:transparent; border:none; width:100%; outline:none; font-size:0.8rem;"/>
+                    </div>
+                </div>
+
+                <button id="btnRegistrar" class="btn-login" style="width: 100%; padding: 14px; font-weight: 700; background: #3b82f6; border: none; color: white; border-radius: 10px; cursor: pointer; font-size: 0.85rem;">FINALIZAR MEU CADASTRO</button>
+                
+                <p style="text-align: center; margin-top: 15px; font-size: 0.75rem; color: #94a3b8;">
+                    Já possui uma conta? <a href="index.html" style="color: #3b82f6; text-decoration: none; font-weight: 700;">Voltar ao Login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
+    <script>
+        firebase.initializeApp({
+            apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+            authDomain: "gaditasmatriz.firebaseapp.com",
+            projectId: "gaditasmatriz",
+            storageBucket: "gaditasmatriz.firebasestorage.app",
+            messagingSenderId: "166834416988",
+            appId: "1:166834416988:web:2921c95c87c42019282599"
+        });
+
+        const db = firebase.firestore();
+        let planoSelecionado = null;
+
+        // Carrega os planos do Firebase
+        async function carregarPlanos() {
+            const container = document.getElementById('planos-container');
+            try {
+                const doc = await db.collection('configuracoes').doc('planos').get();
+                const planos = doc.exists ? doc.data() : {
+                    mensal:     { valor: 120, label: 'Mensal',     ciclo: 'mês' },
+                    trimestral: { valor: 110, label: 'Trimestral', ciclo: 'mês' },
+                    semestral:  { valor: 100, label: 'Semestral',  ciclo: 'mês' },
+                    anual:      { valor: 90,  label: 'Anual',      ciclo: 'mês' }
+                };
+
+                const ordem = ['mensal', 'trimestral', 'semestral', 'anual'];
+                const emojis = { mensal: '📅', trimestral: '📆', semestral: '🗓️', anual: '🏆' };
+                const cores = { mensal: '#3b82f6', trimestral: '#8b5cf6', semestral: '#10b981', anual: '#f59e0b' };
+
+                // Planos com valor fixo
+                const planosHtml = ordem.map(key => {
+                    const p = planos[key];
+                    if (!p) return '';
+                    return `
+                        <div id="plano-card-${key}" onclick="selecionarPlano('${key}', ${p.valor}, '${p.label}')"
+                             style="background:#0f172a; border:2px solid #334155; border-radius:12px; padding:14px; text-align:center; cursor:pointer; transition:all 0.2s;">
+                            <div style="font-size:1.5rem; margin-bottom:6px;">${emojis[key]}</div>
+                            <div style="font-size:0.8rem; font-weight:800; color:white;">${p.label.toUpperCase()}</div>
+                            <div style="font-size:1.1rem; font-weight:900; color:${cores[key]}; margin-top:4px;">
+                                R$ ${parseFloat(p.valor).toFixed(2).replace('.', ',')}
+                            </div>
+                            <div style="font-size:0.6rem; color:#64748b; margin-top:2px;">por ${p.ciclo || 'mês'}</div>
+                        </div>`;
+                }).join('');
+
+                // Planos especiais (Família e Livre) — valor definido pelo admin depois
+                const planosEspeciaisHtml = `
+                    <div id="plano-card-familia" onclick="selecionarPlanoEspecial('familia')"
+                         style="background:#0f172a; border:2px solid #334155; border-radius:12px; padding:14px; text-align:center; cursor:pointer; transition:all 0.2s;">
+                        <div style="font-size:1.5rem; margin-bottom:6px;">👨‍👩‍👧‍👦</div>
+                        <div style="font-size:0.8rem; font-weight:800; color:white;">FAMÍLIA</div>
+                        <div style="font-size:0.65rem; font-weight:600; color:#f59e0b; margin-top:4px;">Valor sob consulta</div>
+                        <div style="font-size:0.6rem; color:#64748b; margin-top:2px;">por pessoa/mês</div>
+                    </div>
+                    <div id="plano-card-livre" onclick="selecionarPlanoEspecial('livre')"
+                         style="background:#0f172a; border:2px solid #334155; border-radius:12px; padding:14px; text-align:center; cursor:pointer; transition:all 0.2s;">
+                        <div style="font-size:1.5rem; margin-bottom:6px;">🥋</div>
+                        <div style="font-size:0.8rem; font-weight:800; color:white;">LIVRE</div>
+                        <div style="font-size:0.65rem; font-weight:600; color:#a78bfa; margin-top:4px;">Valor sob consulta</div>
+                        <div style="font-size:0.6rem; color:#64748b; margin-top:2px;">múltiplas modalidades</div>
+                    </div>`;
+
+                container.innerHTML = planosHtml + planosEspeciaisHtml;
+
+            } catch(e) {
+                container.innerHTML = `<p style="color:#f43f5e; font-size:0.75rem; text-align:center; grid-column:1/-1;">Erro ao carregar planos.</p>`;
+            }
+        }
+
+        const todosPlanos = ['mensal','trimestral','semestral','anual','familia','livre'];
+        const coresPlanos = { mensal: '#3b82f6', trimestral: '#8b5cf6', semestral: '#10b981', anual: '#f59e0b', familia: '#f59e0b', livre: '#a78bfa' };
+
+        function resetarCards() {
+            todosPlanos.forEach(k => {
+                const card = document.getElementById(`plano-card-${k}`);
+                if (card) { card.style.borderColor = '#334155'; card.style.background = '#0f172a'; card.style.boxShadow = 'none'; }
+            });
+            // Esconde campos extras
+            const divFamilia = document.getElementById('campo-familia');
+            const divLivre = document.getElementById('campo-livre');
+            if (divFamilia) divFamilia.classList.add('hidden');
+            if (divLivre) divLivre.classList.add('hidden');
+        }
+
+        function selecionarPlano(key, valor, label) {
+            planoSelecionado = { key, valor, label };
+            document.getElementById('reg-plano').value = key;
+            document.getElementById('reg-plano-valor').value = valor;
+            document.getElementById('reg-plano-label').value = label;
+            resetarCards();
+            const card = document.getElementById(`plano-card-${key}`);
+            if (card) { card.style.borderColor = coresPlanos[key] || '#3b82f6'; card.style.boxShadow = `0 0 12px ${coresPlanos[key]}44`; }
+        }
+
+        function selecionarPlanoEspecial(key) {
+            planoSelecionado = { key, valor: 0, label: key === 'familia' ? 'Família' : 'Livre' };
+            document.getElementById('reg-plano').value = key;
+            document.getElementById('reg-plano-valor').value = 0;
+            document.getElementById('reg-plano-label').value = planoSelecionado.label;
+            resetarCards();
+            const card = document.getElementById(`plano-card-${key}`);
+            if (card) { card.style.borderColor = coresPlanos[key]; card.style.boxShadow = `0 0 12px ${coresPlanos[key]}44`; }
+
+            // Mostra campo específico
+            if (key === 'familia') {
+                document.getElementById('campo-familia').classList.remove('hidden');
+            } else if (key === 'livre') {
+                document.getElementById('campo-livre').classList.remove('hidden');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarPlanos();
+
+            // Máscaras
+            document.getElementById('reg-cpf').addEventListener('input', (e) => {
+                let v = e.target.value.replace(/\D/g, "");
+                v = v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+                e.target.value = v;
+            });
+            document.getElementById('reg-telefone').addEventListener('input', (e) => {
+                let v = e.target.value.replace(/\D/g, "");
+                v = v.replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
+                e.target.value = v;
+            });
+            document.getElementById('reg-cep').addEventListener('input', (e) => {
+                let v = e.target.value.replace(/\D/g, "");
+                e.target.value = v.replace(/^(\d{5})(\d)/, "$1-$2");
+            });
+            document.getElementById('reg-cep').addEventListener('blur', async (e) => {
+                const cep = e.target.value.replace(/\D/g, "");
+                if (cep.length !== 8) return;
+                try {
+                    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                    const data = await response.json();
+                    if (!data.erro) {
+                        document.getElementById('reg-rua').value = data.logradouro;
+                        document.getElementById('reg-bairro').value = data.bairro;
+                        document.getElementById('reg-cidade').value = data.localidade;
+                        document.getElementById('reg-estado').value = data.uf;
+                        document.getElementById('reg-numero').focus();
+                    }
+                } catch(err) { console.error(err); }
+            });
+
+            const btnReg = document.getElementById('btnRegistrar');
+            if (btnReg) {
+                btnReg.addEventListener('click', async () => {
+                    const nome = document.getElementById('reg-nome').value.trim();
+                    const email = document.getElementById('reg-email').value.trim();
+                    const pass = document.getElementById('reg-pass').value;
+                    const cpf = document.getElementById('reg-cpf').value.replace(/\D/g, '');
+                    const telefone = document.getElementById('reg-telefone').value.replace(/\D/g, '');
+                    const nascimento = document.getElementById('reg-nascimento').value;
+                    const cep = document.getElementById('reg-cep').value.replace(/\D/g, '');
+                    const rua = document.getElementById('reg-rua').value.trim();
+                    const numero = document.getElementById('reg-numero').value.trim();
+                    const complemento = document.getElementById('reg-complemento').value.trim();
+                    const bairro = document.getElementById('reg-bairro').value.trim();
+                    const cidade = document.getElementById('reg-cidade').value.trim();
+                    const estado = document.getElementById('reg-estado').value.trim().toUpperCase();
+
+                    if (!nome || !email || !pass || !cpf || !telefone || !cep || !rua || !numero || !bairro || !cidade || !estado) {
+                        return alert("Por favor, preencha todos os campos obrigatórios.");
+                    }
+                    if (!planoSelecionado) {
+                        return alert("Por favor, selecione um plano de pagamento.");
+                    }
+
+                    // Valida campos extras dos planos especiais
+                    let qtdFamilia = null;
+                    let qtdModalidades = null;
+                    if (planoSelecionado.key === 'familia') {
+                        qtdFamilia = parseInt(document.getElementById('reg-qtd-familia').value);
+                        if (!qtdFamilia || qtdFamilia < 2) return alert("Informe a quantidade de pessoas da família (mínimo 2).");
+                    }
+                    if (planoSelecionado.key === 'livre') {
+                        qtdModalidades = parseInt(document.getElementById('reg-qtd-modalidades').value);
+                        if (!qtdModalidades || qtdModalidades < 1) return alert("Informe a quantidade de modalidades.");
+                    }
+
+                    btnReg.disabled = true;
+                    btnReg.innerText = "PROCESSANDO...";
+
+                    try {
+                        // 1. Cria conta no Firebase Auth
+                        const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+                        const uid = userCredential.user.uid;
+
+                        // 2. Verifica/cria cliente no Asaas
+                        let asaasId = null;
+                        try {
+                            const resCpf = await fetch(`/api/asaas?endpoint=customers&cpfCnpj=${cpf}`);
+                            const dadosCpf = await resCpf.json();
+                            if (dadosCpf.data && dadosCpf.data.length > 0) {
+                                asaasId = dadosCpf.data[0].id;
+                            } else {
+                                const resEmail = await fetch(`/api/asaas?endpoint=customers&email=${encodeURIComponent(email)}`);
+                                const dadosEmail = await resEmail.json();
+                                if (dadosEmail.data && dadosEmail.data.length > 0) {
+                                    asaasId = dadosEmail.data[0].id;
+                                } else {
+                                    const resCriar = await fetch(`/api/asaas?endpoint=customers`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ name: nome, email, cpfCnpj: cpf, mobilePhone: telefone, postalCode: cep, address: rua, addressNumber: numero, complement: complemento, province: bairro, city: cidade, state: estado })
+                                    });
+                                    const dadosCriado = await resCriar.json();
+                                    if (dadosCriado.id) asaasId = dadosCriado.id;
+                                }
+                            }
+                        } catch(errAsaas) { console.warn('Erro Asaas:', errAsaas.message); }
+
+                        // 3. Salva no Firestore com plano
+                        const novoAluno = {
+                            id: uid, nome, email, cpf, telefone, nascimento,
+                            cep, rua, numero, complemento, bairro, cidade, estado,
+                            plano: planoSelecionado.key,
+                            planoLabel: planoSelecionado.label,
+                            planoValor: planoSelecionado.valor,
+                            faixa: "Branca", grau: 0, aulas: 0, role: "aluno",
+                            cadastroData: firebase.firestore.FieldValue.serverTimestamp(),
+                            cadastroPendente: true
+                        };
+                        if (qtdFamilia) novoAluno.qtdFamilia = qtdFamilia;
+                        if (qtdModalidades) novoAluno.qtdModalidades = qtdModalidades;
+                        if (asaasId) novoAluno.asaasId = asaasId;
+                        await db.collection("alunos").doc(uid).set(novoAluno);
+
+                        // 4. Registra na coleção de novos cadastros para alerta do admin
+                        await db.collection("novos_cadastros").add({
+                            alunoId: uid,
+                            nome, email,
+                            plano: planoSelecionado.key,
+                            planoLabel: planoSelecionado.label,
+                            planoValor: planoSelecionado.valor,
+                            data: new Date().getTime(),
+                            dataFormatada: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
+                            lido: false
+                        });
+
+                        alert("Matrícula realizada com sucesso! Faça login para acessar o tatame. OSS!");
+                        window.location.href = "index.html";
+
+                    } catch(error) {
+                        btnReg.disabled = false;
+                        btnReg.innerText = "FINALIZAR MEU CADASTRO";
+                        if (error.code === 'auth/email-already-in-use') {
+                            alert("Este e-mail já está cadastrado na plataforma.");
+                        } else {
+                            alert("Erro ao realizar pré-cadastro: " + error.message);
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

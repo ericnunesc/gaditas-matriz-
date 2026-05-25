@@ -1,0 +1,14 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/asaas",
+      "destination": "/api/asaas.js"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/notificacoes-cobranca",
+      "schedule": "0 11 * * *"
+    }
+  ]
+}

@@ -838,6 +838,38 @@ const academia = {
 
     async recusarCheckin(cId) { if(confirm("Remover?")) { await db.collection("checkins").doc(cId).delete(); this.renderCheckins(); } },
 
+    async carregarMeusCheckinsPendentes() {
+        const container = document.getElementById('meus-checkins-pendentes');
+        if (!container || auth.role !== 'aluno') return;
+        const snap = await db.collection("checkins").where("alunoId", "==", auth.currentUser.id).get();
+        if (snap.empty) { container.innerHTML = ''; return; }
+        container.innerHTML = `
+            <small style="color:#f59e0b; font-weight:800; font-size:0.6rem; display:block; margin:8px 0 6px 0; letter-spacing:0.5px;">
+                <i class="fas fa-clock"></i> AGUARDANDO VALIDAÇÃO DO PROFESSOR:
+            </small>` +
+            snap.docs.map(doc => {
+                const c = doc.data();
+                return `<div style="background:#0f172a; border:1px solid #f59e0b44; border-left:3px solid #f59e0b; border-radius:8px; padding:10px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-size:0.8rem; font-weight:700; color:#e2e8f0;">⏳ ${c.turma}</div>
+                        <div style="font-size:0.6rem; color:#64748b; margin-top:2px;">Check-in pendente</div>
+                    </div>
+                    <button onclick="academia.cancelarMeuCheckin('${doc.id}')" style="background:#4c0519; border:none; color:#f43f5e; padding:7px 12px; border-radius:6px; font-size:0.7rem; font-weight:800; cursor:pointer; white-space:nowrap;">
+                        <i class="fas fa-times"></i> CANCELAR
+                    </button>
+                </div>`;
+            }).join('');
+    },
+
+    async cancelarMeuCheckin(checkinId) {
+        if (!confirm("Deseja cancelar seu check-in?")) return;
+        try {
+            await db.collection("checkins").doc(checkinId).delete();
+            await this.carregarMeusCheckinsPendentes();
+            await this.atualizarPresencaAntecipada();
+        } catch(e) { alert("Erro ao cancelar check-in."); }
+    },
+
     async alunoEnviaCheckin() {
         const t = document.getElementById('select-turma-aluno').value; if(t.includes("Sem treinos")) return;
 
@@ -879,7 +911,7 @@ const academia = {
         } catch(e) { console.warn("Verificação duplicado falhou:", e.message); }
 
         await db.collection("checkins").add({ alunoId: auth.currentUser.id, alunoNome: auth.currentUser.nome, turma: t, data: new Date().getTime() });
-        alert("Check-in enviado!"); this.atualizarPresencaAntecipada();
+        alert("Check-in enviado!"); this.atualizarPresencaAntecipada(); this.carregarMeusCheckinsPendentes();
     },
 
     async renderRanking() {
@@ -1669,7 +1701,7 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
-        if(id === 'tab-checkin') { academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); }
+        if(id === 'tab-checkin') { academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); }
         if(id === 'tab-relatorios') { academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
     },

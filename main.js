@@ -561,9 +561,12 @@ const academia = {
     async atualizarPresencaAntecipada() {
         const s = document.getElementById('select-turma-aluno'); const lD = document.getElementById('quem-treina-hoje'); if(!s || !lD) return;
         const snap = await db.collection("checkins").where("turma", "==", s.value).get();
-        if (snap.empty) { lD.innerHTML = `<small style="color:var(--text-muted);">Nenhum atleta confirmado.</small>`; return; }
-        const nomes = snap.docs.map(doc => { const n = doc.data().alunoNome.split(' '); return n.length > 1 ? `${n[0]} ${n[1][0]}.` : n[0]; });
-        lD.innerHTML = `<div style="display:flex; flex-wrap:wrap; gap:4px;">${nomes.map(n => `<span style="background:#0f172a; color:#ccc; padding:4px 10px; border-radius:6px; font-size:0.65rem; border:1px solid var(--border-light); font-weight:600;">${n}</span>`).join('')}</div>`;
+        if (snap.empty) { lD.innerHTML = `<small style="color:var(--text-muted);">Nenhum atleta confirmado.</small>`; } else {
+            const nomes = snap.docs.map(doc => { const n = doc.data().alunoNome.split(' '); return n.length > 1 ? `${n[0]} ${n[1][0]}.` : n[0]; });
+            lD.innerHTML = `<div style="display:flex; flex-wrap:wrap; gap:4px;">${nomes.map(n => `<span style="background:#0f172a; color:#ccc; padding:4px 10px; border-radius:6px; font-size:0.65rem; border:1px solid var(--border-light); font-weight:600;">${n}</span>`).join('')}</div>`;
+        }
+        // Mostra o plano da aula para o aluno ao trocar turma
+        if (auth.role === 'aluno') this.carregarPlanoAulaTurma(s.value);
     },
 
     async salvarEventoAdmin() {
@@ -837,6 +840,94 @@ const academia = {
     },
 
     async recusarCheckin(cId) { if(confirm("Remover?")) { await db.collection("checkins").doc(cId).delete(); this.renderCheckins(); } },
+
+    _getDataHoje() {
+        const h = new Date();
+        return `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-${String(h.getDate()).padStart(2,'0')}`;
+    },
+
+    async renderPlanoAulaProf() {
+        const container = document.getElementById('plano-aula-professor');
+        if (!container) return;
+        const dataHoje = this._getDataHoje();
+        const grade = this.getGrade();
+        const diaSemana = new Date().getDay();
+        const turmasHoje = (grade[diaSemana] || grade[String(diaSemana)] || []).filter(t => !t.includes('Sem treinos'));
+
+        if (turmasHoje.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        // Para professor, filtra só as turmas dele
+        let turmasVisiveis = turmasHoje;
+        if (auth.role === 'professor' && auth.currentUser.turmasAcesso) {
+            turmasVisiveis = turmasHoje.filter(t =>
+                auth.currentUser.turmasAcesso.some(ta => t.toLowerCase().includes(ta.toLowerCase().replace(/\s*\d+$/, '').trim()))
+            );
+        }
+        if (turmasVisiveis.length === 0) { container.innerHTML = ''; return; }
+
+        // Carrega planos já salvos para hoje
+        let planosExistentes = {};
+        try {
+            const doc = await db.collection('plano_aula').doc(dataHoje).get();
+            if (doc.exists) planosExistentes = doc.data();
+        } catch(e) {}
+
+        container.innerHTML = `
+            <div style="background:#1e293b; border:1px solid #8b5cf644; border-left:3px solid #8b5cf6; border-radius:12px; padding:15px;">
+                <div style="font-size:0.75rem; font-weight:800; color:#8b5cf6; margin-bottom:12px; letter-spacing:0.3px;">
+                    <i class="fas fa-clipboard-list"></i> PLANO DA AULA DE HOJE
+                </div>
+                ${turmasVisiveis.map(turma => {
+                    const inputId = 'plano_' + turma.replace(/[^a-z0-9]/gi, '_');
+                    const conteudoSalvo = planosExistentes[turma] || '';
+                    return `<div style="margin-bottom:12px;">
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:5px; letter-spacing:0.5px;">📍 ${turma.toUpperCase()}</small>
+                        <textarea id="${inputId}" placeholder="Ex: Raspagens da guarda fechada + finalização kimura..." rows="2"
+                            style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; font-size:0.8rem; outline:none; resize:none; margin-bottom:6px;">${conteudoSalvo}</textarea>
+                        <button onclick="academia.salvarPlanoAula('${turma.replace(/'/g,"\\'")}', document.getElementById('${inputId}').value)"
+                            style="width:100%; padding:9px; background:#8b5cf6; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem;">
+                            <i class="fas fa-save"></i> SALVAR CONTEÚDO DA AULA
+                        </button>
+                    </div>`;
+                }).join('')}
+            </div>`;
+    },
+
+    async salvarPlanoAula(turma, conteudo) {
+        const dataHoje = this._getDataHoje();
+        try {
+            await db.collection('plano_aula').doc(dataHoje).set({ [turma]: conteudo.trim() }, { merge: true });
+            // Feedback visual no botão em vez de alert
+            const btn = event.target.closest ? event.target : event.srcElement;
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> SALVO!';
+            btn.style.background = '#10b981';
+            setTimeout(() => { btn.innerHTML = txtOriginal; btn.style.background = '#8b5cf6'; }, 2000);
+        } catch(e) { alert('Erro ao salvar plano.'); }
+    },
+
+    async carregarPlanoAulaTurma(turma) {
+        const preview = document.getElementById('preview-plano-aula');
+        if (!preview || !turma || turma.includes('Sem treinos')) { if(preview) preview.innerHTML = ''; return; }
+        const dataHoje = this._getDataHoje();
+        try {
+            const doc = await db.collection('plano_aula').doc(dataHoje).get();
+            if (doc.exists && doc.data()[turma] && doc.data()[turma].trim()) {
+                preview.innerHTML = `
+                    <div style="background:#1e293b; border:1px solid #8b5cf644; border-left:3px solid #8b5cf6; border-radius:8px; padding:12px; margin-top:10px;">
+                        <small style="color:#8b5cf6; font-weight:800; font-size:0.6rem; display:block; margin-bottom:5px; letter-spacing:0.5px;">
+                            <i class="fas fa-clipboard-list"></i> O QUE SERÁ MINISTRADO NESSA AULA:
+                        </small>
+                        <div style="color:#e2e8f0; font-size:0.85rem; font-weight:500; line-height:1.6;">${doc.data()[turma]}</div>
+                    </div>`;
+            } else {
+                preview.innerHTML = '';
+            }
+        } catch(e) { preview.innerHTML = ''; }
+    },
 
     async carregarMeusCheckinsPendentes() {
         const container = document.getElementById('meus-checkins-pendentes');
@@ -1701,7 +1792,7 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
-        if(id === 'tab-checkin') { academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); }
+        if(id === 'tab-checkin') { academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') academia.renderPlanoAulaProf(); }
         if(id === 'tab-relatorios') { academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
     },
@@ -1715,6 +1806,8 @@ const ui = {
         document.getElementById('menu-alunos').style.display = (isAdmin || isProf) ? "flex" : "none";
         document.getElementById('menu-relatorios').style.display = isAdmin ? "flex" : "none";
         document.getElementById('area-professor-checkin').classList.toggle('hidden', !isAdmin && !isProf);
+        const planoProfDiv = document.getElementById('plano-aula-professor');
+        if (planoProfDiv) planoProfDiv.classList.toggle('hidden', !isAdmin && !isProf);
         // Professor/aluno vê área de check-in próprio
         document.getElementById('area-aluno-checkin').classList.toggle('hidden', auth.role !== 'aluno' && auth.role !== 'professor');
         document.getElementById('admin-mural-editor').classList.toggle('hidden', !isAdmin);

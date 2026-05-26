@@ -882,7 +882,7 @@ const academia = {
                 </div>
                 ${turmasVisiveis.map(turma => {
                     const inputId = 'plano_' + turma.replace(/[^a-z0-9]/gi, '_');
-                    const conteudoSalvo = planosExistentes[turma] || '';
+                    const conteudoSalvo = this._planoConteudo(planosExistentes[turma]);
                     return `<div style="margin-bottom:12px;">
                         <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:5px; letter-spacing:0.5px;">📍 ${turma.toUpperCase()}</small>
                         <textarea id="${inputId}" placeholder="Ex: Raspagens da guarda fechada + finalização kimura..." rows="2"
@@ -896,11 +896,18 @@ const academia = {
             </div>`;
     },
 
+    // Helpers: suporta dados antigos (string) e novos (objeto {conteudo, profNome})
+    _planoConteudo(val) { return val ? (typeof val === 'object' ? val.conteudo || '' : val) : ''; },
+    _planoProf(val)     { return val && typeof val === 'object' ? val.profNome || '' : ''; },
+
     async salvarPlanoAula(turma, conteudo) {
         const dataHoje = this._getDataHoje();
+        const profNome = auth.currentUser?.nome || '';
         try {
-            await db.collection('plano_aula').doc(dataHoje).set({ [turma]: conteudo.trim() }, { merge: true });
-            // Feedback visual no botão em vez de alert
+            await db.collection('plano_aula').doc(dataHoje).set(
+                { [turma]: { conteudo: conteudo.trim(), profNome } },
+                { merge: true }
+            );
             const btn = event.target.closest ? event.target : event.srcElement;
             const txtOriginal = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-check"></i> SALVO!';
@@ -915,13 +922,17 @@ const academia = {
         const dataHoje = this._getDataHoje();
         try {
             const doc = await db.collection('plano_aula').doc(dataHoje).get();
-            if (doc.exists && doc.data()[turma] && doc.data()[turma].trim()) {
+            const val = doc.exists ? doc.data()[turma] : null;
+            const conteudo = this._planoConteudo(val);
+            const profNome = this._planoProf(val);
+            if (conteudo.trim()) {
                 preview.innerHTML = `
                     <div style="background:#1e293b; border:1px solid #8b5cf644; border-left:3px solid #8b5cf6; border-radius:8px; padding:12px; margin-top:10px;">
-                        <small style="color:#8b5cf6; font-weight:800; font-size:0.6rem; display:block; margin-bottom:5px; letter-spacing:0.5px;">
-                            <i class="fas fa-clipboard-list"></i> O QUE SERÁ MINISTRADO NESSA AULA:
-                        </small>
-                        <div style="color:#e2e8f0; font-size:0.85rem; font-weight:500; line-height:1.6;">${doc.data()[turma]}</div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                            <small style="color:#8b5cf6; font-weight:800; font-size:0.6rem; letter-spacing:0.5px;"><i class="fas fa-clipboard-list"></i> O QUE SERÁ MINISTRADO:</small>
+                            ${profNome ? `<small style="color:#64748b; font-size:0.6rem; font-weight:700;">Prof. ${profNome}</small>` : ''}
+                        </div>
+                        <div style="color:#e2e8f0; font-size:0.85rem; font-weight:500; line-height:1.6;">${conteudo}</div>
                     </div>`;
             } else {
                 preview.innerHTML = '';
@@ -1756,32 +1767,37 @@ Ele voltará a ser aluno normal.`)) return;
         container.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="color:#8b5cf6; font-size:1.2rem;"></i></div>';
 
         try {
-            const snap = await db.collection('plano_aula')
-                .orderBy(firebase.firestore.FieldPath.documentId(), 'desc')
-                .limit(60)
-                .get();
+            // Busca simples sem orderBy para evitar necessidade de índice
+            const snap = await db.collection('plano_aula').get();
 
             if (snap.empty) {
                 container.innerHTML = '<p style="color:#64748b; text-align:center; font-size:0.8rem; padding:15px;">Nenhum histórico registrado ainda.</p>';
                 return;
             }
 
+            // Ordena por data decrescente no cliente
+            const docs = snap.docs
+                .filter(doc => /^\d{4}-\d{2}-\d{2}$/.test(doc.id))
+                .sort((a, b) => b.id.localeCompare(a.id))
+                .slice(0, 60);
+
             const diasNomes = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
             const dataHoje = this._getDataHoje();
 
             let html = '';
-            snap.docs.forEach(doc => {
-                const dataId = doc.id; // YYYY-MM-DD
+            docs.forEach(doc => {
+                const dataId = doc.id;
                 const planos = doc.data();
                 const isHoje = dataId === dataHoje;
-
-                // Converte YYYY-MM-DD para Date (usa noon para evitar problema de fuso)
                 const dataObj = new Date(dataId + 'T12:00:00');
                 const diaSemana = diasNomes[dataObj.getDay()];
                 const dataFormatada = dataObj.toLocaleDateString('pt-BR');
 
-                // Filtra turmas que têm conteúdo
-                const turmasComConteudo = Object.entries(planos).filter(([, v]) => v && v.trim());
+                // Filtra só turmas com conteúdo real
+                const turmasComConteudo = Object.entries(planos).filter(([, v]) => {
+                    const c = this._planoConteudo(v);
+                    return c && c.trim();
+                });
                 if (turmasComConteudo.length === 0) return;
 
                 html += `
@@ -1792,13 +1808,19 @@ Ele voltará a ser aluno normal.`)) return;
                             </span>
                             <span style="font-size:0.65rem; color:#64748b; font-weight:700; background:#1e293b; padding:3px 8px; border-radius:6px;">${dataFormatada}</span>
                         </div>
-                        ${turmasComConteudo.map(([turma, conteudo]) => `
-                            <div style="margin-bottom:8px; padding:8px 10px; background:#1e293b; border-radius:8px; border-left:2px solid #8b5cf644;">
-                                <small style="color:#8b5cf6; font-size:0.6rem; font-weight:800; display:block; margin-bottom:3px; letter-spacing:0.5px;">
-                                    <i class="fas fa-clock"></i> ${turma.toUpperCase()}
-                                </small>
+                        ${turmasComConteudo.map(([turma, val]) => {
+                            const conteudo = this._planoConteudo(val);
+                            const profNome = this._planoProf(val);
+                            return `<div style="margin-bottom:8px; padding:10px; background:#1e293b; border-radius:8px; border-left:2px solid #8b5cf6;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <small style="color:#8b5cf6; font-size:0.6rem; font-weight:800; letter-spacing:0.5px;">
+                                        <i class="fas fa-clock"></i> ${turma.toUpperCase()}
+                                    </small>
+                                    ${profNome ? `<small style="color:#64748b; font-size:0.6rem; font-weight:700;">Prof. ${profNome}</small>` : ''}
+                                </div>
                                 <div style="color:#cbd5e1; font-size:0.8rem; line-height:1.5;">${conteudo}</div>
-                            </div>`).join('')}
+                            </div>`;
+                        }).join('')}
                     </div>`;
             });
 

@@ -118,17 +118,8 @@
                     </div>
                 </div>
 
-                <!-- Campo Livre -->
-                <div id="campo-livre" class="hidden" style="margin-bottom:12px;">
-                    <small style="color:#a78bfa; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px;">🥋 QUANTAS MODALIDADES DESEJA PRATICAR?</small>
-                    <div class="input-group">
-                        <i class="fas fa-layer-group"></i>
-                        <input type="number" id="reg-qtd-modalidades" placeholder="Ex: 2" min="1" max="10"
-                               style="color:white; background:transparent; border:none; width:100%; outline:none; font-size:0.8rem;"/>
-                    </div>
-                </div>
 
-                <!-- SELEÇÃO DE MODALIDADE -->
+<!-- SELEÇÃO DE MODALIDADE -->
                 <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; margin-top:4px;">MODALIDADE QUE VAI PRATICAR:</small>
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:20px;">
                     <button type="button" id="btn-reg-modal-jj" onclick="selecionarModalidadeCad('jiujitsu')"
@@ -260,9 +251,7 @@
             });
             // Esconde campos extras
             const divFamilia = document.getElementById('campo-familia');
-            const divLivre = document.getElementById('campo-livre');
             if (divFamilia) divFamilia.classList.add('hidden');
-            if (divLivre) divLivre.classList.add('hidden');
         }
 
         function selecionarPlano(key, valor, label) {
@@ -287,8 +276,6 @@
             // Mostra campo específico
             if (key === 'familia') {
                 document.getElementById('campo-familia').classList.remove('hidden');
-            } else if (key === 'livre') {
-                document.getElementById('campo-livre').classList.remove('hidden');
             }
         }
 
@@ -355,14 +342,9 @@
 
                     // Valida campos extras dos planos especiais
                     let qtdFamilia = null;
-                    let qtdModalidades = null;
                     if (planoSelecionado.key === 'familia') {
                         qtdFamilia = parseInt(document.getElementById('reg-qtd-familia').value);
                         if (!qtdFamilia || qtdFamilia < 2) return alert("Informe a quantidade de pessoas da família (mínimo 2).");
-                    }
-                    if (planoSelecionado.key === 'livre') {
-                        qtdModalidades = parseInt(document.getElementById('reg-qtd-modalidades').value);
-                        if (!qtdModalidades || qtdModalidades < 1) return alert("Informe a quantidade de modalidades.");
                     }
 
                     btnReg.disabled = true;
@@ -410,7 +392,6 @@
                             cadastroPendente: true
                         };
                         if (qtdFamilia) novoAluno.qtdFamilia = qtdFamilia;
-                        if (qtdModalidades) novoAluno.qtdModalidades = qtdModalidades;
                         if (asaasId) novoAluno.asaasId = asaasId;
                         await db.collection("alunos").doc(uid).set(novoAluno);
 

@@ -314,7 +314,17 @@
                     <input type="hidden" id="edit-aluno-id"/>
                     <input type="text" id="nome-aluno" placeholder="Nome Completo do Atleta" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <input type="email" id="email-aluno" placeholder="E-mail de Login do Atleta" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    
+
+                    <!-- MODALIDADE DO ATLETA -->
+                    <div style="margin-bottom:10px;">
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">MODALIDADE:</small>
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
+                            <button id="btn-modal-jj" onclick="academia.selecionarModalidade('jiujitsu')" style="padding:9px; background:#3b82f6; border:none; color:white; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥋 JIU-JITSU</button>
+                            <button id="btn-modal-mt" onclick="academia.selecionarModalidade('muaythai')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥊 MUAY THAI</button>
+                            <button id="btn-modal-ambos" onclick="academia.selecionarModalidade('ambos')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">⚡ AMBOS</button>
+                        </div>
+                    </div>
+
                     <input type="text" id="cpf-aluno" placeholder="CPF do Atleta (Apenas números)" maxlength="11" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <input type="text" id="telefone-aluno" placeholder="Telefone com DDD (Apenas números)" maxlength="11" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     
@@ -334,9 +344,36 @@
 
                     <label style="color: #94a3b8; font-size: 0.7rem; margin-left: 2px; font-weight:700;">Data de Nascimento:</label>
                     <input type="date" id="nascimento-aluno" onchange="ui.atualizarFaixas()" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <div style="display: flex; gap: 10px; margin-bottom:8px;">
-                        <select id="select-faixa" onchange="ui.atualizarGraus()" style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"></select>
-                        <select id="select-graus" style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"></select>
+                    <!-- GRADUAÇÃO JIU-JITSU -->
+                    <div id="section-grad-jj">
+                        <small style="color:#60a5fa; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">GRADUAÇÃO JIU-JITSU:</small>
+                        <div style="display: flex; gap: 10px; margin-bottom:8px;">
+                            <select id="select-faixa" onchange="ui.atualizarGraus()" style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"></select>
+                            <select id="select-graus" style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"></select>
+                        </div>
+                    </div>
+                    <!-- GRADUAÇÃO MUAY THAI (PRAJIOUD) -->
+                    <div id="section-grad-mt" class="hidden">
+                        <small style="color:#f43f5e; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">GRADUAÇÃO MUAY THAI — PRAJIOUD:</small>
+                        <div style="display: flex; gap: 10px; margin-bottom:8px;">
+                            <select id="select-faixa-mt" onchange="ui.atualizarGrausMT()" style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;">
+                                <option value="Sem Graduação">Sem Graduação</option>
+                                <option value="Branca">🤍 Branca</option>
+                                <option value="Amarela">💛 Amarela</option>
+                                <option value="Laranja">🧡 Laranja</option>
+                                <option value="Verde">💚 Verde</option>
+                                <option value="Azul">💙 Azul</option>
+                                <option value="Vermelha">❤️ Vermelha</option>
+                                <option value="Preta">🖤 Preta</option>
+                            </select>
+                            <select id="select-grau-mt" style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;">
+                                <option value="0">Sem Grau</option>
+                                <option value="1">1º Grau</option>
+                                <option value="2">2º Grau</option>
+                                <option value="3">3º Grau</option>
+                                <option value="4">4º Grau</option>
+                            </select>
+                        </div>
                     </div>
                     <div id="admin-painel-leoes" class="hidden" style="background:#0f172a; padding:15px; border-radius:12px; margin-top:15px; border:1px solid #334155;">
                         <small style="color:#f59e0b; font-weight:800; display:block; font-size:0.6rem; margin-bottom:10px; text-transform:uppercase;">🦁 Conceder Leões de Conquest</small>
@@ -366,7 +403,14 @@
                 </div>
 
                 <h4 style="color: #94a3b8; font-size: 0.7rem; margin: 20px 0 8px 4px; font-weight: 800; text-transform:uppercase;">ATLETAS MATRICULADOS</h4>
-                
+
+                <!-- FILTRO POR MODALIDADE -->
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px;">
+                    <button id="filtro-modal-all" onclick="academia.filtrarModalidade('all')" style="padding:9px; background:#3b82f6; border:none; color:white; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">TODOS</button>
+                    <button id="filtro-modal-jiujitsu" onclick="academia.filtrarModalidade('jiujitsu')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥋 JIU-JITSU</button>
+                    <button id="filtro-modal-muaythai" onclick="academia.filtrarModalidade('muaythai')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥊 MUAY THAI</button>
+                </div>
+
                 <input type="text" id="input-busca-aluno" placeholder="Buscar atleta por nome..." oninput="academia.filtrarPorNomeDigitado()" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:10px;"/>
                 
                 <select id="filtro-avancado-faixas" onchange="GaditasFiltros.faixaFiltroAtual = this.value; academia.renderAlunos();" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-top: -4px; margin-bottom: 15px;">

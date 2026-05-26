@@ -24,6 +24,12 @@ const graduacao = {
     getMaxGraus(faixa) { return faixa === "Preta" ? 6 : 4; }
 };
 
+// ── MUAY THAI — Sistema Prajioud ─────────────────────────
+const graduacaoMT = {
+    faixas: ["Sem Graduação", "Branca", "Amarela", "Laranja", "Verde", "Azul", "Vermelha", "Preta"],
+    getMaxGraus: (faixa) => (faixa === "Preta" || faixa === "Sem Graduação") ? 0 : 4
+};
+
 const auth = {
     adminCreds: { user: "admin", pass: "admin" },
     role: null, currentUser: null,
@@ -120,6 +126,8 @@ const auth = {
 const academia = {
     idUltimoAvisoMural: null,
     categoriaFiltroAtual: "all",
+    modalidadeFiltroAtual: "all",
+    _modalidadeAtual: "jiujitsu",
     textoBuscaNome: "",
     leoesFichaTemp: { leaoAtencao: 0, leaoComportamento: 0, leaoCompanheirismo: 0, leaoDisciplina: 0 },
 
@@ -170,6 +178,38 @@ const academia = {
     filtrarPorNomeDigitado() {
         const input = document.getElementById('input-busca-aluno');
         this.textoBuscaNome = input ? input.value.trim().toLowerCase() : "";
+        this.renderAlunos();
+    },
+
+    // ── SELETOR DE MODALIDADE (formulário de cadastro) ──────
+    selecionarModalidade(mod) {
+        this._modalidadeAtual = mod;
+        const mapa = { jiujitsu: 'btn-modal-jj', muaythai: 'btn-modal-mt', ambos: 'btn-modal-ambos' };
+        Object.keys(mapa).forEach(k => {
+            const btn = document.getElementById(mapa[k]);
+            if (!btn) return;
+            const ativo = k === mod;
+            btn.style.background = ativo ? '#3b82f6' : '#0f172a';
+            btn.style.color     = ativo ? 'white' : '#94a3b8';
+            btn.style.border    = ativo ? 'none' : '1px solid #334155';
+        });
+        const jjSec = document.getElementById('section-grad-jj');
+        const mtSec = document.getElementById('section-grad-mt');
+        if (jjSec) jjSec.classList.toggle('hidden', mod === 'muaythai');
+        if (mtSec) mtSec.classList.toggle('hidden', mod === 'jiujitsu');
+    },
+
+    // ── FILTRO DE MODALIDADE (lista de atletas) ─────────────
+    filtrarModalidade(mod) {
+        this.modalidadeFiltroAtual = mod;
+        ['all', 'jiujitsu', 'muaythai'].forEach(k => {
+            const btn = document.getElementById(`filtro-modal-${k}`);
+            if (!btn) return;
+            const ativo = k === mod;
+            btn.style.background = ativo ? '#3b82f6' : '#0f172a';
+            btn.style.color     = ativo ? 'white' : '#94a3b8';
+            btn.style.border    = ativo ? 'none' : '1px solid #334155';
+        });
         this.renderAlunos();
     },
 
@@ -742,6 +782,11 @@ const academia = {
             if (this.categoriaFiltroAtual === "kids" && !isKids) return;
             if (faixaFiltro !== "all" && a.faixa !== faixaFiltro) return;
 
+            // Filtro por modalidade
+            const alunoMod = a.modalidade || 'jiujitsu';
+            if (this.modalidadeFiltroAtual === 'jiujitsu' && alunoMod === 'muaythai') return;
+            if (this.modalidadeFiltroAtual === 'muaythai' && alunoMod !== 'muaythai') return;
+
             // Filtro do professor
             if (auth.role === 'professor') {
                 if (isKids && !profTemKids) return; // Não tem turma kids
@@ -763,15 +808,29 @@ const academia = {
                 </div>`;
             }
             const fotoSrc = a.fotoPerfil || '';
+            // Badge e info de graduação por modalidade
+            const modBadge = alunoMod === 'muaythai'
+                ? `<span style="background:#4c0519; color:#f43f5e; font-size:0.5rem; padding:2px 5px; border-radius:4px; font-weight:800; margin-left:5px; vertical-align:middle;">🥊 MT</span>`
+                : alunoMod === 'ambos'
+                ? `<span style="background:#2e1065; color:#c4b5fd; font-size:0.5rem; padding:2px 5px; border-radius:4px; font-weight:800; margin-left:5px; vertical-align:middle;">⚡ JJJ+MT</span>`
+                : `<span style="background:#1e3a8a; color:#60a5fa; font-size:0.5rem; padding:2px 5px; border-radius:4px; font-weight:800; margin-left:5px; vertical-align:middle;">🥋 JJJ</span>`;
+            const gradInfo = alunoMod === 'muaythai'
+                ? `🥊 ${a.faixaMT || 'Sem Grad.'} • ${a.grauMT ? a.grauMT + 'º G' : 'Iniciante'}`
+                : alunoMod === 'ambos'
+                ? `🥋 ${a.faixa} ${a.grau}ºG | 🥊 ${a.faixaMT || 'Sem Grad.'} ${a.grauMT ? a.grauMT + 'ºG' : ''}`
+                : `${a.faixa} • ${a.grau}º G • ${a.aulas || 0}/${s.meta}`;
+            const corBorda = alunoMod === 'muaythai'
+                ? ui.getCorFaixaMT(a.faixaMT)
+                : ui.getCorFaixa(a.faixa);
             const fotoMini = fotoSrc
-                ? `<img src="${fotoSrc}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid ${ui.getCorFaixa(a.faixa)}; margin-right:10px; flex-shrink:0;"/>`
+                ? `<img src="${fotoSrc}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid ${corBorda}; margin-right:10px; flex-shrink:0;"/>`
                 : `<div style="width:36px; height:36px; border-radius:50%; background:#1e293b; border:2px solid #334155; display:inline-flex; align-items:center; justify-content:center; margin-right:10px; flex-shrink:0; font-size:0.85rem; font-weight:800; color:#94a3b8;">${a.nome.charAt(0).toUpperCase()}</div>`;
 
-            cardsHtml += `<div class="item-card" style="border-left: 4px solid ${ui.getCorFaixa(a.faixa)}; flex-direction:column; align-items:stretch; gap:10px;">
+            cardsHtml += `<div class="item-card" style="border-left: 4px solid ${corBorda}; flex-direction:column; align-items:stretch; gap:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="display:flex; align-items:center; flex:1; min-width:0;">
                         ${fotoMini}
-                        <div style="color:#e2e8f0; flex:1; font-size:0.85rem; font-weight:600; min-width:0;"><span>${a.nome.toUpperCase()} ${eng.icon}</span><br><small style="color:#64748b; font-weight:500;">${a.faixa} • ${a.grau}º G • ${a.aulas || 0}/${s.meta}</small>${tagsLeoes}</div>
+                        <div style="color:#e2e8f0; flex:1; font-size:0.85rem; font-weight:600; min-width:0;"><span>${a.nome.toUpperCase()}${modBadge} ${eng.icon}</span><br><small style="color:#64748b; font-weight:500;">${gradInfo}</small>${tagsLeoes}</div>
                     </div>
                     <div style="display:flex; gap:5px; flex-shrink:0;">
                         <button onclick="academia.editarAluno('${doc.id}')" style="background:#16161a; border:1px solid #2d2d34; color:#94a3b8; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-eye"></i></button>
@@ -1030,6 +1089,9 @@ const academia = {
         const doc = await db.collection("alunos").doc(id).get(); const a = doc.data(); const isAdmin = auth.role === 'admin';
         document.getElementById('edit-aluno-id').value = id; document.getElementById('nome-aluno').value = a.nome;
         document.getElementById('email-aluno').value = a.email; document.getElementById('nascimento-aluno').value = a.nascimento || '';
+        // Modalidade
+        const mod = a.modalidade || 'jiujitsu';
+        this.selecionarModalidade(mod);
         const anoAtual = new Date().getFullYear();
         if (a.nascimento) {
             const idade = anoAtual - new Date(a.nascimento).getFullYear();
@@ -1040,6 +1102,13 @@ const academia = {
         if (a.faixa) { document.getElementById('select-faixa').value = a.faixa; }
         ui.atualizarGraus();
         if (a.grau !== undefined) { document.getElementById('select-graus').value = a.grau; }
+        // Graduação MT
+        if (mod === 'muaythai' || mod === 'ambos') {
+            const selFaixaMT = document.getElementById('select-faixa-mt');
+            const selGrauMT  = document.getElementById('select-grau-mt');
+            if (selFaixaMT && a.faixaMT) selFaixaMT.value = a.faixaMT;
+            if (selGrauMT  && a.grauMT !== undefined) selGrauMT.value = a.grauMT;
+        }
         const idadeAtleta = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
         if (idadeAtleta <= 14 && isAdmin) {
             document.getElementById('admin-painel-leoes').classList.remove('hidden');
@@ -1238,6 +1307,9 @@ Ele voltará a ser aluno normal.`)) return;
         document.getElementById('nascimento-aluno').value = "";
         document.getElementById('admin-painel-leoes').classList.add('hidden');
         document.querySelectorAll('#card-gestao-atleta input, #card-gestao-atleta select').forEach(el => el.disabled = false);
+        // Reset modalidade para JJ (padrão)
+        this._modalidadeAtual = 'jiujitsu';
+        this.selecionarModalidade('jiujitsu');
     },
 
     limparPr() { document.getElementById('nome-prof').value = ""; document.getElementById('email-prof').value = ""; document.querySelectorAll('.check-turma').forEach(c => c.checked = false); },
@@ -1326,11 +1398,13 @@ Ele voltará a ser aluno normal.`)) return;
     async salvarAluno() {
         const id = document.getElementById('edit-aluno-id').value;
         const novaFaixa = document.getElementById('select-faixa').value;
-        const dados = { 
-            nome: document.getElementById('nome-aluno').value.trim(), 
-            email: document.getElementById('email-aluno').value.trim().toLowerCase(), 
-            nascimento: document.getElementById('nascimento-aluno').value, 
-            faixa: novaFaixa, 
+        const modalidadeSalva = this._modalidadeAtual || 'jiujitsu';
+        const dados = {
+            nome: document.getElementById('nome-aluno').value.trim(),
+            email: document.getElementById('email-aluno').value.trim().toLowerCase(),
+            nascimento: document.getElementById('nascimento-aluno').value,
+            modalidade: modalidadeSalva,
+            faixa: novaFaixa,
             grau: parseInt(document.getElementById('select-graus').value) || 0,
             cpf: document.getElementById('cpf-aluno') ? document.getElementById('cpf-aluno').value.replace(/\D/g, '') : "",
             telefone: document.getElementById('telefone-aluno') ? document.getElementById('telefone-aluno').value.replace(/\D/g, '') : "",
@@ -1342,6 +1416,11 @@ Ele voltará a ser aluno normal.`)) return;
             cidade: document.getElementById('cidade-aluno') ? document.getElementById('cidade-aluno').value.trim() : "",
             estado: document.getElementById('estado-aluno') ? document.getElementById('estado-aluno').value.trim().toUpperCase() : ""
         };
+        // Graduação Muay Thai
+        if (modalidadeSalva === 'muaythai' || modalidadeSalva === 'ambos') {
+            dados.faixaMT = document.getElementById('select-faixa-mt')?.value || 'Sem Graduação';
+            dados.grauMT  = parseInt(document.getElementById('select-grau-mt')?.value) || 0;
+        }
         const painelLeoes = document.getElementById('admin-painel-leoes');
         if (id && painelLeoes && !painelLeoes.classList.contains('hidden')) {
             try {
@@ -1910,6 +1989,8 @@ Ele voltará a ser aluno normal.`)) return;
     },
 
     verificarMeta(a) {
+        // Aluno exclusivo de Muay Thai não tem meta JJ
+        if ((a.modalidade || 'jiujitsu') === 'muaythai') return { meta: 0, pronto: false, percent: 0 };
         if (a.faixa === "Preta") return { meta: 0, pronto: false, percent: 100 };
         let m = 40;
         if (graduacao.adulto.includes(a.faixa)) m = graduacao.regrasAulas[a.faixa][a.grau] || 40;
@@ -1947,8 +2028,22 @@ const ui = {
     },
     getCorFaixa(f) {
         if(!f) return "#fff";
-        const c = { "Branca": "#fff", "Azul": "#1e3a8a", "Roxa": "#581c87", "Marrom": "#451a03", "Preta": "#000", "Cinza": "#4b5563", "Amarela": "#ca8a04", "Laranja": "#c2410c", "Verde": "#15803d" };
+        const c = { "Branca": "#fff", "Azul": "#1e3a8a", "Roxa": "#581c87", "Marrom": "#451a03", "Preta": "#000", "Cinza": "#4b5563", "Amarela": "#ca8a04", "Laranja": "#c2410c", "Verde": "#15803d", "Vermelha": "#dc2626" };
         return c[f.split('/')[0]] || "#fff";
+    },
+    getCorFaixaMT(f) {
+        if(!f || f === "Sem Graduação") return "#475569";
+        const c = { "Branca": "#cbd5e1", "Amarela": "#ca8a04", "Laranja": "#ea580c", "Verde": "#16a34a", "Azul": "#2563eb", "Vermelha": "#dc2626", "Preta": "#1e1e1e" };
+        return c[f] || "#475569";
+    },
+    atualizarGrausMT() {
+        const selFaixa = document.getElementById('select-faixa-mt');
+        const selGrau  = document.getElementById('select-grau-mt');
+        if (!selFaixa || !selGrau) return;
+        const max = graduacaoMT.getMaxGraus(selFaixa.value);
+        let h = `<option value="0">Sem Grau</option>`;
+        for (let i = 1; i <= max; i++) h += `<option value="${i}">${i}º Grau</option>`;
+        selGrau.innerHTML = h;
     },
     configurarVisao() {
         const isAdmin = auth.role === 'admin'; const isProf = auth.role === 'professor';
@@ -1985,10 +2080,12 @@ const ui = {
         s.innerHTML = t.map(i => `<option value="${i}">${i}</option>`).join(''); academia.atualizarPresencaAntecipada();
     },
     atualizarFaixas() {
+        // Se modalidade for Muay Thai puro, não precisa popular faixas JJ
+        if ((academia._modalidadeAtual || 'jiujitsu') === 'muaythai') return;
         const n = document.getElementById('nascimento-aluno').value; if(!n) return;
         const i = new Date().getFullYear() - new Date(n).getFullYear();
         const faixaAtual = document.getElementById('select-faixa').value;
-        document.getElementById('select-faixa').innerHTML = graduacao.getFaixas(i).map(f => `<option value="${f}">${f}</option>`).join(''); 
+        document.getElementById('select-faixa').innerHTML = graduacao.getFaixas(i).map(f => `<option value="${f}">${f}</option>`).join('');
         if(faixaAtual && document.querySelector(`#select-faixa option[value="${faixaAtual}"]`)) { document.getElementById('select-faixa').value = faixaAtual; }
         this.atualizarGraus();
     },

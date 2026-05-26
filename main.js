@@ -170,8 +170,13 @@ const academia = {
         try {
             const ref = db.collection("alunos").doc(alunoId); const doc = await ref.get(); if (!doc.exists) return;
             const d = doc.data(); const h = d.historico || [];
-            h.unshift({ data: new Date().toLocaleString('pt-BR'), turma: turmasDisponiveis[index], tipo: "Presença Manual (Adm/Prof)" });
-            await ref.update({ aulas: (d.aulas || 0) + 1, historico: h });
+            const turmaSel = turmasDisponiveis[index];
+            h.unshift({ data: new Date().toLocaleString('pt-BR'), turma: turmaSel, tipo: "Presença Manual (Adm/Prof)" });
+            const isMTManual = this._isTurmaMT(turmaSel);
+            const updManual = { historico: h };
+            if (isMTManual) updManual.aulasMT = (d.aulasMT || 0) + 1;
+            else             updManual.aulas   = (d.aulas   || 0) + 1;
+            await ref.update(updManual);
             alert("✅ Presença inserida!"); this.renderAlunos(); this.renderRanking();
         } catch (e) { alert("Erro ao lançar."); }
     },
@@ -827,9 +832,9 @@ const academia = {
                 ? `<span style="background:#2e1065; color:#c4b5fd; font-size:0.5rem; padding:2px 5px; border-radius:4px; font-weight:800; margin-left:5px; vertical-align:middle;">⚡ JJJ+MT</span>`
                 : `<span style="background:#1e3a8a; color:#60a5fa; font-size:0.5rem; padding:2px 5px; border-radius:4px; font-weight:800; margin-left:5px; vertical-align:middle;">🥋 JJJ</span>`;
             const gradInfo = alunoMod === 'muaythai'
-                ? `🥊 ${a.faixaMT || 'Branco (Iniciante)'}`
+                ? `🥊 ${a.faixaMT || 'Branco'} • ${a.aulasMT || 0} aulas MT`
                 : alunoMod === 'ambos'
-                ? `🥋 ${a.faixa} ${a.grau}ºG  |  🥊 ${a.faixaMT || 'Branco'}`
+                ? `🥋 ${a.faixa} ${a.grau}ºG (${a.aulas || 0}aJ)  |  🥊 ${a.faixaMT || 'Branco'} (${a.aulasMT || 0}aMT)`
                 : `${a.faixa} • ${a.grau}º G • ${a.aulas || 0}/${s.meta}`;
             const corBorda = alunoMod === 'muaythai'
                 ? ui.getCorFaixaMT(a.faixaMT)
@@ -901,11 +906,23 @@ const academia = {
         l.innerHTML = h || "<p style='color:var(--text-muted); text-align:center; font-size:0.8rem; padding:10px;'>Nenhum check-in pendente.</p>";
     },
 
+    // Detecta se a turma é Muay Thai pelo nome
+    _isTurmaMT(turma) {
+        if (!turma) return false;
+        const t = turma.toLowerCase();
+        return t.includes('muay') || t.includes('thai') || t.includes(' mt') || t.startsWith('mt ');
+    },
+
     async aprovar(cId, aId, t) {
         const r = db.collection("alunos").doc(aId); const doc = await r.get();
         if(doc.exists) {
-            const d = doc.data(); const nA = (d.aulas || 0) + 1; const h = d.historico || [];
-            h.unshift({ data: new Date().toLocaleString('pt-BR'), turma: t }); await r.update({ aulas: nA, historico: h });
+            const d = doc.data(); const h = d.historico || [];
+            h.unshift({ data: new Date().toLocaleString('pt-BR'), turma: t });
+            const isMT = this._isTurmaMT(t);
+            const upd = { historico: h };
+            if (isMT) upd.aulasMT = (d.aulasMT || 0) + 1;
+            else       upd.aulas   = (d.aulas   || 0) + 1;
+            await r.update(upd);
         }
         await db.collection("checkins").doc(cId).delete(); this.renderCheckins(); academia.renderRanking(); academia.carregarConquistas();
     },
@@ -1724,7 +1741,11 @@ Ele voltará a ser aluno normal.`)) return;
                 // Computa presença automaticamente
                 const h = d.historico || [];
                 h.unshift({ data: new Date().toLocaleString('pt-BR'), turma: turmaQR });
-                await alunoRef.update({ aulas: (d.aulas || 0) + 1, historico: h });
+                const isMTqr = this._isTurmaMT(turmaQR);
+                const updQR = { historico: h };
+                if (isMTqr) updQR.aulasMT = (d.aulasMT || 0) + 1;
+                else         updQR.aulas   = (d.aulas   || 0) + 1;
+                await alunoRef.update(updQR);
 
                 // Remove checkin pendente se existir
                 const snapCI = await db.collection("checkins").where("alunoId", "==", alunoId).get();
@@ -2159,15 +2180,18 @@ const ui = {
                    </div>`
                 : `<div style="font-weight:700; font-size:0.85rem; border-bottom:2px solid ${corJJ}; display:inline-block; margin-bottom:15px; color:#e2e8f0; padding-bottom:3px;">${d.faixa.toUpperCase()} • ${d.grau}º GRAU</div>`;
 
-            // Bloco de estatísticas
+            // Bloco de estatísticas (contadores separados por modalidade)
             const statsHtml = modPerfil === 'muaythai'
                 ? `<div style="display:flex; gap:10px; margin-bottom:15px;">
-                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">AULAS COMPUTADAS</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulas || 0}</span></div>
-                       <div style="flex:1; background:#4c0519; padding:12px; border-radius:10px; text-align:center; border:1px solid #f43f5e44;"><small style="font-size:0.55rem; color:#f43f5e; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:4px;">🥊 MODALIDADE</small><span style="font-size:0.7rem; font-weight:800; color:#f43f5e;">MUAY THAI</span></div>
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:#f43f5e; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">🥊 AULAS MUAY THAI</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulasMT || 0}</span></div>
+                       <div style="flex:1; background:#4c0519; padding:12px; border-radius:10px; text-align:center; border:1px solid #f43f5e44;"><small style="font-size:0.55rem; color:#f43f5e; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:4px;">MODALIDADE</small><span style="font-size:0.7rem; font-weight:800; color:#f43f5e;">MUAY THAI</span></div>
                    </div>`
                 : modPerfil === 'ambos'
-                ? `<div style="display:flex; gap:10px; margin-bottom:15px;">
-                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">AULAS COMPUTADAS</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulas || 0}</span></div>
+                ? `<div style="display:flex; gap:10px; margin-bottom:8px;">
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid #3b82f644;"><small style="font-size:0.55rem; color:#60a5fa; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">🥋 AULAS JIU-JITSU</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulas || 0}</span></div>
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid #f43f5e44;"><small style="font-size:0.55rem; color:#f43f5e; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">🥊 AULAS MUAY THAI</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulasMT || 0}</span></div>
+                   </div>
+                   <div style="display:flex; gap:10px; margin-bottom:15px;">
                        <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">FALTAM P/ META JJ</small><span style="font-size:1.1rem; font-weight:800; color:var(--accent-gold);">${f}</span></div>
                    </div>`
                 : `<div style="display:flex; gap:10px; margin-bottom:15px;">

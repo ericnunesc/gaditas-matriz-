@@ -24,10 +24,22 @@ const graduacao = {
     getMaxGraus(faixa) { return faixa === "Preta" ? 6 : 4; }
 };
 
-// ── MUAY THAI — Sistema Prajioud ─────────────────────────
+// ── MUAY THAI — Sequência oficial de graduação ───────────
+// Cada faixa É um nível; não há graus separados
 const graduacaoMT = {
-    faixas: ["Sem Graduação", "Branca", "Amarela", "Laranja", "Verde", "Azul", "Vermelha", "Preta"],
-    getMaxGraus: (faixa) => (faixa === "Preta" || faixa === "Sem Graduação") ? 0 : 4
+    faixas: [
+        "Branco",
+        "Branco ponta Vermelha",
+        "Vermelha",
+        "Vermelha ponta Azul Clara",
+        "Azul Clara",
+        "Azul Clara ponta Azul Escura",
+        "Azul Escura",
+        "Azul Escura ponta Preta",
+        "Preta",
+        "Preta ponta Branca",
+        "Preta, Ponta Branca e Vermelha"
+    ]
 };
 
 const auth = {
@@ -815,9 +827,9 @@ const academia = {
                 ? `<span style="background:#2e1065; color:#c4b5fd; font-size:0.5rem; padding:2px 5px; border-radius:4px; font-weight:800; margin-left:5px; vertical-align:middle;">⚡ JJJ+MT</span>`
                 : `<span style="background:#1e3a8a; color:#60a5fa; font-size:0.5rem; padding:2px 5px; border-radius:4px; font-weight:800; margin-left:5px; vertical-align:middle;">🥋 JJJ</span>`;
             const gradInfo = alunoMod === 'muaythai'
-                ? `🥊 ${a.faixaMT || 'Sem Grad.'} • ${a.grauMT ? a.grauMT + 'º G' : 'Iniciante'}`
+                ? `🥊 ${a.faixaMT || 'Branco (Iniciante)'}`
                 : alunoMod === 'ambos'
-                ? `🥋 ${a.faixa} ${a.grau}ºG | 🥊 ${a.faixaMT || 'Sem Grad.'} ${a.grauMT ? a.grauMT + 'ºG' : ''}`
+                ? `🥋 ${a.faixa} ${a.grau}ºG  |  🥊 ${a.faixaMT || 'Branco'}`
                 : `${a.faixa} • ${a.grau}º G • ${a.aulas || 0}/${s.meta}`;
             const corBorda = alunoMod === 'muaythai'
                 ? ui.getCorFaixaMT(a.faixaMT)
@@ -1102,12 +1114,10 @@ const academia = {
         if (a.faixa) { document.getElementById('select-faixa').value = a.faixa; }
         ui.atualizarGraus();
         if (a.grau !== undefined) { document.getElementById('select-graus').value = a.grau; }
-        // Graduação MT
+        // Graduação MT (sem graus — só faixa)
         if (mod === 'muaythai' || mod === 'ambos') {
             const selFaixaMT = document.getElementById('select-faixa-mt');
-            const selGrauMT  = document.getElementById('select-grau-mt');
             if (selFaixaMT && a.faixaMT) selFaixaMT.value = a.faixaMT;
-            if (selGrauMT  && a.grauMT !== undefined) selGrauMT.value = a.grauMT;
         }
         const idadeAtleta = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
         if (idadeAtleta <= 14 && isAdmin) {
@@ -1416,10 +1426,9 @@ Ele voltará a ser aluno normal.`)) return;
             cidade: document.getElementById('cidade-aluno') ? document.getElementById('cidade-aluno').value.trim() : "",
             estado: document.getElementById('estado-aluno') ? document.getElementById('estado-aluno').value.trim().toUpperCase() : ""
         };
-        // Graduação Muay Thai
+        // Graduação Muay Thai (sem graus — cada faixa é um nível único)
         if (modalidadeSalva === 'muaythai' || modalidadeSalva === 'ambos') {
-            dados.faixaMT = document.getElementById('select-faixa-mt')?.value || 'Sem Graduação';
-            dados.grauMT  = parseInt(document.getElementById('select-grau-mt')?.value) || 0;
+            dados.faixaMT = document.getElementById('select-faixa-mt')?.value || 'Branco';
         }
         const painelLeoes = document.getElementById('admin-painel-leoes');
         if (id && painelLeoes && !painelLeoes.classList.contains('hidden')) {
@@ -2032,18 +2041,18 @@ const ui = {
         return c[f.split('/')[0]] || "#fff";
     },
     getCorFaixaMT(f) {
-        if(!f || f === "Sem Graduação") return "#475569";
-        const c = { "Branca": "#cbd5e1", "Amarela": "#ca8a04", "Laranja": "#ea580c", "Verde": "#16a34a", "Azul": "#2563eb", "Vermelha": "#dc2626", "Preta": "#1e1e1e" };
-        return c[f] || "#475569";
-    },
-    atualizarGrausMT() {
-        const selFaixa = document.getElementById('select-faixa-mt');
-        const selGrau  = document.getElementById('select-grau-mt');
-        if (!selFaixa || !selGrau) return;
-        const max = graduacaoMT.getMaxGraus(selFaixa.value);
-        let h = `<option value="0">Sem Grau</option>`;
-        for (let i = 1; i <= max; i++) h += `<option value="${i}">${i}º Grau</option>`;
-        selGrau.innerHTML = h;
+        if (!f) return "#475569";
+        if (f.startsWith("Branco"))           return "#cbd5e1";   // branco
+        if (f.startsWith("Vermelha ponta"))   return "#dc2626";   // vermelho
+        if (f === "Vermelha")                 return "#dc2626";   // vermelho
+        if (f.startsWith("Azul Clara ponta")) return "#60a5fa";   // azul clara
+        if (f === "Azul Clara")               return "#60a5fa";   // azul clara
+        if (f.startsWith("Azul Escura ponta"))return "#1d4ed8";   // azul escura
+        if (f === "Azul Escura")              return "#1d4ed8";   // azul escura
+        if (f.startsWith("Preta ponta"))      return "#334155";   // preta/branca
+        if (f.includes("Branca e Vermelha"))  return "#7f1d1d";   // grão mestre
+        if (f === "Preta")                    return "#0f172a";   // preta
+        return "#475569";
     },
     configurarVisao() {
         const isAdmin = auth.role === 'admin'; const isProf = auth.role === 'professor';

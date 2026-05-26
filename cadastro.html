@@ -21,6 +21,32 @@
             </div>
 
             <div class="login-form">
+
+                <!-- ══ SELEÇÃO DE MODALIDADE (topo) ══ -->
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:14px; padding:14px; margin-bottom:20px;">
+                    <div style="text-align:center; margin-bottom:12px;">
+                        <span style="font-size:0.65rem; font-weight:800; color:#94a3b8; letter-spacing:1px;">🏆 QUAL MODALIDADE VOCÊ VAI TREINAR?</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+                        <button type="button" id="btn-reg-modal-jj" onclick="selecionarModalidadeCad('jiujitsu')"
+                            style="padding:14px 6px; border-radius:12px; border:2px solid #3b82f6; background:#1e3a8a55; color:#60a5fa; font-size:0.7rem; font-weight:800; cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                            <span style="font-size:1.6rem;">🥋</span>
+                            <span>JIU-JITSU</span>
+                        </button>
+                        <button type="button" id="btn-reg-modal-mt" onclick="selecionarModalidadeCad('muaythai')"
+                            style="padding:14px 6px; border-radius:12px; border:2px solid #334155; background:#0f172a; color:#64748b; font-size:0.7rem; font-weight:800; cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                            <span style="font-size:1.6rem;">🥊</span>
+                            <span>MUAY THAI</span>
+                        </button>
+                        <button type="button" id="btn-reg-modal-ambos" onclick="selecionarModalidadeCad('ambos')"
+                            style="padding:14px 6px; border-radius:12px; border:2px solid #334155; background:#0f172a; color:#64748b; font-size:0.7rem; font-weight:800; cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                            <span style="font-size:1.6rem;">⚔️</span>
+                            <span>AMBOS</span>
+                        </button>
+                    </div>
+                </div>
+                <input type="hidden" id="reg-modalidade" value="jiujitsu"/>
+
                 <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">NOME COMPLETO:</small>
                 <div class="input-group" style="margin-bottom: 12px;">
                     <i class="fas fa-user"></i>
@@ -119,24 +145,6 @@
                 </div>
 
 
-<!-- SELEÇÃO DE MODALIDADE -->
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; margin-top:4px;">MODALIDADE QUE VAI PRATICAR:</small>
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:20px;">
-                    <button type="button" id="btn-reg-modal-jj" onclick="selecionarModalidadeCad('jiujitsu')"
-                        style="padding:12px 6px; border-radius:10px; border:2px solid #3b82f6; background:#1e3a8a22; color:#60a5fa; font-size:0.7rem; font-weight:800; cursor:pointer; transition:all 0.2s;">
-                        🥋 JIU-JITSU
-                    </button>
-                    <button type="button" id="btn-reg-modal-mt" onclick="selecionarModalidadeCad('muaythai')"
-                        style="padding:12px 6px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#94a3b8; font-size:0.7rem; font-weight:800; cursor:pointer; transition:all 0.2s;">
-                        🥊 MUAY THAI
-                    </button>
-                    <button type="button" id="btn-reg-modal-ambos" onclick="selecionarModalidadeCad('ambos')"
-                        style="padding:12px 6px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#94a3b8; font-size:0.7rem; font-weight:800; cursor:pointer; transition:all 0.2s;">
-                        ⚔️ AMBOS
-                    </button>
-                </div>
-                <input type="hidden" id="reg-modalidade" value="jiujitsu"/>
-
                 <button id="btnRegistrar" class="btn-login" style="width: 100%; padding: 14px; font-weight: 700; background: #3b82f6; border: none; color: white; border-radius: 10px; cursor: pointer; font-size: 0.85rem;">FINALIZAR MEU CADASTRO</button>
                 
                 <p style="text-align: center; margin-top: 15px; font-size: 0.75rem; color: #94a3b8;">
@@ -165,22 +173,51 @@
 
         function selecionarModalidadeCad(mod) {
             document.getElementById('reg-modalidade').value = mod;
-            const map = { jiujitsu: 'jj', muaythai: 'mt', ambos: 'ambos' };
+            const map   = { jiujitsu: 'jj', muaythai: 'mt', ambos: 'ambos' };
             const cores = { jiujitsu: '#3b82f6', muaythai: '#f43f5e', ambos: '#8b5cf6' };
-            const textos = { jiujitsu: '#60a5fa', muaythai: '#f43f5e', ambos: '#c4b5fd' };
+            const textos= { jiujitsu: '#60a5fa', muaythai: '#f43f5e', ambos: '#c4b5fd' };
+            const bgSel = { jiujitsu: '#1e3a8a55', muaythai: '#4c051955', ambos: '#2e106555' };
+
             ['jiujitsu','muaythai','ambos'].forEach(m => {
                 const btn = document.getElementById(`btn-reg-modal-${map[m]}`);
                 if (!btn) return;
                 if (m === mod) {
                     btn.style.borderColor = cores[m];
-                    btn.style.background = cores[m] + '22';
-                    btn.style.color = textos[m];
-                    btn.style.boxShadow = `0 0 10px ${cores[m]}44`;
+                    btn.style.background  = bgSel[m];
+                    btn.style.color       = textos[m];
+                    btn.style.boxShadow   = `0 0 14px ${cores[m]}55`;
                 } else {
                     btn.style.borderColor = '#334155';
-                    btn.style.background = '#0f172a';
-                    btn.style.color = '#94a3b8';
-                    btn.style.boxShadow = 'none';
+                    btn.style.background  = '#0f172a';
+                    btn.style.color       = '#64748b';
+                    btn.style.boxShadow   = 'none';
+                }
+            });
+
+            // Quando AMBOS → só Família e Livre ficam disponíveis
+            filtrarPlanosPorModalidade(mod);
+
+            // Se plano incompatível estava selecionado, limpa a seleção
+            if (mod === 'ambos' && planoSelecionado && !['familia','livre'].includes(planoSelecionado.key)) {
+                planoSelecionado = null;
+                document.getElementById('reg-plano').value = '';
+                resetarCards();
+            }
+        }
+
+        function filtrarPlanosPorModalidade(mod) {
+            const planosSimples = ['mensal','trimestral','semestral','anual'];
+            planosSimples.forEach(k => {
+                const card = document.getElementById(`plano-card-${k}`);
+                if (!card) return;
+                if (mod === 'ambos') {
+                    card.style.opacity = '0.25';
+                    card.style.pointerEvents = 'none';
+                    card.style.filter = 'grayscale(1)';
+                } else {
+                    card.style.opacity = '1';
+                    card.style.pointerEvents = 'auto';
+                    card.style.filter = 'none';
                 }
             });
         }

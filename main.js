@@ -1811,14 +1811,21 @@ Ele voltará a ser aluno normal.`)) return;
                         ${turmasComConteudo.map(([turma, val]) => {
                             const conteudo = this._planoConteudo(val);
                             const profNome = this._planoProf(val);
+                            const isAdminOrProf = auth.role === 'admin' || auth.role === 'professor';
+                            const itemId = 'hist_' + dataId.replace(/-/g,'') + '_' + turma.replace(/[^a-z0-9]/gi,'_');
+                            const turmaEsc = turma.replace(/'/g, "\\'");
                             return `<div style="margin-bottom:8px; padding:10px; background:#1e293b; border-radius:8px; border-left:2px solid #8b5cf6;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                    <small style="color:#8b5cf6; font-size:0.6rem; font-weight:800; letter-spacing:0.5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:6px;">
+                                    <small style="color:#8b5cf6; font-size:0.6rem; font-weight:800; letter-spacing:0.5px; flex:1;">
                                         <i class="fas fa-clock"></i> ${turma.toUpperCase()}
                                     </small>
                                     <small style="color:#64748b; font-size:0.6rem; font-weight:700;">${profNome ? 'Prof. ' + profNome : 'Prof. não registrado'}</small>
+                                    ${isAdminOrProf ? `
+                                        <button onclick="academia.editarPlanoAula('${dataId}','${turmaEsc}','${itemId}')" style="background:#1e3a8a; border:none; color:#60a5fa; padding:4px 8px; border-radius:5px; cursor:pointer; font-size:0.65rem;"><i class="fas fa-edit"></i></button>
+                                        <button onclick="academia.excluirPlanoAula('${dataId}','${turmaEsc}')" style="background:#4c0519; border:none; color:#f43f5e; padding:4px 8px; border-radius:5px; cursor:pointer; font-size:0.65rem;"><i class="fas fa-trash"></i></button>
+                                    ` : ''}
                                 </div>
-                                <div style="color:#cbd5e1; font-size:0.8rem; line-height:1.5;">${conteudo}</div>
+                                <div id="${itemId}" style="color:#cbd5e1; font-size:0.8rem; line-height:1.5;">${conteudo}</div>
                             </div>`;
                         }).join('')}
                     </div>`;
@@ -1828,6 +1835,45 @@ Ele voltará a ser aluno normal.`)) return;
         } catch(e) {
             container.innerHTML = `<p style="color:#f43f5e; text-align:center; font-size:0.8rem; padding:15px;">Erro ao carregar histórico.</p>`;
         }
+    },
+
+    editarPlanoAula(dataId, turma, itemId) {
+        const div = document.getElementById(itemId);
+        if (!div) return;
+        const conteudoAtual = div.innerText.trim();
+        div.innerHTML = `
+            <textarea id="edit_${itemId}" rows="3"
+                style="width:100%; padding:8px; background:#0f172a; border:1px solid #8b5cf6; color:white; border-radius:6px; font-size:0.8rem; outline:none; resize:none; margin-bottom:6px;">${conteudoAtual}</textarea>
+            <div style="display:flex; gap:6px;">
+                <button onclick="academia.salvarEdicaoHistorico('${dataId}','${turma.replace(/'/g,"\\'")}','${itemId}')"
+                    style="flex:1; padding:7px; background:#8b5cf6; border:none; color:white; border-radius:6px; font-size:0.7rem; font-weight:800; cursor:pointer;">
+                    <i class="fas fa-save"></i> SALVAR
+                </button>
+                <button onclick="academia.renderHistoricoAulas()"
+                    style="flex:1; padding:7px; background:#334155; border:none; color:white; border-radius:6px; font-size:0.7rem; font-weight:800; cursor:pointer;">
+                    CANCELAR
+                </button>
+            </div>`;
+    },
+
+    async salvarEdicaoHistorico(dataId, turma, itemId) {
+        const textarea = document.getElementById('edit_' + itemId);
+        if (!textarea) return;
+        const novoConteudo = textarea.value.trim();
+        if (!novoConteudo) return alert('O conteúdo não pode ser vazio.');
+        const profNome = auth.currentUser?.nome || '';
+        try {
+            await db.collection('plano_aula').doc(dataId).update({ [turma]: { conteudo: novoConteudo, profNome } });
+            await this.renderHistoricoAulas();
+        } catch(e) { alert('Erro ao salvar edição.'); }
+    },
+
+    async excluirPlanoAula(dataId, turma) {
+        if (!confirm(`Excluir o plano de "${turma}" deste dia?`)) return;
+        try {
+            await db.collection('plano_aula').doc(dataId).update({ [turma]: firebase.firestore.FieldValue.delete() });
+            await this.renderHistoricoAulas();
+        } catch(e) { alert('Erro ao excluir.'); }
     },
 
     toggleEdicaoHorarios() {

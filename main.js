@@ -930,7 +930,7 @@ const academia = {
                     <div style="background:#1e293b; border:1px solid #8b5cf644; border-left:3px solid #8b5cf6; border-radius:8px; padding:12px; margin-top:10px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
                             <small style="color:#8b5cf6; font-weight:800; font-size:0.6rem; letter-spacing:0.5px;"><i class="fas fa-clipboard-list"></i> O QUE SERÁ MINISTRADO:</small>
-                            ${profNome ? `<small style="color:#64748b; font-size:0.6rem; font-weight:700;">Prof. ${profNome}</small>` : ''}
+                            <small style="color:#64748b; font-size:0.6rem; font-weight:700;">${profNome ? 'Prof. ' + profNome : ''}</small>
                         </div>
                         <div style="color:#e2e8f0; font-size:0.85rem; font-weight:500; line-height:1.6;">${conteudo}</div>
                     </div>`;
@@ -1816,7 +1816,7 @@ Ele voltará a ser aluno normal.`)) return;
                                     <small style="color:#8b5cf6; font-size:0.6rem; font-weight:800; letter-spacing:0.5px;">
                                         <i class="fas fa-clock"></i> ${turma.toUpperCase()}
                                     </small>
-                                    ${profNome ? `<small style="color:#64748b; font-size:0.6rem; font-weight:700;">Prof. ${profNome}</small>` : ''}
+                                    <small style="color:#64748b; font-size:0.6rem; font-weight:700;">${profNome ? 'Prof. ' + profNome : 'Prof. não registrado'}</small>
                                 </div>
                                 <div style="color:#cbd5e1; font-size:0.8rem; line-height:1.5;">${conteudo}</div>
                             </div>`;

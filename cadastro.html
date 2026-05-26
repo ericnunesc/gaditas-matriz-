@@ -128,6 +128,24 @@
                     </div>
                 </div>
 
+                <!-- SELEÇÃO DE MODALIDADE -->
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; margin-top:4px;">MODALIDADE QUE VAI PRATICAR:</small>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:20px;">
+                    <button type="button" id="btn-reg-modal-jj" onclick="selecionarModalidadeCad('jiujitsu')"
+                        style="padding:12px 6px; border-radius:10px; border:2px solid #3b82f6; background:#1e3a8a22; color:#60a5fa; font-size:0.7rem; font-weight:800; cursor:pointer; transition:all 0.2s;">
+                        🥋 JIU-JITSU
+                    </button>
+                    <button type="button" id="btn-reg-modal-mt" onclick="selecionarModalidadeCad('muaythai')"
+                        style="padding:12px 6px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#94a3b8; font-size:0.7rem; font-weight:800; cursor:pointer; transition:all 0.2s;">
+                        🥊 MUAY THAI
+                    </button>
+                    <button type="button" id="btn-reg-modal-ambos" onclick="selecionarModalidadeCad('ambos')"
+                        style="padding:12px 6px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#94a3b8; font-size:0.7rem; font-weight:800; cursor:pointer; transition:all 0.2s;">
+                        ⚔️ AMBOS
+                    </button>
+                </div>
+                <input type="hidden" id="reg-modalidade" value="jiujitsu"/>
+
                 <button id="btnRegistrar" class="btn-login" style="width: 100%; padding: 14px; font-weight: 700; background: #3b82f6; border: none; color: white; border-radius: 10px; cursor: pointer; font-size: 0.85rem;">FINALIZAR MEU CADASTRO</button>
                 
                 <p style="text-align: center; margin-top: 15px; font-size: 0.75rem; color: #94a3b8;">
@@ -153,6 +171,28 @@
 
         const db = firebase.firestore();
         let planoSelecionado = null;
+
+        function selecionarModalidadeCad(mod) {
+            document.getElementById('reg-modalidade').value = mod;
+            const map = { jiujitsu: 'jj', muaythai: 'mt', ambos: 'ambos' };
+            const cores = { jiujitsu: '#3b82f6', muaythai: '#f43f5e', ambos: '#8b5cf6' };
+            const textos = { jiujitsu: '#60a5fa', muaythai: '#f43f5e', ambos: '#c4b5fd' };
+            ['jiujitsu','muaythai','ambos'].forEach(m => {
+                const btn = document.getElementById(`btn-reg-modal-${map[m]}`);
+                if (!btn) return;
+                if (m === mod) {
+                    btn.style.borderColor = cores[m];
+                    btn.style.background = cores[m] + '22';
+                    btn.style.color = textos[m];
+                    btn.style.boxShadow = `0 0 10px ${cores[m]}44`;
+                } else {
+                    btn.style.borderColor = '#334155';
+                    btn.style.background = '#0f172a';
+                    btn.style.color = '#94a3b8';
+                    btn.style.boxShadow = 'none';
+                }
+            });
+        }
 
         // Carrega os planos do Firebase
         async function carregarPlanos() {
@@ -254,6 +294,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             carregarPlanos();
+            selecionarModalidadeCad('jiujitsu'); // padrão
 
             // Máscaras
             document.getElementById('reg-cpf').addEventListener('input', (e) => {
@@ -302,6 +343,8 @@
                     const bairro = document.getElementById('reg-bairro').value.trim();
                     const cidade = document.getElementById('reg-cidade').value.trim();
                     const estado = document.getElementById('reg-estado').value.trim().toUpperCase();
+
+                    const modalidade = document.getElementById('reg-modalidade').value || 'jiujitsu';
 
                     if (!nome || !email || !pass || !cpf || !telefone || !cep || !rua || !numero || !bairro || !cidade || !estado) {
                         return alert("Por favor, preencha todos os campos obrigatórios.");
@@ -361,7 +404,8 @@
                             plano: planoSelecionado.key,
                             planoLabel: planoSelecionado.label,
                             planoValor: planoSelecionado.valor,
-                            faixa: "Branca", grau: 0, aulas: 0, role: "aluno",
+                            faixa: "Branca", grau: 0, aulas: 0, aulasMT: 0,
+                            modalidade: modalidade, role: "aluno",
                             cadastroData: firebase.firestore.FieldValue.serverTimestamp(),
                             cadastroPendente: true
                         };

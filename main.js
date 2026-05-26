@@ -2144,18 +2144,51 @@ const ui = {
                     <div style="font-size:0.8rem; color:#e2e8f0; font-weight:600;"><i class="fas fa-check-circle" style="color:var(--accent-green); margin-right:6px;"></i> ${t.turma.toUpperCase()}</div>
                     <div style="font-size:0.65rem; color:var(--text-muted); font-weight:500;">${t.data.split(' ')[0]} às ${t.data.split(' ')[1] || ''}</div>
                 </div>`).join('') || `<p style="color:var(--text-muted); text-align:center; font-size:0.75rem; padding:10px;">Nenhum treino registrado.</p>`;
+            // ── Blocos condicionais por modalidade ────────────────
+            const modPerfil = d.modalidade || 'jiujitsu';
+            const corJJ = this.getCorFaixa(d.faixa);
+            const corMT = this.getCorFaixaMT(d.faixaMT);
+
+            // Bloco de faixa/graduação
+            const beltHtml = modPerfil === 'muaythai'
+                ? `<div style="font-weight:700; font-size:0.85rem; border-bottom:2px solid ${corMT}; display:inline-block; margin-bottom:15px; color:#e2e8f0; padding-bottom:3px;">🥊 ${(d.faixaMT || 'Branco').toUpperCase()} — MUAY THAI</div>`
+                : modPerfil === 'ambos'
+                ? `<div style="display:flex; flex-direction:column; gap:5px; margin-bottom:15px;">
+                       <div style="font-weight:700; font-size:0.8rem; border-left:3px solid ${corJJ}; padding-left:8px; color:#e2e8f0;">🥋 ${d.faixa.toUpperCase()} • ${d.grau}º GRAU — JIU-JITSU</div>
+                       <div style="font-weight:700; font-size:0.8rem; border-left:3px solid ${corMT}; padding-left:8px; color:#e2e8f0;">🥊 ${(d.faixaMT || 'Branco').toUpperCase()} — MUAY THAI</div>
+                   </div>`
+                : `<div style="font-weight:700; font-size:0.85rem; border-bottom:2px solid ${corJJ}; display:inline-block; margin-bottom:15px; color:#e2e8f0; padding-bottom:3px;">${d.faixa.toUpperCase()} • ${d.grau}º GRAU</div>`;
+
+            // Bloco de estatísticas
+            const statsHtml = modPerfil === 'muaythai'
+                ? `<div style="display:flex; gap:10px; margin-bottom:15px;">
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">AULAS COMPUTADAS</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulas || 0}</span></div>
+                       <div style="flex:1; background:#4c0519; padding:12px; border-radius:10px; text-align:center; border:1px solid #f43f5e44;"><small style="font-size:0.55rem; color:#f43f5e; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:4px;">🥊 MODALIDADE</small><span style="font-size:0.7rem; font-weight:800; color:#f43f5e;">MUAY THAI</span></div>
+                   </div>`
+                : modPerfil === 'ambos'
+                ? `<div style="display:flex; gap:10px; margin-bottom:15px;">
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">AULAS COMPUTADAS</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulas || 0}</span></div>
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">FALTAM P/ META JJ</small><span style="font-size:1.1rem; font-weight:800; color:var(--accent-gold);">${f}</span></div>
+                   </div>`
+                : `<div style="display:flex; gap:10px; margin-bottom:15px;">
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">AULAS COMPUTADAS</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulas || 0}</span></div>
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">FALTAM P/ META</small><span style="font-size:1.1rem; font-weight:800; color:var(--accent-gold);">${f}</span></div>
+                   </div>`;
+
+            // Barra de progresso (só JJ/ambos)
+            const progressHtml = modPerfil !== 'muaythai'
+                ? `<div style="background:#16161a; height:6px; border-radius:3px; overflow:hidden; margin-bottom:15px;"><div style="width:${s.percent}%; background:var(--accent-blue); height:100%;"></div></div>`
+                : '';
+
             card.innerHTML = `
                 <div class="curriculo-atleta" style="background: var(--bg-card); padding: 18px; border-radius: 16px; border: 1px solid var(--border-light);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <h2 style="color:var(--accent-blue); margin:0; font-size: 0.95rem; font-weight:800; letter-spacing:-0.3px;">${d.nome.toUpperCase()}</h2>
                         <span style="background:${eng.color}; font-size: 0.55rem; padding: 4px 10px; border-radius: 20px; font-weight: 700; color:white;">${eng.icon} ${eng.label.toUpperCase()}</span>
                     </div>
-                    <div style="font-weight: 700; font-size: 0.85rem; border-bottom: 2px solid ${this.getCorFaixa(d.faixa)}; display: inline-block; margin-bottom: 15px; color:#e2e8f0; padding-bottom:3px;">${d.faixa.toUpperCase()} • ${d.grau}º GRAU</div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                        <div style="flex: 1; background: #0f172a; padding: 12px; border-radius: 10px; text-align: center; border:1px solid var(--border-light);"><small style="font-size: 0.55rem; color: var(--text-muted); display: block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">AULAS COMPUTADAS</small><span style="font-size: 1.1rem; font-weight: 800; color: white;">${d.aulas || 0}</span></div>
-                        <div style="flex: 1; background: #0f172a; padding: 12px; border-radius: 10px; text-align: center; border:1px solid var(--border-light);"><small style="font-size: 0.55rem; color: var(--text-muted); display: block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">FALTAM P/ META</small><span style="font-size: 1.1rem; font-weight: 800; color: var(--accent-gold);">${f}</span></div>
-                    </div>
-                    <div style="background: #16161a; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 15px;"><div style="width:${s.percent}%; background: var(--accent-blue); height: 100%;"></div></div>
+                    ${beltHtml}
+                    ${statsHtml}
+                    ${progressHtml}
                     <button onclick="academia.toggleHistoricoTreinos()" class="btn-clean" style="margin-top:0; color:#60a5fa; text-align:center; display:block; width:100%; font-size:0.75rem; font-weight:700;"><i class="fas fa-history"></i> VER MEU HISTÓRICO DE TREINOS</button>
                     <div id="secao-historico-treinos-aluno" class="hidden" style="margin-top:15px; padding-top:12px; border-top:1px solid var(--border-light); max-height:200px; overflow-y:auto; padding-right:4px;">${htmlLinhaTempo}</div>
                 </div>`;

@@ -423,10 +423,15 @@
                             plano: planoSelecionado.key,
                             planoLabel: planoSelecionado.label,
                             planoValor: planoSelecionado.valor,
-                            faixa: "Branca", grau: 0, aulas: 0, aulasMT: 0,
                             modalidade: modalidade, role: "aluno",
                             cadastroData: firebase.firestore.FieldValue.serverTimestamp(),
-                            cadastroPendente: true
+                            cadastroPendente: true,
+                            // Campos de Jiu-Jitsu (sempre presentes)
+                            faixa: "Branca", grau: 0, aulas: 0,
+                            // Campos de Muay Thai — só para MT e AMBOS
+                            ...(modalidade === 'muaythai' || modalidade === 'ambos'
+                                ? { faixaMT: "Branco", aulasMT: 0 }
+                                : { aulasMT: 0 })
                         };
                         if (qtdFamilia) novoAluno.qtdFamilia = qtdFamilia;
                         if (asaasId) novoAluno.asaasId = asaasId;

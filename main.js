@@ -1578,8 +1578,8 @@ Ele voltará a ser aluno normal.`)) return;
     _professorRelatoId: null,
     _professorRelatoNome: null,
     _relatoListener: null,
-    _relatoRespondidoVisto: null,   // {id, resposta} carregado do localStorage
-    _relatoRespondidoAtual: null,   // {id, resposta} da resposta pendente de ser marcada como vista
+    _relatosVistos: {},             // Map { docId: respostaText } — persiste no localStorage
+    _relatoRespondidoAtual: null,   // {id, resposta} da resposta em exibição no toast
     alunoMuralSelecionado: null,
 
     selecionarPublicoMural(publico) {
@@ -1661,42 +1661,42 @@ Ele voltará a ser aluno normal.`)) return;
         // Cancela listener anterior se houver
         if (this._relatoListener) { this._relatoListener(); this._relatoListener = null; }
 
-        // Carrega do localStorage o que o aluno já viu (persiste entre sessões)
+        // Carrega do localStorage o Map de todas as respostas já vistas (persiste entre sessões)
         try {
-            const stored = localStorage.getItem(`relato_resp_visto_${auth.currentUser.id}`);
-            this._relatoRespondidoVisto = stored ? JSON.parse(stored) : null;
-        } catch(e) { this._relatoRespondidoVisto = null; }
+            const stored = localStorage.getItem(`relatos_vistos_${auth.currentUser.id}`);
+            this._relatosVistos = stored ? JSON.parse(stored) : {};
+        } catch(e) { this._relatosVistos = {}; }
 
         this._relatoListener = db.collection("relatos_saude")
             .where("alunoId","==", auth.currentUser.id)
             .onSnapshot(snap => {
-                snap.docChanges().forEach(change => {
-                    if (change.type === 'modified' || change.type === 'added') {
-                        const d = change.doc.data();
-                        const id = change.doc.id;
-                        if (d.respondido && d.resposta) {
-                            // Só mostra o toast se esta resposta específica ainda não foi vista
-                            const visto = this._relatoRespondidoVisto;
-                            const jaViu = visto && visto.id === id && visto.resposta === d.resposta;
-                            if (!jaViu) {
-                                // Registra resposta pendente (salva no localStorage só quando o aluno fechar o toast ou abrir o card)
-                                this._relatoRespondidoAtual = { id, resposta: d.resposta };
-                                // Mostra toast
-                                const toast = document.getElementById('toast-resposta-relato');
-                                const textoEl = document.getElementById('toast-resposta-texto');
-                                if (toast && textoEl) {
-                                    textoEl.textContent = d.resposta;
-                                    toast.classList.remove('hidden');
-                                }
-                                // Mostra badge no botão
-                                const badge = document.getElementById('badge-resposta-relato');
-                                if (badge) badge.classList.remove('hidden');
-                                // Atualiza o campo de resposta no card se estiver aberto
-                                this.carregarRespostaRelato();
-                            }
-                        }
-                    }
-                });
+                // Analisa o snapshot completo — pega APENAS o relato ativo mais recente
+                const todos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const ativo = todos
+                    .filter(d => !d.arquivado)
+                    .sort((a,b) => (b.data||0)-(a.data||0))[0];
+
+                // Só age se o relato ativo tiver resposta
+                if (!ativo || !ativo.respondido || !ativo.resposta) return;
+
+                // Verifica se esta resposta específica já foi vista
+                const jaViu = this._relatosVistos[ativo.id] === ativo.resposta;
+                if (jaViu) return;
+
+                // Guarda referência da resposta atual para salvar ao fechar/abrir
+                this._relatoRespondidoAtual = { id: ativo.id, resposta: ativo.resposta };
+                // Mostra toast
+                const toast  = document.getElementById('toast-resposta-relato');
+                const textoEl = document.getElementById('toast-resposta-texto');
+                if (toast && textoEl) {
+                    textoEl.textContent = ativo.resposta;
+                    toast.classList.remove('hidden');
+                }
+                // Mostra badge no botão
+                const badge = document.getElementById('badge-resposta-relato');
+                if (badge) badge.classList.remove('hidden');
+                // Atualiza o card se estiver aberto
+                this.carregarRespostaRelato();
             });
     },
 
@@ -1794,14 +1794,17 @@ Ele voltará a ser aluno normal.`)) return;
 
     _marcarRespostaVista() {
         if (!this._relatoRespondidoAtual || !auth.currentUser) return;
-        this._relatoRespondidoVisto = this._relatoRespondidoAtual;
+        if (!this._relatosVistos) this._relatosVistos = {};
+        // Adiciona esta resposta ao Map de vistas
+        this._relatosVistos[this._relatoRespondidoAtual.id] = this._relatoRespondidoAtual.resposta;
         try {
             localStorage.setItem(
-                `relato_resp_visto_${auth.currentUser.id}`,
-                JSON.stringify(this._relatoRespondidoAtual)
+                `relatos_vistos_${auth.currentUser.id}`,
+                JSON.stringify(this._relatosVistos)
             );
         } catch(e) {}
-        // Esconde badge ao marcar como visto
+        this._relatoRespondidoAtual = null;
+        // Esconde badge
         const badge = document.getElementById('badge-resposta-relato');
         if (badge) badge.classList.add('hidden');
     },

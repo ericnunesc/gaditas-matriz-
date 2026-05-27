@@ -1730,15 +1730,17 @@ Ele voltará a ser aluno normal.`)) return;
     async carregarRespostaRelato() {
         if (!auth.currentUser) return;
         try {
+            // Busca todos os relatos do aluno e filtra no client (evita índice composto)
             const snap = await db.collection("relatos_saude")
-                .where("alunoId","==", auth.currentUser.id)
-                .where("respondido","==", true)
-                .orderBy("data","desc").limit(1).get();
+                .where("alunoId","==", auth.currentUser.id).get();
+            const respondidos = snap.docs
+                .filter(d => d.data().respondido && d.data().resposta)
+                .sort((a,b) => (b.data().data||0) - (a.data().data||0));
             const divResp  = document.getElementById('resposta-professor-relato');
             const divTexto = document.getElementById('texto-resposta-professor');
             const divData  = document.getElementById('data-resposta-professor');
-            if (!snap.empty && divResp && divTexto) {
-                const d = snap.docs[0].data();
+            if (respondidos.length > 0 && divResp && divTexto) {
+                const d = respondidos[0].data();
                 divTexto.textContent = d.resposta;
                 if (divData) divData.textContent = d.respostaDataFormatada || '';
                 divResp.classList.remove('hidden');
@@ -1754,15 +1756,16 @@ Ele voltará a ser aluno normal.`)) return;
         if (card) card.classList.remove('hidden');
         lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:10px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small>';
         try {
-            const snap = await db.collection("relatos_saude").orderBy("data","desc").limit(30).get();
-            const naoLidos = snap.docs.filter(d => !d.data().lido).length;
+            const snap = await db.collection("relatos_saude").orderBy("data","desc").limit(50).get();
+            const ativos   = snap.docs.filter(d => !d.data().arquivado);
+            const naoLidos = ativos.filter(d => !d.data().lido).length;
             if (badge) badge.textContent = naoLidos;
 
-            if (snap.empty) {
-                lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:10px;">Nenhum relato recebido. ✅</small>';
+            if (ativos.length === 0) {
+                lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:10px;">Nenhum relato ativo. ✅</small>';
                 return;
             }
-            lista.innerHTML = snap.docs.map(doc => {
+            lista.innerHTML = ativos.map(doc => {
                 const d = doc.data();
                 const icon  = d.tipo === 'machucado' ? '🤕' : '🤒';
                 const label = d.tipo === 'machucado' ? 'MACHUCADO' : 'DOENTE';
@@ -1789,8 +1792,8 @@ Ele voltará a ser aluno normal.`)) return;
                     }
                 </div>`;
             }).join('');
-            // Marca como lidos
-            snap.docs.filter(d => !d.data().lido).forEach(doc => {
+            // Marca ativos como lidos
+            ativos.filter(d => !d.data().lido).forEach(doc => {
                 db.collection("relatos_saude").doc(doc.id).update({ lido: true }).catch(()=>{});
             });
         } catch(e) { lista.innerHTML = '<small style="color:#f43f5e;">Erro ao carregar relatos.</small>'; }
@@ -1810,9 +1813,9 @@ Ele voltará a ser aluno normal.`)) return;
     },
 
     async resolverRelato(id) {
-        if (!confirm("Marcar este relato como resolvido e arquivar?")) return;
+        if (!confirm("Marcar este relato como resolvido?")) return;
         try {
-            await db.collection("relatos_saude").doc(id).delete();
+            await db.collection("relatos_saude").doc(id).update({ arquivado: true });
             this.carregarRelatosSaude();
         } catch(e) { alert("Erro."); }
     },

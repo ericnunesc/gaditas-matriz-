@@ -2112,10 +2112,13 @@ const ui = {
         for (let i = 0; i < (grau || 0); i++) {
             stripes += `<div style="width:3px; height:75%; background:rgba(255,255,255,0.92); border-radius:1px;"></div>`;
         }
+        // Estrutura: [corpo colorido][ponta preta c/ graus][pequeno pedaço colorido]
         return `<div style="display:flex; height:10px; border-radius:3px; overflow:hidden; width:100%; margin-top:4px;">
             <div style="flex:3; background:${bodyBg};"></div>
             <div style="width:2px; background:#0a0a0f;"></div>
-            <div style="flex:0.9; background:#111827; display:flex; align-items:center; justify-content:center; gap:2px;">${stripes}</div>
+            <div style="flex:1; background:#111827; display:flex; align-items:center; justify-content:center; gap:2px;">${stripes}</div>
+            <div style="width:2px; background:#0a0a0f;"></div>
+            <div style="flex:0.25; background:${bodyBg};"></div>
         </div>`;
     },
 

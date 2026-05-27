@@ -1570,6 +1570,7 @@ Ele voltará a ser aluno normal.`)) return;
     },
 
     publicoMuralAtual: 'todos',
+    _tipoRelatoAtual: 'machucado',
     alunoMuralSelecionado: null,
 
     selecionarPublicoMural(publico) {
@@ -1625,6 +1626,148 @@ Ele voltará a ser aluno normal.`)) return;
         document.getElementById('mural-aluno-selecionado').classList.add('hidden');
         document.getElementById('mural-input-busca-aluno').value = '';
         document.getElementById('mural-lista-alunos').innerHTML = '';
+    },
+
+    // ══════════════════════════════════════════
+    // RELATOS DE SAÚDE
+    // ══════════════════════════════════════════
+    toggleRelatoSaude() {
+        const card = document.getElementById('card-relato-saude');
+        if (!card) return;
+        card.classList.toggle('hidden');
+        if (!card.classList.contains('hidden')) this.carregarRespostaRelato();
+    },
+
+    selecionarTipoRelato(tipo) {
+        this._tipoRelatoAtual = tipo;
+        const cfg = {
+            machucado: { border:'#f97316', bg:'#431407', color:'#fb923c' },
+            doente:    { border:'#334155', bg:'#0f172a', color:'#64748b' }
+        };
+        ['machucado','doente'].forEach(t => {
+            const btn = document.getElementById(`btn-tipo-${t}`);
+            if (!btn) return;
+            const s = t === tipo
+                ? { border:'#f97316', bg:'#431407', color:'#fb923c' }
+                : (t === 'doente' && tipo === 'doente')
+                    ? { border:'#f43f5e', bg:'#4c0519', color:'#f43f5e' }
+                    : { border:'#334155', bg:'#0f172a', color:'#64748b' };
+            // cor dinâmica por tipo selecionado
+            const ativo = t === tipo;
+            btn.style.borderColor = ativo ? (tipo === 'machucado' ? '#f97316' : '#f43f5e') : '#334155';
+            btn.style.background  = ativo ? (tipo === 'machucado' ? '#431407' : '#4c0519') : '#0f172a';
+            btn.style.color       = ativo ? (tipo === 'machucado' ? '#fb923c' : '#f43f5e') : '#64748b';
+        });
+    },
+
+    async enviarRelato() {
+        const texto = document.getElementById('textarea-relato')?.value.trim();
+        if (!texto) return alert("Descreva o que está acontecendo antes de enviar.");
+        const aluno = auth.currentUser;
+        try {
+            await db.collection("relatos_saude").add({
+                alunoId: aluno.id,
+                alunoNome: aluno.nome || aluno.name || aluno.email,
+                tipo: this._tipoRelatoAtual,
+                relato: texto,
+                data: new Date().getTime(),
+                dataFormatada: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
+                lido: false, respondido: false, resposta: null
+            });
+            document.getElementById('textarea-relato').value = '';
+            document.getElementById('card-relato-saude').classList.add('hidden');
+            alert("✅ Relato enviado! O professor foi notificado. OSS!");
+        } catch(e) { alert("Erro ao enviar relato."); }
+    },
+
+    async carregarRespostaRelato() {
+        if (!auth.currentUser) return;
+        try {
+            const snap = await db.collection("relatos_saude")
+                .where("alunoId","==", auth.currentUser.id)
+                .where("respondido","==", true)
+                .orderBy("data","desc").limit(1).get();
+            const divResp  = document.getElementById('resposta-professor-relato');
+            const divTexto = document.getElementById('texto-resposta-professor');
+            const divData  = document.getElementById('data-resposta-professor');
+            if (!snap.empty && divResp && divTexto) {
+                const d = snap.docs[0].data();
+                divTexto.textContent = d.resposta;
+                if (divData) divData.textContent = d.respostaDataFormatada || '';
+                divResp.classList.remove('hidden');
+            }
+        } catch(e) {}
+    },
+
+    async carregarRelatosSaude() {
+        const card  = document.getElementById('card-alertas-saude');
+        const lista = document.getElementById('lista-relatos-saude');
+        const badge = document.getElementById('badge-relatos');
+        if (!lista) return;
+        if (card) card.classList.remove('hidden');
+        lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:10px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small>';
+        try {
+            const snap = await db.collection("relatos_saude").orderBy("data","desc").limit(30).get();
+            const naoLidos = snap.docs.filter(d => !d.data().lido).length;
+            if (badge) badge.textContent = naoLidos;
+
+            if (snap.empty) {
+                lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:10px;">Nenhum relato recebido. ✅</small>';
+                return;
+            }
+            lista.innerHTML = snap.docs.map(doc => {
+                const d = doc.data();
+                const icon  = d.tipo === 'machucado' ? '🤕' : '🤒';
+                const label = d.tipo === 'machucado' ? 'MACHUCADO' : 'DOENTE';
+                const cor   = d.tipo === 'machucado' ? '#f97316' : '#f43f5e';
+                const novo  = !d.lido ? 'border-left:3px solid #f43f5e;' : '';
+                return `<div style="background:#0f172a; border-radius:10px; padding:12px; margin-bottom:8px; ${novo}">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                        <span style="font-weight:800; font-size:0.8rem; color:#e2e8f0;">${icon} ${(d.alunoNome||'').toUpperCase()}</span>
+                        <span style="background:${cor}22; color:${cor}; font-size:0.55rem; font-weight:800; padding:2px 7px; border-radius:4px; flex-shrink:0; margin-left:6px;">${label}</span>
+                    </div>
+                    <p style="color:#cbd5e1; font-size:0.75rem; margin:0 0 4px 0; line-height:1.5; font-style:italic;">"${d.relato}"</p>
+                    <small style="color:#475569; font-size:0.6rem;">${d.dataFormatada}</small>
+                    ${d.respondido
+                        ? `<div style="margin-top:8px; background:#0c2344; padding:8px; border-radius:6px; border-left:2px solid #3b82f6;">
+                               <small style="color:#3b82f6; font-size:0.6rem; font-weight:800;">SUA RESPOSTA:</small>
+                               <p style="color:#93c5fd; font-size:0.75rem; margin:3px 0 0 0;">${d.resposta}</p>
+                           </div>
+                           <button onclick="academia.resolverRelato('${doc.id}')" style="margin-top:6px; width:100%; padding:7px; background:#064e3b22; border:1px solid #10b98144; color:#10b981; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.65rem;">✓ MARCAR COMO RESOLVIDO</button>`
+                        : `<div style="display:flex; gap:6px; margin-top:8px;">
+                               <input type="text" id="resp-${doc.id}" placeholder="Responder ao aluno..." style="flex:1; padding:8px; background:#1e293b; border:1px solid #334155; color:white; border-radius:6px; outline:none; font-size:0.75rem;"/>
+                               <button onclick="academia.responderRelato('${doc.id}')" style="padding:8px 12px; background:#3b82f6; border:none; color:white; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; white-space:nowrap;"><i class="fas fa-reply"></i> ENVIAR</button>
+                           </div>
+                           <button onclick="academia.resolverRelato('${doc.id}')" style="margin-top:6px; width:100%; padding:7px; background:#064e3b22; border:1px solid #10b98144; color:#10b981; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.65rem;">✓ MARCAR COMO RESOLVIDO SEM RESPONDER</button>`
+                    }
+                </div>`;
+            }).join('');
+            // Marca como lidos
+            snap.docs.filter(d => !d.data().lido).forEach(doc => {
+                db.collection("relatos_saude").doc(doc.id).update({ lido: true }).catch(()=>{});
+            });
+        } catch(e) { lista.innerHTML = '<small style="color:#f43f5e;">Erro ao carregar relatos.</small>'; }
+    },
+
+    async responderRelato(id) {
+        const input = document.getElementById(`resp-${id}`);
+        const texto = input?.value.trim();
+        if (!texto) return alert("Escreva uma resposta antes de enviar.");
+        try {
+            await db.collection("relatos_saude").doc(id).update({
+                respondido: true, resposta: texto,
+                respostaDataFormatada: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
+            });
+            this.carregarRelatosSaude();
+        } catch(e) { alert("Erro ao responder."); }
+    },
+
+    async resolverRelato(id) {
+        if (!confirm("Marcar este relato como resolvido e arquivar?")) return;
+        try {
+            await db.collection("relatos_saude").doc(id).delete();
+            this.carregarRelatosSaude();
+        } catch(e) { alert("Erro."); }
     },
 
     async salvarAvisoMural() {
@@ -2059,11 +2202,13 @@ const ui = {
         document.querySelectorAll('.bottom-nav .nav-item').forEach(btn => btn.classList.remove('active'));
         const activeBtn = Array.from(document.querySelectorAll('.bottom-nav .nav-item')).find(btn => btn.getAttribute('onclick').includes(id));
         if (activeBtn) activeBtn.classList.add('active');
-        if(id === 'tab-alunos') { 
+        if(id === 'tab-alunos') {
             const inputBusca = document.getElementById('input-busca-aluno'); if (inputBusca) inputBusca.value = "";
             if (document.getElementById('filtro-avancado-faixas')) document.getElementById('filtro-avancado-faixas').value = "all";
-            academia.textoBuscaNome = ""; academia.categoriaFiltroAtual = "all"; academia.filtrarCategoriaAlunos("all"); 
+            academia.textoBuscaNome = ""; academia.categoriaFiltroAtual = "all"; academia.filtrarCategoriaAlunos("all");
             academia.renderProfessores(); this.renderTurmasCheckboxes();
+            // Carrega relatos de saúde para prof/admin
+            if (auth.role === 'admin' || auth.role === 'professor') academia.carregarRelatosSaude();
             if (auth.role === 'admin') academia.carregarVideosPendentesAdmin();
             if (auth.role === 'professor') {
                 academia.carregarVideosPendentesProf();

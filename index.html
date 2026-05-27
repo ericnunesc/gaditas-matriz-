@@ -171,10 +171,34 @@
                         <span><i class="fas fa-key" style="color:#f59e0b; margin-right:8px; font-size:1.1rem;"></i> ALTERAR MINHA SENHA</span>
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
-                    <div id="card-alterar-senha" class="hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-bottom:35px;">
+                    <div id="card-alterar-senha" class="hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-bottom:8px;">
                         <input type="password" id="nova-senha" placeholder="Nova senha (mínimo 6 caracteres)" style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:8px;"/>
                         <input type="password" id="confirmar-senha" placeholder="Confirmar nova senha" style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:12px;"/>
                         <button onclick="executarAlterarSenha()" style="width:100%; padding:13px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.85rem;"><i class="fas fa-save"></i> SALVAR NOVA SENHA</button>
+                    </div>
+
+                    <!-- ── RELATO DE SAÚDE (aluno) ── -->
+                    <button onclick="academia.toggleRelatoSaude()" class="btn-save" style="background:#1e293b; border:1px solid #f43f5e44; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
+                        <span><i class="fas fa-heartbeat" style="color:#f43f5e; margin-right:8px; font-size:1.1rem;"></i> ESTOU MACHUCADO / DOENTE</span>
+                        <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
+                    </button>
+                    <div id="card-relato-saude" class="hidden" style="background:#1e293b; border:1px solid #f43f5e44; padding:15px; border-radius:12px; margin-bottom:35px;">
+                        <small style="color:#f43f5e; font-size:0.6rem; font-weight:800; display:block; margin-bottom:10px; letter-spacing:0.5px;">O QUE ESTÁ ACONTECENDO?</small>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+                            <button id="btn-tipo-machucado" onclick="academia.selecionarTipoRelato('machucado')" style="padding:12px 6px; border-radius:10px; border:2px solid #f97316; background:#431407; color:#fb923c; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                                <span style="font-size:1.4rem;">🤕</span><span>MACHUCADO</span>
+                            </button>
+                            <button id="btn-tipo-doente" onclick="academia.selecionarTipoRelato('doente')" style="padding:12px 6px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#64748b; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                                <span style="font-size:1.4rem;">🤒</span><span>DOENTE</span>
+                            </button>
+                        </div>
+                        <textarea id="textarea-relato" placeholder="Descreva o que aconteceu ou como se sente..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; margin-bottom:10px; resize:none; box-sizing:border-box;"></textarea>
+                        <button onclick="academia.enviarRelato()" style="width:100%; padding:12px; background:#f43f5e; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;"><i class="fas fa-paper-plane"></i> ENVIAR RELATO AO PROFESSOR</button>
+                        <div id="resposta-professor-relato" class="hidden" style="margin-top:12px; padding:12px; background:#0c2344; border-radius:8px; border-left:3px solid #3b82f6;">
+                            <small style="color:#3b82f6; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;"><i class="fas fa-comment-dots"></i> RESPOSTA DO PROFESSOR:</small>
+                            <div id="texto-resposta-professor" style="color:#93c5fd; font-size:0.8rem; line-height:1.5;"></div>
+                            <small id="data-resposta-professor" style="color:#475569; font-size:0.6rem;"></small>
+                        </div>
                     </div>
                 </div>
 
@@ -202,6 +226,18 @@
             </div>
 
             <div id="tab-alunos" class="tab-content hidden" style="padding:15px;">
+
+                <!-- ══ ALERTAS DE SAÚDE (professor/admin) ══ -->
+                <div id="card-alertas-saude" class="hidden" style="background:#1e293b; border:1px solid #f43f5e55; border-radius:12px; padding:15px; margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="font-size:0.8rem; font-weight:800; color:#f43f5e;">
+                            <i class="fas fa-heartbeat"></i> RELATOS DE SAÚDE
+                            <span id="badge-relatos" style="background:#f43f5e; color:white; border-radius:10px; padding:1px 7px; font-size:0.6rem; margin-left:6px; font-weight:800;">0</span>
+                        </span>
+                        <button onclick="academia.carregarRelatosSaude()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem; font-weight:700;"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div id="lista-relatos-saude"></div>
+                </div>
 
                 <!-- ═══ SEÇÃO: PROFESSOR ═══ -->
                 <div id="gestao-header-professor" style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6; border-radius: 0 10px 10px 0; padding: 10px 14px; margin: 0 0 14px 0; display:flex; align-items:center; gap:10px;">

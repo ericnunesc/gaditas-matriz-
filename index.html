@@ -209,30 +209,39 @@
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
                     <div id="card-relato-saude" class="hidden" style="background:#1e293b; border:1px solid #f43f5e44; padding:15px; border-radius:12px; margin-bottom:35px;">
-                        <small style="color:#f43f5e; font-size:0.6rem; font-weight:800; display:block; margin-bottom:10px; letter-spacing:0.5px;">O QUE ESTÁ ACONTECENDO?</small>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
-                            <button id="btn-tipo-machucado" onclick="academia.selecionarTipoRelato('machucado')" style="padding:12px 6px; border-radius:10px; border:2px solid #f97316; background:#431407; color:#fb923c; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
-                                <span style="font-size:1.4rem;">🤕</span><span>MACHUCADO</span>
-                            </button>
-                            <button id="btn-tipo-doente" onclick="academia.selecionarTipoRelato('doente')" style="padding:12px 6px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#64748b; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
-                                <span style="font-size:1.4rem;">🤒</span><span>DOENTE</span>
-                            </button>
+
+                        <!-- FORMULÁRIO (só quando não há relato ativo) -->
+                        <div id="section-form-relato">
+                            <small style="color:#f43f5e; font-size:0.6rem; font-weight:800; display:block; margin-bottom:10px; letter-spacing:0.5px;">O QUE ESTÁ ACONTECENDO?</small>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+                                <button id="btn-tipo-machucado" onclick="academia.selecionarTipoRelato('machucado')" style="padding:12px 6px; border-radius:10px; border:2px solid #f97316; background:#431407; color:#fb923c; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                                    <span style="font-size:1.4rem;">🤕</span><span>MACHUCADO</span>
+                                </button>
+                                <button id="btn-tipo-doente" onclick="academia.selecionarTipoRelato('doente')" style="padding:12px 6px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#64748b; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                                    <span style="font-size:1.4rem;">🤒</span><span>DOENTE</span>
+                                </button>
+                            </div>
+                            <textarea id="textarea-relato" placeholder="Descreva o que aconteceu ou como se sente..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; margin-bottom:10px; resize:none; box-sizing:border-box;"></textarea>
+                            <button onclick="academia.enviarRelato()" style="width:100%; padding:12px; background:#f43f5e; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;"><i class="fas fa-paper-plane"></i> ENVIAR RELATO AO PROFESSOR</button>
                         </div>
-                        <textarea id="textarea-relato" placeholder="Descreva o que aconteceu ou como se sente..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; margin-bottom:10px; resize:none; box-sizing:border-box;"></textarea>
-                        <button onclick="academia.enviarRelato()" style="width:100%; padding:12px; background:#f43f5e; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;"><i class="fas fa-paper-plane"></i> ENVIAR RELATO AO PROFESSOR</button>
-                        <div id="resposta-professor-relato" class="hidden" style="margin-top:12px; padding:12px; background:#0c2344; border-radius:8px; border-left:3px solid #3b82f6;">
-                            <small style="color:#3b82f6; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;"><i class="fas fa-comment-dots"></i> RESPOSTA DO PROFESSOR:</small>
-                            <div id="texto-resposta-professor" style="color:#93c5fd; font-size:0.8rem; line-height:1.5;"></div>
-                            <small id="data-resposta-professor" style="color:#475569; font-size:0.6rem;"></small>
-                        </div>
-                        <!-- Botão de recuperação -->
-                        <div id="div-btn-recuperado" class="hidden" style="margin-top:10px;">
-                            <div style="border-top:1px solid #1e293b; padding-top:10px; margin-top:2px;">
+
+                        <!-- STATUS (quando há relato ativo) -->
+                        <div id="section-status-relato" class="hidden">
+                            <div id="status-relato-content"></div>
+                            <!-- Resposta do professor (persiste mesmo após fechar) -->
+                            <div id="resposta-professor-relato" class="hidden" style="margin-top:12px; padding:12px; background:#0c2344; border-radius:8px; border-left:3px solid #3b82f6;">
+                                <small style="color:#3b82f6; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;"><i class="fas fa-comment-dots"></i> RESPOSTA DO PROFESSOR:</small>
+                                <div id="texto-resposta-professor" style="color:#93c5fd; font-size:0.8rem; line-height:1.5;"></div>
+                                <small id="data-resposta-professor" style="color:#475569; font-size:0.6rem;"></small>
+                            </div>
+                            <!-- Botão recuperado -->
+                            <div id="div-btn-recuperado" class="hidden" style="margin-top:10px;">
                                 <button onclick="academia.marcarRecuperado()" style="width:100%; padding:13px; background:linear-gradient(135deg,#064e3b,#065f46); border:1px solid #10b981; color:#34d399; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.8rem; letter-spacing:0.3px;">
                                     💪 MELHOREI / ESTOU RECUPERADO
                                 </button>
                             </div>
                         </div>
+
                     </div>
                 </div>
 

@@ -1757,30 +1757,62 @@ Ele voltará a ser aluno normal.`)) return;
 
     async carregarRespostaRelato() {
         if (!auth.currentUser) return;
+        const secForm   = document.getElementById('section-form-relato');
+        const secStatus = document.getElementById('section-status-relato');
+        const statusContent = document.getElementById('status-relato-content');
+        const divResp   = document.getElementById('resposta-professor-relato');
+        const divTexto  = document.getElementById('texto-resposta-professor');
+        const divData   = document.getElementById('data-resposta-professor');
+        const btnRecup  = document.getElementById('div-btn-recuperado');
         try {
             const snap = await db.collection("relatos_saude")
                 .where("alunoId","==", auth.currentUser.id).get();
             const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-            // Relato ativo (não arquivado) — para mostrar botão recuperado
             const ativo = docs.filter(d => !d.arquivado).sort((a,b) => (b.data||0)-(a.data||0))[0];
-            const btnRecup = document.getElementById('div-btn-recuperado');
-            if (btnRecup) {
-                if (ativo) btnRecup.classList.remove('hidden');
-                else       btnRecup.classList.add('hidden');
-            }
 
-            // Última resposta (mesmo arquivado, guarda a resposta)
-            const respondidos = docs.filter(d => d.respondido && d.resposta)
-                .sort((a,b) => (b.data||0)-(a.data||0));
-            const divResp  = document.getElementById('resposta-professor-relato');
-            const divTexto = document.getElementById('texto-resposta-professor');
-            const divData  = document.getElementById('data-resposta-professor');
-            if (respondidos.length > 0 && divResp && divTexto) {
-                const d = respondidos[0];
-                divTexto.textContent = d.resposta;
-                if (divData) divData.textContent = d.respostaDataFormatada || '';
-                divResp.classList.remove('hidden');
+            if (ativo) {
+                // Há relato ativo — mostra painel de status, esconde formulário
+                if (secForm)   secForm.classList.add('hidden');
+                if (secStatus) secStatus.classList.remove('hidden');
+
+                if (ativo.recuperado) {
+                    // Aluno já clicou em MELHOREI — aguarda professor confirmar
+                    if (statusContent) statusContent.innerHTML = `
+                        <div style="text-align:center; padding:14px; background:#0a1f14; border-radius:10px; border:1px solid #10b981;">
+                            <div style="font-size:1.6rem; margin-bottom:6px;">💪</div>
+                            <div style="color:#34d399; font-weight:800; font-size:0.85rem;">Recuperação informada!</div>
+                            <small style="color:#6ee7b7; font-size:0.7rem;">Aguardando confirmação do professor.</small>
+                        </div>`;
+                    if (btnRecup) btnRecup.classList.add('hidden');
+                } else if (ativo.respondido && ativo.resposta) {
+                    // Professor respondeu — mostra resposta + botão MELHOREI
+                    if (statusContent) statusContent.innerHTML = `
+                        <div style="background:#0f172a; border-radius:8px; padding:10px; margin-bottom:4px;">
+                            <small style="color:#64748b; font-size:0.6rem;">Relato enviado em ${ativo.dataFormatada}</small>
+                            <p style="color:#cbd5e1; font-size:0.75rem; margin:4px 0 0 0; font-style:italic;">"${ativo.relato}"</p>
+                        </div>`;
+                    if (divTexto) divTexto.textContent = ativo.resposta;
+                    if (divData)  divData.textContent  = ativo.respostaDataFormatada || '';
+                    if (divResp)  divResp.classList.remove('hidden');
+                    if (btnRecup) btnRecup.classList.remove('hidden');
+                } else {
+                    // Aguardando resposta do professor
+                    if (statusContent) statusContent.innerHTML = `
+                        <div style="text-align:center; padding:14px; background:#1c1206; border-radius:10px; border:1px solid #f59e0b44;">
+                            <div style="font-size:1.4rem; margin-bottom:6px;">🔔</div>
+                            <div style="color:#fbbf24; font-weight:800; font-size:0.8rem;">Relato enviado!</div>
+                            <small style="color:#d97706; font-size:0.7rem;">O professor foi notificado e irá responder em breve.</small>
+                            <p style="color:#6b7280; font-size:0.7rem; font-style:italic; margin:8px 0 0 0;">"${ativo.relato}"</p>
+                        </div>`;
+                    if (divResp)  divResp.classList.add('hidden');
+                    if (btnRecup) btnRecup.classList.add('hidden');
+                }
+            } else {
+                // Sem relato ativo — mostra formulário limpo
+                if (secForm)   secForm.classList.remove('hidden');
+                if (secStatus) secStatus.classList.add('hidden');
+                if (divResp)   divResp.classList.add('hidden');
+                if (btnRecup)  btnRecup.classList.add('hidden');
             }
         } catch(e) {}
     },

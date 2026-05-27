@@ -12,6 +12,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <!-- NOTIFICAÇÃO: ALUNO SE RECUPEROU (para professor/admin) -->
+    <div id="toast-recuperacao-prof" class="hidden" style="position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:99999; width:calc(100% - 32px); max-width:420px;">
+        <div style="background:#0a1f14; border:1px solid #10b981; border-radius:14px; padding:16px 18px; box-shadow:0 8px 24px rgba(0,0,0,0.5); display:flex; align-items:flex-start; gap:12px;">
+            <div style="background:#064e3b; border-radius:50%; width:38px; height:38px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">💪</div>
+            <div style="flex:1;">
+                <div style="font-size:0.75rem; font-weight:800; color:#34d399; margin-bottom:4px;">ALUNO ESTÁ RECUPERADO!</div>
+                <div id="toast-recuperacao-nome" style="font-size:0.8rem; color:#e2e8f0; line-height:1.5;"></div>
+            </div>
+            <button onclick="document.getElementById('toast-recuperacao-prof').classList.add('hidden')" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:1rem; flex-shrink:0; padding:0;">✕</button>
+        </div>
+    </div>
+
     <!-- NOTIFICAÇÃO: PROFESSOR RESPONDEU RELATO -->
     <div id="toast-resposta-relato" class="hidden" style="position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:99999; width:calc(100% - 32px); max-width:420px;">
         <div style="background:#0c2344; border:1px solid #3b82f6; border-radius:14px; padding:16px 18px; box-shadow:0 8px 24px rgba(0,0,0,0.5); display:flex; align-items:flex-start; gap:12px;">

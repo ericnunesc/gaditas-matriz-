@@ -109,8 +109,9 @@ const auth = {
             if (wp) wp.classList.remove('hidden');
         }
 
-        // ── LISTENER RELATOS DE SAÚDE (aluno) ────────────
+        // ── LISTENERS RELATOS DE SAÚDE ────────────────────
         if (this.role === 'aluno') academia.iniciarListenerRelatoAluno();
+        if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerRelatosProf();
 
         // ── CHECK-IN AUTOMÁTICO VIA QR CODE ──────────────
         if (this.role === 'aluno') {
@@ -1680,6 +1681,33 @@ Ele voltará a ser aluno normal.`)) return;
             });
     },
 
+    iniciarListenerRelatosProf() {
+        if (auth.role !== 'admin' && auth.role !== 'professor') return;
+        // Listener em tempo real nos relatos não arquivados
+        db.collection("relatos_saude")
+            .where("arquivado","==", false)
+            .onSnapshot(snap => {
+                snap.docChanges().forEach(change => {
+                    if (change.type === 'modified') {
+                        const d = change.doc.data();
+                        if (d.recuperado) {
+                            // Mostra toast verde
+                            const toast = document.getElementById('toast-recuperacao-prof');
+                            const nomeEl = document.getElementById('toast-recuperacao-nome');
+                            if (toast && nomeEl) {
+                                nomeEl.textContent = `${(d.alunoNome||'').toUpperCase()} informou que está bem! Marque como resolvido.`;
+                                toast.classList.remove('hidden');
+                                setTimeout(() => toast.classList.add('hidden'), 8000);
+                            }
+                            // Atualiza a lista se estiver aberta
+                            const lista = document.getElementById('lista-relatos-saude');
+                            if (lista && lista.innerHTML !== '') this.carregarRelatosSaude();
+                        }
+                    }
+                });
+            });
+    },
+
     fecharToastResposta() {
         const toast = document.getElementById('toast-resposta-relato');
         if (toast) toast.classList.add('hidden');
@@ -1764,10 +1792,9 @@ Ele voltará a ser aluno normal.`)) return;
                 .where("alunoId","==", auth.currentUser.id).get();
             const ativos = snap.docs.filter(d => !d.data().arquivado);
             if (ativos.length === 0) return;
-            // Arquiva todos os relatos ativos do aluno
+            // Marca como recuperado (NÃO arquiva — professor ainda precisa resolver)
             await Promise.all(ativos.map(doc =>
                 db.collection("relatos_saude").doc(doc.id).update({
-                    arquivado: true,
                     recuperado: true,
                     dataRecuperacao: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
                 })
@@ -1809,26 +1836,31 @@ Ele voltará a ser aluno normal.`)) return;
                 const icon  = d.tipo === 'machucado' ? '🤕' : '🤒';
                 const label = d.tipo === 'machucado' ? 'MACHUCADO' : 'DOENTE';
                 const cor   = d.tipo === 'machucado' ? '#f97316' : '#f43f5e';
-                const novo  = !d.lido ? 'border-left:3px solid #f43f5e;' : '';
-                const recuperadoTag = d.recuperado ? `<span style="background:#06503b; color:#34d399; font-size:0.55rem; font-weight:800; padding:2px 7px; border-radius:4px; margin-left:4px;">💪 RECUPERADO</span>` : '';
-                return `<div style="background:#0f172a; border-radius:10px; padding:12px; margin-bottom:8px; ${novo}">
+                const isRecup = !!d.recuperado;
+                const bordaEstilo = isRecup ? 'border-left:3px solid #10b981;' : (!d.lido ? 'border-left:3px solid #f43f5e;' : '');
+                const bgCard = isRecup ? '#0a1f14' : '#0f172a';
+                const recuperadoTag = isRecup ? `<span style="background:#064e3b; color:#34d399; font-size:0.55rem; font-weight:800; padding:2px 7px; border-radius:4px; margin-left:4px;">💪 RECUPERADO</span>` : '';
+                return `<div style="background:${bgCard}; border-radius:10px; padding:12px; margin-bottom:8px; ${bordaEstilo}">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
                         <span style="font-weight:800; font-size:0.8rem; color:#e2e8f0;">${icon} ${(d.alunoNome||'').toUpperCase()}</span>
                         <span style="background:${cor}22; color:${cor}; font-size:0.55rem; font-weight:800; padding:2px 7px; border-radius:4px; flex-shrink:0; margin-left:6px;">${label}</span>${recuperadoTag}
                     </div>
                     <p style="color:#cbd5e1; font-size:0.75rem; margin:0 0 4px 0; line-height:1.5; font-style:italic;">"${d.relato}"</p>
                     <small style="color:#475569; font-size:0.6rem;">${d.dataFormatada}</small>
-                    ${d.respondido
+                    ${isRecup
+                        ? `${d.respondido ? `<div style="margin-top:8px; background:#0c2344; padding:8px; border-radius:6px; border-left:2px solid #3b82f6;"><small style="color:#3b82f6; font-size:0.6rem; font-weight:800;">SUA RESPOSTA:</small><p style="color:#93c5fd; font-size:0.75rem; margin:3px 0 0 0;">${d.resposta}</p></div>` : ''}
+                          <button onclick="academia.resolverRelato('${doc.id}')" style="margin-top:10px; width:100%; padding:13px; background:linear-gradient(135deg,#064e3b,#065f46); border:1px solid #10b981; color:#34d399; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.8rem; letter-spacing:0.3px;">✅ RESOLVIDO — ARQUIVAR</button>`
+                        : d.respondido
                         ? `<div style="margin-top:8px; background:#0c2344; padding:8px; border-radius:6px; border-left:2px solid #3b82f6;">
                                <small style="color:#3b82f6; font-size:0.6rem; font-weight:800;">SUA RESPOSTA:</small>
                                <p style="color:#93c5fd; font-size:0.75rem; margin:3px 0 0 0;">${d.resposta}</p>
                            </div>
-                           <button onclick="academia.resolverRelato('${doc.id}')" style="margin-top:6px; width:100%; padding:7px; background:#064e3b22; border:1px solid #10b98144; color:#10b981; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.65rem;">✓ MARCAR COMO RESOLVIDO</button>`
+                           <button onclick="academia.resolverRelato('${doc.id}')" style="margin-top:6px; width:100%; padding:7px; background:#064e3b22; border:1px solid #10b98144; color:#10b981; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.65rem;">✓ RESOLVIDO</button>`
                         : `<div style="display:flex; gap:6px; margin-top:8px;">
                                <input type="text" id="resp-${doc.id}" placeholder="Responder ao aluno..." style="flex:1; padding:8px; background:#1e293b; border:1px solid #334155; color:white; border-radius:6px; outline:none; font-size:0.75rem;"/>
                                <button onclick="academia.responderRelato('${doc.id}')" style="padding:8px 12px; background:#3b82f6; border:none; color:white; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; white-space:nowrap;"><i class="fas fa-reply"></i> ENVIAR</button>
                            </div>
-                           <button onclick="academia.resolverRelato('${doc.id}')" style="margin-top:6px; width:100%; padding:7px; background:#064e3b22; border:1px solid #10b98144; color:#10b981; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.65rem;">✓ MARCAR COMO RESOLVIDO SEM RESPONDER</button>`
+                           <button onclick="academia.resolverRelato('${doc.id}')" style="margin-top:6px; width:100%; padding:7px; background:#064e3b22; border:1px solid #10b98144; color:#10b981; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.65rem;">✓ RESOLVIDO SEM RESPONDER</button>`
                     }
                 </div>`;
             }).join('');

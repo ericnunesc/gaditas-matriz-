@@ -109,6 +109,9 @@ const auth = {
             if (wp) wp.classList.remove('hidden');
         }
 
+        // ── LISTENER RELATOS DE SAÚDE (aluno) ────────────
+        if (this.role === 'aluno') academia.iniciarListenerRelatoAluno();
+
         // ── CHECK-IN AUTOMÁTICO VIA QR CODE ──────────────
         if (this.role === 'aluno') {
             const turmaQR = sessionStorage.getItem('qr_turma');
@@ -1571,6 +1574,8 @@ Ele voltará a ser aluno normal.`)) return;
 
     publicoMuralAtual: 'todos',
     _tipoRelatoAtual: 'machucado',
+    _relatoListener: null,
+    _relatoRespondidoVisto: null, // id do último relato respondido já notificado
     alunoMuralSelecionado: null,
 
     selecionarPublicoMural(publico) {
@@ -1635,7 +1640,49 @@ Ele voltará a ser aluno normal.`)) return;
         const card = document.getElementById('card-relato-saude');
         if (!card) return;
         card.classList.toggle('hidden');
-        if (!card.classList.contains('hidden')) this.carregarRespostaRelato();
+        if (!card.classList.contains('hidden')) {
+            this.carregarRespostaRelato();
+            // Esconde badge quando aluno abre o card
+            const badge = document.getElementById('badge-resposta-relato');
+            if (badge) badge.classList.add('hidden');
+        }
+    },
+
+    iniciarListenerRelatoAluno() {
+        if (!auth.currentUser || auth.role !== 'aluno') return;
+        // Cancela listener anterior se houver
+        if (this._relatoListener) { this._relatoListener(); this._relatoListener = null; }
+
+        this._relatoListener = db.collection("relatos_saude")
+            .where("alunoId","==", auth.currentUser.id)
+            .onSnapshot(snap => {
+                snap.docChanges().forEach(change => {
+                    if (change.type === 'modified' || change.type === 'added') {
+                        const d = change.doc.data();
+                        const id = change.doc.id;
+                        if (d.respondido && d.resposta && id !== this._relatoRespondidoVisto) {
+                            this._relatoRespondidoVisto = id;
+                            // Mostra toast
+                            const toast = document.getElementById('toast-resposta-relato');
+                            const textoEl = document.getElementById('toast-resposta-texto');
+                            if (toast && textoEl) {
+                                textoEl.textContent = d.resposta;
+                                toast.classList.remove('hidden');
+                            }
+                            // Mostra badge no botão
+                            const badge = document.getElementById('badge-resposta-relato');
+                            if (badge) badge.classList.remove('hidden');
+                            // Atualiza o campo de resposta no card se estiver aberto
+                            this.carregarRespostaRelato();
+                        }
+                    }
+                });
+            });
+    },
+
+    fecharToastResposta() {
+        const toast = document.getElementById('toast-resposta-relato');
+        if (toast) toast.classList.add('hidden');
     },
 
     selecionarTipoRelato(tipo) {

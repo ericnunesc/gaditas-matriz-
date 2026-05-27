@@ -12,6 +12,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <!-- NOTIFICAÇÃO: PROFESSOR RESPONDEU RELATO -->
+    <div id="toast-resposta-relato" class="hidden" style="position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:99999; width:calc(100% - 32px); max-width:420px;">
+        <div style="background:#0c2344; border:1px solid #3b82f6; border-radius:14px; padding:16px 18px; box-shadow:0 8px 24px rgba(0,0,0,0.5); display:flex; align-items:flex-start; gap:12px;">
+            <div style="background:#1d4ed8; border-radius:50%; width:38px; height:38px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">💬</div>
+            <div style="flex:1;">
+                <div style="font-size:0.75rem; font-weight:800; color:#60a5fa; margin-bottom:4px;">PROFESSOR RESPONDEU SEU RELATO!</div>
+                <div id="toast-resposta-texto" style="font-size:0.8rem; color:#e2e8f0; line-height:1.5;"></div>
+            </div>
+            <button onclick="academia.fecharToastResposta()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:1rem; flex-shrink:0; padding:0;">✕</button>
+        </div>
+    </div>
+
     <div id="modal-popup-aviso" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.9); z-index: 9999; display: flex; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(5px);">
         <div style="background: #1e293b; border: 1px solid #334155; width: 100%; max-width: 450px; border-radius: 20px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);">
             <div style="text-align: center; margin-bottom: 16px;">
@@ -178,8 +190,10 @@
                     </div>
 
                     <!-- ── RELATO DE SAÚDE (aluno) ── -->
-                    <button onclick="academia.toggleRelatoSaude()" class="btn-save" style="background:#1e293b; border:1px solid #f43f5e44; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
-                        <span><i class="fas fa-heartbeat" style="color:#f43f5e; margin-right:8px; font-size:1.1rem;"></i> ESTOU MACHUCADO / DOENTE</span>
+                    <button id="btn-relato-saude-trigger" onclick="academia.toggleRelatoSaude()" class="btn-save" style="background:#1e293b; border:1px solid #f43f5e44; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
+                        <span><i class="fas fa-heartbeat" style="color:#f43f5e; margin-right:8px; font-size:1.1rem;"></i> ESTOU MACHUCADO / DOENTE
+                            <span id="badge-resposta-relato" class="hidden" style="background:#3b82f6; color:white; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800; animation: pulse 1.5s infinite;">💬 RESPOSTA</span>
+                        </span>
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
                     <div id="card-relato-saude" class="hidden" style="background:#1e293b; border:1px solid #f43f5e44; padding:15px; border-radius:12px; margin-bottom:35px;">

@@ -1500,6 +1500,7 @@ Ele voltará a ser aluno normal.`)) return;
                     if (pub === 'azul-roxa-marrom') return ['Azul','Roxa','Marrom'].includes(faixa);
                     if (pub === 'marrom-preta') return ['Marrom','Preta'].includes(faixa);
                     if (pub === 'preta') return faixa === 'Preta';
+                    if (pub === 'muaythai') return ['muaythai','ambos'].includes(aluno.modalidade || 'jiujitsu');
                     return true;
                 }).sort((a, b) => { const dataA = a.data().data || 0; const dataB = b.data().data || 0; return dataB - dataA; });
 
@@ -1557,7 +1558,7 @@ Ele voltará a ser aluno normal.`)) return;
     selecionarPublicoMural(publico) {
         this.publicoMuralAtual = publico;
         this.alunoMuralSelecionado = null;
-        const botoes = ['todos','individual','adulto','kids','branca','azul-roxa-marrom','marrom-preta','preta'];
+        const botoes = ['todos','individual','adulto','kids','branca','azul-roxa-marrom','marrom-preta','preta','muaythai'];
         botoes.forEach(b => {
             const btn = document.getElementById(`mural-btn-${b}`);
             if (!btn) return;
@@ -1619,7 +1620,8 @@ Ele voltará a ser aluno normal.`)) return;
         const labelPublico = {
             'todos': '👥 Todos', 'individual': `👤 ${this.alunoMuralSelecionado?.nome || ''}`,
             'adulto': '🥋 Adulto', 'kids': '🧒 Kids', 'branca': '⬜ Faixa Branca',
-            'azul-roxa-marrom': '🟦 Azul/Roxa/Marrom', 'marrom-preta': '🟫 Marrom/Preta', 'preta': '⬛ Faixa Preta'
+            'azul-roxa-marrom': '🟦 Azul/Roxa/Marrom', 'marrom-preta': '🟫 Marrom/Preta', 'preta': '⬛ Faixa Preta',
+            'muaythai': '🥊 Muay Thai'
         };
         try {
             await db.collection("mural_avisos").add({
@@ -1661,6 +1663,7 @@ Ele voltará a ser aluno normal.`)) return;
             if (pub === 'azul-roxa-marrom') return ['Azul','Roxa','Marrom'].includes(faixa);
             if (pub === 'marrom-preta') return ['Marrom','Preta'].includes(faixa);
             if (pub === 'preta') return faixa === 'Preta';
+            if (pub === 'muaythai') return ['muaythai','ambos'].includes(aluno.modalidade || 'jiujitsu');
             return false;
         });
 

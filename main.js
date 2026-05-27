@@ -831,11 +831,21 @@ const academia = {
                 : alunoMod === 'ambos'
                 ? `<span style="background:#2e1065; color:#c4b5fd; font-size:0.5rem; padding:2px 5px; border-radius:4px; font-weight:800; margin-left:5px; vertical-align:middle;">⚡ JJJ+MT</span>`
                 : `<span style="background:#1e3a8a; color:#60a5fa; font-size:0.5rem; padding:2px 5px; border-radius:4px; font-weight:800; margin-left:5px; vertical-align:middle;">🥋 JJJ</span>`;
+            // Belt visual (prajerão)
+            let beltBarHtml = '';
+            if (alunoMod === 'muaythai') {
+                beltBarHtml = ui.renderBeltMT(a.faixaMT);
+            } else if (alunoMod === 'ambos') {
+                beltBarHtml = ui.renderBeltJJ(a.faixa, a.grau) + ui.renderBeltMT(a.faixaMT);
+            } else {
+                beltBarHtml = ui.renderBeltJJ(a.faixa, a.grau);
+            }
+            // Subtexto com contadores
             const gradInfo = alunoMod === 'muaythai'
-                ? `🥊 ${a.faixaMT || 'Branco'} • ${a.aulasMT || 0} aulas MT`
+                ? `<span style="font-size:0.6rem; color:#64748b;">${a.faixaMT || 'Branco'} • ${a.aulasMT || 0} aulas MT</span>`
                 : alunoMod === 'ambos'
-                ? `🥋 ${a.faixa} ${a.grau}ºG (${a.aulas || 0}aJ)  |  🥊 ${a.faixaMT || 'Branco'} (${a.aulasMT || 0}aMT)`
-                : `${a.faixa} • ${a.grau}º G • ${a.aulas || 0}/${s.meta}`;
+                ? `<span style="font-size:0.6rem; color:#64748b;">${a.faixa} ${a.grau}ºG (${a.aulas || 0}aJ) · ${a.faixaMT || 'Branco'} (${a.aulasMT || 0}aMT)</span>`
+                : `<span style="font-size:0.6rem; color:#64748b;">${a.faixa} • ${a.grau}ºG • ${a.aulas || 0}/${s.meta} aulas</span>`;
             const corBorda = alunoMod === 'muaythai'
                 ? ui.getCorFaixaMT(a.faixaMT)
                 : ui.getCorFaixa(a.faixa);
@@ -847,7 +857,12 @@ const academia = {
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="display:flex; align-items:center; flex:1; min-width:0;">
                         ${fotoMini}
-                        <div style="color:#e2e8f0; flex:1; font-size:0.85rem; font-weight:600; min-width:0;"><span>${a.nome.toUpperCase()}${modBadge} ${eng.icon}</span><br><small style="color:#64748b; font-weight:500;">${gradInfo}</small>${tagsLeoes}</div>
+                        <div style="color:#e2e8f0; flex:1; font-size:0.85rem; font-weight:600; min-width:0;">
+                            <span>${a.nome.toUpperCase()}${modBadge} ${eng.icon}</span>
+                            ${beltBarHtml}
+                            ${gradInfo}
+                            ${tagsLeoes}
+                        </div>
                     </div>
                     <div style="display:flex; gap:5px; flex-shrink:0;">
                         <button onclick="academia.editarAluno('${doc.id}')" style="background:#16161a; border:1px solid #2d2d34; color:#94a3b8; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-eye"></i></button>
@@ -2063,6 +2078,71 @@ const ui = {
         if(!f) return "#fff";
         const c = { "Branca": "#fff", "Azul": "#1e3a8a", "Roxa": "#581c87", "Marrom": "#451a03", "Preta": "#000", "Cinza": "#4b5563", "Amarela": "#ca8a04", "Laranja": "#c2410c", "Verde": "#15803d", "Vermelha": "#dc2626" };
         return c[f.split('/')[0]] || "#fff";
+    },
+
+    // ── BELT VISUAL (prajerão) ──────────────────────────────
+    _corJJSingle(nome) {
+        const c = {
+            'Branca':'#e2e8f0', 'Cinza':'#6b7280', 'Amarela':'#ca8a04',
+            'Laranja':'#ea580c', 'Verde':'#15803d', 'Azul':'#1d4ed8',
+            'Roxa':'#7c3aed',   'Marrom':'#92400e', 'Preta':'#111827',
+            'Vermelha':'#dc2626'
+        };
+        return c[nome.trim()] || '#e2e8f0';
+    },
+
+    _corMTSingle(nome) {
+        const c = {
+            'Branco':'#e2e8f0', 'Vermelha':'#dc2626',
+            'Azul Clara':'#60a5fa', 'Azul Escura':'#1d4ed8', 'Preta':'#111827'
+        };
+        return c[nome.trim()] || '#475569';
+    },
+
+    renderBeltJJ(faixa, grau) {
+        const partes = (faixa || 'Branca').split('/');
+        const cor1 = this._corJJSingle(partes[0]);
+        const cor2 = partes[1] ? this._corJJSingle(partes[1]) : null;
+        // Faixas combinadas: listra horizontal no meio
+        const bodyBg = cor2
+            ? `linear-gradient(to bottom, ${cor1} 34%, ${cor2} 34%, ${cor2} 66%, ${cor1} 66%)`
+            : cor1;
+        // Listras de grau (vertical, na ponta preta)
+        let stripes = '';
+        for (let i = 0; i < (grau || 0); i++) {
+            stripes += `<div style="width:3px; height:75%; background:rgba(255,255,255,0.92); border-radius:1px;"></div>`;
+        }
+        return `<div style="display:flex; height:10px; border-radius:3px; overflow:hidden; width:100%; margin-top:4px;">
+            <div style="flex:3; background:${bodyBg};"></div>
+            <div style="width:2px; background:#0a0a0f;"></div>
+            <div style="flex:0.9; background:#111827; display:flex; align-items:center; justify-content:center; gap:2px;">${stripes}</div>
+        </div>`;
+    },
+
+    renderBeltMT(faixaMT) {
+        const f = faixaMT || 'Branco';
+        // "Preta, Ponta Branca e Vermelha" — Grão Mestre (3 cores)
+        if (f.includes('Branca e Vermelha')) {
+            return `<div style="display:flex; height:10px; border-radius:3px; overflow:hidden; width:100%; margin-top:4px;">
+                <div style="flex:2; background:#111827;"></div>
+                <div style="flex:1; background:#e2e8f0;"></div>
+                <div style="flex:1; background:#dc2626;"></div>
+            </div>`;
+        }
+        if (f.includes(' ponta ')) {
+            const parts = f.split(' ponta ');
+            const c1 = this._corMTSingle(parts[0].trim());
+            const c2 = this._corMTSingle(parts[1].trim());
+            return `<div style="display:flex; height:10px; border-radius:3px; overflow:hidden; width:100%; margin-top:4px;">
+                <div style="flex:3; background:${c1};"></div>
+                <div style="width:2px; background:#0a0a0f;"></div>
+                <div style="flex:1; background:${c2};"></div>
+            </div>`;
+        }
+        const cor = this._corMTSingle(f);
+        return `<div style="display:flex; height:10px; border-radius:3px; overflow:hidden; width:100%; margin-top:4px;">
+            <div style="flex:1; background:${cor};"></div>
+        </div>`;
     },
     getCorFaixaMT(f) {
         if (!f) return "#475569";

@@ -792,9 +792,11 @@ const academia = {
 
         snap.forEach(doc => {
             const a = doc.data(); const s = this.verificarMeta(a); const eng = this.calcularEngajamento(a.historico);
-            const nomeAtleta = a.nome ? a.nome.toLowerCase() : ""; const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
+            const nomeAtleta = a.nome ? a.nome.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") : "";
+            const buscaNorm = this.textoBuscaNome.normalize("NFD").replace(/[̀-ͯ]/g, "");
+            const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
             const isKids = idade <= 14;
-            if (this.textoBuscaNome !== "" && !nomeAtleta.includes(this.textoBuscaNome)) return;
+            if (buscaNorm !== "" && !nomeAtleta.includes(buscaNorm)) return;
             if (this.categoriaFiltroAtual === "adult" && isKids) return;
             if (this.categoriaFiltroAtual === "kids" && !isKids) return;
             if (faixaFiltro !== "all" && a.faixa !== faixaFiltro) return;
@@ -802,7 +804,7 @@ const academia = {
             // Filtro por modalidade
             const alunoMod = a.modalidade || 'jiujitsu';
             if (this.modalidadeFiltroAtual === 'jiujitsu' && alunoMod === 'muaythai') return;
-            if (this.modalidadeFiltroAtual === 'muaythai' && alunoMod !== 'muaythai') return;
+            if (this.modalidadeFiltroAtual === 'muaythai' && alunoMod !== 'muaythai' && alunoMod !== 'ambos') return;
 
             // Filtro do professor
             if (auth.role === 'professor') {
@@ -2110,7 +2112,7 @@ const ui = {
         // Faixa preta: corpo mais escuro + tarja vermelha
         const isPreta = partes[0] === 'Preta';
         const corCorpo = isPreta ? '#000000' : bodyBg;
-        const corTarja = isPreta ? '#dc2626' : '#111827';
+        const corTarja = isPreta ? '#dc2626' : '#000';
         const corListra = isPreta ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.92)';
         let stripesFinal = '';
         for (let i = 0; i < (grau || 0); i++) {
@@ -2119,9 +2121,9 @@ const ui = {
         // Estrutura: [corpo colorido][tarja c/ graus][pequeno pedaço colorido]
         return `<div style="display:flex; height:10px; border-radius:3px; overflow:hidden; width:100%; margin-top:4px;">
             <div style="flex:3; background:${corCorpo};"></div>
-            <div style="width:2px; background:#0a0a0f;"></div>
+            <div style="width:2px; background:#000;"></div>
             <div style="flex:1; background:${corTarja}; display:flex; align-items:center; justify-content:center; gap:2px;">${stripesFinal}</div>
-            <div style="width:2px; background:#0a0a0f;"></div>
+            <div style="width:2px; background:#000;"></div>
             <div style="flex:0.25; background:${corCorpo};"></div>
         </div>`;
     },

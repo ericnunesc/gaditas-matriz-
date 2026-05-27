@@ -2215,6 +2215,8 @@ Ele voltará a ser aluno normal.`)) return;
         } catch(e) {
             if (!this.gradeFirebase) this.gradeFirebase = { ...this.gradeHorarios };
         }
+        // Atualiza o select de turmas do aluno após a grade do Firebase carregar
+        if (typeof ui !== 'undefined') ui.atualizarTurmasDinamicas();
         return this.gradeFirebase;
     },
 

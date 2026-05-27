@@ -2107,18 +2107,22 @@ const ui = {
         const bodyBg = cor2
             ? `linear-gradient(to bottom, ${cor1} 34%, ${cor2} 34%, ${cor2} 66%, ${cor1} 66%)`
             : cor1;
-        // Listras de grau (vertical, na ponta preta)
-        let stripes = '';
+        // Faixa preta: corpo mais escuro + tarja vermelha
+        const isPreta = partes[0] === 'Preta';
+        const corCorpo = isPreta ? '#000000' : bodyBg;
+        const corTarja = isPreta ? '#dc2626' : '#111827';
+        const corListra = isPreta ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.92)';
+        let stripesFinal = '';
         for (let i = 0; i < (grau || 0); i++) {
-            stripes += `<div style="width:3px; height:75%; background:rgba(255,255,255,0.92); border-radius:1px;"></div>`;
+            stripesFinal += `<div style="width:3px; height:75%; background:${corListra}; border-radius:1px;"></div>`;
         }
-        // Estrutura: [corpo colorido][ponta preta c/ graus][pequeno pedaço colorido]
+        // Estrutura: [corpo colorido][tarja c/ graus][pequeno pedaço colorido]
         return `<div style="display:flex; height:10px; border-radius:3px; overflow:hidden; width:100%; margin-top:4px;">
-            <div style="flex:3; background:${bodyBg};"></div>
+            <div style="flex:3; background:${corCorpo};"></div>
             <div style="width:2px; background:#0a0a0f;"></div>
-            <div style="flex:1; background:#111827; display:flex; align-items:center; justify-content:center; gap:2px;">${stripes}</div>
+            <div style="flex:1; background:${corTarja}; display:flex; align-items:center; justify-content:center; gap:2px;">${stripesFinal}</div>
             <div style="width:2px; background:#0a0a0f;"></div>
-            <div style="flex:0.25; background:${bodyBg};"></div>
+            <div style="flex:0.25; background:${corCorpo};"></div>
         </div>`;
     },
 

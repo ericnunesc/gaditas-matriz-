@@ -1578,7 +1578,8 @@ Ele voltará a ser aluno normal.`)) return;
     _professorRelatoId: null,
     _professorRelatoNome: null,
     _relatoListener: null,
-    _relatoRespondidoVisto: null, // id do último relato respondido já notificado
+    _relatoRespondidoVisto: null,   // {id, resposta} carregado do localStorage
+    _relatoRespondidoAtual: null,   // {id, resposta} da resposta pendente de ser marcada como vista
     alunoMuralSelecionado: null,
 
     selecionarPublicoMural(publico) {
@@ -1645,9 +1646,13 @@ Ele voltará a ser aluno normal.`)) return;
         card.classList.toggle('hidden');
         if (!card.classList.contains('hidden')) {
             this.carregarRespostaRelato();
-            // Esconde badge quando aluno abre o card
+            // Esconde badge e marca resposta como vista quando aluno abre o card
             const badge = document.getElementById('badge-resposta-relato');
             if (badge) badge.classList.add('hidden');
+            // Fecha o toast se estiver aberto e marca como visto
+            const toast = document.getElementById('toast-resposta-relato');
+            if (toast) toast.classList.add('hidden');
+            this._marcarRespostaVista();
         }
     },
 
@@ -1656,6 +1661,12 @@ Ele voltará a ser aluno normal.`)) return;
         // Cancela listener anterior se houver
         if (this._relatoListener) { this._relatoListener(); this._relatoListener = null; }
 
+        // Carrega do localStorage o que o aluno já viu (persiste entre sessões)
+        try {
+            const stored = localStorage.getItem(`relato_resp_visto_${auth.currentUser.id}`);
+            this._relatoRespondidoVisto = stored ? JSON.parse(stored) : null;
+        } catch(e) { this._relatoRespondidoVisto = null; }
+
         this._relatoListener = db.collection("relatos_saude")
             .where("alunoId","==", auth.currentUser.id)
             .onSnapshot(snap => {
@@ -1663,20 +1674,26 @@ Ele voltará a ser aluno normal.`)) return;
                     if (change.type === 'modified' || change.type === 'added') {
                         const d = change.doc.data();
                         const id = change.doc.id;
-                        if (d.respondido && d.resposta && id !== this._relatoRespondidoVisto) {
-                            this._relatoRespondidoVisto = id;
-                            // Mostra toast
-                            const toast = document.getElementById('toast-resposta-relato');
-                            const textoEl = document.getElementById('toast-resposta-texto');
-                            if (toast && textoEl) {
-                                textoEl.textContent = d.resposta;
-                                toast.classList.remove('hidden');
+                        if (d.respondido && d.resposta) {
+                            // Só mostra o toast se esta resposta específica ainda não foi vista
+                            const visto = this._relatoRespondidoVisto;
+                            const jaViu = visto && visto.id === id && visto.resposta === d.resposta;
+                            if (!jaViu) {
+                                // Registra resposta pendente (salva no localStorage só quando o aluno fechar o toast ou abrir o card)
+                                this._relatoRespondidoAtual = { id, resposta: d.resposta };
+                                // Mostra toast
+                                const toast = document.getElementById('toast-resposta-relato');
+                                const textoEl = document.getElementById('toast-resposta-texto');
+                                if (toast && textoEl) {
+                                    textoEl.textContent = d.resposta;
+                                    toast.classList.remove('hidden');
+                                }
+                                // Mostra badge no botão
+                                const badge = document.getElementById('badge-resposta-relato');
+                                if (badge) badge.classList.remove('hidden');
+                                // Atualiza o campo de resposta no card se estiver aberto
+                                this.carregarRespostaRelato();
                             }
-                            // Mostra badge no botão
-                            const badge = document.getElementById('badge-resposta-relato');
-                            if (badge) badge.classList.remove('hidden');
-                            // Atualiza o campo de resposta no card se estiver aberto
-                            this.carregarRespostaRelato();
                         }
                     }
                 });
@@ -1771,6 +1788,22 @@ Ele voltará a ser aluno normal.`)) return;
     fecharToastResposta() {
         const toast = document.getElementById('toast-resposta-relato');
         if (toast) toast.classList.add('hidden');
+        // Marca resposta como vista — persiste no localStorage
+        this._marcarRespostaVista();
+    },
+
+    _marcarRespostaVista() {
+        if (!this._relatoRespondidoAtual || !auth.currentUser) return;
+        this._relatoRespondidoVisto = this._relatoRespondidoAtual;
+        try {
+            localStorage.setItem(
+                `relato_resp_visto_${auth.currentUser.id}`,
+                JSON.stringify(this._relatoRespondidoAtual)
+            );
+        } catch(e) {}
+        // Esconde badge ao marcar como visto
+        const badge = document.getElementById('badge-resposta-relato');
+        if (badge) badge.classList.add('hidden');
     },
 
     selecionarTipoRelato(tipo) {

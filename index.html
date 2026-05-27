@@ -578,11 +578,33 @@
                     if (!email) return alert("Sessão expirada. Faça logout e login novamente.");
                     const senhaAtual = prompt("Informe sua senha ATUAL para confirmar:");
                     if (!senhaAtual) return;
+
+                    // 1º tenta Firebase Auth
+                    let authFirebase = false;
                     try {
                         const cred = await firebase.auth().signInWithEmailAndPassword(email, senhaAtual);
                         user = cred.user;
-                    } catch (e) { return alert("Senha atual incorreta."); }
+                        authFirebase = true;
+                    } catch (e) { /* não tem conta no Firebase Auth — verifica senha local */ }
+
+                    if (!authFirebase) {
+                        // 2º verifica contra a senha local do Firestore (ou padrão "1234")
+                        const senhaLocal = auth.currentUser?.senha;
+                        const senhaOk = senhaAtual === senhaLocal || senhaAtual === "1234";
+                        if (!senhaOk) return alert("Senha atual incorreta.");
+
+                        // Salva a nova senha no Firestore e na sessão
+                        const colecao = auth.role === 'professor' ? 'professores' : 'alunos';
+                        await db.collection(colecao).doc(auth.currentUser.id).update({ senha: novaSenha });
+                        auth.currentUser.senha = novaSenha;
+                        alert("✅ Senha alterada com sucesso! OSS!");
+                        document.getElementById(idCard).classList.add('hidden');
+                        document.getElementById(idNova).value = '';
+                        document.getElementById(idConfirmar).value = '';
+                        return;
+                    }
                 }
+                // Tem sessão Firebase Auth — atualiza lá
                 await user.updatePassword(novaSenha);
                 alert("✅ Senha alterada com sucesso! OSS!");
                 document.getElementById(idCard).classList.add('hidden');

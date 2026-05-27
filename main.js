@@ -1091,13 +1091,20 @@ const academia = {
             const idade = anoAtual - new Date(nascimento).getFullYear();
             const isKids = idade <= 14;
             const turmaKids = t.toLowerCase().includes('kids');
+            const turmaMT   = this._isTurmaMT(t);
+            const alunoMod  = auth.currentUser?.modalidade || 'jiujitsu';
             if (!isKids && turmaKids) {
                 alert("🚫 Você está matriculado nas turmas adulto e não pode fazer check-in nas turmas Kids.");
                 return;
             }
             if (isKids && !turmaKids) {
-                alert("🚫 Você está matriculado nas turmas Kids e não pode fazer check-in nas turmas adulto.");
-                return;
+                // Kids de Muay Thai podem fazer check-in em turmas MT
+                if (turmaMT && (alunoMod === 'muaythai' || alunoMod === 'ambos')) {
+                    // Liberado — aluno kids na modalidade MT
+                } else {
+                    alert("🚫 Você está matriculado nas turmas Kids e não pode fazer check-in nas turmas adulto.");
+                    return;
+                }
             }
         }
         if (typeof GaditasFiltros !== 'undefined' && auth.currentUser && auth.currentUser.email) {

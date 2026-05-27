@@ -1730,22 +1730,61 @@ Ele voltará a ser aluno normal.`)) return;
     async carregarRespostaRelato() {
         if (!auth.currentUser) return;
         try {
-            // Busca todos os relatos do aluno e filtra no client (evita índice composto)
             const snap = await db.collection("relatos_saude")
                 .where("alunoId","==", auth.currentUser.id).get();
-            const respondidos = snap.docs
-                .filter(d => d.data().respondido && d.data().resposta)
-                .sort((a,b) => (b.data().data||0) - (a.data().data||0));
+            const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // Relato ativo (não arquivado) — para mostrar botão recuperado
+            const ativo = docs.filter(d => !d.arquivado).sort((a,b) => (b.data||0)-(a.data||0))[0];
+            const btnRecup = document.getElementById('div-btn-recuperado');
+            if (btnRecup) {
+                if (ativo) btnRecup.classList.remove('hidden');
+                else       btnRecup.classList.add('hidden');
+            }
+
+            // Última resposta (mesmo arquivado, guarda a resposta)
+            const respondidos = docs.filter(d => d.respondido && d.resposta)
+                .sort((a,b) => (b.data||0)-(a.data||0));
             const divResp  = document.getElementById('resposta-professor-relato');
             const divTexto = document.getElementById('texto-resposta-professor');
             const divData  = document.getElementById('data-resposta-professor');
             if (respondidos.length > 0 && divResp && divTexto) {
-                const d = respondidos[0].data();
+                const d = respondidos[0];
                 divTexto.textContent = d.resposta;
                 if (divData) divData.textContent = d.respostaDataFormatada || '';
                 divResp.classList.remove('hidden');
             }
         } catch(e) {}
+    },
+
+    async marcarRecuperado() {
+        if (!auth.currentUser) return;
+        try {
+            const snap = await db.collection("relatos_saude")
+                .where("alunoId","==", auth.currentUser.id).get();
+            const ativos = snap.docs.filter(d => !d.data().arquivado);
+            if (ativos.length === 0) return;
+            // Arquiva todos os relatos ativos do aluno
+            await Promise.all(ativos.map(doc =>
+                db.collection("relatos_saude").doc(doc.id).update({
+                    arquivado: true,
+                    recuperado: true,
+                    dataRecuperacao: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
+                })
+            ));
+            // Esconde botão e atualiza card
+            const btnRecup = document.getElementById('div-btn-recuperado');
+            if (btnRecup) btnRecup.classList.add('hidden');
+            // Feedback visual
+            const card = document.getElementById('card-relato-saude');
+            if (card) {
+                const aviso = document.createElement('div');
+                aviso.style.cssText = 'background:#064e3b; border:1px solid #10b981; border-radius:10px; padding:14px; text-align:center; margin-top:10px;';
+                aviso.innerHTML = '<span style="font-size:1.5rem;">💪</span><br><span style="color:#34d399; font-weight:800; font-size:0.85rem;">Que ótimo! Fico feliz que esteja bem!</span><br><small style="color:#6ee7b7; font-size:0.7rem;">O professor foi notificado da sua recuperação.</small>';
+                card.appendChild(aviso);
+                setTimeout(() => { aviso.remove(); card.classList.add('hidden'); }, 3000);
+            }
+        } catch(e) { alert("Erro ao registrar recuperação."); }
     },
 
     async carregarRelatosSaude() {
@@ -1771,10 +1810,11 @@ Ele voltará a ser aluno normal.`)) return;
                 const label = d.tipo === 'machucado' ? 'MACHUCADO' : 'DOENTE';
                 const cor   = d.tipo === 'machucado' ? '#f97316' : '#f43f5e';
                 const novo  = !d.lido ? 'border-left:3px solid #f43f5e;' : '';
+                const recuperadoTag = d.recuperado ? `<span style="background:#06503b; color:#34d399; font-size:0.55rem; font-weight:800; padding:2px 7px; border-radius:4px; margin-left:4px;">💪 RECUPERADO</span>` : '';
                 return `<div style="background:#0f172a; border-radius:10px; padding:12px; margin-bottom:8px; ${novo}">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
                         <span style="font-weight:800; font-size:0.8rem; color:#e2e8f0;">${icon} ${(d.alunoNome||'').toUpperCase()}</span>
-                        <span style="background:${cor}22; color:${cor}; font-size:0.55rem; font-weight:800; padding:2px 7px; border-radius:4px; flex-shrink:0; margin-left:6px;">${label}</span>
+                        <span style="background:${cor}22; color:${cor}; font-size:0.55rem; font-weight:800; padding:2px 7px; border-radius:4px; flex-shrink:0; margin-left:6px;">${label}</span>${recuperadoTag}
                     </div>
                     <p style="color:#cbd5e1; font-size:0.75rem; margin:0 0 4px 0; line-height:1.5; font-style:italic;">"${d.relato}"</p>
                     <small style="color:#475569; font-size:0.6rem;">${d.dataFormatada}</small>

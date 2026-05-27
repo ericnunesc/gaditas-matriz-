@@ -212,6 +212,11 @@
 
                         <!-- FORMULÁRIO (só quando não há relato ativo) -->
                         <div id="section-form-relato">
+                            <!-- Seleção de professor -->
+                            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">👨‍🏫 PARA QUAL PROFESSOR?</small>
+                            <div id="div-selector-prof-relato" style="margin-bottom:12px;">
+                                <small style="color:#475569; font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> Carregando professores...</small>
+                            </div>
                             <small style="color:#f43f5e; font-size:0.6rem; font-weight:800; display:block; margin-bottom:10px; letter-spacing:0.5px;">O QUE ESTÁ ACONTECENDO?</small>
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
                                 <button id="btn-tipo-machucado" onclick="academia.selecionarTipoRelato('machucado')" style="padding:12px 6px; border-radius:10px; border:2px solid #f97316; background:#431407; color:#fb923c; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">

@@ -1575,6 +1575,8 @@ Ele voltará a ser aluno normal.`)) return;
 
     publicoMuralAtual: 'todos',
     _tipoRelatoAtual: 'machucado',
+    _professorRelatoId: null,
+    _professorRelatoNome: null,
     _relatoListener: null,
     _relatoRespondidoVisto: null, // id do último relato respondido já notificado
     alunoMuralSelecionado: null,
@@ -1681,6 +1683,62 @@ Ele voltará a ser aluno normal.`)) return;
             });
     },
 
+    async carregarProfessoresParaRelato() {
+        const container = document.getElementById('div-selector-prof-relato');
+        if (!container) return;
+        container.innerHTML = '<small style="color:#475569; font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small>';
+        try {
+            const [snapAlunos, snapProfs] = await Promise.all([
+                db.collection("alunos").where("role","==","professor").get(),
+                db.collection("professores").get()
+            ]);
+            const lista = [];
+            // Admin sempre disponível como opção
+            lista.push({ id: 'admin', nome: 'Eric (Adm)' });
+            // Professores da coleção alunos
+            snapAlunos.docs.forEach(d => {
+                const dt = d.data();
+                if (!lista.find(p => p.id === d.id))
+                    lista.push({ id: d.id, nome: dt.nome || dt.name || dt.email || 'Professor' });
+            });
+            // Professores da coleção professores
+            snapProfs.docs.forEach(d => {
+                const dt = d.data();
+                if (!lista.find(p => p.id === d.id))
+                    lista.push({ id: d.id, nome: dt.nome || dt.name || dt.email || 'Professor' });
+            });
+            // Reseta seleção anterior
+            this._professorRelatoId   = null;
+            this._professorRelatoNome = null;
+            container.innerHTML = `<div style="display:flex; flex-wrap:wrap; gap:6px;">` +
+                lista.map(p => `<button type="button" id="btn-prof-relato-${p.id}"
+                    onclick="academia.selecionarProfessorRelato('${p.id}','${p.nome.replace(/'/g,"\\'")}' )"
+                    style="padding:7px 12px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#94a3b8; font-size:0.7rem; font-weight:700; cursor:pointer;">
+                    👨‍🏫 ${p.nome}</button>`).join('') +
+            `</div>`;
+        } catch(e) {
+            container.innerHTML = '<small style="color:#f43f5e; font-size:0.7rem;">Erro ao carregar professores.</small>';
+        }
+    },
+
+    selecionarProfessorRelato(id, nome) {
+        this._professorRelatoId   = id;
+        this._professorRelatoNome = nome;
+        const container = document.getElementById('div-selector-prof-relato');
+        if (!container) return;
+        container.querySelectorAll('button').forEach(btn => {
+            btn.style.borderColor = '#334155';
+            btn.style.background  = '#0f172a';
+            btn.style.color       = '#94a3b8';
+        });
+        const sel = document.getElementById(`btn-prof-relato-${id}`);
+        if (sel) {
+            sel.style.borderColor = '#f43f5e';
+            sel.style.background  = '#4c0519';
+            sel.style.color       = '#f43f5e';
+        }
+    },
+
     iniciarListenerRelatosProf() {
         if (auth.role !== 'admin' && auth.role !== 'professor') return;
         // Listener em tempo real nos relatos não arquivados
@@ -1690,6 +1748,8 @@ Ele voltará a ser aluno normal.`)) return;
                 snap.docChanges().forEach(change => {
                     if (change.type === 'modified') {
                         const d = change.doc.data();
+                        // Professores só recebem alertas dos relatos direcionados a eles
+                        if (auth.role === 'professor' && d.professorId !== auth.currentUser.id) return;
                         if (d.recuperado) {
                             // Mostra toast verde
                             const toast = document.getElementById('toast-recuperacao-prof');
@@ -1738,6 +1798,7 @@ Ele voltará a ser aluno normal.`)) return;
     async enviarRelato() {
         const texto = document.getElementById('textarea-relato')?.value.trim();
         if (!texto) return alert("Descreva o que está acontecendo antes de enviar.");
+        if (!this._professorRelatoId) return alert("Selecione um professor para receber o relato.");
         const aluno = auth.currentUser;
         try {
             await db.collection("relatos_saude").add({
@@ -1745,13 +1806,15 @@ Ele voltará a ser aluno normal.`)) return;
                 alunoNome: aluno.nome || aluno.name || aluno.email,
                 tipo: this._tipoRelatoAtual,
                 relato: texto,
+                professorId:   this._professorRelatoId,
+                professorNome: this._professorRelatoNome,
                 data: new Date().getTime(),
                 dataFormatada: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
-                lido: false, respondido: false, resposta: null
+                lido: false, respondido: false, resposta: null, arquivado: false
             });
             document.getElementById('textarea-relato').value = '';
             document.getElementById('card-relato-saude').classList.add('hidden');
-            alert("✅ Relato enviado! O professor foi notificado. OSS!");
+            alert(`✅ Relato enviado para ${this._professorRelatoNome}! OSS!`);
         } catch(e) { alert("Erro ao enviar relato."); }
     },
 
@@ -1775,6 +1838,10 @@ Ele voltará a ser aluno normal.`)) return;
                 if (secForm)   secForm.classList.add('hidden');
                 if (secStatus) secStatus.classList.remove('hidden');
 
+                const profTag = ativo.professorNome
+                    ? `<small style="color:#475569; font-size:0.6rem; display:block; margin-top:4px;">👨‍🏫 Para: <span style="color:#94a3b8;">${ativo.professorNome}</span></small>`
+                    : '';
+
                 if (ativo.recuperado) {
                     // Aluno já clicou em MELHOREI — aguarda professor confirmar
                     if (statusContent) statusContent.innerHTML = `
@@ -1782,6 +1849,7 @@ Ele voltará a ser aluno normal.`)) return;
                             <div style="font-size:1.6rem; margin-bottom:6px;">💪</div>
                             <div style="color:#34d399; font-weight:800; font-size:0.85rem;">Recuperação informada!</div>
                             <small style="color:#6ee7b7; font-size:0.7rem;">Aguardando confirmação do professor.</small>
+                            ${profTag}
                         </div>`;
                     if (btnRecup) btnRecup.classList.add('hidden');
                 } else if (ativo.respondido && ativo.resposta) {
@@ -1789,6 +1857,7 @@ Ele voltará a ser aluno normal.`)) return;
                     if (statusContent) statusContent.innerHTML = `
                         <div style="background:#0f172a; border-radius:8px; padding:10px; margin-bottom:4px;">
                             <small style="color:#64748b; font-size:0.6rem;">Relato enviado em ${ativo.dataFormatada}</small>
+                            ${profTag}
                             <p style="color:#cbd5e1; font-size:0.75rem; margin:4px 0 0 0; font-style:italic;">"${ativo.relato}"</p>
                         </div>`;
                     if (divTexto) divTexto.textContent = ativo.resposta;
@@ -1802,6 +1871,7 @@ Ele voltará a ser aluno normal.`)) return;
                             <div style="font-size:1.4rem; margin-bottom:6px;">🔔</div>
                             <div style="color:#fbbf24; font-weight:800; font-size:0.8rem;">Relato enviado!</div>
                             <small style="color:#d97706; font-size:0.7rem;">O professor foi notificado e irá responder em breve.</small>
+                            ${profTag}
                             <p style="color:#6b7280; font-size:0.7rem; font-style:italic; margin:8px 0 0 0;">"${ativo.relato}"</p>
                         </div>`;
                     if (divResp)  divResp.classList.add('hidden');
@@ -1813,6 +1883,8 @@ Ele voltará a ser aluno normal.`)) return;
                 if (secStatus) secStatus.classList.add('hidden');
                 if (divResp)   divResp.classList.add('hidden');
                 if (btnRecup)  btnRecup.classList.add('hidden');
+                // Carrega lista de professores para seleção
+                this.carregarProfessoresParaRelato();
             }
         } catch(e) {}
     },
@@ -1855,7 +1927,11 @@ Ele voltará a ser aluno normal.`)) return;
         lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:10px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small>';
         try {
             const snap = await db.collection("relatos_saude").orderBy("data","desc").limit(50).get();
-            const ativos   = snap.docs.filter(d => !d.data().arquivado);
+            let ativos = snap.docs.filter(d => !d.data().arquivado);
+            // Professores só veem os direcionados a eles
+            if (auth.role === 'professor') {
+                ativos = ativos.filter(d => d.data().professorId === auth.currentUser.id);
+            }
             const naoLidos = ativos.filter(d => !d.data().lido).length;
             if (badge) badge.textContent = naoLidos;
 
@@ -1872,10 +1948,14 @@ Ele voltará a ser aluno normal.`)) return;
                 const bordaEstilo = isRecup ? 'border-left:3px solid #10b981;' : (!d.lido ? 'border-left:3px solid #f43f5e;' : '');
                 const bgCard = isRecup ? '#0a1f14' : '#0f172a';
                 const recuperadoTag = isRecup ? `<span style="background:#064e3b; color:#34d399; font-size:0.55rem; font-weight:800; padding:2px 7px; border-radius:4px; margin-left:4px;">💪 RECUPERADO</span>` : '';
+                // Admin vê tag do professor destinatário
+                const profTag = auth.role === 'admin' && d.professorNome
+                    ? `<span style="background:#1e3a5f; color:#93c5fd; font-size:0.55rem; font-weight:800; padding:2px 7px; border-radius:4px; margin-left:4px;">👨‍🏫 ${d.professorNome}</span>`
+                    : '';
                 return `<div style="background:${bgCard}; border-radius:10px; padding:12px; margin-bottom:8px; ${bordaEstilo}">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
                         <span style="font-weight:800; font-size:0.8rem; color:#e2e8f0;">${icon} ${(d.alunoNome||'').toUpperCase()}</span>
-                        <span style="background:${cor}22; color:${cor}; font-size:0.55rem; font-weight:800; padding:2px 7px; border-radius:4px; flex-shrink:0; margin-left:6px;">${label}</span>${recuperadoTag}
+                        <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center; justify-content:flex-end; flex-shrink:0; margin-left:6px;"><span style="background:${cor}22; color:${cor}; font-size:0.55rem; font-weight:800; padding:2px 7px; border-radius:4px;">${label}</span>${recuperadoTag}${profTag}</div>
                     </div>
                     <p style="color:#cbd5e1; font-size:0.75rem; margin:0 0 4px 0; line-height:1.5; font-style:italic;">"${d.relato}"</p>
                     <small style="color:#475569; font-size:0.6rem;">${d.dataFormatada}</small>

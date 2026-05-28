@@ -1133,12 +1133,54 @@ const academia = {
     },
 
     async renderRanking() {
-        const ids = ['kids1', 'kids2', 'adulto']; const snap = await db.collection("alunos").orderBy("aulas", "desc").get();
-        const ano = new Date().getFullYear(); const listas = { kids1: [], kids2: [], adulto: [] };
-        snap.forEach(doc => { const a = doc.data(); const i = ano - new Date(a.nascimento).getFullYear(); if(i <= 8) listas.kids1.push(a); else if(i <= 14) listas.kids2.push(a); else listas.adulto.push(a); });
-        ids.forEach(id => {
+        const snap = await db.collection("alunos").get();
+        const ano  = new Date().getFullYear();
+
+        // ── JIU-JITSU (por aulas JJ) ───────────────────────────────
+        const listasJJ = { kids1: [], kids2: [], adulto: [] };
+        snap.forEach(doc => {
+            const a = doc.data();
+            const mod = a.modalidade || 'jiujitsu';
+            if (mod === 'muaythai') return; // só MT puro fica fora do ranking JJ
+            const idade = ano - new Date(a.nascimento).getFullYear();
+            if      (idade <= 8)  listasJJ.kids1.push(a);
+            else if (idade <= 14) listasJJ.kids2.push(a);
+            else                  listasJJ.adulto.push(a);
+        });
+        ['kids1','kids2','adulto'].forEach(id => {
             const c = document.getElementById(`lista-ranking-${id}`); if(!c) return;
-            c.innerHTML = listas[id].slice(0,5).map((a, i) => `<div class="ranking-item"><div style="display:flex; align-items:center; gap:8px;"><span style="font-size:0.85rem; font-weight:700;">${(i === 0) ? "🥇" : (i === 1) ? "🥈" : (i === 2) ? "🥉" : `${i+1}º`}</span><span style="font-weight:600; color:#cbd5e1; font-size:0.8rem;">${a.nome}</span></div><div style="text-align:right;"><b style="color:#3b82f6; font-size:0.85rem; font-weight:800;">${a.aulas}</b></div></div>`).join('') || "<small style='color:var(--text-muted);'>Nenhum registro.</small>";
+            const ordenado = listasJJ[id].sort((x,y) => (y.aulas||0)-(x.aulas||0));
+            c.innerHTML = ordenado.slice(0,5).map((a,i) => `
+                <div class="ranking-item">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:0.85rem; font-weight:700;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>
+                        <span style="font-weight:600; color:#cbd5e1; font-size:0.8rem;">${a.nome}</span>
+                    </div>
+                    <div style="text-align:right;"><b style="color:#3b82f6; font-size:0.85rem; font-weight:800;">${a.aulas||0}</b></div>
+                </div>`).join('') || "<small style='color:var(--text-muted);'>Nenhum registro.</small>";
+        });
+
+        // ── MUAY THAI (por aulasMT, apenas modalidade MT ou AMBOS) ─
+        const listasMT = { kids: [], adulto: [] };
+        snap.forEach(doc => {
+            const a = doc.data();
+            const mod = a.modalidade || 'jiujitsu';
+            if (mod !== 'muaythai' && mod !== 'ambos') return;
+            const idade = ano - new Date(a.nascimento).getFullYear();
+            if (idade <= 14) listasMT.kids.push(a);
+            else             listasMT.adulto.push(a);
+        });
+        ['kids','adulto'].forEach(id => {
+            const c = document.getElementById(`lista-ranking-mt-${id}`); if(!c) return;
+            const ordenado = listasMT[id].sort((x,y) => (y.aulasMT||0)-(x.aulasMT||0));
+            c.innerHTML = ordenado.slice(0,5).map((a,i) => `
+                <div class="ranking-item">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:0.85rem; font-weight:700;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>
+                        <span style="font-weight:600; color:#cbd5e1; font-size:0.8rem;">${a.nome}</span>
+                    </div>
+                    <div style="text-align:right;"><b style="color:#f43f5e; font-size:0.85rem; font-weight:800;">${a.aulasMT||0}</b></div>
+                </div>`).join('') || "<small style='color:var(--text-muted);'>Nenhum registro.</small>";
         });
     },
 

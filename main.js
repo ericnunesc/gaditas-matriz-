@@ -2177,7 +2177,8 @@ Ele voltará a ser aluno normal.`)) return;
         if (!match) return true; // sem horário no nome → sem restrição
 
         const minInicio = parseInt(match[1]) * 60 + parseInt(match[2]);
-        const duracao   = (this.gradeFirebase?.duracaoAula) || 90; // padrão 90 min
+        const duracoes  = this.gradeFirebase?.duracoes || {};
+        const duracao   = duracoes[turmaQR] || (this.gradeFirebase?.duracaoAula) || 90;
         const minFim    = minInicio + duracao;
 
         const agora    = new Date();
@@ -2249,7 +2250,8 @@ Ele voltará a ser aluno normal.`)) return;
                         data: new Date().getTime()
                     });
                 }
-                const durQR = (this.gradeFirebase?.duracaoAula) || 90;
+                const duracoes = this.gradeFirebase?.duracoes || {};
+                const durQR = duracoes[turmaQR] || (this.gradeFirebase?.duracaoAula) || 90;
                 alert(`⚠️ Check-in enviado para aprovação!\n\nVocê está fora da janela permitida.\nA janela para esta turma é:\n• 15 min antes do início\n• até 15 min após o término (${durQR} min de aula)`);
             }
         } catch(e) { console.warn("Erro QR:", e.message); }
@@ -2300,27 +2302,37 @@ Ele voltará a ser aluno normal.`)) return;
             const isHoje = d === hoje;
 
             if (modoEditar) {
-                html += `<div style="margin-bottom:18px;">
-                    <div style="font-size:0.65rem; font-weight:800; color:${isHoje ? '#3b82f6' : '#94a3b8'}; margin-bottom:8px; letter-spacing:0.5px;">
-                        ${diasNomes[d].toUpperCase()}${isHoje ? ' — HOJE' : ''}
-                    </div>`;
+                const duracoes = grade.duracoes || {};
+                html += '<div style="margin-bottom:18px;">' +
+                    '<div style="font-size:0.65rem; font-weight:800; color:' + (isHoje ? '#3b82f6' : '#94a3b8') + '; margin-bottom:8px; letter-spacing:0.5px;">' +
+                    diasNomes[d].toUpperCase() + (isHoje ? ' — HOJE' : '') + '</div>';
                 slots.forEach(slot => {
                     if (slot === 'Sem treinos hoje') {
-                        html += `<div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:11px 14px; margin-bottom:6px;">
-                            <span style="color:#64748b; font-size:0.8rem; font-style:italic;">Sem treinos hoje</span>
-                        </div>`;
+                        html += '<div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:11px 14px; margin-bottom:6px;">' +
+                            '<span style="color:#64748b; font-size:0.8rem; font-style:italic;">Sem treinos hoje</span></div>';
                         return;
                     }
-                    html += `<div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:11px 14px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
-                        <span style="color:#e2e8f0; font-size:0.85rem; font-weight:600;">${slot}</span>
-                        <button onclick="academia.removerHorarioAdmin(${d}, '${slot.replace(/'/g, "\\'")}')" style="background:none; border:none; color:#f43f5e; cursor:pointer; padding:4px; font-size:1rem;"><i class="fas fa-times"></i></button>
-                    </div>`;
+                    const durSlot = duracoes[slot] || (grade.duracaoAula || 90);
+                    const slotEsc = slot.replace(/'/g, "\\'");
+                    html += '<div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:8px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; gap:6px;">' +
+                        '<span style="color:#e2e8f0; font-size:0.83rem; font-weight:600; flex:1;">' + slot + '</span>' +
+                        '<div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">' +
+                        '<input type="number" value="' + durSlot + '" min="15" max="300" title="Duração desta turma em minutos" ' +
+                        'onchange="academia.salvarDuracaoSlot(\'' + slotEsc + '\', this.value)" ' +
+                        'style="width:48px; padding:4px 5px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:5px; font-size:0.7rem; text-align:center; outline:none;"/>' +
+                        '<span style="color:#475569; font-size:0.55rem; font-weight:600;">min</span>' +
+                        '<button onclick="academia.removerHorarioAdmin(' + d + ', \'' + slotEsc + '\')" ' +
+                        'style="background:none; border:none; color:#f43f5e; cursor:pointer; padding:4px 6px; font-size:0.9rem;"><i class="fas fa-times"></i></button>' +
+                        '</div></div>';
                 });
-                html += `<div style="display:flex; gap:8px; margin-top:4px;">
-                    <input type="text" id="input-horario-${d}" placeholder="ex: 19:00 - BJJ"
-                        style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"/>
-                    <button onclick="academia.adicionarHorarioAdmin(${d})" style="background:#3b82f6; border:none; color:white; padding:10px 16px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; white-space:nowrap;">+ Add</button>
-                </div></div>`;
+                html += '<div style="display:flex; gap:6px; margin-top:4px; align-items:center;">' +
+                    '<input type="text" id="input-horario-' + d + '" placeholder="ex: 19:00 - BJJ" ' +
+                    'style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"/>' +
+                    '<input type="number" id="input-dur-novo-' + d + '" value="90" min="15" max="300" placeholder="min" title="Duração em minutos" ' +
+                    'style="width:52px; padding:10px 5px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; outline:none; font-size:0.75rem; text-align:center;"/>' +
+                    '<button onclick="academia.adicionarHorarioAdmin(' + d + ')" ' +
+                    'style="background:#3b82f6; border:none; color:white; padding:10px 14px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; white-space:nowrap;">+ Add</button>' +
+                    '</div></div>';
             } else {
                 html += `<div style="${isHoje ? 'border:1px solid #3b82f6; border-radius:12px; padding:10px;' : ''} margin-bottom:16px;">
                     <div style="font-size:0.65rem; font-weight:800; color:${isHoje ? '#3b82f6' : '#94a3b8'}; margin-bottom:8px; letter-spacing:0.5px;">
@@ -2351,20 +2363,19 @@ Ele voltará a ser aluno normal.`)) return;
         const blocoInfo    = document.getElementById('bloco-info-janela');
         if (modoEditar && isAdmin && blocoDuracao) {
             blocoDuracao.innerHTML =
-                '<div style="background:#0f172a; border:1px solid #f59e0b; border-radius:10px; padding:12px; margin-bottom:18px;">' +
-                    '<small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">&#9201; DURAÇÃO PADRÃO DAS AULAS:</small>' +
-                    '<div style="display:flex; gap:8px; align-items:center;">' +
-                        '<input type="number" id="input-duracao-aula" value="' + duracaoAtual + '" min="15" max="300" style="width:72px; padding:8px; background:#1e293b; border:1px solid #334155; color:white; border-radius:6px; outline:none; font-size:0.9rem; text-align:center;"/>' +
-                        '<span style="color:#94a3b8; font-size:0.75rem; font-weight:600;">minutos</span>' +
-                        '<button onclick="academia.salvarDuracaoAula()" style="margin-left:auto; padding:8px 16px; background:#f59e0b; border:none; color:#000; border-radius:6px; font-weight:800; cursor:pointer; font-size:0.7rem;">SALVAR</button>' +
+                '<div style="background:#0f172a; border:1px solid #f59e0b44; border-radius:10px; padding:10px 12px; margin-bottom:16px;">' +
+                    '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
+                        '<i class="fas fa-clock" style="color:#f59e0b; font-size:0.7rem;"></i>' +
+                        '<small style="color:#f59e0b; font-size:0.6rem; font-weight:800; letter-spacing:0.5px;">DURAÇÃO POR TURMA</small>' +
                     '</div>' +
-                    '<small style="color:#475569; font-size:0.6rem; display:block; margin-top:6px;">Janela QR: 15 min antes do inicio ate ' + (duracaoAtual + 15) + ' min apos (total ' + (duracaoAtual + 30) + ' min)</small>' +
+                    '<small style="color:#64748b; font-size:0.6rem; display:block; line-height:1.5;">Cada turma tem sua pr&#243;pria dura&#231;&#227;o &mdash; edite o n&#250;mero <em>(min)</em> ao lado de cada aula.</small>' +
+                    '<small style="color:#475569; font-size:0.55rem; display:block; margin-top:4px;">Padr&#227;o quando n&#227;o configurado: ' + duracaoAtual + ' min &bull; Janela QR = 15 min antes + dura&#231;&#227;o + 15 min ap&#243;s</small>' +
                 '</div>';
         } else if (!modoEditar && blocoInfo) {
             blocoInfo.innerHTML =
                 '<div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:8px 12px; margin-bottom:14px; display:flex; align-items:center; gap:8px;">' +
                     '<i class="fas fa-qrcode" style="color:#3b82f6; font-size:0.8rem;"></i>' +
-                    '<small style="color:#64748b; font-size:0.65rem; font-weight:600;">Janela QR Code: 15 min antes ate 15 min apos o fim &bull; Duracao: <span style="color:#94a3b8;">' + duracaoAtual + ' min</span></small>' +
+                    '<small style="color:#64748b; font-size:0.65rem; font-weight:600;">Janela QR: 15 min antes do in&#237;cio at&#233; 15 min ap&#243;s o t&#233;rmino &bull; Dura&#231;&#227;o configurada por turma</small>' +
                 '</div>';
         }
     },
@@ -2515,15 +2526,35 @@ Ele voltará a ser aluno normal.`)) return;
         } catch(e) { alert("Erro ao salvar duração."); }
     },
 
+    // Salva a duração de um slot específico (por turma)
+    async salvarDuracaoSlot(slot, minStr) {
+        const min = parseInt(minStr);
+        if (isNaN(min) || min < 15 || min > 300) return; // silencioso — input direto
+        const grade = this.getGrade();
+        if (!grade.duracoes) grade.duracoes = {};
+        grade.duracoes[slot] = min;
+        this.gradeFirebase = grade;
+        try {
+            await db.collection('configuracoes').doc('horarios').set({ duracoes: grade.duracoes }, { merge: true });
+        } catch(e) { console.warn('Erro ao salvar duração do slot:', e); }
+    },
+
     async adicionarHorarioAdmin(dia) {
         const input = document.getElementById(`input-horario-${dia}`);
         if (!input || !input.value.trim()) return alert("Digite o horário e turma (ex: 19:00 - BJJ).");
         const valor = input.value.trim();
+        const durInput = document.getElementById(`input-dur-novo-${dia}`);
+        const durMin = durInput ? parseInt(durInput.value) : NaN;
         const grade = this.getGrade();
         const slots = (grade[dia] || grade[String(dia)] || []).filter(s => s !== 'Sem treinos hoje');
         if (!slots.includes(valor)) slots.push(valor);
         slots.sort();
         grade[dia] = slots;
+        // Salva duração por slot se fornecida e válida
+        if (!isNaN(durMin) && durMin >= 15 && durMin <= 300) {
+            if (!grade.duracoes) grade.duracoes = {};
+            grade.duracoes[valor] = durMin;
+        }
         this.gradeFirebase = grade;
         try {
             await db.collection('configuracoes').doc('horarios').set(grade);
@@ -2536,6 +2567,10 @@ Ele voltará a ser aluno normal.`)) return;
         const grade = this.getGrade();
         const slots = (grade[dia] || grade[String(dia)] || []).filter(s => s !== slotValor);
         grade[dia] = slots.length > 0 ? slots : ['Sem treinos hoje'];
+        // Remove duração do slot removido, se existir
+        if (grade.duracoes && grade.duracoes[slotValor] !== undefined) {
+            delete grade.duracoes[slotValor];
+        }
         this.gradeFirebase = grade;
         try {
             await db.collection('configuracoes').doc('horarios').set(grade);

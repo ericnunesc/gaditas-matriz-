@@ -2172,18 +2172,19 @@ Ele voltará a ser aluno normal.`)) return;
     },
 
     _verificarJanelaHorario(turmaQR) {
-        // Extrai o horário da turma — ex: "22:30 - BJJ" → "22:30"
+        // Extrai o horário de início da turma — ex: "16:00 - BJJ" → 16:00
         const match = turmaQR.match(/^(\d{2}):(\d{2})/);
-        if (!match) return false;
-        const hTurma = parseInt(match[1]);
-        const mTurma = parseInt(match[2]);
+        if (!match) return true; // sem horário no nome → sem restrição
 
-        const agora = new Date();
+        const minInicio = parseInt(match[1]) * 60 + parseInt(match[2]);
+        const duracao   = (this.gradeFirebase?.duracaoAula) || 90; // padrão 90 min
+        const minFim    = minInicio + duracao;
+
+        const agora    = new Date();
         const minAgora = agora.getHours() * 60 + agora.getMinutes();
-        const minTurma = hTurma * 60 + mTurma;
 
-        // Janela de ±15 minutos
-        return Math.abs(minAgora - minTurma) <= 15;
+        // Janela: 15 min antes do início até 15 min após o término
+        return minAgora >= (minInicio - 15) && minAgora <= (minFim + 15);
     },
 
     async processarCheckinQR(turmaQR, alunoId) {
@@ -2248,7 +2249,8 @@ Ele voltará a ser aluno normal.`)) return;
                         data: new Date().getTime()
                     });
                 }
-                alert("⚠️ Check-in enviado para aprovação! Você está fora da janela de ±15 min da aula.");
+                const durQR = (this.gradeFirebase?.duracaoAula) || 90;
+                alert(`⚠️ Check-in enviado para aprovação!\n\nVocê está fora da janela permitida.\nA janela para esta turma é:\n• 15 min antes do início\n• até 15 min após o término (${durQR} min de aula)`);
             }
         } catch(e) { console.warn("Erro QR:", e.message); }
     },
@@ -2279,6 +2281,8 @@ Ele voltará a ser aluno normal.`)) return;
         const isAdmin = auth.role === 'admin';
         const modoEditar = this._modoEdicaoHorarios;
 
+        const duracaoAtual = grade.duracaoAula || 90;
+
         let html = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <span style="font-size:0.85rem; font-weight:800; color:${modoEditar ? '#f59e0b' : 'white'};">
@@ -2286,7 +2290,23 @@ Ele voltará a ser aluno normal.`)) return;
                     ${modoEditar ? 'EDITAR HORÁRIOS' : 'Horários e Turmas'}
                 </span>
                 ${isAdmin ? `<button onclick="academia.toggleEdicaoHorarios()" style="background:${modoEditar ? '#334155' : '#f59e0b'}; border:none; color:${modoEditar ? 'white' : '#000'}; padding:8px 14px; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">${modoEditar ? '✕ FECHAR' : '✏️ EDITAR'}</button>` : ''}
-            </div>`;
+            </div>
+            ${modoEditar ? `
+            <div style="background:#0f172a; border:1px solid #f59e0b44; border-radius:10px; padding:12px; margin-bottom:18px;">
+                <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">⏱️ DURAÇÃO PADRÃO DAS AULAS (para janela do QR Code):</small>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="number" id="input-duracao-aula" value="${duracaoAtual}" min="15" max="300"
+                        style="width:72px; padding:8px; background:#1e293b; border:1px solid #334155; color:white; border-radius:6px; outline:none; font-size:0.9rem; text-align:center;"/>
+                    <span style="color:#94a3b8; font-size:0.75rem; font-weight:600;">minutos</span>
+                    <button onclick="academia.salvarDuracaoAula()" style="margin-left:auto; padding:8px 16px; background:#f59e0b; border:none; color:#000; border-radius:6px; font-weight:800; cursor:pointer; font-size:0.7rem;">💾 SALVAR</button>
+                </div>
+                <small style="color:#475569; font-size:0.6rem; display:block; margin-top:6px;">Janela QR: 15 min antes do início → 15 min após o término (total: ${duracaoAtual + 30} min)</small>
+            </div>` : `
+            <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:8px 12px; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-qrcode" style="color:#3b82f6; font-size:0.8rem;"></i>
+                <small style="color:#64748b; font-size:0.65rem; font-weight:600;">Janela QR Code: 15 min antes até 15 min após o fim • Duração: <span style="color:#94a3b8;">${duracaoAtual} min</span></small>
+            </div>`}
+        `;
 
         for (let d = 0; d <= 6; d++) {
             const slots = grade[d] || grade[String(d)] || ['Sem treinos hoje'];
@@ -2472,6 +2492,18 @@ Ele voltará a ser aluno normal.`)) return;
     toggleEdicaoHorarios() {
         this._modoEdicaoHorarios = !this._modoEdicaoHorarios;
         this.renderHorarios();
+    },
+
+    async salvarDuracaoAula() {
+        const input = document.getElementById('input-duracao-aula');
+        const min = parseInt(input?.value);
+        if (isNaN(min) || min < 15 || min > 300) return alert("Duração inválida (15 a 300 minutos).");
+        try {
+            await db.collection('configuracoes').doc('horarios').set({ duracaoAula: min }, { merge: true });
+            if (!this.gradeFirebase) this.gradeFirebase = {};
+            this.gradeFirebase.duracaoAula = min;
+            alert(`✅ Duração salva: ${min} min.\nJanela QR: 15 min antes até ${min + 15} min após o início.`);
+        } catch(e) { alert("Erro ao salvar duração."); }
     },
 
     async adicionarHorarioAdmin(dia) {

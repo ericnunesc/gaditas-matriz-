@@ -2289,23 +2289,10 @@ Ele voltará a ser aluno normal.`)) return;
                     <i class="fas fa-${modoEditar ? 'pen' : 'calendar-alt'}" style="margin-right:6px; color:${modoEditar ? '#f59e0b' : '#3b82f6'};"></i>
                     ${modoEditar ? 'EDITAR HORÁRIOS' : 'Horários e Turmas'}
                 </span>
-                ${isAdmin ? `<button onclick="academia.toggleEdicaoHorarios()" style="background:${modoEditar ? '#334155' : '#f59e0b'}; border:none; color:${modoEditar ? 'white' : '#000'}; padding:8px 14px; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">${modoEditar ? '✕ FECHAR' : '✏️ EDITAR'}</button>` : ''}
+                ${isAdmin ? '<button onclick="academia.toggleEdicaoHorarios()" style="background:' + (modoEditar ? '#334155' : '#f59e0b') + '; border:none; color:' + (modoEditar ? 'white' : '#000') + '; padding:8px 14px; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">' + (modoEditar ? '✕ FECHAR' : '✏️ EDITAR') + '</button>' : ''}
             </div>
-            ${modoEditar ? `
-            <div style="background:#0f172a; border:1px solid #f59e0b44; border-radius:10px; padding:12px; margin-bottom:18px;">
-                <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">⏱️ DURAÇÃO PADRÃO DAS AULAS (para janela do QR Code):</small>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <input type="number" id="input-duracao-aula" value="${duracaoAtual}" min="15" max="300"
-                        style="width:72px; padding:8px; background:#1e293b; border:1px solid #334155; color:white; border-radius:6px; outline:none; font-size:0.9rem; text-align:center;"/>
-                    <span style="color:#94a3b8; font-size:0.75rem; font-weight:600;">minutos</span>
-                    <button onclick="academia.salvarDuracaoAula()" style="margin-left:auto; padding:8px 16px; background:#f59e0b; border:none; color:#000; border-radius:6px; font-weight:800; cursor:pointer; font-size:0.7rem;">💾 SALVAR</button>
-                </div>
-                <small style="color:#475569; font-size:0.6rem; display:block; margin-top:6px;">Janela QR: 15 min antes do início → 15 min após o término (total: ${duracaoAtual + 30} min)</small>
-            </div>` : `
-            <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:8px 12px; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
-                <i class="fas fa-qrcode" style="color:#3b82f6; font-size:0.8rem;"></i>
-                <small style="color:#64748b; font-size:0.65rem; font-weight:600;">Janela QR Code: 15 min antes até 15 min após o fim • Duração: <span style="color:#94a3b8;">${duracaoAtual} min</span></small>
-            </div>`}
+            <div id="bloco-duracao-aula"></div>
+            <div id="bloco-info-janela"></div>
         `;
 
         for (let d = 0; d <= 6; d++) {
@@ -2358,6 +2345,28 @@ Ele voltará a ser aluno normal.`)) return;
             </div>`;
 
         container.innerHTML = html;
+
+        // Preenche bloco de duração separadamente (evita problema com template literal aninhado)
+        const blocoDuracao = document.getElementById('bloco-duracao-aula');
+        const blocoInfo    = document.getElementById('bloco-info-janela');
+        if (modoEditar && isAdmin && blocoDuracao) {
+            blocoDuracao.innerHTML =
+                '<div style="background:#0f172a; border:1px solid #f59e0b; border-radius:10px; padding:12px; margin-bottom:18px;">' +
+                    '<small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">&#9201; DURAÇÃO PADRÃO DAS AULAS:</small>' +
+                    '<div style="display:flex; gap:8px; align-items:center;">' +
+                        '<input type="number" id="input-duracao-aula" value="' + duracaoAtual + '" min="15" max="300" style="width:72px; padding:8px; background:#1e293b; border:1px solid #334155; color:white; border-radius:6px; outline:none; font-size:0.9rem; text-align:center;"/>' +
+                        '<span style="color:#94a3b8; font-size:0.75rem; font-weight:600;">minutos</span>' +
+                        '<button onclick="academia.salvarDuracaoAula()" style="margin-left:auto; padding:8px 16px; background:#f59e0b; border:none; color:#000; border-radius:6px; font-weight:800; cursor:pointer; font-size:0.7rem;">SALVAR</button>' +
+                    '</div>' +
+                    '<small style="color:#475569; font-size:0.6rem; display:block; margin-top:6px;">Janela QR: 15 min antes do inicio ate ' + (duracaoAtual + 15) + ' min apos (total ' + (duracaoAtual + 30) + ' min)</small>' +
+                '</div>';
+        } else if (!modoEditar && blocoInfo) {
+            blocoInfo.innerHTML =
+                '<div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:8px 12px; margin-bottom:14px; display:flex; align-items:center; gap:8px;">' +
+                    '<i class="fas fa-qrcode" style="color:#3b82f6; font-size:0.8rem;"></i>' +
+                    '<small style="color:#64748b; font-size:0.65rem; font-weight:600;">Janela QR Code: 15 min antes ate 15 min apos o fim &bull; Duracao: <span style="color:#94a3b8;">' + duracaoAtual + ' min</span></small>' +
+                '</div>';
+        }
     },
 
     async toggleHistoricoAulas() {

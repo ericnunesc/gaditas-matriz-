@@ -420,15 +420,19 @@
                         // 3. Cria assinatura recorrente no Asaas (só para planos com valor fixo)
                         btnReg.innerText = "CRIANDO ASSINATURA...";
                         let asaasSubscriptionId = null;
+
+                        // Mensal → PIX (gera Pix novo a cada mês)
+                        // Trimestral/Semestral/Anual → CREDIT_CARD recorrente (sem data final)
                         const ciclosAsaas = {
-                            mensal:     { cycle: 'MONTHLY',    meses: 1  },
-                            trimestral: { cycle: 'QUARTERLY',  meses: 3  },
-                            semestral:  { cycle: 'SEMIANNUAL', meses: 6  },
-                            anual:      { cycle: 'YEARLY',     meses: 12 }
+                            mensal:     { cycle: 'MONTHLY',    meses: 1,  billingType: 'PIX'         },
+                            trimestral: { cycle: 'QUARTERLY',  meses: 3,  billingType: 'CREDIT_CARD' },
+                            semestral:  { cycle: 'SEMIANNUAL', meses: 6,  billingType: 'CREDIT_CARD' },
+                            anual:      { cycle: 'YEARLY',     meses: 12, billingType: 'CREDIT_CARD' }
                         };
                         const cicloInfo = ciclosAsaas[planoSelecionado.key];
                         if (asaasId && cicloInfo && parseFloat(planoSelecionado.valor) > 0) {
                             try {
+                                // Valor sempre vem do Firebase — se o admin alterar, o próximo cadastro já pega o novo
                                 const valorAssinatura = parseFloat(planoSelecionado.valor) * cicloInfo.meses;
                                 // Primeiro vencimento: 5 dias a partir de hoje
                                 const dataVenc = new Date();
@@ -439,25 +443,58 @@
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
-                                        customer: asaasId,
-                                        billingType: 'UNDEFINED',   // Cliente escolhe: Pix, Boleto ou Cartão
-                                        value: valorAssinatura,
+                                        customer:    asaasId,
+                                        billingType: cicloInfo.billingType,
+                                        value:       valorAssinatura,
                                         nextDueDate,
-                                        cycle: cicloInfo.cycle,
+                                        cycle:       cicloInfo.cycle,
                                         description: `Gaditas Matriz — Plano ${planoSelecionado.label} — ${nome}`
+                                        // Sem endDate → assinatura sem data final (recorrente indefinida)
                                     })
                                 });
                                 const dadosSub = await resSub.json();
                                 if (dadosSub.id) {
                                     asaasSubscriptionId = dadosSub.id;
-                                    console.log('✅ Assinatura Asaas criada:', asaasSubscriptionId);
+                                    console.log('✅ Assinatura criada:', asaasSubscriptionId, cicloInfo.billingType);
                                 } else {
                                     console.warn('⚠️ Assinatura não criada:', dadosSub);
                                 }
                             } catch(errSub) { console.warn('Erro ao criar assinatura Asaas:', errSub.message); }
                         }
 
-                        // 4. Salva no Firestore com plano + IDs Asaas
+                        // 4. Cria cobrança avulsa de matrícula (R$30 via PIX)
+                        //    Exceto no Plano Anual — matrícula grátis
+                        btnReg.innerText = "GERANDO TAXA DE MATRÍCULA...";
+                        let asaasMatriculaId = null;
+                        const matriculaGratis = planoSelecionado.key === 'anual';
+                        if (asaasId && !matriculaGratis) {
+                            try {
+                                const dataMatricula = new Date();
+                                dataMatricula.setDate(dataMatricula.getDate() + 3); // vence em 3 dias
+                                const dueDateMatricula = dataMatricula.toISOString().split('T')[0];
+
+                                const resMat = await fetch('/api/asaas?endpoint=payments', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        customer:    asaasId,
+                                        billingType: 'PIX',
+                                        value:       30.00,
+                                        dueDate:     dueDateMatricula,
+                                        description: `Taxa de Matrícula — Gaditas Matriz — ${nome}`
+                                    })
+                                });
+                                const dadosMat = await resMat.json();
+                                if (dadosMat.id) {
+                                    asaasMatriculaId = dadosMat.id;
+                                    console.log('✅ Matrícula gerada:', asaasMatriculaId);
+                                } else {
+                                    console.warn('⚠️ Matrícula não gerada:', dadosMat);
+                                }
+                            } catch(errMat) { console.warn('Erro ao gerar matrícula Asaas:', errMat.message); }
+                        }
+
+                        // 5. Salva no Firestore com plano + IDs Asaas
                         btnReg.innerText = "SALVANDO DADOS...";
                         const novoAluno = {
                             id: uid, nome, email, cpf, telefone, nascimento,
@@ -475,12 +512,13 @@
                                 ? { faixaMT: "Branco", aulasMT: 0 }
                                 : { aulasMT: 0 })
                         };
-                        if (qtdFamilia)           novoAluno.qtdFamilia           = qtdFamilia;
-                        if (asaasId)              novoAluno.asaasId              = asaasId;
-                        if (asaasSubscriptionId)  novoAluno.asaasSubscriptionId  = asaasSubscriptionId;
+                        if (qtdFamilia)          novoAluno.qtdFamilia          = qtdFamilia;
+                        if (asaasId)             novoAluno.asaasId             = asaasId;
+                        if (asaasSubscriptionId) novoAluno.asaasSubscriptionId = asaasSubscriptionId;
+                        if (asaasMatriculaId)    novoAluno.asaasMatriculaId    = asaasMatriculaId;
                         await db.collection("alunos").doc(uid).set(novoAluno);
 
-                        // 5. Registra na coleção de novos cadastros para alerta do admin
+                        // 6. Registra na coleção de novos cadastros para alerta do admin
                         await db.collection("novos_cadastros").add({
                             alunoId: uid,
                             nome, email,
@@ -488,15 +526,24 @@
                             planoLabel: planoSelecionado.label,
                             planoValor: planoSelecionado.valor,
                             asaasSubscriptionId: asaasSubscriptionId || null,
+                            asaasMatriculaId:    asaasMatriculaId    || null,
                             data: new Date().getTime(),
                             dataFormatada: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
                             lido: false
                         });
 
-                        const msgSub = asaasSubscriptionId
-                            ? `\n\n💳 Assinatura criada no Asaas! O link de pagamento será enviado para ${email}.`
-                            : '';
-                        alert("Matrícula realizada com sucesso! Faça login para acessar o tatame. OSS!" + msgSub);
+                        // Monta mensagem de confirmação
+                        let msgFinal = "✅ Matrícula realizada com sucesso! OSS!\n\nVerifique seu e-mail — o Asaas enviará o link de pagamento.";
+                        if (matriculaGratis) {
+                            msgFinal += "\n\n🎁 Plano Anual: taxa de matrícula GRÁTIS!";
+                        } else {
+                            msgFinal += "\n\n💰 Taxa de matrícula: R$ 30,00 via PIX (vence em 3 dias).";
+                        }
+                        if (asaasSubscriptionId) {
+                            const tipoPag = cicloInfo?.billingType === 'PIX' ? 'Pix mensal' : 'Cartão de crédito recorrente';
+                            msgFinal += `\n💳 Assinatura ${planoSelecionado.label}: ${tipoPag}.`;
+                        }
+                        alert(msgFinal);
                         window.location.href = "index.html";
 
                     } catch(error) {

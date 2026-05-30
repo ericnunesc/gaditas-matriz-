@@ -3933,10 +3933,8 @@ const ui = {
                 if (cardS) cardS.classList.remove('hidden');
                 academia.carregarRelatosSaude();
             }
-            // Depoimentos pendentes — só para admin
+            // Depoimentos pendentes — carrega ao entrar na aba (card já visível via configurarVisao)
             if (auth.role === 'admin') {
-                const cardDep = document.getElementById('card-depoimentos-admin');
-                if (cardDep) cardDep.classList.remove('hidden');
                 academia.carregarDepoimentosPendentes();
             }
             if (auth.role === 'admin') academia.carregarVideosPendentesAdmin();
@@ -4062,6 +4060,9 @@ const ui = {
         if (profSenhaSection) profSenhaSection.classList.toggle('hidden', !isProf);
         document.getElementById('card-gestao-atleta').classList.toggle('hidden', isProf && !document.getElementById('edit-aluno-id').value);
         document.getElementById('admin-eventos-editor').classList.toggle('hidden', !isAdmin);
+        // Card depoimentos pendentes — só admin, usa display block/none
+        const cardDepAdmin = document.getElementById('card-depoimentos-admin');
+        if (cardDepAdmin) cardDepAdmin.style.display = isAdmin ? 'block' : 'none';
         // Professor vê o wrapper de perfil (alterar senha, dados)
         const wrapperPerfil = document.getElementById('wrapper-perfil-proprio');
         if (wrapperPerfil && isProf) wrapperPerfil.classList.remove('hidden');

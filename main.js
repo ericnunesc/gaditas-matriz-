@@ -2217,36 +2217,70 @@ Ele voltará a ser aluno normal.`)) return;
         } catch(e) { alert('Erro ao enviar: ' + e.message); }
     },
 
-    // ── Admin: depoimentos pendentes ────────────────────────
+    // ── Admin: depoimentos pendentes + aprovados ───────────
     async carregarDepoimentosPendentes() {
-        const lista = document.getElementById('lista-dep-pendentes');
-        const badge = document.getElementById('badge-dep-pendentes');
+        const lista  = document.getElementById('lista-dep-pendentes');
+        const badge  = document.getElementById('badge-dep-pendentes');
         if (!lista) return;
         lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:10px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small>';
         try {
-            const snap = await db.collection('depoimentos').where('aprovado', '==', false).get();
-            if (badge) badge.textContent = snap.docs.length;
-            if (snap.empty) {
-                lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:12px;">Nenhum depoimento pendente. ✅</small>';
-                return;
+            const snap = await db.collection('depoimentos').get();
+            const pendentes = snap.docs.filter(d => !d.data().aprovado)
+                .sort((a,b) => (b.data().data||0) - (a.data().data||0));
+            const aprovados = snap.docs.filter(d =>  d.data().aprovado)
+                .sort((a,b) => (b.data().data||0) - (a.data().data||0));
+            if (badge) badge.textContent = pendentes.length;
+
+            let html = '';
+
+            // ── PENDENTES ──
+            if (pendentes.length > 0) {
+                html += `<div style="font-size:0.6rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px; margin-bottom:6px;">⏳ AGUARDANDO APROVAÇÃO (${pendentes.length})</div>`;
+                html += pendentes.map(doc => {
+                    const d = doc.data();
+                    return `<div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap:8px;">
+                            <div>
+                                <div style="font-size:0.78rem; font-weight:800; color:#f1f5f9;">${(d.alunoNome||'').toUpperCase()}</div>
+                                <small style="color:#64748b; font-size:0.6rem;">${d.faixa||''}${d.grau?' · '+d.grau+'ºG':''} · ${d.dataFormatada||''}</small>
+                            </div>
+                            <div style="display:flex; gap:5px; flex-shrink:0;">
+                                <button onclick="academia.aprovarDepoimento('${doc.id}')" style="background:#064e3b; border:1px solid #10b981; color:#34d399; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.7rem; font-weight:800;">✓ APROVAR</button>
+                                <button onclick="academia.rejeitarDepoimento('${doc.id}')" style="background:#2a0808; border:1px solid #f43f5e55; color:#f43f5e; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.7rem; font-weight:800;">✗</button>
+                            </div>
+                        </div>
+                        <p style="color:#94a3b8; font-size:0.78rem; line-height:1.5; margin:0 0 6px; font-style:italic;">"${d.texto}"</p>
+                        <button onclick="academia.destaqueDepoimento('${doc.id}',${!d.destaque})" style="background:none; border:none; color:${d.destaque?'#f59e0b':'#475569'}; cursor:pointer; font-size:0.65rem; font-weight:700; padding:0;"><i class="fas fa-star"></i> ${d.destaque?'REMOVER DESTAQUE':'DESTAQUE'}</button>
+                    </div>`;
+                }).join('');
+            } else {
+                html += '<small style="color:#64748b; display:block; text-align:center; padding:10px 0; font-size:0.7rem;">Nenhum pendente ✅</small>';
             }
-            lista.innerHTML = snap.docs.map(doc => {
-                const d = doc.data();
-                return `<div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap:8px;">
-                        <div>
-                            <div style="font-size:0.8rem; font-weight:800; color:#f1f5f9;">${(d.alunoNome||'').toUpperCase()}</div>
-                            <small style="color:#64748b; font-size:0.6rem;">${d.faixa || ''}${d.grau ? ' · ' + d.grau + 'ºG' : ''} · ${d.dataFormatada || ''}</small>
+
+            // ── APROVADOS / PUBLICADOS ──
+            html += `<div style="font-size:0.6rem; font-weight:800; color:#10b981; letter-spacing:0.5px; margin:12px 0 6px; border-top:1px solid #1e293b; padding-top:12px;">⭐ PUBLICADOS NO MURAL (${aprovados.length})</div>`;
+            if (aprovados.length === 0) {
+                html += '<small style="color:#64748b; display:block; text-align:center; padding:6px 0; font-size:0.7rem;">Nenhum aprovado ainda.</small>';
+            } else {
+                html += aprovados.map(doc => {
+                    const d = doc.data();
+                    return `<div style="background:#0a1a12; border:1px solid #10b98133; border-radius:10px; padding:10px 12px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
+                            <div>
+                                <div style="font-size:0.78rem; font-weight:800; color:#f1f5f9;">${d.destaque?'⭐ ':''} ${(d.alunoNome||'').toUpperCase()}</div>
+                                <small style="color:#64748b; font-size:0.6rem;">${d.faixa||''}${d.grau?' · '+d.grau+'ºG':''} · ${d.dataFormatada||''}</small>
+                            </div>
+                            <div style="display:flex; gap:5px; flex-shrink:0;">
+                                <button onclick="academia.destaqueDepoimento('${doc.id}',${!d.destaque})" title="${d.destaque?'Remover destaque':'Marcar destaque'}" style="background:none; border:1px solid ${d.destaque?'#f59e0b':'#334155'}; color:${d.destaque?'#f59e0b':'#475569'}; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem;"><i class="fas fa-star"></i></button>
+                                <button onclick="academia.excluirDepoimentoAprovado('${doc.id}')" title="Excluir do mural" style="background:#2a0808; border:1px solid #f43f5e55; color:#f43f5e; padding:5px 10px; border-radius:6px; cursor:pointer; font-size:0.7rem; font-weight:800;"><i class="fas fa-trash"></i> EXCLUIR</button>
+                            </div>
                         </div>
-                        <div style="display:flex; gap:5px; flex-shrink:0;">
-                            <button onclick="academia.aprovarDepoimento('${doc.id}')" title="Aprovar" style="background:#064e3b; border:1px solid #10b981; color:#34d399; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:800;">✓ APROVAR</button>
-                            <button onclick="academia.rejeitarDepoimento('${doc.id}')" title="Rejeitar" style="background:#2a0808; border:1px solid #f43f5e55; color:#f43f5e; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:800;">✗</button>
-                        </div>
-                    </div>
-                    <p style="color:#94a3b8; font-size:0.78rem; line-height:1.5; margin:0; font-style:italic;">"${d.texto}"</p>
-                    <button onclick="academia.destaqueDepoimento('${doc.id}', ${!d.destaque})" style="margin-top:8px; background:none; border:none; color:${d.destaque ? '#f59e0b' : '#475569'}; cursor:pointer; font-size:0.7rem; font-weight:700;"><i class="fas fa-star"></i> ${d.destaque ? 'REMOVER DESTAQUE' : 'MARCAR COMO DESTAQUE'}</button>
-                </div>`;
-            }).join('');
+                        <p style="color:#6ee7b7; font-size:0.75rem; line-height:1.5; margin:0; font-style:italic;">"${d.texto}"</p>
+                    </div>`;
+                }).join('');
+            }
+
+            lista.innerHTML = html;
         } catch(e) {
             lista.innerHTML = `<small style="color:#f43f5e; display:block; text-align:center; padding:10px;">Erro: ${e.message}</small>`;
         }
@@ -2285,7 +2319,10 @@ Ele voltará a ser aluno normal.`)) return;
         if (!confirm('Excluir este depoimento do mural?')) return;
         try {
             await db.collection('depoimentos').doc(id).delete();
-            this.carregarDepoimentos();
+            this.carregarDepoimentosPendentes();
+            // Atualiza mural público se estiver aberto
+            const cardMural = document.getElementById('card-depoimentos');
+            if (cardMural && !cardMural.classList.contains('hidden')) this.carregarDepoimentos();
         } catch(e) { alert('Erro ao excluir: ' + e.message); }
     },
 

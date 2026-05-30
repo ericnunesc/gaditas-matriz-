@@ -52,6 +52,8 @@ const auth = {
         // Login admin local
         if (u === this.adminCreds.user && p === this.adminCreds.pass) {
             this.role = 'admin'; this.currentUser = { id: 'admin', nome: "Eric (Adm)" };
+            // Auth anônimo para acesso ao Firebase Storage (upload de imagens)
+            firebase.auth().signInAnonymously().catch(e => console.warn('anon-auth:', e.message));
             return this.sucesso();
         }
 
@@ -63,6 +65,8 @@ const auth = {
                 if (d.senha === p || p === "1234") {
                     this.role = 'professor';
                     this.currentUser = { id: pS.docs[0].id, ...d };
+                    // Auth anônimo para Storage
+                    firebase.auth().signInAnonymously().catch(e => console.warn('anon-auth:', e.message));
                     return this.sucesso();
                 } else {
                     return alert("Senha incorreta.");
@@ -2704,6 +2708,10 @@ Ele voltará a ser aluno normal.`)) return;
         if (file && !imageUrl) {
             if (btn) { btn.disabled = true; btn.innerText = '⏳ Enviando imagem...'; }
             try {
+                // Garante que há um usuário Firebase Auth (necessário para Storage)
+                if (!firebase.auth().currentUser) {
+                    await firebase.auth().signInAnonymously();
+                }
                 const storage = firebase.storage();
                 const ref = storage.ref(`stories/${Date.now()}_${file.name.replace(/\s/g, '_')}`);
                 await ref.put(file);

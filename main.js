@@ -2108,24 +2108,71 @@ Ele voltará a ser aluno normal.`)) return;
         if (!auth.currentUser) return;
         const statusEl = document.getElementById('meu-depoimento-status');
         const formEl   = document.getElementById('meu-depoimento-form');
+        const badge    = document.getElementById('badge-meu-dep-enviado');
+        const LIMITE   = 2;
         try {
             const snap = await db.collection('depoimentos')
                 .where('alunoId', '==', auth.currentUser.id)
                 .get();
-            if (snap.empty) {
-                if (statusEl) statusEl.innerHTML = '';
-                if (formEl)   formEl.classList.remove('hidden');
-                return;
+            // Filtra apenas os do mês atual
+            const now = new Date();
+            const esteMes = snap.docs.filter(d => {
+                const dt = new Date(d.data().data || 0);
+                return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth();
+            });
+            const usados    = esteMes.length;
+            const restantes = LIMITE - usados;
+            const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            const mesLabel = meses[now.getMonth()];
+            // Badge: mostra se tem algum aprovado no histórico total
+            const temAprovado = snap.docs.some(d => d.data().aprovado);
+            if (badge) badge.classList.toggle('hidden', !temAprovado);
+            // Monta cards de status deste mês
+            let statusHTML = '';
+            esteMes.forEach(doc => {
+                const d = doc.data();
+                if (d.aprovado) {
+                    statusHTML += `<div style="background:#064e3b; border:1px solid #10b981; border-radius:10px; padding:10px 12px; margin-bottom:8px;">
+                        <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                            <span style="font-size:0.7rem;">⭐</span>
+                            <span style="color:#34d399; font-weight:800; font-size:0.72rem;">PUBLICADO</span>
+                            <small style="color:#475569; font-size:0.6rem; margin-left:auto;">${d.dataFormatada || ''}</small>
+                        </div>
+                        <p style="color:#6ee7b7; font-size:0.75rem; margin:0; font-style:italic;">"${d.texto}"</p>
+                    </div>`;
+                } else {
+                    statusHTML += `<div style="background:#1c1400; border:1px solid #f59e0b44; border-radius:10px; padding:10px 12px; margin-bottom:8px;">
+                        <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                            <span style="font-size:0.7rem;">⏳</span>
+                            <span style="color:#f59e0b; font-weight:800; font-size:0.72rem;">AGUARDANDO APROVAÇÃO</span>
+                            <small style="color:#475569; font-size:0.6rem; margin-left:auto;">${d.dataFormatada || ''}</small>
+                        </div>
+                        <p style="color:#fde68a; font-size:0.75rem; margin:0; font-style:italic;">"${d.texto}"</p>
+                    </div>`;
+                }
+            });
+            if (statusHTML) {
+                statusHTML = `<small style="color:#64748b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.3px;">SEUS DEPOIMENTOS EM ${mesLabel.toUpperCase()}:</small>` + statusHTML;
             }
-            const d = snap.docs[0].data();
-            const badge = document.getElementById('badge-meu-dep-enviado');
-            if (d.aprovado) {
-                if (badge) badge.classList.remove('hidden');
-                if (statusEl) statusEl.innerHTML = '<div style="background:#064e3b; border:1px solid #10b981; border-radius:10px; padding:12px; text-align:center; margin-bottom:10px;"><span style="font-size:1.3rem; display:block; margin-bottom:4px;">⭐</span><span style="color:#34d399; font-weight:800; font-size:0.8rem;">Seu depoimento está publicado!</span><p style="color:#6ee7b7; font-size:0.75rem; margin:6px 0 0;font-style:italic;">"' + d.texto + '"</p></div>';
-                if (formEl) formEl.classList.add('hidden');
+            if (statusEl) statusEl.innerHTML = statusHTML;
+            // Mostra formulário se ainda tem cota no mês
+            if (restantes > 0) {
+                if (formEl) {
+                    formEl.classList.remove('hidden');
+                    const aviso = formEl.querySelector('small[data-cota]');
+                    const avisoPadrao = formEl.querySelector('small:not([data-cota])');
+                    if (avisoPadrao) {
+                        avisoPadrao.setAttribute('data-cota', '1');
+                        avisoPadrao.textContent = `⚠️ Você pode enviar mais ${restantes} depoimento${restantes > 1 ? 's' : ''} em ${mesLabel}. Será revisado pelo admin.`;
+                    }
+                }
             } else {
-                if (statusEl) statusEl.innerHTML = '<div style="background:#1c1400; border:1px solid #f59e0b55; border-radius:10px; padding:12px; text-align:center; margin-bottom:10px;"><span style="color:#f59e0b; font-weight:800; font-size:0.8rem;">⏳ Aguardando aprovação do professor/admin</span><p style="color:#a78bfa; font-size:0.75rem; margin:6px 0 0; font-style:italic;">"' + d.texto + '"</p></div>';
                 if (formEl) formEl.classList.add('hidden');
+                if (statusEl) {
+                    statusEl.innerHTML += `<div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:10px; text-align:center; margin-top:4px;">
+                        <span style="color:#475569; font-size:0.75rem; font-weight:700;">🗓 Limite de ${LIMITE} depoimentos por mês atingido.<br><small style="font-weight:400;">Volte em ${meses[(now.getMonth()+1)%12]}!</small></span>
+                    </div>`;
+                }
             }
         } catch(e) { console.warn('_verificarMeuDepoimento:', e.message); }
     },
@@ -2138,23 +2185,32 @@ Ele voltará a ser aluno normal.`)) return;
         const u = auth.currentUser;
         const mod = u.modalidade || 'jiujitsu';
         const modLabel = mod === 'jiujitsu' ? 'JJJ' : mod === 'muaythai' ? 'MT' : 'JJJ+MT';
+        const LIMITE = 2;
         try {
-            // Verifica se já enviou
-            const jaSnap = await db.collection('depoimentos').where('alunoId', '==', u.id).get();
-            if (!jaSnap.empty) return alert('Você já enviou um depoimento. Aguarde a aprovação!');
+            // Conta depoimentos do mês atual
+            const snap = await db.collection('depoimentos').where('alunoId', '==', u.id).get();
+            const now = new Date();
+            const esteMes = snap.docs.filter(d => {
+                const dt = new Date(d.data().data || 0);
+                return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth();
+            });
+            if (esteMes.length >= LIMITE) {
+                const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+                return alert(`Você já enviou ${LIMITE} depoimentos em ${meses[now.getMonth()]}. Volte no mês que vem!`);
+            }
             await db.collection('depoimentos').add({
-                alunoId:       u.id,
-                alunoNome:     u.nome,
-                faixa:         u.faixa || '',
-                grau:          u.grau  || 0,
-                faixaMT:       u.faixaMT || '',
-                modalidade:    mod,
+                alunoId:         u.id,
+                alunoNome:       u.nome,
+                faixa:           u.faixa || '',
+                grau:            u.grau  || 0,
+                faixaMT:         u.faixaMT || '',
+                modalidade:      mod,
                 modalidadeLabel: modLabel,
                 texto,
-                aprovado:      false,
-                destaque:      false,
-                data:          new Date().getTime(),
-                dataFormatada: new Date().toLocaleDateString('pt-BR')
+                aprovado:        false,
+                destaque:        false,
+                data:            new Date().getTime(),
+                dataFormatada:   new Date().toLocaleDateString('pt-BR')
             });
             if (textarea) textarea.value = '';
             this._verificarMeuDepoimento();

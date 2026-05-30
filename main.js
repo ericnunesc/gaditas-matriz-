@@ -577,7 +577,8 @@ const academia = {
         snap.forEach(doc => {
             const a = doc.data();
             const s = academia.verificarMeta(a);
-            if (s.pronto) prontos.push({ id: doc.id, a, s });
+            // Sobe para destaque: atingiu a meta OU foi convocado pelo admin
+            if (s.pronto || a.aspiranteGraduacao === true) prontos.push({ id: doc.id, a, s });
             else outros.push({ id: doc.id, a, s });
         });
 
@@ -585,10 +586,17 @@ const academia = {
 
         // ── Prontos para graduar — destaque AMARELO ────────────────────
         if (prontos.length > 0) {
+            const totalProntos   = prontos.filter(({ s }) => s.pronto).length;
+            const totalConvocados = prontos.filter(({ a }) => a.aspiranteGraduacao).length;
+            const subtitulo = [
+                totalProntos   ? `${totalProntos} atingiu a meta`  : '',
+                totalConvocados ? `${totalConvocados} convocado${totalConvocados > 1 ? 's' : ''}` : ''
+            ].filter(Boolean).join(' · ');
             html += `<div style="background:#451a03; border:2px solid #f59e0b; border-radius:12px; padding:14px; margin-bottom:16px;">
-                <div style="color:#fbbf24; font-size:0.7rem; font-weight:800; margin-bottom:10px; letter-spacing:0.5px;">
-                    ⭐ PRONTOS PARA GRADUAR — ${prontos.length} atleta${prontos.length > 1 ? 's' : ''}
-                </div>`;
+                <div style="color:#fbbf24; font-size:0.7rem; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">
+                    ⭐ EM DESTAQUE — ${prontos.length} atleta${prontos.length > 1 ? 's' : ''}
+                </div>
+                <div style="color:#92400e; font-size:0.6rem; margin-bottom:10px;">${subtitulo}</div>`;
             prontos.forEach(({ id, a }) => {
                 const convocado = a.aspiranteGraduacao === true;
                 const nomeEsc = (a.nome || '').replace(/'/g, "\\'");

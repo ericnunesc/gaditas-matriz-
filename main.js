@@ -52,8 +52,9 @@ const auth = {
         // Login admin local
         if (u === this.adminCreds.user && p === this.adminCreds.pass) {
             this.role = 'admin'; this.currentUser = { id: 'admin', nome: "Eric (Adm)" };
-            // Auth anônimo para acesso ao Firebase Storage (upload de imagens)
-            firebase.auth().signInAnonymously().catch(e => console.warn('anon-auth:', e.message));
+            // Aguarda auth anônimo antes de entrar (necessário para Firestore/Storage)
+            try { await firebase.auth().signInAnonymously(); }
+            catch(e) { console.warn('anon-auth admin:', e.message); }
             return this.sucesso();
         }
 
@@ -2802,6 +2803,11 @@ Ele voltará a ser aluno normal.`)) return;
         if (!imageUrl) return alert('Selecione uma imagem da galeria ou informe a URL.');
         if (btn) { btn.disabled = true; btn.innerText = '⏳ Publicando...'; }
         try {
+            // Garante auth antes de escrever no Firestore
+            if (!firebase.auth().currentUser) {
+                try { await firebase.auth().signInAnonymously(); }
+                catch(e) { console.warn('anon pre-write:', e.message); }
+            }
             await db.collection('stories').add({ imageUrl, titulo, link, duracaoDias: duracao, criadoEm: Date.now() });
             document.getElementById('modal-form-story')?.remove();
             alert('✅ Story publicado!');

@@ -2753,9 +2753,18 @@ Ele voltará a ser aluno normal.`)) return;
                 const kbFinal = (blob.size / 1024).toFixed(0);
                 if (btn) btn.innerText = `⏳ Enviando (${kbFinal} KB)...`;
 
-                // Garante que há um usuário Firebase Auth (necessário para Storage)
+                // Tenta login anônimo para autenticar no Storage
+                // (requer "Anonymous" ativado em Firebase Console > Authentication)
                 if (!firebase.auth().currentUser) {
-                    await firebase.auth().signInAnonymously();
+                    try { await firebase.auth().signInAnonymously(); }
+                    catch(authErr) {
+                        if (authErr.code === 'auth/admin-restricted-operation') {
+                            if (btn) { btn.disabled = false; btn.innerHTML = '📸 PUBLICAR STORY'; }
+                            return alert('⚙️ Ative o Login Anônimo no Firebase Console:\n\nAuthentication → Sign-in method → Anonymous → Ativar\n\nOu use o campo de URL da imagem como alternativa.');
+                        }
+                        // Se outro erro, tenta o upload mesmo assim
+                        console.warn('anon-auth falhou:', authErr.message);
+                    }
                 }
                 const storage = firebase.storage();
                 const nomeArq = file.name.replace(/\s/g, '_').replace(/\.[^.]+$/, '') + '.jpg';

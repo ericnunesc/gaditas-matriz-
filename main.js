@@ -102,6 +102,7 @@ const auth = {
         academia.carregarMural();
         academia.carregarConquistas();
         academia.carregarBibliotecaTecnica();
+        academia.renderStoriesBar();
 
         // Mostra wrapper de perfil para aluno e professor
         if (this.role === 'aluno' || this.role === 'professor') {
@@ -2395,6 +2396,218 @@ Ele voltará a ser aluno normal.`)) return;
     marcarAvisoComoLido() { if (this.idUltimoAvisoMural) { localStorage.setItem('gaditas_ultimo_aviso_visto', this.idUltimoAvisoMural); const m = document.getElementById('modal-popup-aviso'); if(m) m.classList.add('hidden'); } },
     async excluirAviso(id) { if (confirm("Deseja apagar definitivamente este aviso do mural?")) { await db.collection("mural_avisos").doc(id).delete(); alert("Aviso removido!"); } },
 
+    // ══════════════════════════════════════════════════════════
+    // ── 11. DASHBOARD VISUAL ADMIN ────────────────────────────
+    // ══════════════════════════════════════════════════════════
+    async renderDashboardAdmin() {
+        if (auth.role !== 'admin') return;
+        let container = document.getElementById('dashboard-admin-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'dashboard-admin-container';
+            container.style.marginBottom = '16px';
+            const relTab = document.getElementById('tab-relatorios');
+            if (relTab) relTab.insertBefore(container, relTab.firstChild);
+        }
+        container.innerHTML = `<div style="text-align:center;padding:12px;color:#64748b;font-size:0.75rem;"><i class="fas fa-spinner fa-spin"></i> Carregando dashboard...</div>`;
+        try {
+            const snap = await db.collection('alunos').get();
+            const agora = new Date();
+            const ms7  = agora.getTime() - 7  * 86400000;
+            const ms30 = agora.getTime() - 30 * 86400000;
+            const primeiroDiaMes = new Date(agora.getFullYear(), agora.getMonth(), 1).getTime();
+            const anoAtual = agora.getFullYear();
+            let total = 0, ativos7 = 0, inativos30 = 0, kids = 0, adulto = 0, jj = 0, mt = 0, ambos = 0;
+
+            snap.forEach(doc => {
+                const a = doc.data();
+                if (a.status === 'trancado') return;
+                total++;
+                const hist = a.historico || [];
+                let ultimaDataMs = null;
+                if (hist[0]?.data) {
+                    const p = hist[0].data.split(',')[0].split('/');
+                    if (p.length === 3) ultimaDataMs = new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime();
+                }
+                if (ultimaDataMs && ultimaDataMs >= ms7)  ativos7++;
+                if (!ultimaDataMs || ultimaDataMs < ms30) inativos30++;
+                const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
+                if (idade <= 14) kids++; else adulto++;
+                const mod = a.modalidade || 'jiujitsu';
+                if (mod === 'muaythai') mt++; else if (mod === 'ambos') ambos++; else jj++;
+            });
+
+            let novosMes = 0;
+            try {
+                const snapN = await db.collection('novos_cadastros').where('data', '>=', primeiroDiaMes).get();
+                novosMes = snapN.size;
+            } catch(_) {}
+
+            const pctAtivos = total > 0 ? Math.round((ativos7 / total) * 100) : 0;
+            const corAtivos  = pctAtivos >= 60 ? '#10b981' : pctAtivos >= 30 ? '#f59e0b' : '#f43f5e';
+
+            container.innerHTML = `
+                <div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border:1px solid #334155;border-radius:12px;padding:16px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#94a3b8;margin-bottom:12px;letter-spacing:0.5px;">🎛️ DASHBOARD — VISÃO GERAL</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                        <div style="background:#1e3a8a22;border:1px solid #3b82f644;border-radius:10px;padding:12px;text-align:center;">
+                            <span style="font-size:0.5rem;color:#60a5fa;font-weight:800;display:block;margin-bottom:3px;">🧑‍🤝‍🧑 TOTAL</span>
+                            <span style="font-size:2rem;font-weight:900;color:#3b82f6;">${total}</span>
+                        </div>
+                        <div style="background:#064e3b22;border:1px solid #10b98144;border-radius:10px;padding:12px;text-align:center;">
+                            <span style="font-size:0.5rem;color:#34d399;font-weight:800;display:block;margin-bottom:3px;">🔥 ATIVOS (7d)</span>
+                            <span style="font-size:2rem;font-weight:900;color:${corAtivos};">${ativos7}</span>
+                            <span style="font-size:0.55rem;color:#64748b;">${pctAtivos}% do total</span>
+                        </div>
+                        <div style="background:#4c051922;border:1px solid #f43f5e44;border-radius:10px;padding:12px;text-align:center;">
+                            <span style="font-size:0.5rem;color:#f43f5e;font-weight:800;display:block;margin-bottom:3px;">💤 INATIVOS (+30d)</span>
+                            <span style="font-size:2rem;font-weight:900;color:#f43f5e;">${inativos30}</span>
+                        </div>
+                        <div style="background:#78350f22;border:1px solid #f59e0b44;border-radius:10px;padding:12px;text-align:center;">
+                            <span style="font-size:0.5rem;color:#fbbf24;font-weight:800;display:block;margin-bottom:3px;">🆕 NOVOS (mês)</span>
+                            <span style="font-size:2rem;font-weight:900;color:#f59e0b;">${novosMes}</span>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;">
+                            <span style="font-size:0.5rem;color:#94a3b8;font-weight:800;display:block;margin-bottom:6px;">FAIXA ETÁRIA</span>
+                            <div style="font-size:0.7rem;display:flex;justify-content:space-between;">
+                                <span style="color:#60a5fa;">🥋 ${adulto} adultos</span>
+                                <span style="color:#fbbf24;">🧒 ${kids} kids</span>
+                            </div>
+                        </div>
+                        <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;">
+                            <span style="font-size:0.5rem;color:#94a3b8;font-weight:800;display:block;margin-bottom:6px;">MODALIDADE</span>
+                            <div style="font-size:0.65rem;color:#e2e8f0;">
+                                JJJ <strong>${jj}</strong> · MT <strong>${mt}</strong> · ⚡ <strong>${ambos}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        } catch(e) {
+            container.innerHTML = `<div style="color:#f43f5e;text-align:center;font-size:0.75rem;padding:10px;">Erro: ${e.message}</div>`;
+        }
+    },
+
+    // ══════════════════════════════════════════════════════════
+    // ── 12. STORIES ───────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════
+    async renderStoriesBar() {
+        const bar = document.getElementById('stories-bar');
+        if (!bar) return;
+        try {
+            const snap = await db.collection('stories').orderBy('criadoEm', 'desc').limit(20).get();
+            const agora = Date.now();
+            const vistos  = JSON.parse(localStorage.getItem('gaditas_stories_vistos') || '{}');
+            const isAdmin = auth.role === 'admin';
+            const stories = snap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(s => !s.duracaoDias || (agora - s.criadoEm) < s.duracaoDias * 86400000);
+
+            if (stories.length === 0 && !isAdmin) { bar.innerHTML = ''; return; }
+
+            let html = `<div style="display:flex;gap:12px;overflow-x:auto;padding:6px 2px 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">`;
+
+            if (isAdmin) {
+                html += `<div onclick="academia.abrirFormStory()" style="flex-shrink:0;cursor:pointer;text-align:center;">
+                    <div style="width:58px;height:58px;border-radius:50%;background:#1e293b;border:2px dashed #334155;display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:#64748b;">+</div>
+                    <span style="font-size:0.5rem;color:#64748b;display:block;margin-top:4px;font-weight:700;">STORY</span>
+                </div>`;
+            }
+
+            stories.forEach(s => {
+                const visto = !!vistos[s.id];
+                const anel  = visto
+                    ? 'border:2px solid #334155;'
+                    : 'border:2px solid transparent;background-image:linear-gradient(white,white),linear-gradient(135deg,#f43f5e,#f59e0b);background-origin:border-box;background-clip:padding-box,border-box;';
+                html += `<div style="flex-shrink:0;cursor:pointer;text-align:center;position:relative;" onclick="academia.abrirStory('${s.id}','${s.imageUrl.replace(/'/g,"\\'")}','${(s.titulo||'').replace(/'/g,"\\'")}','${(s.link||'').replace(/'/g,"\\'")}')">
+                    <div style="width:58px;height:58px;border-radius:50%;overflow:hidden;${anel}">
+                        <img src="${s.imageUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=font-size:1.6rem;line-height:58px;>📸</div>'"/>
+                    </div>
+                    ${isAdmin ? `<button onclick="event.stopPropagation();academia.excluirStory('${s.id}')" style="position:absolute;top:-4px;right:-4px;background:#f43f5e;border:none;color:white;border-radius:50%;width:18px;height:18px;font-size:0.6rem;cursor:pointer;line-height:18px;padding:0;">✕</button>` : ''}
+                    <span style="font-size:0.5rem;color:#94a3b8;display:block;margin-top:4px;font-weight:700;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.titulo || 'Story'}</span>
+                </div>`;
+            });
+            html += `</div>`;
+            bar.innerHTML = html;
+        } catch(e) {
+            bar.innerHTML = '';
+        }
+    },
+
+    abrirStory(id, imageUrl, titulo, link) {
+        // Marca como visto
+        const vistos = JSON.parse(localStorage.getItem('gaditas_stories_vistos') || '{}');
+        vistos[id] = true;
+        localStorage.setItem('gaditas_stories_vistos', JSON.stringify(vistos));
+        this.renderStoriesBar(); // atualiza borda
+
+        let overlay = document.getElementById('overlay-story');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'overlay-story';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+            overlay.onclick = e => { if (e.target === overlay) this.fecharStory(); };
+            document.body.appendChild(overlay);
+        }
+        overlay.innerHTML = `
+            <style>@keyframes storyBar{from{width:0}to{width:100%}}</style>
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#1e293b;">
+                <div style="height:100%;background:linear-gradient(90deg,#f43f5e,#f59e0b);animation:storyBar 8s linear forwards;border-radius:2px;"></div>
+            </div>
+            <button onclick="academia.fecharStory()" style="position:absolute;top:18px;right:18px;background:rgba(255,255,255,0.15);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:1.1rem;cursor:pointer;z-index:1;">✕</button>
+            <img src="${imageUrl}" style="max-width:100%;max-height:82vh;object-fit:contain;border-radius:4px;" onerror="this.alt='Imagem indisponível'"/>
+            ${titulo ? `<div style="position:absolute;bottom:${link ? '70px' : '24px'};left:0;right:0;text-align:center;padding:0 24px;">
+                <span style="background:rgba(0,0,0,0.75);color:white;padding:8px 18px;border-radius:20px;font-size:0.9rem;font-weight:700;">${titulo}</span>
+            </div>` : ''}
+            ${link ? `<div style="position:absolute;bottom:18px;left:0;right:0;text-align:center;">
+                <button onclick="window.open('${link}')" style="background:#3b82f6;color:white;border:none;padding:10px 28px;border-radius:20px;font-size:0.8rem;font-weight:700;cursor:pointer;">🔗 VER MAIS</button>
+            </div>` : ''}`;
+        overlay.style.display = 'flex';
+    },
+
+    fecharStory() {
+        document.getElementById('overlay-story')?.remove();
+    },
+
+    abrirFormStory() {
+        let modal = document.getElementById('modal-form-story');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-form-story'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        const opts = [{ v: 1, l: '24 horas' }, { v: 3, l: '3 dias' }, { v: 7, l: '7 dias' }, { v: 0, l: 'Sem expirar' }].map(o => `<option value="${o.v}">${o.l}</option>`).join('');
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.95rem;font-weight:800;color:white;">📸 POSTAR STORY</span>
+                    <button onclick="document.getElementById('modal-form-story').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                ${[['URL DA IMAGEM *','story-imageUrl','url','https://...'],['TÍTULO (opcional)','story-titulo','text','Ex: Aula especial hoje!'],['LINK (opcional)','story-link','url','https://...']].map(([l,id,t,p])=>`<small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">${l}</small><input type="${t}" id="${id}" placeholder="${p}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;"/>`).join('')}
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DURAÇÃO:</small>
+                <select id="story-duracao" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:14px;box-sizing:border-box;">${opts}</select>
+                <button onclick="academia.postarStory()" style="width:100%;padding:13px;background:linear-gradient(135deg,#f43f5e,#f59e0b);border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">📸 PUBLICAR STORY</button>
+            </div>`;
+    },
+
+    async postarStory() {
+        const imageUrl = document.getElementById('story-imageUrl')?.value.trim();
+        const titulo   = document.getElementById('story-titulo')?.value.trim() || '';
+        const link     = document.getElementById('story-link')?.value.trim() || '';
+        const duracao  = parseInt(document.getElementById('story-duracao')?.value || '1');
+        if (!imageUrl) return alert('Informe a URL da imagem.');
+        try {
+            await db.collection('stories').add({ imageUrl, titulo, link, duracaoDias: duracao, criadoEm: Date.now() });
+            document.getElementById('modal-form-story')?.remove();
+            alert('✅ Story publicado!');
+            this.renderStoriesBar();
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async excluirStory(id) {
+        if (!confirm('Remover este story?')) return;
+        await db.collection('stories').doc(id).delete();
+        this.renderStoriesBar();
+    },
+
     // ── TRANCAR / ATIVAR MATRÍCULA ────────────────────────────
     async trancarAluno(id, nome) {
         if (!confirm(`Trancar matrícula de ${nome}?\n\nO aluno ficará impedido de fazer check-in.`)) return;
@@ -3010,8 +3223,8 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
-        if(id === 'tab-checkin') { academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } }
-        if(id === 'tab-relatorios') { academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
+        if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } }
+        if(id === 'tab-relatorios') { if(auth.role === 'admin') academia.renderDashboardAdmin(); academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
     },
     getCorFaixa(f) {

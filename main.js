@@ -2058,11 +2058,15 @@ Ele voltará a ser aluno normal.`)) return;
                 lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:20px; font-size:0.75rem;">Nenhum depoimento ainda. Seja o primeiro! ⭐</small>';
                 return;
             }
+            const isAdmin = auth.role === 'admin';
             lista.innerHTML = docs.map(doc => {
                 const d = doc.data();
                 const iniciais = (d.alunoNome || '?').split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
                 const beltLabel = d.faixa ? `<span style="font-size:0.55rem; color:#94a3b8; display:block; margin-top:2px;">${d.faixa}${d.grau ? ' · ' + d.grau + 'ºG' : ''}${d.modalidadeLabel ? ' · ' + d.modalidadeLabel : ''}</span>` : '';
                 const destaque = d.destaque ? '<span style="color:#f59e0b; font-size:0.8rem; margin-right:4px;">⭐</span>' : '';
+                const btnExcluir = isAdmin
+                    ? `<button onclick="academia.excluirDepoimentoAprovado('${doc.id}')" title="Excluir depoimento" style="background:none; border:none; color:#475569; cursor:pointer; font-size:0.8rem; padding:2px 4px; flex-shrink:0;" onmouseover="this.style.color='#f43f5e'" onmouseout="this.style.color='#475569'"><i class="fas fa-trash"></i></button>`
+                    : '';
                 return `<div style="background:${d.destaque ? 'linear-gradient(135deg,#1c1400,#2d1e00)' : '#0f172a'}; border:1px solid ${d.destaque ? '#f59e0b55' : '#1e293b'}; border-radius:12px; padding:14px; margin-bottom:10px;">
                     <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
                         <div style="width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#1e3a8a,#7c3aed); display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800; color:white; flex-shrink:0;">${iniciais}</div>
@@ -2070,7 +2074,10 @@ Ele voltará a ser aluno normal.`)) return;
                             <div style="font-size:0.8rem; font-weight:800; color:#f1f5f9;">${destaque}${(d.alunoNome || '').toUpperCase()}</div>
                             ${beltLabel}
                         </div>
-                        <small style="color:#475569; font-size:0.6rem; flex-shrink:0;">${d.dataFormatada || ''}</small>
+                        <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                            <small style="color:#475569; font-size:0.6rem;">${d.dataFormatada || ''}</small>
+                            ${btnExcluir}
+                        </div>
                     </div>
                     <p style="color:#cbd5e1; font-size:0.8rem; line-height:1.6; margin:0; font-style:italic;">"${d.texto}"</p>
                 </div>`;
@@ -2216,6 +2223,14 @@ Ele voltará a ser aluno normal.`)) return;
             await db.collection('depoimentos').doc(id).update({ destaque: marcar });
             this.carregarDepoimentosPendentes();
         } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async excluirDepoimentoAprovado(id) {
+        if (!confirm('Excluir este depoimento do mural?')) return;
+        try {
+            await db.collection('depoimentos').doc(id).delete();
+            this.carregarDepoimentos();
+        } catch(e) { alert('Erro ao excluir: ' + e.message); }
     },
 
     async _carregarBadgeDepoimentos() {

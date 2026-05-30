@@ -1019,6 +1019,160 @@ const academia = {
             </div>`;
     },
 
+    // ── CHAMADA / APPELO POR LISTA ────────────────────────────
+    renderChamadaProf() {
+        // Garante que o card existe (cria uma única vez)
+        let card = document.getElementById('card-chamada-prof');
+        if (!card) {
+            card = document.createElement('div');
+            card.id = 'card-chamada-prof';
+            card.style.cssText = 'background:#1e293b; border:1px solid #0ea5e944; border-left:3px solid #0ea5e9; border-radius:12px; padding:15px; margin-top:15px;';
+            const profArea = document.getElementById('area-professor-checkin');
+            if (profArea) profArea.after(card);
+            else {
+                const checkinTab = document.getElementById('tab-checkin');
+                if (checkinTab) checkinTab.appendChild(card);
+            }
+        }
+        const grade = this.getGrade();
+        const todasTurmas = [...new Set(Object.values(grade).flat())].filter(t => !t.includes('Sem treinos'));
+        const opts = todasTurmas.map(t => `<option value="${t}">${t}</option>`).join('');
+        card.innerHTML = `
+            <div style="font-size:0.75rem; font-weight:800; color:#0ea5e9; margin-bottom:12px; letter-spacing:0.3px;">
+                <i class="fas fa-list-check"></i> CHAMADA POR LISTA
+            </div>
+            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:5px;">TURMA:</small>
+            <select id="chamada-select-turma"
+                style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:10px;">
+                ${opts}
+            </select>
+            <button onclick="academia.abrirChamada()"
+                style="width:100%; padding:12px; background:#0ea5e9; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.85rem;">
+                <i class="fas fa-users"></i> ABRIR LISTA DE ALUNOS
+            </button>`;
+    },
+
+    async abrirChamada() {
+        const turma = document.getElementById('chamada-select-turma')?.value;
+        if (!turma) return alert('Selecione uma turma.');
+
+        // Modal overlay
+        let modal = document.getElementById('modal-chamada-prof');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modal-chamada-prof';
+            modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; display:flex; flex-direction:column; overflow-y:auto; padding:20px; box-sizing:border-box;';
+            document.body.appendChild(modal);
+        }
+        modal.innerHTML = `<div style="background:#1e293b; border-radius:16px; padding:20px; max-width:500px; margin:0 auto; width:100%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div>
+                    <div style="font-size:0.65rem; color:#0ea5e9; font-weight:800;">CHAMADA</div>
+                    <div style="font-size:1rem; font-weight:800; color:white;">${turma}</div>
+                </div>
+                <button onclick="document.getElementById('modal-chamada-prof').remove()" style="background:#334155; border:none; color:white; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700;">✕</button>
+            </div>
+            <div id="chamada-lista-alunos" style="color:#64748b; text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem; color:#0ea5e9; display:block; margin-bottom:8px;"></i>Carregando alunos...</div>
+            </div>`;
+        modal.style.display = 'flex';
+
+        try {
+            const snap = await db.collection('alunos').orderBy('nome').get();
+            const anoAtual = new Date().getFullYear();
+            const isTurmaKids = turma.toLowerCase().includes('kids');
+            const isTurmaMT   = this._isTurmaMT(turma);
+
+            let alunos = [];
+            snap.forEach(doc => {
+                const a = doc.data();
+                const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
+                const isKids = idade <= 14;
+                const mod = a.modalidade || 'jiujitsu';
+                // Filtra compatíveis com a turma
+                if (isTurmaKids && !isKids) return;
+                if (!isTurmaKids && isKids && !isTurmaMT) return;
+                if (isTurmaMT && mod === 'jiujitsu') return;
+                if (a.status === 'trancado') return; // ignora trancados
+                alunos.push({ id: doc.id, nome: a.nome, faixa: a.faixa || '', aulas: a.aulas || 0 });
+            });
+
+            if (alunos.length === 0) {
+                document.getElementById('chamada-lista-alunos').innerHTML = '<p style="color:#f59e0b; text-align:center;">Nenhum aluno compatível com esta turma.</p>';
+                return;
+            }
+
+            let listaHtml = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">${alunos.length} alunos</span>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.7rem; color:#94a3b8; cursor:pointer;">
+                        <input type="checkbox" id="chamada-todos" onchange="document.querySelectorAll('.chamada-check').forEach(c=>c.checked=this.checked)"> Marcar todos
+                    </label>
+                </div>
+                <div style="max-height:50vh; overflow-y:auto; margin-bottom:12px;">`;
+
+            alunos.forEach(a => {
+                listaHtml += `
+                    <label style="display:flex; align-items:center; gap:10px; padding:10px; background:#0f172a; border-radius:8px; margin-bottom:6px; cursor:pointer; border:1px solid #334155;">
+                        <input type="checkbox" class="chamada-check" value="${a.id}" style="width:18px; height:18px; accent-color:#0ea5e9;">
+                        <div style="flex:1;">
+                            <span style="font-size:0.85rem; font-weight:700; color:#e2e8f0;">${a.nome}</span>
+                            <span style="font-size:0.6rem; color:#64748b; margin-left:8px;">${a.faixa}</span>
+                        </div>
+                    </label>`;
+            });
+
+            listaHtml += `</div>
+                <button onclick="academia.confirmarChamada('${turma.replace(/'/g,"\\'")}', document.querySelectorAll('.chamada-check:checked'))"
+                    style="width:100%; padding:14px; background:#10b981; border:none; color:white; border-radius:10px; font-weight:800; font-size:0.9rem; cursor:pointer;">
+                    <i class="fas fa-check-double"></i> CONFIRMAR PRESENÇAS
+                </button>`;
+
+            document.getElementById('chamada-lista-alunos').innerHTML = listaHtml;
+        } catch(e) {
+            document.getElementById('chamada-lista-alunos').innerHTML = `<p style="color:#f43f5e; text-align:center;">Erro: ${e.message}</p>`;
+        }
+    },
+
+    async confirmarChamada(turma, checkboxes) {
+        const ids = Array.from(checkboxes).map(c => c.value);
+        if (ids.length === 0) return alert('Nenhum aluno marcado.');
+        if (!confirm(`Confirmar presença de ${ids.length} aluno(s) na turma ${turma}?`)) return;
+
+        const btn = document.querySelector('#modal-chamada-prof button[onclick*="confirmarChamada"]');
+        if (btn) { btn.disabled = true; btn.innerText = `⏳ Salvando ${ids.length} presenças...`; }
+
+        const isMT  = this._isTurmaMT(turma);
+        const dataStr = new Date().toLocaleString('pt-BR');
+        let salvos = 0; let erros = 0;
+
+        await Promise.all(ids.map(async (alunoId) => {
+            try {
+                const ref = db.collection('alunos').doc(alunoId);
+                const doc = await ref.get();
+                if (!doc.exists) return;
+                const d = doc.data();
+                const h = d.historico || [];
+
+                // Evita duplicata no mesmo dia
+                const hoje = new Date().toLocaleDateString('pt-BR');
+                const jaTem = h.some(e => e.turma === turma && (e.data || '').startsWith(hoje));
+                if (jaTem) return;
+
+                h.unshift({ data: dataStr, turma, tipo: 'Chamada (Prof/Adm)' });
+                const upd = { historico: h };
+                if (isMT) upd.aulasMT = (d.aulasMT || 0) + 1;
+                else       upd.aulas   = (d.aulas   || 0) + 1;
+                await ref.update(upd);
+                salvos++;
+            } catch(e) { erros++; }
+        }));
+
+        document.getElementById('modal-chamada-prof')?.remove();
+        alert(`✅ ${salvos} presença(s) registrada(s)!${erros > 0 ? `\n⚠️ ${erros} erro(s).` : ''}`);
+        this.renderRanking();
+        this.carregarConquistas();
+    },
+
     // Helpers: suporta dados antigos (string) e novos (objeto {conteudo, profNome})
     _planoConteudo(val) { return val ? (typeof val === 'object' ? val.conteudo || '' : val) : ''; },
     _planoProf(val)     { return val && typeof val === 'object' ? val.profNome || '' : ''; },
@@ -1470,12 +1624,34 @@ Ele voltará a ser aluno normal.`)) return;
             const dadosCliente = await resCliente.json();
             if (!dadosCliente.data || dadosCliente.data.length === 0) { conteudo.innerHTML = `<p style="color:#f59e0b;">Aluno não localizado no Asaas.<br><small style="color:#64748b;">${email}</small></p>`; return; }
             const customerId = dadosCliente.data[0].id;
-            const [resPendente, resPago] = await Promise.all([
+            const [resPendente, resPago, resSubs] = await Promise.all([
                 fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=PENDING&limit=10`),
-                fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=RECEIVED&limit=5`)
+                fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=RECEIVED&limit=5`),
+                fetch(`${asaasUrl}?endpoint=subscriptions&customer=${customerId}&status=ACTIVE&limit=5`)
             ]);
-            const pendentes = await resPendente.json(); const pagos = await resPago.json();
+            const pendentes = await resPendente.json(); const pagos = await resPago.json(); const subs = await resSubs.json();
             const dataHoje = new Date(); dataHoje.setHours(0,0,0,0); let html = '';
+
+            // Assinaturas ativas
+            if (subs.data && subs.data.length > 0) {
+                html += `<small style="color:#8b5cf6; font-weight:800; font-size:0.6rem; display:block; margin-bottom:8px;">🔄 ASSINATURA RECORRENTE</small>`;
+                subs.data.forEach(s => {
+                    const valor = s.value.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+                    const ciclo = s.cycle === 'MONTHLY' ? 'Mensal' : s.cycle;
+                    const proxVenc = s.nextDueDate ? s.nextDueDate.split('-').reverse().join('/') : '—';
+                    html += `<div style="background:#0f172a; border:1px solid #8b5cf644; border-left:3px solid #8b5cf6; border-radius:8px; padding:10px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div><div style="font-size:0.85rem; font-weight:800; color:white;">${valor}<span style="font-size:0.6rem; color:#94a3b8; margin-left:5px;">/ ${ciclo}</span></div>
+                            <div style="font-size:0.6rem; color:#64748b;">Próx: ${proxVenc} • ID: ${s.id.substring(0,12)}...</div></div>
+                            <span style="font-size:0.6rem; font-weight:800; color:#8b5cf6; background:#8b5cf622; padding:3px 8px; border-radius:6px;">ATIVA</span>
+                        </div>
+                        <button onclick="academia.cancelarAssinaturaAdmin('${s.id}','${nome.replace(/'/g,"\\'")}')" style="width:100%; padding:8px; background:#1a0a00; border:1px solid #92400e; color:#f59e0b; border-radius:7px; font-size:0.7rem; font-weight:800; cursor:pointer;">
+                            ⚠️ CANCELAR ASSINATURA RECORRENTE
+                        </button>
+                    </div>`;
+                });
+            }
+
             if (pendentes.data && pendentes.data.length > 0) {
                 pendentes.data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
                 html += `<small style="color:#f43f5e; font-weight:800; font-size:0.6rem; display:block; margin-bottom:8px;">FATURAS EM ABERTO</small>`;
@@ -2234,6 +2410,25 @@ Ele voltará a ser aluno normal.`)) return;
         this.renderAlunos();
     },
 
+    // ── CANCELAR ASSINATURA PELO ADMIN (modal financeiro do aluno) ──
+    async cancelarAssinaturaAdmin(subscriptionId, nomeAluno) {
+        if (!confirm(`Cancelar assinatura recorrente de ${nomeAluno}?\n\nO Asaas para de cobrar mensalmente. As faturas já emitidas permanecem.`)) return;
+        try {
+            const r = await fetch(`/api/asaas?endpoint=subscriptions/${encodeURIComponent(subscriptionId)}`, { method: 'DELETE' });
+            const d = await r.json();
+            if (d.deleted === true || d.id) {
+                alert(`✅ Assinatura de ${nomeAluno} cancelada!`);
+                // Fecha o modal para o admin atualizar
+                const modal = document.getElementById('modal-financeiro-admin');
+                if (modal) modal.remove();
+            } else {
+                throw new Error(d.errors?.[0]?.description || JSON.stringify(d));
+            }
+        } catch(e) {
+            alert('❌ Erro ao cancelar assinatura: ' + e.message);
+        }
+    },
+
     // ── FILTRO INATIVOS ───────────────────────────────────────
     toggleFiltroInativos() {
         this.filtroInativos = !this.filtroInativos;
@@ -2815,7 +3010,7 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
-        if(id === 'tab-checkin') { academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') academia.renderPlanoAulaProf(); }
+        if(id === 'tab-checkin') { academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } }
         if(id === 'tab-relatorios') { academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
     },

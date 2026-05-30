@@ -24,6 +24,8 @@ const GaditasPainelAdm = {
                 <p style="font-size: 0.75rem; color: #94a3b8; margin: 4px 0 0 0;">Gaditas Academy & Lotta</p>
             </div>
 
+            <div id="painel-resumo-mensal" style="margin-top:4px;"></div>
+
             <div id="painel-novos-cadastros" style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:15px; margin-top:4px;"></div>
 
             <div id="painel-config-planos" style="margin-top:4px;"></div>
@@ -94,6 +96,7 @@ const GaditasPainelAdm = {
             </div>
         `;
 
+        this.carregarResumoMensal();
         await this.buscarInadimplentes();
 
         // Carrega os outros painéis após renderizar
@@ -271,6 +274,83 @@ const GaditasPainelAdm = {
         }
     },
     
+    // ── RESUMO FINANCEIRO DO MÊS ─────────────────────────────
+    async carregarResumoMensal() {
+        const container = document.getElementById('painel-resumo-mensal');
+        if (!container) return;
+        container.innerHTML = `<div style="text-align:center; padding:12px; color:#64748b; font-size:0.75rem;"><i class="fas fa-spinner fa-spin"></i> Calculando resumo do mês...</div>`;
+
+        try {
+            const agora = new Date();
+            const anoMes = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+            const mesNome = agora.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+            const [resRecebidos, resOverdue] = await Promise.all([
+                fetch(`/api/asaas?endpoint=payments&status=RECEIVED&limit=200`),
+                fetch(`/api/asaas?endpoint=payments&status=OVERDUE&limit=200`)
+            ]);
+
+            const recebidos = await resRecebidos.json();
+            const overdue   = await resOverdue.json();
+
+            // Filtra recebidos no mês atual pela paymentDate ou dueDate
+            const pagosEsteMes = (recebidos.data || []).filter(p =>
+                (p.paymentDate || p.dueDate || '').startsWith(anoMes)
+            );
+
+            const totalRecebido = pagosEsteMes.reduce((s, p) => s + p.value, 0);
+            const totalOverdue  = (overdue.data  || []).reduce((s, p) => s + p.value, 0);
+            const totalGeral    = totalRecebido + totalOverdue;
+            const pct           = totalGeral > 0 ? Math.round((totalRecebido / totalGeral) * 100) : 100;
+            const corPct        = pct >= 80 ? '#10b981' : pct >= 60 ? '#f59e0b' : '#f43f5e';
+
+            container.innerHTML = `
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:14px;">
+                    <div style="font-size:0.65rem; font-weight:800; color:#94a3b8; margin-bottom:10px; letter-spacing:0.5px;">
+                        📊 RESUMO FINANCEIRO — ${mesNome.toUpperCase()}
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px;">
+                        <div style="background:#064e3b22; border:1px solid #10b98133; border-radius:8px; padding:10px; text-align:center;">
+                            <span style="font-size:0.5rem; color:#34d399; font-weight:800; display:block; margin-bottom:3px;">✅ RECEBIDO</span>
+                            <span style="font-size:0.75rem; font-weight:900; color:#10b981;">${totalRecebido.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                            <span style="font-size:0.5rem; color:#64748b; display:block;">${pagosEsteMes.length} pag.</span>
+                        </div>
+                        <div style="background:#4c051922; border:1px solid #f43f5e33; border-radius:8px; padding:10px; text-align:center;">
+                            <span style="font-size:0.5rem; color:#f43f5e; font-weight:800; display:block; margin-bottom:3px;">⚠️ EM ATRASO</span>
+                            <span style="font-size:0.75rem; font-weight:900; color:#f43f5e;">${totalOverdue.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                            <span style="font-size:0.5rem; color:#64748b; display:block;">${(overdue.data||[]).length} fat.</span>
+                        </div>
+                        <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:10px; text-align:center;">
+                            <span style="font-size:0.5rem; color:#94a3b8; font-weight:800; display:block; margin-bottom:3px;">📈 ADIMPL.</span>
+                            <span style="font-size:1.2rem; font-weight:900; color:${corPct};">${pct}%</span>
+                        </div>
+                    </div>
+                    <div style="background:#1e293b; border-radius:6px; height:7px; overflow:hidden;">
+                        <div style="height:100%; width:${pct}%; background:${corPct}; border-radius:6px;"></div>
+                    </div>
+                </div>`;
+        } catch(e) {
+            const container = document.getElementById('painel-resumo-mensal');
+            if (container) container.innerHTML = `<div style="color:#f43f5e; text-align:center; font-size:0.75rem; padding:8px;">Erro no resumo: ${e.message}</div>`;
+        }
+    },
+
+    // ── CANCELAR ASSINATURA PELO ADMIN ────────────────────────
+    async cancelarAssinaturaAdmin(subscriptionId, nomeAluno) {
+        if (!confirm(`Cancelar assinatura recorrente de ${nomeAluno}?\n\nO Asaas para de cobrar automaticamente. As faturas já existentes não são removidas.`)) return;
+        try {
+            const r = await fetch(`/api/asaas?endpoint=subscriptions/${encodeURIComponent(subscriptionId)}`, { method: 'DELETE' });
+            const d = await r.json();
+            if (d.deleted === true || d.id) {
+                alert(`✅ Assinatura de ${nomeAluno} cancelada com sucesso.`);
+            } else {
+                throw new Error(d.errors?.[0]?.description || JSON.stringify(d));
+            }
+        } catch(e) {
+            alert('❌ Erro ao cancelar assinatura: ' + e.message);
+        }
+    },
+
     async buscarInadimplentes() {
         const loading = document.getElementById('adm-financeiro-loading');
         const conteudo = document.getElementById('adm-financeiro-conteudo');

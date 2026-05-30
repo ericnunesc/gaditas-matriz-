@@ -43,15 +43,29 @@ const graduacaoMT = {
 };
 
 const auth = {
-    adminCreds: { user: "admin", pass: "admin" },
+    adminCreds: { user: "admin", pass: "admin", nome: "Eric (Adm)" },
     role: null, currentUser: null,
+
+    // Carrega credenciais do admin salvas no Firestore
+    async carregarCredenciaisAdmin() {
+        try {
+            const doc = await db.collection('configuracoes').doc('admin_config').get();
+            if (doc.exists) {
+                const d = doc.data();
+                if (d.user) this.adminCreds.user = d.user;
+                if (d.pass) this.adminCreds.pass = d.pass;
+                if (d.nome) this.adminCreds.nome = d.nome;
+            }
+        } catch(e) { console.warn('carregarCredenciaisAdmin:', e.message); }
+    },
+
     async login() {
         const u = document.getElementById('user').value.trim().toLowerCase();
         const p = document.getElementById('pass').value.trim();
 
         // Login admin local
         if (u === this.adminCreds.user && p === this.adminCreds.pass) {
-            this.role = 'admin'; this.currentUser = { id: 'admin', nome: "Eric (Adm)" };
+            this.role = 'admin'; this.currentUser = { id: 'admin', nome: this.adminCreds.nome || "Admin" };
             // Aguarda auth anônimo antes de entrar (necessário para Firestore/Storage)
             try { await firebase.auth().signInAnonymously(); }
             catch(e) { console.warn('anon-auth admin:', e.message); }
@@ -123,6 +137,9 @@ const auth = {
         document.getElementById('screen-login').classList.add('hidden');
         document.getElementById('screen-dashboard').classList.remove('hidden');
         document.getElementById('display-user').innerText = this.currentUser.nome;
+        // Mostra ícone de configurações só para admin
+        const btnCfg = document.getElementById('btn-config-admin');
+        if (btnCfg) btnCfg.style.display = this.role === 'admin' ? 'inline-block' : 'none';
         ui.configurarVisao();
         ui.showTab('tab-checkin');
         academia.carregarGradeFirebase();
@@ -944,7 +961,7 @@ const academia = {
                     </div>
                     <div style="display:flex; gap:5px; flex-shrink:0;">
                         <button onclick="academia.editarAluno('${doc.id}')" style="background:#16161a; border:1px solid #2d2d34; color:#94a3b8; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-eye"></i></button>
-                        ${telLimpo ? `<button onclick="academia._abrirWhatsappBusiness('${telLimpo}')" title="WhatsApp Business" style="background:#064e3b; border:none; color:#25d366; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : ''}
+                        ${telLimpo ? `<button onclick="window.location.href='whatsapp-business://send?phone=55${telLimpo}'" title="WhatsApp Business" style="background:#064e3b; border:none; color:#25d366; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : ''}
                         ${isAdmin ? `<button onclick="academia.verFinanceiroAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#064e3b; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-dollar-sign"></i></button>` : ''}
                         ${isAdmin ? (trancado
                             ? `<button onclick="academia.ativarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Reativar matrícula" style="background:#1e3a8a; border:none; color:#60a5fa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-lock-open"></i></button>`
@@ -2824,6 +2841,54 @@ Ele voltará a ser aluno normal.`)) return;
         this.renderStoriesBar();
     },
 
+    // ── CONFIGURAÇÕES DO ADMIN ────────────────────────────────
+    abrirConfigAdmin() {
+        let modal = document.getElementById('modal-config-admin');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-config-admin'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.95rem;font-weight:800;color:white;">⚙️ Configurações do Admin</span>
+                    <button onclick="document.getElementById('modal-config-admin').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">NOME DE EXIBIÇÃO</small>
+                <input type="text" id="cfg-admin-nome" value="${auth.adminCreds.nome || 'Admin'}" style="${inp}" placeholder="Seu nome"/>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">USUÁRIO DE LOGIN</small>
+                <input type="text" id="cfg-admin-user" value="${auth.adminCreds.user}" style="${inp}" placeholder="Usuário"/>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">NOVA SENHA (deixe em branco para manter)</small>
+                <input type="password" id="cfg-admin-pass" placeholder="••••••••" style="${inp}"/>
+                <input type="password" id="cfg-admin-pass2" placeholder="Confirmar nova senha" style="${inp}"/>
+                <button onclick="academia.salvarConfigAdmin()" style="width:100%;padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">💾 SALVAR CONFIGURAÇÕES</button>
+            </div>`;
+    },
+
+    async salvarConfigAdmin() {
+        const nome  = document.getElementById('cfg-admin-nome')?.value.trim();
+        const user  = document.getElementById('cfg-admin-user')?.value.trim().toLowerCase();
+        const pass1 = document.getElementById('cfg-admin-pass')?.value;
+        const pass2 = document.getElementById('cfg-admin-pass2')?.value;
+        if (!nome || !user) return alert('Nome e usuário são obrigatórios.');
+        if (pass1 && pass1 !== pass2) return alert('As senhas não coincidem.');
+        const dados = { nome, user };
+        if (pass1) dados.pass = pass1;
+        try {
+            await db.collection('configuracoes').doc('admin_config').set(dados, { merge: true });
+            // Atualiza em memória imediatamente
+            auth.adminCreds.nome = nome;
+            auth.adminCreds.user = user;
+            if (pass1) auth.adminCreds.pass = pass1;
+            if (auth.currentUser?.id === 'admin') {
+                auth.currentUser.nome = nome;
+                const el = document.getElementById('display-user');
+                if (el) el.innerText = nome;
+            }
+            document.getElementById('modal-config-admin')?.remove();
+            alert('✅ Configurações salvas!');
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
     // ── TRANCAR / ATIVAR MATRÍCULA ────────────────────────────
     async trancarAluno(id, nome) {
         if (!confirm(`Trancar matrícula de ${nome}?\n\nO aluno ficará impedido de fazer check-in.`)) return;
@@ -3714,6 +3779,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('QR Code detectado — turma:', turmaQR);
     }
 
-    const btn = document.getElementById('btnEntrar'); 
-    if(btn) btn.addEventListener('click', () => auth.login()); 
+    const btn = document.getElementById('btnEntrar');
+    if(btn) btn.addEventListener('click', () => auth.login());
+
+    // Carrega credenciais do admin salvas no Firestore
+    auth.carregarCredenciaisAdmin();
 });

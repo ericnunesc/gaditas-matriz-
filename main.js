@@ -58,43 +58,65 @@ const auth = {
         }
 
         try {
-            // Verifica se é professor (sem Firebase Auth)
+            // ── Passo 1: tenta Firebase Auth primeiro ─────────────────
+            // Isso autentica o usuário ANTES de qualquer query Firestore,
+            // evitando erros de permissão com as Storage Rules.
+            let fbAutenticado = false;
+            try {
+                await firebase.auth().signInWithEmailAndPassword(u, p);
+                fbAutenticado = true;
+            } catch(authErr) {
+                // Pode ser professor (sem conta Firebase Auth) ou senha errada
+                // Continua para verificar via Firestore com auth anônimo
+            }
+
+            if (fbAutenticado) {
+                // Já autenticado — busca dados no Firestore com segurança
+                const aS = await db.collection("alunos").where("email", "==", u).get();
+                if (!aS.empty) {
+                    const d = aS.docs[0].data();
+                    this.role = d.role === 'professor' ? 'professor' : 'aluno';
+                    this.currentUser = { id: aS.docs[0].id, ...d };
+                    return this.sucesso();
+                }
+                return alert("Usuário autenticado mas não encontrado na academia. Contate o admin.");
+            }
+
+            // ── Passo 2: sem Firebase Auth — garante sessão para acessar Firestore
+            if (!firebase.auth().currentUser) {
+                try { await firebase.auth().signInAnonymously(); }
+                catch(e) { console.warn('anon fallback:', e.message); }
+            }
+
+            // ── Passo 3: verifica professor (senha local no Firestore) ─
             const pS = await db.collection("professores").where("email", "==", u).get();
             if (!pS.empty) {
                 const d = pS.docs[0].data();
                 if (d.senha === p || p === "1234") {
                     this.role = 'professor';
                     this.currentUser = { id: pS.docs[0].id, ...d };
-                    // Auth anônimo para Storage
-                    firebase.auth().signInAnonymously().catch(e => console.warn('anon-auth:', e.message));
                     return this.sucesso();
-                } else {
-                    return alert("Senha incorreta.");
                 }
+                return alert("Senha incorreta.");
             }
 
-            // Login de aluno (pode ter role professor)
-            const aS = await db.collection("alunos").where("email", "==", u).get();
-            if (!aS.empty) {
-                const d = aS.docs[0].data();
-                const id = aS.docs[0].id;
-                // Autentica
-                let autenticado = false;
-                try {
-                    await firebase.auth().signInWithEmailAndPassword(u, p);
-                    autenticado = true;
-                } catch(authErr) {
-                    autenticado = (d.senha === p || p === "1234");
+            // ── Passo 4: verifica aluno com senha local (sem conta Firebase) ─
+            const aS2 = await db.collection("alunos").where("email", "==", u).get();
+            if (!aS2.empty) {
+                const d = aS2.docs[0].data();
+                if (d.senha === p || p === "1234") {
+                    this.role = d.role === 'professor' ? 'professor' : 'aluno';
+                    this.currentUser = { id: aS2.docs[0].id, ...d };
+                    return this.sucesso();
                 }
-                if (!autenticado) return alert("Senha incorreta.");
-                // Define role pelo campo no Firestore
-                this.role = d.role === 'professor' ? 'professor' : 'aluno';
-                this.currentUser = { id, ...d };
-                return this.sucesso();
+                return alert("Senha incorreta.");
             }
 
             alert("Acesso negado. Usuário não encontrado.");
-        } catch (e) { alert("Erro de conexão."); }
+        } catch (e) {
+            console.error('login error:', e);
+            alert("Erro ao fazer login: " + e.message);
+        }
     },
     sucesso() {
         document.getElementById('screen-login').classList.add('hidden');

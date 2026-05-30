@@ -3539,7 +3539,11 @@ const ui = {
             academia.textoBuscaNome = ""; academia.categoriaFiltroAtual = "all"; academia.filtrarCategoriaAlunos("all");
             academia.renderProfessores(); this.renderTurmasCheckboxes();
             // Carrega relatos de saúde para prof/admin
-            if (auth.role === 'admin' || auth.role === 'professor') academia.carregarRelatosSaude();
+            if (auth.role === 'admin' || auth.role === 'professor') {
+                const cardS = document.getElementById('card-alertas-saude');
+                if (cardS) cardS.classList.remove('hidden');
+                academia.carregarRelatosSaude();
+            }
             if (auth.role === 'admin') academia.carregarVideosPendentesAdmin();
             if (auth.role === 'professor') {
                 academia.carregarVideosPendentesProf();

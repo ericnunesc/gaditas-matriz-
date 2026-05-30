@@ -312,21 +312,22 @@ const GaditasPainelAdm = {
             const porCliente = {};
             const dataHoje = new Date();
             dataHoje.setHours(0, 0, 0, 0);
-            
+
             dados.data.forEach(fatura => {
                 const clienteId = fatura.customer;
                 if (!porCliente[clienteId]) {
                     porCliente[clienteId] = {
-                        nome: fatura.customerName || 'Nome não encontrado',
+                        asaasId: clienteId,
+                        nome: fatura.customerName || '',
                         email: fatura.customerEmail || '',
                         faturas: []
                     };
                 }
-                
+
                 const vencimento = new Date(fatura.dueDate + 'T00:00:00');
                 vencimento.setHours(0, 0, 0, 0);
                 const diasAtraso = Math.floor((dataHoje - vencimento) / (1000 * 60 * 60 * 24));
-                
+
                 porCliente[clienteId].faturas.push({
                     id: fatura.id,
                     valor: fatura.value,
@@ -334,7 +335,26 @@ const GaditasPainelAdm = {
                     diasAtraso
                 });
             });
-            
+
+            // Busca nome/email dos clientes que vieram sem nome no payload dos pagamentos
+            const semNome = Object.keys(porCliente).filter(id => !porCliente[id].nome);
+            if (semNome.length > 0) {
+                await Promise.all(semNome.map(async (id) => {
+                    try {
+                        const rc = await fetch(`/api/asaas?endpoint=customers/${encodeURIComponent(id)}`);
+                        const dc = await rc.json();
+                        if (dc.name) {
+                            porCliente[id].nome  = dc.name;
+                            porCliente[id].email = dc.email || '';
+                        } else {
+                            porCliente[id].nome = 'Nome não encontrado';
+                        }
+                    } catch (_) {
+                        porCliente[id].nome = 'Nome não encontrado';
+                    }
+                }));
+            }
+
             // Calcula totais
             const clientes = Object.values(porCliente);
             const totalAlunos = clientes.length;
@@ -377,10 +397,11 @@ const GaditasPainelAdm = {
                     const tagTexto = bloqueado ? `🔒 BLOQUEADO (${maiorAtraso} dias)` : `⚠️ ${maiorAtraso} dia${maiorAtraso > 1 ? 's' : ''} de atraso`;
                     
                     const faturasHtml = cliente.faturas.map(f => `
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:8px 10px; border-radius:8px; margin-top:6px;">
-                            <span style="font-size:0.7rem; color:#94a3b8;">Venc: ${f.vencimento}</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:8px 10px; border-radius:8px; margin-top:6px; gap:6px;">
+                            <span style="font-size:0.7rem; color:#94a3b8; flex:1;">Venc: ${f.vencimento}</span>
                             <span style="font-size:0.75rem; font-weight:700; color:#fff;">${f.valor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
-                            <span style="font-size:0.6rem; color:#f43f5e; font-weight:700;">${f.diasAtraso}d</span>
+                            <span style="font-size:0.6rem; color:#f43f5e; font-weight:700; min-width:28px; text-align:right;">${f.diasAtraso}d</span>
+                            <button onclick="GaditasPainelAdm.cancelarFatura('${f.id}')" title="Cancelar fatura no Asaas" style="background:#1e293b; border:1px solid #f43f5e; color:#f43f5e; border-radius:6px; padding:3px 7px; font-size:0.65rem; cursor:pointer; line-height:1;">🗑️</button>
                         </div>`).join('');
                     
                     html += `
@@ -412,6 +433,28 @@ const GaditasPainelAdm = {
                     <p style="color:#f43f5e; text-align:center; font-size:0.85rem; margin-bottom:10px;">❌ Erro: ${e.message}</p>
                     <button onclick="GaditasPainelAdm.buscarInadimplentes()" style="width:100%; padding:10px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">TENTAR NOVAMENTE</button>`;
             }
+        }
+    },
+
+    // ── CANCELAR FATURA INDIVIDUAL NO ASAAS ─────────────────────
+    async cancelarFatura(faturaId) {
+        if (!confirm('Cancelar esta fatura no Asaas?\n\nEsta ação não pode ser desfeita.')) return;
+        try {
+            const r = await fetch(`/api/asaas?endpoint=payments/${encodeURIComponent(faturaId)}/cancel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const d = await r.json();
+            if (d.status === 'CANCELLED' || d.deleted === true) {
+                alert('✅ Fatura cancelada com sucesso!');
+            } else if (d.id && d.status) {
+                alert(`✅ Fatura atualizada. Status: ${d.status}`);
+            } else {
+                throw new Error(d.errors?.[0]?.description || JSON.stringify(d));
+            }
+            await this.buscarInadimplentes();
+        } catch (e) {
+            alert('❌ Erro ao cancelar fatura: ' + e.message);
         }
     }
 };

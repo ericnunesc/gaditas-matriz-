@@ -489,8 +489,67 @@ const GaditasFiltros = {
             });
             
             this.statusBloqueado = algumBloqueioAtivo;
+            htmlFaturas += `
+                <button onclick="GaditasFiltros.carregarHistoricoPagamentos()" style="width:100%; margin-top:8px; padding:11px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.75rem; font-weight:700; cursor:pointer;">
+                    📋 VER HISTÓRICO DE PAGAMENTOS REALIZADOS
+                </button>`;
             conteudo.innerHTML = htmlFaturas;
         } catch (error) { console.error(error); }
+    },
+
+    // ── HISTÓRICO DE PAGAMENTOS PAGOS ────────────────────────────
+    async carregarHistoricoPagamentos() {
+        const conteudo = document.getElementById('financeiro-conteudo');
+        if (!conteudo) return;
+        conteudo.innerHTML = `<div style="text-align:center; padding:20px; color:#64748b;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem; color:#3b82f6; display:block; margin-bottom:8px;"></i>Buscando histórico...</div>`;
+
+        try {
+            const emailAtleta = auth.currentUser.email.trim();
+            const resCliente = await fetch(`${this.asaasUrl}?endpoint=customers&email=${encodeURIComponent(emailAtleta)}`);
+            const dadosCliente = await resCliente.json();
+            if (!dadosCliente.data || dadosCliente.data.length === 0) {
+                conteudo.innerHTML = `<p style="color:#94a3b8; text-align:center; padding:15px;">Atleta não localizado no Asaas.</p>
+                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">← VOLTAR</button>`;
+                return;
+            }
+
+            const customerId = dadosCliente.data[0].id;
+            const resPagos = await fetch(`${this.asaasUrl}?endpoint=payments&customer=${customerId}&status=RECEIVED&limit=30`);
+            const dadosPagos = await resPagos.json();
+
+            if (!dadosPagos.data || dadosPagos.data.length === 0) {
+                conteudo.innerHTML = `<p style="color:#94a3b8; text-align:center; padding:15px;">Nenhum pagamento confirmado encontrado.</p>
+                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">← VOLTAR</button>`;
+                return;
+            }
+
+            dadosPagos.data.sort((a, b) => new Date(b.paymentDate || b.dueDate) - new Date(a.paymentDate || a.dueDate));
+
+            let html = `<p style="font-size:0.8rem; color:#94a3b8; font-weight:600; margin-bottom:12px;">✅ ${dadosPagos.data.length} pagamento(s) confirmado(s):</p>`;
+            dadosPagos.data.forEach(p => {
+                const valor = p.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                const dataBruta = p.paymentDate || p.dueDate;
+                const data = dataBruta ? dataBruta.split('-').reverse().join('/') : '—';
+                const desc = p.description || 'Mensalidade';
+                html += `
+                    <div style="background:#064e3b22; border:1px solid #10b98144; padding:12px 14px; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="flex:1; min-width:0;">
+                            <span style="font-size:0.65rem; color:#34d399; font-weight:800; display:block;">✅ PAGO</span>
+                            <span style="font-size:0.75rem; color:#e2e8f0; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${desc}</span>
+                        </div>
+                        <div style="text-align:right; flex-shrink:0; margin-left:12px;">
+                            <span style="font-size:0.9rem; font-weight:800; color:#10b981; display:block;">${valor}</span>
+                            <span style="font-size:0.65rem; color:#64748b;">${data}</span>
+                        </div>
+                    </div>`;
+            });
+            html += `<button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer; margin-top:8px;">← VOLTAR</button>`;
+            conteudo.innerHTML = html;
+        } catch (e) {
+            console.error(e);
+            conteudo.innerHTML = `<p style="color:#f43f5e; text-align:center;">Erro ao carregar histórico.</p>
+                <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer; margin-top:8px;">← VOLTAR</button>`;
+        }
     },
 
     async gerarPixReal(idCobranca) {

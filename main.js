@@ -145,6 +145,7 @@ const academia = {
     modalidadeFiltroAtual: "all",
     _modalidadeAtual: "jiujitsu",
     textoBuscaNome: "",
+    filtroInativos: false,
     leoesFichaTemp: { leaoAtencao: 0, leaoComportamento: 0, leaoCompanheirismo: 0, leaoDisciplina: 0 },
 
     gradeHorarios: {
@@ -796,6 +797,7 @@ const academia = {
 
         snap.forEach(doc => {
             const a = doc.data(); const s = this.verificarMeta(a); const eng = this.calcularEngajamento(a.historico);
+            const trancado = a.status === 'trancado';
             const nomeAtleta = a.nome ? a.nome.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") : "";
             const buscaNorm = this.textoBuscaNome.normalize("NFD").replace(/[̀-ͯ]/g, "");
             const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
@@ -804,6 +806,7 @@ const academia = {
             if (this.categoriaFiltroAtual === "adult" && isKids) return;
             if (this.categoriaFiltroAtual === "kids" && !isKids) return;
             if (faixaFiltro !== "all" && a.faixa !== faixaFiltro) return;
+            if (this.filtroInativos && eng.label !== 'Inativo') return;
 
             // Filtro por modalidade
             const alunoMod = a.modalidade || 'jiujitsu';
@@ -859,12 +862,13 @@ const academia = {
                 ? `<img src="${fotoSrc}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid ${corBorda}; margin-right:10px; flex-shrink:0;"/>`
                 : `<div style="width:36px; height:36px; border-radius:50%; background:#1e293b; border:2px solid #334155; display:inline-flex; align-items:center; justify-content:center; margin-right:10px; flex-shrink:0; font-size:0.85rem; font-weight:800; color:#94a3b8;">${a.nome.charAt(0).toUpperCase()}</div>`;
 
-            cardsHtml += `<div class="item-card" style="border-left: 4px solid ${corBorda}; flex-direction:column; align-items:stretch; gap:10px;">
+            const telLimpo = (a.telefone || '').replace(/\D/g, '');
+            cardsHtml += `<div class="item-card" style="border-left: 4px solid ${trancado ? '#64748b' : corBorda}; flex-direction:column; align-items:stretch; gap:10px; ${trancado ? 'opacity:0.7;' : ''}">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="display:flex; align-items:center; flex:1; min-width:0;">
                         ${fotoMini}
                         <div style="color:#e2e8f0; flex:1; font-size:0.85rem; font-weight:600; min-width:0;">
-                            <span>${a.nome.toUpperCase()}${modBadge} ${eng.icon}</span>
+                            <span>${a.nome.toUpperCase()}${modBadge} ${eng.icon}${trancado ? ' <span style="background:#334155; color:#94a3b8; font-size:0.5rem; padding:2px 6px; border-radius:4px; font-weight:800; vertical-align:middle;">🔒 TRANCADO</span>' : ''}</span>
                             ${beltBarHtml}
                             ${gradInfo}
                             ${tagsLeoes}
@@ -872,7 +876,12 @@ const academia = {
                     </div>
                     <div style="display:flex; gap:5px; flex-shrink:0;">
                         <button onclick="academia.editarAluno('${doc.id}')" style="background:#16161a; border:1px solid #2d2d34; color:#94a3b8; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-eye"></i></button>
-                        ${isAdmin ? `<button onclick="academia.verFinanceiroAluno('${doc.id}', '${a.nome.replace(/'/g, "\'")}')" style="background:#064e3b; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-dollar-sign"></i></button>` : ''}
+                        ${telLimpo ? `<button onclick="window.open('https://wa.me/55${telLimpo}')" title="WhatsApp" style="background:#064e3b; border:none; color:#25d366; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : ''}
+                        ${isAdmin ? `<button onclick="academia.verFinanceiroAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#064e3b; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-dollar-sign"></i></button>` : ''}
+                        ${isAdmin ? (trancado
+                            ? `<button onclick="academia.ativarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Reativar matrícula" style="background:#1e3a8a; border:none; color:#60a5fa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-lock-open"></i></button>`
+                            : `<button onclick="academia.trancarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Trancar matrícula" style="background:#1c1000; border:1px solid #92400e; color:#f59e0b; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-lock"></i></button>`)
+                        : ''}
                         ${isAdmin ? `<button onclick="academia.excluirAluno('${doc.id}')" style="background:#2a0808; border:none; color:#ef4444; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-trash"></i></button>` : ''}
                     </div>
                 </div>
@@ -896,15 +905,20 @@ const academia = {
         }).length;
 
         const contadorHtml = `
-            <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px 15px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <i class="fas fa-users" style="color:#3b82f6; font-size:1rem;"></i>
-                    <span style="font-size:0.8rem; font-weight:700; color:#e2e8f0;">ATLETAS MATRICULADOS</span>
+            <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px 15px; margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-users" style="color:#3b82f6; font-size:1rem;"></i>
+                        <span style="font-size:0.8rem; font-weight:700; color:#e2e8f0;">ATLETAS MATRICULADOS</span>
+                    </div>
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        ${totalVisiveis !== totalGeral ? `<span style="font-size:0.7rem; color:#94a3b8;">Filtrado: <strong style="color:#f59e0b;">${totalVisiveis}</strong></span>` : ''}
+                        <span style="font-size:0.7rem; color:#94a3b8;">Total: <strong style="color:#3b82f6; font-size:1rem;">${totalGeral}</strong></span>
+                    </div>
                 </div>
-                <div style="display:flex; gap:12px; align-items:center;">
-                    ${totalVisiveis !== totalGeral ? `<span style="font-size:0.7rem; color:#94a3b8;">Filtrado: <strong style="color:#f59e0b;">${totalVisiveis}</strong></span>` : ''}
-                    <span style="font-size:0.7rem; color:#94a3b8;">Total: <strong style="color:#3b82f6; font-size:1rem;">${totalGeral}</strong></span>
-                </div>
+                <button onclick="academia.toggleFiltroInativos()" style="width:100%; padding:7px; background:${this.filtroInativos ? '#78350f' : '#1e293b'}; border:1px solid ${this.filtroInativos ? '#f59e0b' : '#334155'}; color:${this.filtroInativos ? '#fbbf24' : '#94a3b8'}; border-radius:7px; font-size:0.7rem; font-weight:800; cursor:pointer; letter-spacing:0.3px;">
+                    💤 ${this.filtroInativos ? 'MOSTRANDO SÓ INATIVOS — clique para ver todos' : 'FILTRAR: SEM TREINOS (+30 dias)'}
+                </button>
             </div>`;
 
         l.innerHTML = contadorHtml + (cardsHtml || `<p style='color:var(--text-muted); text-align:center; font-size:0.8rem; padding:15px;'>Nenhum atleta.</p>`);
@@ -1107,6 +1121,15 @@ const academia = {
                 }
             }
         }
+        // Verifica se matrícula está trancada (leitura direta no Firestore)
+        try {
+            const docAtual = await db.collection('alunos').doc(auth.currentUser.id).get();
+            if (docAtual.exists && docAtual.data().status === 'trancado') {
+                alert("🔒 Sua matrícula está trancada.\n\nEntre em contato com a academia para reativar. OSS!");
+                return;
+            }
+        } catch(e) { console.warn('Erro ao verificar status matrícula:', e); }
+
         if (typeof GaditasFiltros !== 'undefined' && auth.currentUser && auth.currentUser.email) {
             const botaoCheckin = document.querySelector("#area-aluno-checkin button");
             const botaoOriginalTxt = botaoCheckin ? botaoCheckin.innerText : "ENVIAR CHECK-IN AGORA";
@@ -2110,6 +2133,39 @@ Ele voltará a ser aluno normal.`)) return;
                 data: new Date().getTime(),
                 dataFormatada: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
             });
+
+            // ── Envia push notification para os alunos do público selecionado ──
+            try {
+                const snapAlunos = await db.collection('alunos').get();
+                const anoAtual = new Date().getFullYear();
+                const tokens = [];
+                const alunoIndivId = this.alunoMuralSelecionado?.id;
+                snapAlunos.forEach(doc => {
+                    const a = doc.data();
+                    if (!a.fcmToken) return;
+                    if (publico === 'todos')      { tokens.push(a.fcmToken); return; }
+                    if (publico === 'individual') { if (doc.id === alunoIndivId) tokens.push(a.fcmToken); return; }
+                    const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
+                    const isKids = idade <= 14;
+                    const faixa = a.faixa || '';
+                    const mod   = a.modalidade || 'jiujitsu';
+                    if (publico === 'adulto'           && !isKids)                                       tokens.push(a.fcmToken);
+                    if (publico === 'kids'             && isKids)                                        tokens.push(a.fcmToken);
+                    if (publico === 'branca'           && faixa === 'Branca')                            tokens.push(a.fcmToken);
+                    if (publico === 'azul-roxa-marrom' && ['Azul','Roxa','Marrom'].includes(faixa))      tokens.push(a.fcmToken);
+                    if (publico === 'marrom-preta'     && ['Marrom','Preta'].includes(faixa))            tokens.push(a.fcmToken);
+                    if (publico === 'preta'            && faixa === 'Preta')                             tokens.push(a.fcmToken);
+                    if (publico === 'muaythai'         && ['muaythai','ambos'].includes(mod))            tokens.push(a.fcmToken);
+                });
+                if (tokens.length > 0) {
+                    fetch('/api/push-comunicado', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tokens, title: '📢 Gaditas — Novo comunicado', body: txt.substring(0, 150) })
+                    }).catch(e => console.warn('Push mural falhou:', e));
+                }
+            } catch(ePush) { console.warn('Erro ao montar push do mural:', ePush); }
+
             document.getElementById('input-mural').value = "";
             this.alunoMuralSelecionado = null;
             this.selecionarPublicoMural('todos');
@@ -2162,6 +2218,27 @@ Ele voltará a ser aluno normal.`)) return;
 
     marcarAvisoComoLido() { if (this.idUltimoAvisoMural) { localStorage.setItem('gaditas_ultimo_aviso_visto', this.idUltimoAvisoMural); const m = document.getElementById('modal-popup-aviso'); if(m) m.classList.add('hidden'); } },
     async excluirAviso(id) { if (confirm("Deseja apagar definitivamente este aviso do mural?")) { await db.collection("mural_avisos").doc(id).delete(); alert("Aviso removido!"); } },
+
+    // ── TRANCAR / ATIVAR MATRÍCULA ────────────────────────────
+    async trancarAluno(id, nome) {
+        if (!confirm(`Trancar matrícula de ${nome}?\n\nO aluno ficará impedido de fazer check-in.`)) return;
+        await db.collection('alunos').doc(id).update({ status: 'trancado' });
+        alert(`🔒 Matrícula de ${nome} trancada.`);
+        this.renderAlunos();
+    },
+
+    async ativarAluno(id, nome) {
+        if (!confirm(`Reativar matrícula de ${nome}?`)) return;
+        await db.collection('alunos').doc(id).update({ status: 'ativo' });
+        alert(`✅ ${nome} reativado com sucesso!`);
+        this.renderAlunos();
+    },
+
+    // ── FILTRO INATIVOS ───────────────────────────────────────
+    toggleFiltroInativos() {
+        this.filtroInativos = !this.filtroInativos;
+        this.renderAlunos();
+    },
 
     calcularEngajamento(h) {
         if (!h || h.length === 0) return { label: "Inativo", icon: "💤", color: "#475569" };

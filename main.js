@@ -2744,7 +2744,7 @@ Ele voltará a ser aluno normal.`)) return;
         const fileInput = document.getElementById('story-file-input');
         const file = fileInput?.files?.[0];
 
-        // Se selecionou arquivo → redimensiona e faz upload no Firebase Storage
+        // Se selecionou arquivo → redimensiona e envia via servidor (bypassa Storage Rules)
         if (file && !imageUrl) {
             if (btn) { btn.disabled = true; btn.innerText = '⏳ Redimensionando...'; }
             try {
@@ -2753,24 +2753,24 @@ Ele voltará a ser aluno normal.`)) return;
                 const kbFinal = (blob.size / 1024).toFixed(0);
                 if (btn) btn.innerText = `⏳ Enviando (${kbFinal} KB)...`;
 
-                // Tenta login anônimo para autenticar no Storage
-                // (requer "Anonymous" ativado em Firebase Console > Authentication)
-                if (!firebase.auth().currentUser) {
-                    try { await firebase.auth().signInAnonymously(); }
-                    catch(authErr) {
-                        if (authErr.code === 'auth/admin-restricted-operation') {
-                            if (btn) { btn.disabled = false; btn.innerHTML = '📸 PUBLICAR STORY'; }
-                            return alert('⚙️ Ative o Login Anônimo no Firebase Console:\n\nAuthentication → Sign-in method → Anonymous → Ativar\n\nOu use o campo de URL da imagem como alternativa.');
-                        }
-                        // Se outro erro, tenta o upload mesmo assim
-                        console.warn('anon-auth falhou:', authErr.message);
-                    }
-                }
-                const storage = firebase.storage();
+                // Converte blob para base64
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload  = e => resolve(e.target.result.split(',')[1]); // só o base64
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+
+                // Envia para API Vercel (usa Admin SDK — sem restrição de Storage Rules)
                 const nomeArq = file.name.replace(/\s/g, '_').replace(/\.[^.]+$/, '') + '.jpg';
-                const ref = storage.ref(`stories/${Date.now()}_${nomeArq}`);
-                await ref.put(blob, { contentType: 'image/jpeg' });
-                imageUrl = await ref.getDownloadURL();
+                const resp = await fetch('/api/upload-story', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageBase64: base64, fileName: nomeArq })
+                });
+                const data = await resp.json();
+                if (!data.ok) throw new Error(data.error || 'Falha no upload');
+                imageUrl = data.url;
             } catch(e) {
                 if (btn) { btn.disabled = false; btn.innerHTML = '📸 PUBLICAR STORY'; }
                 return alert('Erro ao enviar imagem: ' + e.message);

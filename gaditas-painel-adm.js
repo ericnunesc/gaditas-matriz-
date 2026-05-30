@@ -217,7 +217,9 @@ const GaditasPainelAdm = {
                     billingType: tipo,
                     value:       valor,
                     dueDate:     vencimento,
-                    description: descricao + ' — ' + nome
+                    description: descricao + ' — ' + nome,
+                    fine:        { value: 0 },
+                    interest:    { value: 0 }
                 })
             });
             const dadosPag = await resPag.json();

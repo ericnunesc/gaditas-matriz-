@@ -2951,18 +2951,22 @@ Ele voltará a ser aluno normal.`)) return;
 
     // ── WHATSAPP BUSINESS ─────────────────────────────────────
     abrirWhatsappBusiness(tel) {
-        // Remove não-dígitos e evita duplo código 55 (ex: se o número já tem +55)
         let num = tel.replace(/\D/g, '');
         if (num.startsWith('55') && num.length >= 12) num = num.slice(2);
 
         const ua = navigator.userAgent;
-        const isMobile = /android|iphone|ipad|ipod/i.test(ua);
+        const isAndroid = /android/i.test(ua);
+        const isIOS     = /iphone|ipad|ipod/i.test(ua);
 
-        if (isMobile) {
-            // Mobile: whatsapp-business:// abre diretamente o app Business
+        if (isAndroid) {
+            // Android: intent URL força abertura no WhatsApp Business (com.whatsapp.w4b)
+            // Se não estiver instalado, redireciona para a Play Store
+            const fallback = encodeURIComponent('https://play.google.com/store/apps/details?id=com.whatsapp.w4b');
+            window.location.href = `intent://send?phone=55${num}#Intent;scheme=whatsapp;package=com.whatsapp.w4b;S.browser_fallback_url=${fallback};end`;
+        } else if (isIOS) {
             window.location.href = `whatsapp-business://send?phone=55${num}`;
         } else {
-            // Desktop Windows/Mac: whatsapp:// (WA Business Desktop registra esse scheme)
+            // Desktop
             window.location.href = `whatsapp://send?phone=55${num}`;
         }
     },

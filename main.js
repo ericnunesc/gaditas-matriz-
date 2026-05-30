@@ -961,7 +961,7 @@ const academia = {
                     </div>
                     <div style="display:flex; gap:5px; flex-shrink:0;">
                         <button onclick="academia.editarAluno('${doc.id}')" style="background:#16161a; border:1px solid #2d2d34; color:#94a3b8; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-eye"></i></button>
-                        ${telLimpo ? `<button onclick="window.location.href='whatsapp-business://send?phone=55${telLimpo}'" title="WhatsApp Business" style="background:#064e3b; border:none; color:#25d366; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : ''}
+                        ${telLimpo ? `<button onclick="academia.abrirWhatsappBusiness('${telLimpo}')" title="WhatsApp Business" style="background:#064e3b; border:none; color:#25d366; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : ''}
                         ${isAdmin ? `<button onclick="academia.verFinanceiroAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#064e3b; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-dollar-sign"></i></button>` : ''}
                         ${isAdmin ? (trancado
                             ? `<button onclick="academia.ativarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Reativar matrícula" style="background:#1e3a8a; border:none; color:#60a5fa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-lock-open"></i></button>`
@@ -2924,14 +2924,23 @@ Ele voltará a ser aluno normal.`)) return;
     },
 
     // ── WHATSAPP BUSINESS ─────────────────────────────────────
-    _abrirWhatsappBusiness(tel) {
-        // Usa <a> invisível para acionar o protocolo sem abrir aba em branco
-        const a = document.createElement('a');
-        a.href = `whatsapp-business://send?phone=55${tel}`;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => document.body.removeChild(a), 500);
+    abrirWhatsappBusiness(tel) {
+        const ua = navigator.userAgent;
+        const isAndroid = /android/i.test(ua);
+        const isIOS     = /iphone|ipad|ipod/i.test(ua);
+        let url;
+        if (isAndroid) {
+            // Android Intent URL — abre especificamente o WhatsApp Business
+            // (package com.whatsapp.w4b) mesmo se WA normal também estiver instalado
+            url = `intent://send?phone=55${tel}#Intent;package=com.whatsapp.w4b;scheme=whatsapp;end`;
+        } else if (isIOS) {
+            // iOS — protocolo nativo do WA Business
+            url = `whatsapp-business://send?phone=55${tel}`;
+        } else {
+            // Windows/Mac Desktop — abre WhatsApp/WA Business Desktop via whatsapp://
+            url = `whatsapp://send?phone=55${tel}`;
+        }
+        window.location.href = url;
     },
 
     // ── FILTRO INATIVOS ───────────────────────────────────────

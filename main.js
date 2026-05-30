@@ -2060,7 +2060,7 @@ Ele voltará a ser aluno normal.`)) return;
             ]);
             const lista = [];
             // Admin sempre disponível como opção
-            lista.push({ id: 'admin', nome: 'Eric (Adm)' });
+            lista.push({ id: 'admin', nome: auth.adminCreds?.nome || 'Admin' });
             // Professores da coleção alunos
             snapAlunos.docs.forEach(d => {
                 const dt = d.data();
@@ -2112,6 +2112,18 @@ Ele voltará a ser aluno normal.`)) return;
             .where("arquivado","==", false)
             .onSnapshot(snap => {
                 snap.docChanges().forEach(change => {
+                    // 'added': novo relato chegou — atualiza lista automaticamente
+                    if (change.type === 'added') {
+                        const d = change.doc.data();
+                        if (auth.role === 'professor' && d.professorId !== auth.currentUser.id) return;
+                        // Só atualiza se a lista estiver visível (tab gestão aberta)
+                        const lista = document.getElementById('lista-relatos-saude');
+                        const card  = document.getElementById('card-alertas-saude');
+                        if (lista && card && !card.classList.contains('hidden')) {
+                            this.carregarRelatosSaude();
+                        }
+                        return;
+                    }
                     if (change.type === 'modified') {
                         const d = change.doc.data();
                         // Professores só recebem alertas dos relatos direcionados a eles
@@ -2131,6 +2143,8 @@ Ele voltará a ser aluno normal.`)) return;
                         }
                     }
                 });
+            }, err => {
+                console.warn('iniciarListenerRelatosProf error:', err.message);
             });
     },
 
@@ -2271,7 +2285,13 @@ Ele voltará a ser aluno normal.`)) return;
                 // Carrega lista de professores para seleção
                 this.carregarProfessoresParaRelato();
             }
-        } catch(e) {}
+        } catch(e) {
+            // Se der erro, exibe formulário e tenta carregar professores assim mesmo
+            console.warn('carregarRespostaRelato error:', e.message);
+            if (secForm)   secForm.classList.remove('hidden');
+            if (secStatus) secStatus.classList.add('hidden');
+            this.carregarProfessoresParaRelato();
+        }
     },
 
     async marcarRecuperado() {
@@ -2311,8 +2331,11 @@ Ele voltará a ser aluno normal.`)) return;
         if (card) card.classList.remove('hidden');
         lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:10px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small>';
         try {
-            const snap = await db.collection("relatos_saude").orderBy("data","desc").limit(50).get();
-            let ativos = snap.docs.filter(d => !d.data().arquivado);
+            // Busca sem orderBy/limit para evitar problemas de índice e não perder relatos ativos
+            const snap = await db.collection("relatos_saude").get();
+            let ativos = snap.docs
+                .filter(d => !d.data().arquivado)
+                .sort((a, b) => (b.data().data || 0) - (a.data().data || 0));
             // Professores só veem os direcionados a eles
             if (auth.role === 'professor') {
                 ativos = ativos.filter(d => d.data().professorId === auth.currentUser.id);
@@ -2365,7 +2388,10 @@ Ele voltará a ser aluno normal.`)) return;
             ativos.filter(d => !d.data().lido).forEach(doc => {
                 db.collection("relatos_saude").doc(doc.id).update({ lido: true }).catch(()=>{});
             });
-        } catch(e) { lista.innerHTML = '<small style="color:#f43f5e;">Erro ao carregar relatos.</small>'; }
+        } catch(e) {
+            console.error('carregarRelatosSaude error:', e.message);
+            lista.innerHTML = `<small style="color:#f43f5e; display:block; text-align:center; padding:10px;">⚠️ Erro ao carregar relatos: ${e.message}</small>`;
+        }
     },
 
     async responderRelato(id) {

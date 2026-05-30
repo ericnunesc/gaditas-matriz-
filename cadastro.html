@@ -417,12 +417,25 @@
                             }
                         } catch(errAsaas) { console.warn('Erro Asaas cliente:', errAsaas.message); }
 
-                        // 3. Cria assinatura recorrente no Asaas (só para planos com valor fixo)
-                        btnReg.innerText = "CRIANDO ASSINATURA...";
+                        // 3. Verifica se já existe assinatura ativa no Asaas (cliente pré-existente)
+                        btnReg.innerText = "VERIFICANDO ASSINATURA...";
                         let asaasSubscriptionId = null;
+                        let assinaturaJaExiste = false;
 
+                        if (asaasId) {
+                            try {
+                                const resSubExist = await fetch(`/api/asaas?endpoint=subscriptions&customer=${asaasId}&status=ACTIVE&limit=1`);
+                                const dadosSubExist = await resSubExist.json();
+                                if (dadosSubExist.data && dadosSubExist.data.length > 0) {
+                                    asaasSubscriptionId = dadosSubExist.data[0].id;
+                                    assinaturaJaExiste = true;
+                                    console.log('✅ Assinatura existente encontrada — pulando criação:', asaasSubscriptionId);
+                                }
+                            } catch(e) { console.warn('Erro ao verificar assinaturas existentes:', e.message); }
+                        }
+
+                        // Cria assinatura recorrente apenas se não existir uma ativa
                         // Todos os planos são cobrados mensalmente (MONTHLY)
-                        // A diferença é só o preço por mês e o método de pagamento
                         // Mensal → Pix ou Cartão (UNDEFINED) | Trimestral/Semestral/Anual → Cartão recorrente
                         const ciclosAsaas = {
                             mensal:     { cycle: 'MONTHLY', billingType: 'UNDEFINED'   },
@@ -431,7 +444,8 @@
                             anual:      { cycle: 'MONTHLY', billingType: 'CREDIT_CARD' }
                         };
                         const cicloInfo = ciclosAsaas[planoSelecionado.key];
-                        if (asaasId && cicloInfo && parseFloat(planoSelecionado.valor) > 0) {
+                        if (asaasId && !assinaturaJaExiste && cicloInfo && parseFloat(planoSelecionado.valor) > 0) {
+                            btnReg.innerText = "CRIANDO ASSINATURA...";
                             try {
                                 // Valor mensal direto do Firebase — se admin alterar, próximo cadastro já usa o novo
                                 const valorAssinatura = parseFloat(planoSelecionado.valor);
@@ -464,10 +478,10 @@
                         }
 
                         // 4. Cria cobrança avulsa de matrícula (R$30 via PIX)
-                        //    Exceto no Plano Anual — matrícula grátis
+                        //    Exceto: Plano Anual (grátis) ou aluno que já tinha assinatura ativa
                         btnReg.innerText = "GERANDO TAXA DE MATRÍCULA...";
                         let asaasMatriculaId = null;
-                        const matriculaGratis = planoSelecionado.key === 'anual';
+                        const matriculaGratis = planoSelecionado.key === 'anual' || assinaturaJaExiste;
                         if (asaasId && !matriculaGratis) {
                             try {
                                 const dataMatricula = new Date();
@@ -534,15 +548,20 @@
                         });
 
                         // Monta mensagem de confirmação
-                        let msgFinal = "✅ Matrícula realizada com sucesso! OSS!\n\nVerifique seu e-mail — o Asaas enviará o link de pagamento, ou acesse a aba 💳 FINANCEIRO no app para pagar.";
-                        if (matriculaGratis) {
-                            msgFinal += "\n\n🎁 Plano Anual: taxa de matrícula GRÁTIS!";
+                        let msgFinal = "✅ Cadastro realizado com sucesso! OSS!\n\n";
+                        if (assinaturaJaExiste) {
+                            msgFinal += "Sua assinatura e matrícula já estavam ativas no Asaas — nenhuma nova cobrança foi gerada.\n\nBem-vindo(a) de volta! Acesse o app normalmente.";
                         } else {
-                            msgFinal += "\n\n💰 Taxa de matrícula: R$ 30,00 via PIX (vence em 3 dias).";
-                        }
-                        if (asaasSubscriptionId) {
-                            const tipoPag = cicloInfo?.billingType === 'UNDEFINED' ? 'Pix ou Cartão (você escolhe no link)' : 'Cartão de crédito — cobrado mensalmente';
-                            msgFinal += `\n💳 Assinatura ${planoSelecionado.label}: ${tipoPag}.`;
+                            msgFinal += "Verifique seu e-mail — o Asaas enviará o link de pagamento, ou acesse a aba 💳 FINANCEIRO no app para pagar.";
+                            if (matriculaGratis && planoSelecionado.key === 'anual') {
+                                msgFinal += "\n\n🎁 Plano Anual: taxa de matrícula GRÁTIS!";
+                            } else if (!matriculaGratis) {
+                                msgFinal += "\n\n💰 Taxa de matrícula: R$ 30,00 via PIX (vence em 3 dias).";
+                            }
+                            if (asaasSubscriptionId) {
+                                const tipoPag = cicloInfo?.billingType === 'UNDEFINED' ? 'Pix ou Cartão (você escolhe no link)' : 'Cartão de crédito — cobrado mensalmente';
+                                msgFinal += `\n💳 Assinatura ${planoSelecionado.label}: ${tipoPag}.`;
+                            }
                         }
                         alert(msgFinal);
                         window.location.href = "index.html";

@@ -2638,8 +2638,9 @@ Ele voltará a ser aluno normal.`)) return;
                 <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:8px;">IMAGEM *</small>
 
                 <!-- Opção 1: galeria -->
-                <div id="story-preview-box" style="display:none;width:100%;height:140px;border-radius:10px;background:#0f172a;border:1px solid #334155;margin-bottom:8px;overflow:hidden;position:relative;">
-                    <img id="story-preview-img" src="" style="width:100%;height:100%;object-fit:cover;border-radius:10px;" />
+                <div id="story-preview-box" style="display:none;width:100%;border-radius:10px;background:#0f172a;border:1px solid #334155;margin-bottom:8px;overflow:hidden;position:relative;">
+                    <img id="story-preview-img" src="" style="width:100%;height:140px;object-fit:cover;border-radius:10px;" />
+                    <div id="story-img-info" style="font-size:0.55rem;color:#64748b;padding:4px 8px;text-align:center;background:#0f172a;"></div>
                     <button onclick="academia._limparImagemStory()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.7);border:none;color:white;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:0.75rem;">✕</button>
                 </div>
                 <label id="story-galeria-label" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:700;margin-bottom:8px;box-sizing:border-box;">
@@ -2674,8 +2675,39 @@ Ele voltará a ser aluno normal.`)) return;
             document.getElementById('story-preview-img').src = e.target.result;
             document.getElementById('story-preview-box').style.display = 'block';
             document.getElementById('story-imageUrl').value = '';
+            // Mostra tamanho original
+            const kb = (file.size / 1024).toFixed(0);
+            const info = document.getElementById('story-img-info');
+            if (info) info.innerText = `Original: ${kb} KB — será redimensionada antes do envio`;
         };
         reader.readAsDataURL(file);
+    },
+
+    // Redimensiona e comprime imagem via Canvas antes do upload
+    _redimensionarImagem(file, maxW = 1080, maxH = 1920, quality = 0.82) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                let { width, height } = img;
+                // Calcula escala mantendo proporção
+                const ratio = Math.min(maxW / width, maxH / height, 1); // nunca aumenta
+                width  = Math.round(width  * ratio);
+                height = Math.round(height * ratio);
+                const canvas = document.createElement('canvas');
+                canvas.width  = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob(blob => {
+                    if (!blob) return reject(new Error('Falha ao processar imagem'));
+                    resolve(blob);
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = () => reject(new Error('Imagem inválida'));
+            img.src = url;
+        });
     },
 
     _onUrlStoryInput(input) {
@@ -2704,17 +2736,23 @@ Ele voltará a ser aluno normal.`)) return;
         const fileInput = document.getElementById('story-file-input');
         const file = fileInput?.files?.[0];
 
-        // Se selecionou arquivo → faz upload no Firebase Storage
+        // Se selecionou arquivo → redimensiona e faz upload no Firebase Storage
         if (file && !imageUrl) {
-            if (btn) { btn.disabled = true; btn.innerText = '⏳ Enviando imagem...'; }
+            if (btn) { btn.disabled = true; btn.innerText = '⏳ Redimensionando...'; }
             try {
+                // Redimensiona para no máximo 1080×1920 JPEG 82% de qualidade
+                const blob = await this._redimensionarImagem(file, 1080, 1920, 0.82);
+                const kbFinal = (blob.size / 1024).toFixed(0);
+                if (btn) btn.innerText = `⏳ Enviando (${kbFinal} KB)...`;
+
                 // Garante que há um usuário Firebase Auth (necessário para Storage)
                 if (!firebase.auth().currentUser) {
                     await firebase.auth().signInAnonymously();
                 }
                 const storage = firebase.storage();
-                const ref = storage.ref(`stories/${Date.now()}_${file.name.replace(/\s/g, '_')}`);
-                await ref.put(file);
+                const nomeArq = file.name.replace(/\s/g, '_').replace(/\.[^.]+$/, '') + '.jpg';
+                const ref = storage.ref(`stories/${Date.now()}_${nomeArq}`);
+                await ref.put(blob, { contentType: 'image/jpeg' });
                 imageUrl = await ref.getDownloadURL();
             } catch(e) {
                 if (btn) { btn.disabled = false; btn.innerHTML = '📸 PUBLICAR STORY'; }

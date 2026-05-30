@@ -2291,7 +2291,12 @@ Ele voltará a ser aluno normal.`)) return;
                     <i class="fas fa-${modoEditar ? 'pen' : 'calendar-alt'}" style="margin-right:6px; color:${modoEditar ? '#f59e0b' : '#3b82f6'};"></i>
                     ${modoEditar ? 'EDITAR HORÁRIOS' : 'Horários e Turmas'}
                 </span>
-                ${isAdmin ? '<button onclick="academia.toggleEdicaoHorarios()" style="background:' + (modoEditar ? '#334155' : '#f59e0b') + '; border:none; color:' + (modoEditar ? 'white' : '#000') + '; padding:8px 14px; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">' + (modoEditar ? '✕ FECHAR' : '✏️ EDITAR') + '</button>' : ''}
+                ${isAdmin
+                    ? '<div style="display:flex; gap:6px;">' +
+                      '<button onclick="academia.gerarQRCodesHorarios()" style="background:#1e3a8a; border:1px solid #3b82f6; color:#60a5fa; padding:8px 12px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">📱 QR CODES</button>' +
+                      '<button onclick="academia.toggleEdicaoHorarios()" style="background:' + (modoEditar ? '#334155' : '#f59e0b') + '; border:none; color:' + (modoEditar ? 'white' : '#000') + '; padding:8px 14px; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">' + (modoEditar ? '✕ FECHAR' : '✏️ EDITAR') + '</button>' +
+                      '</div>'
+                    : ''}
             </div>
             <div id="bloco-duracao-aula"></div>
             <div id="bloco-info-janela"></div>
@@ -2576,6 +2581,125 @@ Ele voltará a ser aluno normal.`)) return;
             await db.collection('configuracoes').doc('horarios').set(grade);
         } catch(e) { console.warn('Erro ao salvar horário:', e); }
         this.renderHorarios();
+    },
+
+    // ── GERADOR DE QR CODES PARA IMPRESSÃO ───────────────────
+    async gerarQRCodesHorarios() {
+        const grade = this.getGrade();
+        const diasAbrev   = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+        const baseUrl     = window.location.origin + window.location.pathname.replace(/index\.html$/, '');
+
+        // Monta mapa: slot → dias em que aparece
+        const slotDias = {};
+        for (let d = 0; d <= 6; d++) {
+            const slots = grade[d] || grade[String(d)] || [];
+            slots.forEach(s => {
+                if (!s.includes('Sem treinos')) {
+                    if (!slotDias[s]) slotDias[s] = [];
+                    slotDias[s].push(d);
+                }
+            });
+        }
+        const slots = Object.keys(slotDias).sort();
+        if (slots.length === 0) return alert("Nenhuma turma cadastrada na grade.");
+
+        // Remove modal anterior
+        const anterior = document.getElementById('modal-qr-horarios');
+        if (anterior) anterior.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-qr-horarios';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.97); z-index:9999; overflow-y:auto; padding:20px; box-sizing:border-box;';
+
+        const cardsHtml = slots.map(slot => {
+            const url    = baseUrl + '?checkin=' + encodeURIComponent(slot);
+            const qrUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(url) + '&format=png&margin=2&color=000000&bgcolor=FFFFFF';
+            const dias   = slotDias[slot].map(d => diasAbrev[d]).join(' · ');
+            return '<div class="qr-card" style="background:white; border-radius:12px; padding:14px 12px; text-align:center;">' +
+                '<div style="font-size:0.5rem; font-weight:800; color:#64748b; letter-spacing:0.8px; margin-bottom:3px;">📅 ' + dias.toUpperCase() + '</div>' +
+                '<div style="font-size:0.75rem; font-weight:800; color:#0f172a; margin-bottom:10px; line-height:1.3;">' + slot.toUpperCase() + '</div>' +
+                '<img src="' + qrUrl + '" width="170" height="170" style="display:block; margin:0 auto; border-radius:6px;"/>' +
+                '<div style="font-size:0.42rem; color:#94a3b8; margin-top:8px; line-height:1.5;">Gaditas Matriz — escaneie para check-in</div>' +
+                '</div>';
+        }).join('');
+
+        modal.innerHTML =
+            '<div style="max-width:860px; margin:0 auto;">' +
+                '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; flex-wrap:wrap; gap:10px;">' +
+                    '<div>' +
+                        '<div style="font-size:0.6rem; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Admin — Gaditas Matriz</div>' +
+                        '<div style="font-size:1rem; font-weight:800; color:white; margin-top:3px;">📱 QR Codes de Check-in</div>' +
+                        '<div style="font-size:0.65rem; color:#64748b; margin-top:4px;">Imprima e cole nas paredes — alunos escaneiam para registrar presença</div>' +
+                    '</div>' +
+                    '<div style="display:flex; gap:8px; flex-shrink:0;">' +
+                        '<button onclick="academia.imprimirQRCodes()" style="background:#10b981; border:none; color:white; padding:10px 18px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;">🖨️ IMPRIMIR / PDF</button>' +
+                        '<button onclick="document.getElementById(\'modal-qr-horarios\').remove()" style="background:#334155; border:none; color:white; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:700; font-size:1rem;">✕</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div id="grid-qr-codes" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:14px;">' +
+                    cardsHtml +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(modal);
+    },
+
+    imprimirQRCodes() {
+        const grid = document.getElementById('grid-qr-codes');
+        if (!grid) return;
+
+        const cards = Array.from(grid.querySelectorAll('.qr-card'));
+        if (cards.length === 0) return;
+
+        const win = window.open('', '_blank');
+        if (!win) return alert("Permita pop-ups para imprimir.");
+
+        let cardsImpressao = '';
+        cards.forEach(card => {
+            const diasEl = card.querySelector('div:first-child');
+            const slotEl = card.querySelector('div:nth-child(2)');
+            const imgEl  = card.querySelector('img');
+            if (!imgEl) return;
+            cardsImpressao +=
+                '<div class="card">' +
+                    '<div class="dia">' + (diasEl ? diasEl.innerText : '') + '</div>' +
+                    '<div class="slot">' + (slotEl ? slotEl.innerText : '') + '</div>' +
+                    '<img src="' + imgEl.src + '" width="155" height="155"/>' +
+                    '<div class="rodape">Gaditas Matriz — check-in QR Code</div>' +
+                '</div>';
+        });
+
+        win.document.write(
+            '<!DOCTYPE html><html lang="pt-br"><head><meta charset="UTF-8">' +
+            '<title>QR Codes — Gaditas Matriz</title>' +
+            '<style>' +
+            '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+            'body { background: #fff; font-family: sans-serif; padding: 12px; }' +
+            'h1 { font-size: 13px; color: #0f172a; text-align: center; margin-bottom: 14px; font-weight: 800; }' +
+            '.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }' +
+            '.card { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px 10px; text-align: center; break-inside: avoid; page-break-inside: avoid; }' +
+            '.dia  { font-size: 7.5px; font-weight: 800; color: #64748b; letter-spacing: 0.8px; margin-bottom: 4px; }' +
+            '.slot { font-size: 11px; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.3; }' +
+            '.rodape { font-size: 7px; color: #94a3b8; margin-top: 7px; }' +
+            '@media print { @page { margin: 8mm; } body { padding: 0; } }' +
+            '</style></head><body>' +
+            '<h1>📱 QR Codes — Gaditas Matriz — Check-in por turma</h1>' +
+            '<div class="grid">' + cardsImpressao + '</div>' +
+            '</body></html>'
+        );
+        win.document.close();
+
+        // Aguarda as imagens carregarem antes de imprimir
+        const imgs = win.document.querySelectorAll('img');
+        let loaded = 0;
+        const total = imgs.length;
+        const doPrint = () => { win.focus(); win.print(); };
+        if (total === 0) { setTimeout(doPrint, 300); return; }
+        imgs.forEach(img => {
+            img.onload  = () => { if (++loaded >= total) doPrint(); };
+            img.onerror = () => { if (++loaded >= total) doPrint(); };
+        });
+        setTimeout(doPrint, 4000); // fallback
     },
 
     verificarMeta(a) {

@@ -207,6 +207,19 @@
                     </div>
                 </div>
 
+                <!-- ══ MURAL DE DEPOIMENTOS (público) ══ -->
+                <button id="btn-depoimentos-trigger" onclick="academia.toggleDepoimentos()" style="background:#1e293b; border:1px solid #f59e0b44; margin:12px 0 0 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
+                    <span><i class="fas fa-star" style="color:#f59e0b; margin-right:8px; font-size:1.1rem;"></i> DEPOIMENTOS &amp; FEEDBACK
+                        <span id="badge-depoimentos-count" class="hidden" style="background:#f59e0b; color:#000; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800;">0</span>
+                    </span>
+                    <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
+                </button>
+                <div id="card-depoimentos" class="hidden" style="background:#1e293b; border:1px solid #f59e0b44; padding:15px; border-radius:12px; margin-bottom:8px;">
+                    <div id="lista-depoimentos-publicos">
+                        <small style="color:#64748b; display:block; text-align:center; padding:12px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small>
+                    </div>
+                </div>
+
                 <div id="wrapper-perfil-proprio" class="hidden" style="width: 100%;">
                     <button onclick="GaditasFiltros.abrirFormPerfilAlunoHome()" id="btn-meus-dados-aluno-trigger" class="btn-save" style="background: #1e293b; border: 1px solid #334155; margin: 15px 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
                         <span><i class="fas fa-user-cog" style="color:#3b82f6; margin-right:8px; font-size:1.1rem;"></i> MEUS DADOS CADASTRAIS</span>
@@ -349,6 +362,23 @@
                         <button onclick="academia.salvarFichaSaude()" style="width:100%; padding:13px; background:linear-gradient(135deg,#064e3b,#065f46); border:1px solid #10b981; color:#34d399; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.8rem; letter-spacing:0.3px;"><i class="fas fa-save"></i> SALVAR FICHA DE SAÚDE</button>
                     </div>
 
+                    <!-- ── DEIXAR DEPOIMENTO (aluno) ── -->
+                    <button id="btn-meu-depoimento-trigger" onclick="academia.toggleMeuDepoimento()" class="btn-save" style="background:#1e293b; border:1px solid #f59e0b44; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
+                        <span><i class="fas fa-pen-nib" style="color:#f59e0b; margin-right:8px; font-size:1.1rem;"></i> DEIXAR MEU DEPOIMENTO
+                            <span id="badge-meu-dep-enviado" class="hidden" style="background:#f59e0b; color:#000; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800;">✓ ENVIADO</span>
+                        </span>
+                        <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
+                    </button>
+                    <div id="card-meu-depoimento" class="hidden" style="background:#1e293b; border:1px solid #f59e0b44; padding:15px; border-radius:12px; margin-bottom:8px;">
+                        <div id="meu-depoimento-status"></div>
+                        <div id="meu-depoimento-form">
+                            <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">✍️ CONTE SUA EXPERIÊNCIA NA GADITAS</small>
+                            <textarea id="textarea-depoimento" placeholder="Como o treino transformou sua vida? O que a academia representa pra você?..." rows="4" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; resize:none; box-sizing:border-box; margin-bottom:10px;"></textarea>
+                            <small style="color:#475569; font-size:0.6rem; display:block; margin-bottom:10px;">⚠️ Seu depoimento será revisado pelo admin antes de ser publicado.</small>
+                            <button onclick="academia.enviarDepoimento()" style="width:100%; padding:12px; background:linear-gradient(135deg,#78350f,#92400e); border:1px solid #f59e0b; color:#fbbf24; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.8rem;"><i class="fas fa-paper-plane"></i> ENVIAR PARA APROVAÇÃO</button>
+                        </div>
+                    </div>
+
                 </div>
 
             </div>
@@ -386,6 +416,18 @@
                         <button onclick="academia.carregarRelatosSaude()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem; font-weight:700;"><i class="fas fa-sync-alt"></i></button>
                     </div>
                     <div id="lista-relatos-saude"></div>
+                </div>
+
+                <!-- ══ DEPOIMENTOS PENDENTES (admin) ══ -->
+                <div id="card-depoimentos-admin" class="hidden" style="background:#1e293b; border:1px solid #f59e0b55; border-radius:12px; padding:15px; margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="font-size:0.8rem; font-weight:800; color:#f59e0b;">
+                            <i class="fas fa-star"></i> DEPOIMENTOS PENDENTES
+                            <span id="badge-dep-pendentes" style="background:#f59e0b; color:#000; border-radius:10px; padding:1px 7px; font-size:0.6rem; margin-left:6px; font-weight:800;">0</span>
+                        </span>
+                        <button onclick="academia.carregarDepoimentosPendentes()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem; font-weight:700;"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div id="lista-dep-pendentes"></div>
                 </div>
 
                 <!-- ═══ SEÇÃO: PROFESSOR ═══ -->
@@ -645,8 +687,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="main.js?v=20260530f"></script>
-    <script src="filtros-academia.js?v=20260530f"></script>
+    <script src="main.js?v=20260530g"></script>
+    <script src="filtros-academia.js?v=20260530g"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>

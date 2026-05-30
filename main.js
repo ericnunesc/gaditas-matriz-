@@ -159,6 +159,8 @@ const auth = {
         // ── LISTENERS RELATOS DE SAÚDE ────────────────────
         if (this.role === 'aluno') academia.iniciarListenerRelatoAluno();
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerRelatosProf();
+        // Badge de depoimentos aprovados (carrega em background)
+        academia._carregarBadgeDepoimentos();
 
         // ── CHECK-IN AUTOMÁTICO VIA QR CODE ──────────────
         if (this.role === 'aluno') {
@@ -2019,6 +2021,215 @@ Ele voltará a ser aluno normal.`)) return;
     },
 
     // ══════════════════════════════════════════
+    // MURAL DE DEPOIMENTOS & FEEDBACK
+    // ══════════════════════════════════════════
+    toggleDepoimentos() {
+        const card = document.getElementById('card-depoimentos');
+        const btn  = document.getElementById('btn-depoimentos-trigger');
+        if (!card) return;
+        const isOpen = !card.classList.contains('hidden');
+        if (isOpen) {
+            card.classList.add('hidden');
+            const icon = btn?.querySelector('.fa-chevron-down');
+            if (icon) icon.style.transform = '';
+        } else {
+            card.classList.remove('hidden');
+            const icon = btn?.querySelector('.fa-chevron-down');
+            if (icon) icon.style.transform = 'rotate(180deg)';
+            this.carregarDepoimentos();
+        }
+    },
+
+    async carregarDepoimentos() {
+        const lista = document.getElementById('lista-depoimentos-publicos');
+        const badge = document.getElementById('badge-depoimentos-count');
+        if (!lista) return;
+        lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:12px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small>';
+        try {
+            const snap = await db.collection('depoimentos')
+                .where('aprovado', '==', true)
+                .get();
+            const docs = snap.docs.sort((a, b) => (b.data().data || 0) - (a.data().data || 0));
+            if (badge) {
+                badge.textContent = docs.length;
+                badge.classList.toggle('hidden', docs.length === 0);
+            }
+            if (docs.length === 0) {
+                lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:20px; font-size:0.75rem;">Nenhum depoimento ainda. Seja o primeiro! ⭐</small>';
+                return;
+            }
+            lista.innerHTML = docs.map(doc => {
+                const d = doc.data();
+                const iniciais = (d.alunoNome || '?').split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
+                const beltLabel = d.faixa ? `<span style="font-size:0.55rem; color:#94a3b8; display:block; margin-top:2px;">${d.faixa}${d.grau ? ' · ' + d.grau + 'ºG' : ''}${d.modalidadeLabel ? ' · ' + d.modalidadeLabel : ''}</span>` : '';
+                const destaque = d.destaque ? '<span style="color:#f59e0b; font-size:0.8rem; margin-right:4px;">⭐</span>' : '';
+                return `<div style="background:${d.destaque ? 'linear-gradient(135deg,#1c1400,#2d1e00)' : '#0f172a'}; border:1px solid ${d.destaque ? '#f59e0b55' : '#1e293b'}; border-radius:12px; padding:14px; margin-bottom:10px;">
+                    <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+                        <div style="width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#1e3a8a,#7c3aed); display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800; color:white; flex-shrink:0;">${iniciais}</div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:0.8rem; font-weight:800; color:#f1f5f9;">${destaque}${(d.alunoNome || '').toUpperCase()}</div>
+                            ${beltLabel}
+                        </div>
+                        <small style="color:#475569; font-size:0.6rem; flex-shrink:0;">${d.dataFormatada || ''}</small>
+                    </div>
+                    <p style="color:#cbd5e1; font-size:0.8rem; line-height:1.6; margin:0; font-style:italic;">"${d.texto}"</p>
+                </div>`;
+            }).join('');
+        } catch(e) {
+            lista.innerHTML = `<small style="color:#f43f5e; display:block; text-align:center; padding:12px;">Erro ao carregar: ${e.message}</small>`;
+        }
+    },
+
+    toggleMeuDepoimento() {
+        const card = document.getElementById('card-meu-depoimento');
+        const btn  = document.getElementById('btn-meu-depoimento-trigger');
+        if (!card) return;
+        const isOpen = !card.classList.contains('hidden');
+        if (isOpen) {
+            card.classList.add('hidden');
+            const icon = btn?.querySelector('.fa-chevron-down');
+            if (icon) icon.style.transform = '';
+        } else {
+            card.classList.remove('hidden');
+            const icon = btn?.querySelector('.fa-chevron-down');
+            if (icon) icon.style.transform = 'rotate(180deg)';
+            this._verificarMeuDepoimento();
+        }
+    },
+
+    async _verificarMeuDepoimento() {
+        if (!auth.currentUser) return;
+        const statusEl = document.getElementById('meu-depoimento-status');
+        const formEl   = document.getElementById('meu-depoimento-form');
+        try {
+            const snap = await db.collection('depoimentos')
+                .where('alunoId', '==', auth.currentUser.id)
+                .get();
+            if (snap.empty) {
+                if (statusEl) statusEl.innerHTML = '';
+                if (formEl)   formEl.classList.remove('hidden');
+                return;
+            }
+            const d = snap.docs[0].data();
+            const badge = document.getElementById('badge-meu-dep-enviado');
+            if (d.aprovado) {
+                if (badge) badge.classList.remove('hidden');
+                if (statusEl) statusEl.innerHTML = '<div style="background:#064e3b; border:1px solid #10b981; border-radius:10px; padding:12px; text-align:center; margin-bottom:10px;"><span style="font-size:1.3rem; display:block; margin-bottom:4px;">⭐</span><span style="color:#34d399; font-weight:800; font-size:0.8rem;">Seu depoimento está publicado!</span><p style="color:#6ee7b7; font-size:0.75rem; margin:6px 0 0;font-style:italic;">"' + d.texto + '"</p></div>';
+                if (formEl) formEl.classList.add('hidden');
+            } else {
+                if (statusEl) statusEl.innerHTML = '<div style="background:#1c1400; border:1px solid #f59e0b55; border-radius:10px; padding:12px; text-align:center; margin-bottom:10px;"><span style="color:#f59e0b; font-weight:800; font-size:0.8rem;">⏳ Aguardando aprovação do professor/admin</span><p style="color:#a78bfa; font-size:0.75rem; margin:6px 0 0; font-style:italic;">"' + d.texto + '"</p></div>';
+                if (formEl) formEl.classList.add('hidden');
+            }
+        } catch(e) { console.warn('_verificarMeuDepoimento:', e.message); }
+    },
+
+    async enviarDepoimento() {
+        if (!auth.currentUser) return;
+        const textarea = document.getElementById('textarea-depoimento');
+        const texto = textarea ? textarea.value.trim() : '';
+        if (!texto || texto.length < 10) return alert('Escreva pelo menos 10 caracteres no depoimento.');
+        const u = auth.currentUser;
+        const mod = u.modalidade || 'jiujitsu';
+        const modLabel = mod === 'jiujitsu' ? 'JJJ' : mod === 'muaythai' ? 'MT' : 'JJJ+MT';
+        try {
+            // Verifica se já enviou
+            const jaSnap = await db.collection('depoimentos').where('alunoId', '==', u.id).get();
+            if (!jaSnap.empty) return alert('Você já enviou um depoimento. Aguarde a aprovação!');
+            await db.collection('depoimentos').add({
+                alunoId:       u.id,
+                alunoNome:     u.nome,
+                faixa:         u.faixa || '',
+                grau:          u.grau  || 0,
+                faixaMT:       u.faixaMT || '',
+                modalidade:    mod,
+                modalidadeLabel: modLabel,
+                texto,
+                aprovado:      false,
+                destaque:      false,
+                data:          new Date().getTime(),
+                dataFormatada: new Date().toLocaleDateString('pt-BR')
+            });
+            if (textarea) textarea.value = '';
+            this._verificarMeuDepoimento();
+        } catch(e) { alert('Erro ao enviar: ' + e.message); }
+    },
+
+    // ── Admin: depoimentos pendentes ────────────────────────
+    async carregarDepoimentosPendentes() {
+        const lista = document.getElementById('lista-dep-pendentes');
+        const badge = document.getElementById('badge-dep-pendentes');
+        if (!lista) return;
+        lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:10px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small>';
+        try {
+            const snap = await db.collection('depoimentos').where('aprovado', '==', false).get();
+            if (badge) badge.textContent = snap.docs.length;
+            if (snap.empty) {
+                lista.innerHTML = '<small style="color:#64748b; display:block; text-align:center; padding:12px;">Nenhum depoimento pendente. ✅</small>';
+                return;
+            }
+            lista.innerHTML = snap.docs.map(doc => {
+                const d = doc.data();
+                return `<div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap:8px;">
+                        <div>
+                            <div style="font-size:0.8rem; font-weight:800; color:#f1f5f9;">${(d.alunoNome||'').toUpperCase()}</div>
+                            <small style="color:#64748b; font-size:0.6rem;">${d.faixa || ''}${d.grau ? ' · ' + d.grau + 'ºG' : ''} · ${d.dataFormatada || ''}</small>
+                        </div>
+                        <div style="display:flex; gap:5px; flex-shrink:0;">
+                            <button onclick="academia.aprovarDepoimento('${doc.id}')" title="Aprovar" style="background:#064e3b; border:1px solid #10b981; color:#34d399; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:800;">✓ APROVAR</button>
+                            <button onclick="academia.rejeitarDepoimento('${doc.id}')" title="Rejeitar" style="background:#2a0808; border:1px solid #f43f5e55; color:#f43f5e; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:800;">✗</button>
+                        </div>
+                    </div>
+                    <p style="color:#94a3b8; font-size:0.78rem; line-height:1.5; margin:0; font-style:italic;">"${d.texto}"</p>
+                    <button onclick="academia.destaqueDepoimento('${doc.id}', ${!d.destaque})" style="margin-top:8px; background:none; border:none; color:${d.destaque ? '#f59e0b' : '#475569'}; cursor:pointer; font-size:0.7rem; font-weight:700;"><i class="fas fa-star"></i> ${d.destaque ? 'REMOVER DESTAQUE' : 'MARCAR COMO DESTAQUE'}</button>
+                </div>`;
+            }).join('');
+        } catch(e) {
+            lista.innerHTML = `<small style="color:#f43f5e; display:block; text-align:center; padding:10px;">Erro: ${e.message}</small>`;
+        }
+    },
+
+    async aprovarDepoimento(id) {
+        try {
+            await db.collection('depoimentos').doc(id).update({ aprovado: true });
+            this.carregarDepoimentosPendentes();
+            // Atualiza badge do mural público
+            const badge = document.getElementById('badge-depoimentos-count');
+            if (badge) {
+                const n = parseInt(badge.textContent || '0') + 1;
+                badge.textContent = n;
+                badge.classList.remove('hidden');
+            }
+        } catch(e) { alert('Erro ao aprovar: ' + e.message); }
+    },
+
+    async rejeitarDepoimento(id) {
+        if (!confirm('Rejeitar e excluir este depoimento?')) return;
+        try {
+            await db.collection('depoimentos').doc(id).delete();
+            this.carregarDepoimentosPendentes();
+        } catch(e) { alert('Erro ao rejeitar: ' + e.message); }
+    },
+
+    async destaqueDepoimento(id, marcar) {
+        try {
+            await db.collection('depoimentos').doc(id).update({ destaque: marcar });
+            this.carregarDepoimentosPendentes();
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async _carregarBadgeDepoimentos() {
+        try {
+            const snap = await db.collection('depoimentos').where('aprovado', '==', true).get();
+            const badge = document.getElementById('badge-depoimentos-count');
+            if (badge) {
+                badge.textContent = snap.docs.length;
+                badge.classList.toggle('hidden', snap.docs.length === 0);
+            }
+        } catch(e) { /* silencioso */ }
+    },
+
+    // ══════════════════════════════════════════
     // RELATOS DE SAÚDE
     // ══════════════════════════════════════════
     toggleRelatoSaude() {
@@ -3721,6 +3932,12 @@ const ui = {
                 const cardS = document.getElementById('card-alertas-saude');
                 if (cardS) cardS.classList.remove('hidden');
                 academia.carregarRelatosSaude();
+            }
+            // Depoimentos pendentes — só para admin
+            if (auth.role === 'admin') {
+                const cardDep = document.getElementById('card-depoimentos-admin');
+                if (cardDep) cardDep.classList.remove('hidden');
+                academia.carregarDepoimentosPendentes();
             }
             if (auth.role === 'admin') academia.carregarVideosPendentesAdmin();
             if (auth.role === 'professor') {

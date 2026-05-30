@@ -2925,22 +2925,20 @@ Ele voltará a ser aluno normal.`)) return;
 
     // ── WHATSAPP BUSINESS ─────────────────────────────────────
     abrirWhatsappBusiness(tel) {
+        // Remove não-dígitos e evita duplo código 55 (ex: se o número já tem +55)
+        let num = tel.replace(/\D/g, '');
+        if (num.startsWith('55') && num.length >= 12) num = num.slice(2);
+
         const ua = navigator.userAgent;
-        const isAndroid = /android/i.test(ua);
-        const isIOS     = /iphone|ipad|ipod/i.test(ua);
-        let url;
-        if (isAndroid) {
-            // Android Intent URL — abre especificamente o WhatsApp Business
-            // (package com.whatsapp.w4b) mesmo se WA normal também estiver instalado
-            url = `intent://send?phone=55${tel}#Intent;package=com.whatsapp.w4b;scheme=whatsapp;end`;
-        } else if (isIOS) {
-            // iOS — protocolo nativo do WA Business
-            url = `whatsapp-business://send?phone=55${tel}`;
+        const isMobile = /android|iphone|ipad|ipod/i.test(ua);
+
+        if (isMobile) {
+            // Mobile: whatsapp-business:// abre diretamente o app Business
+            window.location.href = `whatsapp-business://send?phone=55${num}`;
         } else {
-            // Windows/Mac Desktop — abre WhatsApp/WA Business Desktop via whatsapp://
-            url = `whatsapp://send?phone=55${tel}`;
+            // Desktop Windows/Mac: whatsapp:// (WA Business Desktop registra esse scheme)
+            window.location.href = `whatsapp://send?phone=55${num}`;
         }
-        window.location.href = url;
     },
 
     // ── FILTRO INATIVOS ───────────────────────────────────────

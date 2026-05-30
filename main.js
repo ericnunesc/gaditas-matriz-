@@ -614,9 +614,19 @@ const academia = {
         outros.forEach(({ id, a, s }) => {
             const percent = Math.round(s.percent);
             const convocado = a.aspiranteGraduacao === true;
-            html += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding:10px 0; font-size:0.8rem; ${convocado ? 'background:#451a0333; border-radius:8px; padding:10px 8px;' : ''}">
-                <span style="color:#e2e8f0;">${a.nome}${convocado ? ' <span style="font-size:0.55rem; color:#fbbf24; font-weight:800;">⭐ CONV.</span>' : ''}<br><small style="color:var(--text-muted);">${a.faixa} • ${a.grau}º G</small></span>
-                <span style="color:#64748b; font-size:0.7rem;">${a.aulas || 0}/${s.meta} <small>(${percent}%)</small></span>
+            const nomeEsc = (a.nome || '').replace(/'/g, "\\'");
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid var(--border-light); padding:10px 0; ${convocado ? 'background:#451a0322; border-radius:8px; padding:10px 8px;' : ''}">
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:0.82rem; color:#e2e8f0; font-weight:600;">${a.nome}${convocado ? ' <span style="font-size:0.55rem; color:#fbbf24; font-weight:800;">⭐</span>' : ''}</div>
+                    <small style="color:var(--text-muted);">${a.faixa} • ${a.grau}º G • ${a.aulas || 0}/${s.meta} (${percent}%)</small>
+                </div>
+                <div style="display:flex; gap:4px; align-items:center; flex-shrink:0;">
+                    ${convocado
+                        ? `<span style="background:#92400e; color:#fbbf24; font-size:0.55rem; padding:3px 7px; border-radius:6px; font-weight:800; white-space:nowrap;">⭐ CONV.</span>
+                           <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar convocação" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.75rem; padding:2px 4px;">✕</button>`
+                        : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}')" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:0.55rem; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:700; white-space:nowrap;">🥋 CONVOCAR</button>`
+                    }
+                </div>
             </div>`;
         });
 
@@ -1095,52 +1105,57 @@ const academia = {
                 </div>
                 <button onclick="document.getElementById('modal-chamada-prof').remove()" style="background:#334155; border:none; color:white; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700;">✕</button>
             </div>
-            <div id="chamada-lista-alunos" style="color:#64748b; text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem; color:#0ea5e9; display:block; margin-bottom:8px;"></i>Carregando alunos...</div>
+            <div id="chamada-lista-alunos" style="color:#64748b; text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem; color:#0ea5e9; display:block; margin-bottom:8px;"></i>Buscando check-ins de hoje...</div>
             </div>`;
         modal.style.display = 'flex';
 
         try {
-            const snap = await db.collection('alunos').orderBy('nome').get();
-            const anoAtual = new Date().getFullYear();
-            const isTurmaKids = turma.toLowerCase().includes('kids');
-            const isTurmaMT   = this._isTurmaMT(turma);
+            // Busca APENAS os check-ins de hoje para esta turma
+            const inicioHoje = new Date(); inicioHoje.setHours(0, 0, 0, 0);
+            const snapCI = await db.collection('checkins').where('turma', '==', turma).get();
+            const checkinsHoje = snapCI.docs.filter(d => d.data().data >= inicioHoje.getTime());
 
-            let alunos = [];
-            snap.forEach(doc => {
-                const a = doc.data();
-                const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
-                const isKids = idade <= 14;
-                const mod = a.modalidade || 'jiujitsu';
-                // Filtra compatíveis com a turma
-                if (isTurmaKids && !isKids) return;
-                if (!isTurmaKids && isKids && !isTurmaMT) return;
-                if (isTurmaMT && mod === 'jiujitsu') return;
-                if (a.status === 'trancado') return; // ignora trancados
-                alunos.push({ id: doc.id, nome: a.nome, faixa: a.faixa || '', aulas: a.aulas || 0 });
-            });
-
-            if (alunos.length === 0) {
-                document.getElementById('chamada-lista-alunos').innerHTML = '<p style="color:#f59e0b; text-align:center;">Nenhum aluno compatível com esta turma.</p>';
+            if (checkinsHoje.length === 0) {
+                document.getElementById('chamada-lista-alunos').innerHTML = `
+                    <div style="text-align:center; padding:20px;">
+                        <div style="font-size:2rem; margin-bottom:8px;">📋</div>
+                        <p style="color:#f59e0b; font-size:0.85rem; font-weight:700; margin-bottom:4px;">Nenhum check-in registrado hoje</p>
+                        <p style="color:#64748b; font-size:0.7rem;">Aguarde os alunos confirmarem presença ou use lançamento manual.</p>
+                    </div>`;
                 return;
             }
 
+            // Busca dados extras (faixa) dos alunos via IDs
+            const uniqueIds = [...new Set(checkinsHoje.map(d => d.data().alunoId))];
+            const alunosDocs = await Promise.all(uniqueIds.map(id => db.collection('alunos').doc(id).get()));
+            const alunosMap = {};
+            alunosDocs.forEach(d => { if (d.exists) alunosMap[d.id] = d.data(); });
+
+            const alunos = checkinsHoje.map(d => {
+                const c = d.data();
+                const dados = alunosMap[c.alunoId] || {};
+                return { id: c.alunoId, nome: dados.nome || c.alunoNome || '—', faixa: dados.faixa || '' };
+            }).sort((a, b) => a.nome.localeCompare(b.nome));
+
             let listaHtml = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">${alunos.length} alunos</span>
+                    <span style="font-size:0.7rem; color:#0ea5e9; font-weight:800;">✅ ${alunos.length} CHECK-IN${alunos.length !== 1 ? 'S' : ''} HOJE</span>
                     <label style="display:flex; align-items:center; gap:6px; font-size:0.7rem; color:#94a3b8; cursor:pointer;">
-                        <input type="checkbox" id="chamada-todos" onchange="document.querySelectorAll('.chamada-check').forEach(c=>c.checked=this.checked)"> Marcar todos
+                        <input type="checkbox" id="chamada-todos" checked onchange="document.querySelectorAll('.chamada-check').forEach(c=>c.checked=this.checked)"> Marcar todos
                     </label>
                 </div>
+                <p style="font-size:0.6rem; color:#64748b; margin-bottom:10px; text-align:center;">Desmarque quem não compareceu</p>
                 <div style="max-height:50vh; overflow-y:auto; margin-bottom:12px;">`;
 
             alunos.forEach(a => {
                 listaHtml += `
-                    <label style="display:flex; align-items:center; gap:10px; padding:10px; background:#0f172a; border-radius:8px; margin-bottom:6px; cursor:pointer; border:1px solid #334155;">
-                        <input type="checkbox" class="chamada-check" value="${a.id}" style="width:18px; height:18px; accent-color:#0ea5e9;">
+                    <label style="display:flex; align-items:center; gap:10px; padding:10px; background:#0f172a; border-radius:8px; margin-bottom:6px; cursor:pointer; border:1px solid #0ea5e955;">
+                        <input type="checkbox" class="chamada-check" value="${a.id}" checked style="width:18px; height:18px; accent-color:#0ea5e9;">
                         <div style="flex:1;">
                             <span style="font-size:0.85rem; font-weight:700; color:#e2e8f0;">${a.nome}</span>
-                            <span style="font-size:0.6rem; color:#64748b; margin-left:8px;">${a.faixa}</span>
+                            ${a.faixa ? `<span style="font-size:0.6rem; color:#64748b; margin-left:8px;">${a.faixa}</span>` : ''}
                         </div>
+                        <span style="font-size:0.6rem; color:#10b981; font-weight:700;">✓</span>
                     </label>`;
             });
 
@@ -2606,33 +2621,110 @@ Ele voltará a ser aluno normal.`)) return;
     abrirFormStory() {
         let modal = document.getElementById('modal-form-story');
         if (!modal) { modal = document.createElement('div'); modal.id = 'modal-form-story'; document.body.appendChild(modal); }
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:20px;box-sizing:border-box;overflow-y:auto;';
         const opts = [{ v: 1, l: '24 horas' }, { v: 3, l: '3 dias' }, { v: 7, l: '7 dias' }, { v: 0, l: 'Sem expirar' }].map(o => `<option value="${o.v}">${o.l}</option>`).join('');
+        const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;';
         modal.innerHTML = `
-            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;">
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;margin-top:10px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                     <span style="font-size:0.95rem;font-weight:800;color:white;">📸 POSTAR STORY</span>
                     <button onclick="document.getElementById('modal-form-story').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
                 </div>
-                ${[['URL DA IMAGEM *','story-imageUrl','url','https://...'],['TÍTULO (opcional)','story-titulo','text','Ex: Aula especial hoje!'],['LINK (opcional)','story-link','url','https://...']].map(([l,id,t,p])=>`<small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">${l}</small><input type="${t}" id="${id}" placeholder="${p}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;"/>`).join('')}
+
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:8px;">IMAGEM *</small>
+
+                <!-- Opção 1: galeria -->
+                <div id="story-preview-box" style="display:none;width:100%;height:140px;border-radius:10px;background:#0f172a;border:1px solid #334155;margin-bottom:8px;overflow:hidden;position:relative;">
+                    <img id="story-preview-img" src="" style="width:100%;height:100%;object-fit:cover;border-radius:10px;" />
+                    <button onclick="academia._limparImagemStory()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.7);border:none;color:white;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:0.75rem;">✕</button>
+                </div>
+                <label id="story-galeria-label" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:700;margin-bottom:8px;box-sizing:border-box;">
+                    <i class="fas fa-image"></i> ESCOLHER DA GALERIA
+                    <input type="file" id="story-file-input" accept="image/*" style="display:none;" onchange="academia._previewImagemStory(this)">
+                </label>
+
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <div style="flex:1;height:1px;background:#334155;"></div>
+                    <span style="color:#64748b;font-size:0.65rem;font-weight:700;">OU</span>
+                    <div style="flex:1;height:1px;background:#334155;"></div>
+                </div>
+
+                <!-- Opção 2: URL -->
+                <input type="url" id="story-imageUrl" placeholder="https://... (cole URL da imagem)" style="${inp}" oninput="academia._onUrlStoryInput(this)"/>
+
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">TÍTULO (opcional)</small>
+                <input type="text" id="story-titulo" placeholder="Ex: Aula especial hoje!" style="${inp}"/>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">LINK (opcional)</small>
+                <input type="url" id="story-link" placeholder="https://..." style="${inp}"/>
                 <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DURAÇÃO:</small>
-                <select id="story-duracao" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:14px;box-sizing:border-box;">${opts}</select>
-                <button onclick="academia.postarStory()" style="width:100%;padding:13px;background:linear-gradient(135deg,#f43f5e,#f59e0b);border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">📸 PUBLICAR STORY</button>
+                <select id="story-duracao" style="${inp}">${opts}</select>
+                <button id="btn-publicar-story" onclick="academia.postarStory()" style="width:100%;padding:13px;background:linear-gradient(135deg,#f43f5e,#f59e0b);border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">📸 PUBLICAR STORY</button>
             </div>`;
     },
 
+    _previewImagemStory(input) {
+        const file = input.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('story-preview-img').src = e.target.result;
+            document.getElementById('story-preview-box').style.display = 'block';
+            document.getElementById('story-imageUrl').value = '';
+        };
+        reader.readAsDataURL(file);
+    },
+
+    _onUrlStoryInput(input) {
+        if (input.value.trim()) {
+            // Limpa arquivo selecionado quando digita URL
+            const fi = document.getElementById('story-file-input');
+            if (fi) fi.value = '';
+            document.getElementById('story-preview-box').style.display = 'none';
+        }
+    },
+
+    _limparImagemStory() {
+        const fi = document.getElementById('story-file-input');
+        if (fi) fi.value = '';
+        document.getElementById('story-preview-box').style.display = 'none';
+        document.getElementById('story-preview-img').src = '';
+    },
+
     async postarStory() {
-        const imageUrl = document.getElementById('story-imageUrl')?.value.trim();
-        const titulo   = document.getElementById('story-titulo')?.value.trim() || '';
-        const link     = document.getElementById('story-link')?.value.trim() || '';
-        const duracao  = parseInt(document.getElementById('story-duracao')?.value || '1');
-        if (!imageUrl) return alert('Informe a URL da imagem.');
+        const titulo  = document.getElementById('story-titulo')?.value.trim() || '';
+        const link    = document.getElementById('story-link')?.value.trim() || '';
+        const duracao = parseInt(document.getElementById('story-duracao')?.value || '1');
+        const btn     = document.getElementById('btn-publicar-story');
+
+        let imageUrl = document.getElementById('story-imageUrl')?.value.trim();
+        const fileInput = document.getElementById('story-file-input');
+        const file = fileInput?.files?.[0];
+
+        // Se selecionou arquivo → faz upload no Firebase Storage
+        if (file && !imageUrl) {
+            if (btn) { btn.disabled = true; btn.innerText = '⏳ Enviando imagem...'; }
+            try {
+                const storage = firebase.storage();
+                const ref = storage.ref(`stories/${Date.now()}_${file.name.replace(/\s/g, '_')}`);
+                await ref.put(file);
+                imageUrl = await ref.getDownloadURL();
+            } catch(e) {
+                if (btn) { btn.disabled = false; btn.innerHTML = '📸 PUBLICAR STORY'; }
+                return alert('Erro ao enviar imagem: ' + e.message);
+            }
+        }
+
+        if (!imageUrl) return alert('Selecione uma imagem da galeria ou informe a URL.');
+        if (btn) { btn.disabled = true; btn.innerText = '⏳ Publicando...'; }
         try {
             await db.collection('stories').add({ imageUrl, titulo, link, duracaoDias: duracao, criadoEm: Date.now() });
             document.getElementById('modal-form-story')?.remove();
             alert('✅ Story publicado!');
             this.renderStoriesBar();
-        } catch(e) { alert('Erro: ' + e.message); }
+        } catch(e) {
+            if (btn) { btn.disabled = false; btn.innerHTML = '📸 PUBLICAR STORY'; }
+            alert('Erro: ' + e.message);
+        }
     },
 
     async excluirStory(id) {

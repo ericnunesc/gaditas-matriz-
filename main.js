@@ -140,6 +140,8 @@ const auth = {
         // Mostra ícone de configurações só para admin
         const btnCfg = document.getElementById('btn-config-admin');
         if (btnCfg) btnCfg.style.display = this.role === 'admin' ? 'inline-block' : 'none';
+        // Exibe faixa/grau no cabeçalho (só para alunos)
+        this._renderFaixaHeader();
         ui.configurarVisao();
         ui.showTab('tab-checkin');
         academia.carregarGradeFirebase();
@@ -178,9 +180,52 @@ const auth = {
             }, 600);
         }
     },
-    logout() { 
+    _renderFaixaHeader() {
+        const el = document.getElementById('display-faixa-header');
+        if (!el || this.role !== 'aluno') return;
+        const u = this.currentUser;
+        const mod = u.modalidade || 'jiujitsu';
+        // Cores vivas para boa leitura no fundo escuro
+        const CORES_JJ = {
+            "Branca": "#cbd5e1", "Azul": "#60a5fa", "Roxa": "#c084fc",
+            "Marrom": "#d97706", "Preta": "#94a3b8", "Cinza": "#9ca3af",
+            "Amarela": "#fbbf24", "Laranja": "#fb923c", "Verde": "#4ade80", "Vermelha": "#f87171"
+        };
+        const partes = [];
+        if (mod !== 'muaythai' && u.faixa) {
+            const cor = CORES_JJ[u.faixa.split('/')[0]] || '#cbd5e1';
+            const grauTxt = u.grau ? ` · ${u.grau}ºG` : '';
+            partes.push(
+                `<span style="display:inline-flex;align-items:center;gap:4px;">` +
+                `<span style="width:9px;height:9px;border-radius:2px;background:${cor};border:1px solid #ffffff22;flex-shrink:0;"></span>` +
+                `<span style="color:${cor};font-size:0.6rem;font-weight:800;letter-spacing:0.3px;">🥋 ${u.faixa.toUpperCase()}${grauTxt}</span>` +
+                `</span>`
+            );
+        }
+        if ((mod === 'muaythai' || mod === 'ambos') && u.faixaMT) {
+            // cor simplificada MT
+            const corMT = u.faixaMT.startsWith('Branco') ? '#cbd5e1'
+                : u.faixaMT.startsWith('Vermelha') ? '#f87171'
+                : u.faixaMT.startsWith('Preto') ? '#94a3b8'
+                : u.faixaMT.startsWith('Azul') ? '#60a5fa'
+                : u.faixaMT.startsWith('Verde') ? '#4ade80'
+                : u.faixaMT.startsWith('Amarelo') ? '#fbbf24'
+                : '#94a3b8';
+            partes.push(
+                `<span style="display:inline-flex;align-items:center;gap:4px;">` +
+                `<span style="width:9px;height:9px;border-radius:2px;background:${corMT};border:1px solid #ffffff22;flex-shrink:0;"></span>` +
+                `<span style="color:${corMT};font-size:0.6rem;font-weight:800;letter-spacing:0.3px;">🥊 ${u.faixaMT.toUpperCase()}</span>` +
+                `</span>`
+            );
+        }
+        if (partes.length) {
+            el.innerHTML = partes.join('<span style="color:#334155;font-size:0.5rem;margin:0 3px;">|</span>');
+            el.style.display = 'flex';
+        }
+    },
+    logout() {
         firebase.auth().signOut().catch(() => {});
-        window.location.reload(); 
+        window.location.reload();
     }
 };
 

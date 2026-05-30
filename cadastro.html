@@ -421,19 +421,20 @@
                         btnReg.innerText = "CRIANDO ASSINATURA...";
                         let asaasSubscriptionId = null;
 
-                        // Mensal → PIX (gera Pix novo a cada mês)
-                        // Trimestral/Semestral/Anual → CREDIT_CARD recorrente (sem data final)
+                        // Todos os planos são cobrados mensalmente (MONTHLY)
+                        // A diferença é só o preço por mês e o método de pagamento
+                        // Mensal → Pix ou Cartão (UNDEFINED) | Trimestral/Semestral/Anual → Cartão recorrente
                         const ciclosAsaas = {
-                            mensal:     { cycle: 'MONTHLY',    meses: 1,  billingType: 'UNDEFINED'   },
-                            trimestral: { cycle: 'QUARTERLY',  meses: 3,  billingType: 'CREDIT_CARD' },
-                            semestral:  { cycle: 'SEMIANNUAL', meses: 6,  billingType: 'CREDIT_CARD' },
-                            anual:      { cycle: 'YEARLY',     meses: 12, billingType: 'CREDIT_CARD' }
+                            mensal:     { cycle: 'MONTHLY', billingType: 'UNDEFINED'   },
+                            trimestral: { cycle: 'MONTHLY', billingType: 'CREDIT_CARD' },
+                            semestral:  { cycle: 'MONTHLY', billingType: 'CREDIT_CARD' },
+                            anual:      { cycle: 'MONTHLY', billingType: 'CREDIT_CARD' }
                         };
                         const cicloInfo = ciclosAsaas[planoSelecionado.key];
                         if (asaasId && cicloInfo && parseFloat(planoSelecionado.valor) > 0) {
                             try {
-                                // Valor sempre vem do Firebase — se o admin alterar, o próximo cadastro já pega o novo
-                                const valorAssinatura = parseFloat(planoSelecionado.valor) * cicloInfo.meses;
+                                // Valor mensal direto do Firebase — se admin alterar, próximo cadastro já usa o novo
+                                const valorAssinatura = parseFloat(planoSelecionado.valor);
                                 // Primeiro vencimento: 5 dias a partir de hoje
                                 const dataVenc = new Date();
                                 dataVenc.setDate(dataVenc.getDate() + 5);
@@ -540,7 +541,7 @@
                             msgFinal += "\n\n💰 Taxa de matrícula: R$ 30,00 via PIX (vence em 3 dias).";
                         }
                         if (asaasSubscriptionId) {
-                            const tipoPag = cicloInfo?.billingType === 'UNDEFINED' ? 'Pix ou Cartão (você escolhe)' : 'Cartão de crédito recorrente';
+                            const tipoPag = cicloInfo?.billingType === 'UNDEFINED' ? 'Pix ou Cartão (você escolhe no link)' : 'Cartão de crédito — cobrado mensalmente';
                             msgFinal += `\n💳 Assinatura ${planoSelecionado.label}: ${tipoPag}.`;
                         }
                         alert(msgFinal);

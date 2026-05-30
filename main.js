@@ -181,31 +181,33 @@ const auth = {
         }
     },
     _renderFaixaHeader() {
-        const el = document.getElementById('display-faixa-header');
-        if (!el || this.role !== 'aluno') return;
-        const u = this.currentUser;
-        const mod = u.modalidade || 'jiujitsu';
-        let html = '';
-        // Barras visuais reais (mesmas do card do aluno)
-        if (mod !== 'muaythai' && u.faixa) {
-            html += academia.renderBeltJJ(u.faixa, u.grau || 0);
-        }
-        if (mod === 'muaythai' || mod === 'ambos') {
-            html += academia.renderBeltMT(u.faixaMT || 'Branco');
-        }
-        // Legenda textual abaixo das barras
-        let label = '';
-        if (mod === 'jiujitsu') {
-            label = `${u.faixa || 'Branca'} · ${u.grau || 0}ºG`;
-        } else if (mod === 'muaythai') {
-            label = `${u.faixaMT || 'Branco'} · MT`;
-        } else {
-            label = `${u.faixa || 'Branca'} ${u.grau || 0}ºG (JJ) · ${u.faixaMT || 'Branco'} (MT)`;
-        }
-        html += `<div style="font-size:0.58rem; color:#64748b; font-weight:600; margin-top:2px;">${label}</div>`;
-        el.innerHTML = html;
-        el.style.display = 'flex';
-        el.style.flexDirection = 'column';
+        try {
+            const el = document.getElementById('display-faixa-header');
+            if (!el || this.role !== 'aluno') return;
+            const u = this.currentUser;
+            const mod = u.modalidade || 'jiujitsu';
+            let html = '';
+            // Barras visuais reais — renderBeltJJ/MT pertencem ao objeto ui
+            if (mod !== 'muaythai' && u.faixa) {
+                html += ui.renderBeltJJ(u.faixa, u.grau || 0);
+            }
+            if (mod === 'muaythai' || mod === 'ambos') {
+                html += ui.renderBeltMT(u.faixaMT || 'Branco');
+            }
+            // Legenda textual abaixo das barras
+            let label = '';
+            if (mod === 'jiujitsu') {
+                label = `${u.faixa || 'Branca'} · ${u.grau || 0}ºG`;
+            } else if (mod === 'muaythai') {
+                label = `${u.faixaMT || 'Branco'} · MT`;
+            } else {
+                label = `${u.faixa || 'Branca'} ${u.grau || 0}ºG (JJ) · ${u.faixaMT || 'Branco'} (MT)`;
+            }
+            html += `<div style="font-size:0.58rem; color:#64748b; font-weight:600; margin-top:2px;">${label}</div>`;
+            el.innerHTML = html;
+            el.style.display = 'flex';
+            el.style.flexDirection = 'column';
+        } catch(e) { console.warn('_renderFaixaHeader error:', e.message); }
     },
     logout() {
         firebase.auth().signOut().catch(() => {});

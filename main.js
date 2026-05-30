@@ -573,25 +573,33 @@ const academia = {
         snap.forEach(doc => {
             const a = doc.data();
             const s = academia.verificarMeta(a);
-            if (s.pronto) prontos.push({ a, s });
-            else outros.push({ a, s });
+            if (s.pronto) prontos.push({ id: doc.id, a, s });
+            else outros.push({ id: doc.id, a, s });
         });
 
         let html = '';
 
-        // Prontos para graduar em destaque
+        // ── Prontos para graduar — destaque AMARELO ────────────────────
         if (prontos.length > 0) {
-            html += `<div style="background:#064e3b; border:1px solid #10b981; border-radius:12px; padding:14px; margin-bottom:16px;">
-                <div style="color:#10b981; font-size:0.7rem; font-weight:800; margin-bottom:10px; letter-spacing:0.5px;">
-                    🎯 PRONTOS PARA GRADUAR — ${prontos.length} atleta${prontos.length > 1 ? 's' : ''}
+            html += `<div style="background:#451a03; border:2px solid #f59e0b; border-radius:12px; padding:14px; margin-bottom:16px;">
+                <div style="color:#fbbf24; font-size:0.7rem; font-weight:800; margin-bottom:10px; letter-spacing:0.5px;">
+                    ⭐ PRONTOS PARA GRADUAR — ${prontos.length} atleta${prontos.length > 1 ? 's' : ''}
                 </div>`;
-            prontos.forEach(({ a }) => {
-                html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; border:1px solid #10b981; border-radius:8px; padding:10px 12px; margin-bottom:6px;">
-                    <div>
-                        <div style="font-size:0.85rem; font-weight:800; color:white;">${a.nome.toUpperCase()}</div>
+            prontos.forEach(({ id, a }) => {
+                const convocado = a.aspiranteGraduacao === true;
+                const nomeEsc = (a.nome || '').replace(/'/g, "\\'");
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; border:1px solid ${convocado ? '#f59e0b' : '#78350f'}; border-radius:8px; padding:10px 12px; margin-bottom:6px;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:0.85rem; font-weight:800; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome.toUpperCase()}</div>
                         <div style="font-size:0.65rem; color:#94a3b8;">${a.faixa} • ${a.grau}º Grau • ${a.aulas || 0} aulas</div>
                     </div>
-                    <span style="background:#10b981; color:white; font-size:0.6rem; padding:4px 10px; border-radius:6px; font-weight:800;">✅ PRONTO</span>
+                    <div style="display:flex; gap:6px; align-items:center; flex-shrink:0; margin-left:8px;">
+                        ${convocado
+                            ? `<span style="background:#92400e; color:#fbbf24; font-size:0.6rem; padding:4px 8px; border-radius:6px; font-weight:800; white-space:nowrap;">⭐ CONVOCADO</span>
+                               <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar convocação" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.85rem; padding:2px 4px;">✕</button>`
+                            : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}')" style="background:#92400e; border:1px solid #f59e0b; color:#fbbf24; font-size:0.6rem; padding:5px 10px; border-radius:6px; cursor:pointer; font-weight:800; white-space:nowrap;">🥋 CONVOCAR</button>`
+                        }
+                    </div>
                 </div>`;
             });
             html += `</div>`;
@@ -601,17 +609,31 @@ const academia = {
             </div>`;
         }
 
-        // Demais alunos
+        // ── Demais alunos ──────────────────────────────────────────────
         html += `<div style="font-size:0.65rem; color:#64748b; font-weight:800; margin-bottom:8px; letter-spacing:0.5px;">TODOS OS ATLETAS</div>`;
-        outros.forEach(({ a, s }) => {
+        outros.forEach(({ id, a, s }) => {
             const percent = Math.round(s.percent);
-            html += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding:10px 0; font-size:0.8rem;">
-                <span style="color:#e2e8f0;">${a.nome}<br><small style="color:var(--text-muted);">${a.faixa} • ${a.grau}º G</small></span>
+            const convocado = a.aspiranteGraduacao === true;
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding:10px 0; font-size:0.8rem; ${convocado ? 'background:#451a0333; border-radius:8px; padding:10px 8px;' : ''}">
+                <span style="color:#e2e8f0;">${a.nome}${convocado ? ' <span style="font-size:0.55rem; color:#fbbf24; font-weight:800;">⭐ CONV.</span>' : ''}<br><small style="color:var(--text-muted);">${a.faixa} • ${a.grau}º G</small></span>
                 <span style="color:#64748b; font-size:0.7rem;">${a.aulas || 0}/${s.meta} <small>(${percent}%)</small></span>
             </div>`;
         });
 
         container.innerHTML = html;
+    },
+
+    async marcarParaExame(id, nome) {
+        if (!confirm(`Convocar ${nome} para o exame de faixa?\n\nEle(a) verá um aviso fixo no perfil até ser graduado(a).`)) return;
+        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true });
+        alert(`✅ ${nome} foi convocado(a) para o exame de faixa! OSS!`);
+        this.generarRelatorioGraduacao();
+    },
+
+    async desmarcarExame(id, nome) {
+        if (!confirm(`Cancelar a convocação de ${nome}?`)) return;
+        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: false });
+        this.generarRelatorioGraduacao();
     },
 
     async exportarDadosBackup() {
@@ -877,7 +899,7 @@ const academia = {
                     </div>
                     <div style="display:flex; gap:5px; flex-shrink:0;">
                         <button onclick="academia.editarAluno('${doc.id}')" style="background:#16161a; border:1px solid #2d2d34; color:#94a3b8; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-eye"></i></button>
-                        ${telLimpo ? `<button onclick="window.open('whatsapp-business://send?phone=55${telLimpo}')" title="WhatsApp Business" style="background:#064e3b; border:none; color:#25d366; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : ''}
+                        ${telLimpo ? `<button onclick="window.location.href='whatsapp-business://send?phone=55${telLimpo}'" title="WhatsApp Business" style="background:#064e3b; border:none; color:#25d366; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : ''}
                         ${isAdmin ? `<button onclick="academia.verFinanceiroAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#064e3b; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-dollar-sign"></i></button>` : ''}
                         ${isAdmin ? (trancado
                             ? `<button onclick="academia.ativarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Reativar matrícula" style="background:#1e3a8a; border:none; color:#60a5fa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-lock-open"></i></button>`
@@ -1739,8 +1761,19 @@ Ele voltará a ser aluno normal.`)) return;
                 dados.historicoLeoes = historicoLeoes;
             } catch (err) { console.error(err); }
         }
-        if(id) await db.collection("alunos").doc(id).update(dados);
-        else await db.collection("alunos").add({...dados, aulas: 0, historico: [], historicoLeoes: []});
+        if(id) {
+            // Se a faixa ou grau mudou, o aluno foi graduado — limpa convocação
+            try {
+                const docAtual = await db.collection("alunos").doc(id).get();
+                const dadosAtuais = docAtual.data() || {};
+                if (dadosAtuais.aspiranteGraduacao && (dadosAtuais.faixa !== dados.faixa || dadosAtuais.grau !== dados.grau)) {
+                    dados.aspiranteGraduacao = false;
+                }
+            } catch(e) { /* ignora */ }
+            await db.collection("alunos").doc(id).update(dados);
+        } else {
+            await db.collection("alunos").add({...dados, aulas: 0, historico: [], historicoLeoes: []});
+        }
         alert("Atleta salvo!"); this.limparAl(); this.renderAlunos(); academia.carregarConquistas();
     },
 
@@ -3447,8 +3480,18 @@ const ui = {
                 ? `<div style="background:#16161a; height:6px; border-radius:3px; overflow:hidden; margin-bottom:15px;"><div style="width:${s.percent}%; background:var(--accent-blue); height:100%;"></div></div>`
                 : '';
 
+            // Banner de convocação para exame de faixa
+            const bannerConvocado = d.aspiranteGraduacao === true
+                ? `<div style="background:linear-gradient(135deg,#78350f,#92400e); border:2px solid #f59e0b; border-radius:14px; padding:16px 14px; margin-bottom:14px; text-align:center;">
+                       <div style="font-size:1.6rem; margin-bottom:4px;">🥋⭐</div>
+                       <div style="color:#fbbf24; font-size:0.95rem; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">Você foi convocado!</div>
+                       <div style="color:#fde68a; font-size:0.75rem; margin-top:6px; line-height:1.5;">Você está apto para o exame de faixa.<br>Entre em contato com a academia. <strong>OSS! 🙏</strong></div>
+                   </div>`
+                : '';
+
             card.innerHTML = `
                 <div class="curriculo-atleta" style="background: var(--bg-card); padding: 18px; border-radius: 16px; border: 1px solid var(--border-light);">
+                    ${bannerConvocado}
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <h2 style="color:var(--accent-blue); margin:0; font-size: 0.95rem; font-weight:800; letter-spacing:-0.3px;">${d.nome.toUpperCase()}</h2>
                         <span style="background:${eng.color}; font-size: 0.55rem; padding: 4px 10px; border-radius: 20px; font-weight: 700; color:white;">${eng.icon} ${eng.label.toUpperCase()}</span>

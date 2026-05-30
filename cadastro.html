@@ -385,7 +385,7 @@
                     }
 
                     btnReg.disabled = true;
-                    btnReg.innerText = "PROCESSANDO...";
+                    btnReg.innerText = "CRIANDO CONTA...";
 
                     try {
                         // 1. Cria conta no Firebase Auth
@@ -393,6 +393,7 @@
                         const uid = userCredential.user.uid;
 
                         // 2. Verifica/cria cliente no Asaas
+                        btnReg.innerText = "CADASTRANDO NO ASAAS...";
                         let asaasId = null;
                         try {
                             const resCpf = await fetch(`/api/asaas?endpoint=customers&cpfCnpj=${cpf}`);
@@ -414,9 +415,50 @@
                                     if (dadosCriado.id) asaasId = dadosCriado.id;
                                 }
                             }
-                        } catch(errAsaas) { console.warn('Erro Asaas:', errAsaas.message); }
+                        } catch(errAsaas) { console.warn('Erro Asaas cliente:', errAsaas.message); }
 
-                        // 3. Salva no Firestore com plano
+                        // 3. Cria assinatura recorrente no Asaas (só para planos com valor fixo)
+                        btnReg.innerText = "CRIANDO ASSINATURA...";
+                        let asaasSubscriptionId = null;
+                        const ciclosAsaas = {
+                            mensal:     { cycle: 'MONTHLY',    meses: 1  },
+                            trimestral: { cycle: 'QUARTERLY',  meses: 3  },
+                            semestral:  { cycle: 'SEMIANNUAL', meses: 6  },
+                            anual:      { cycle: 'YEARLY',     meses: 12 }
+                        };
+                        const cicloInfo = ciclosAsaas[planoSelecionado.key];
+                        if (asaasId && cicloInfo && parseFloat(planoSelecionado.valor) > 0) {
+                            try {
+                                const valorAssinatura = parseFloat(planoSelecionado.valor) * cicloInfo.meses;
+                                // Primeiro vencimento: 5 dias a partir de hoje
+                                const dataVenc = new Date();
+                                dataVenc.setDate(dataVenc.getDate() + 5);
+                                const nextDueDate = dataVenc.toISOString().split('T')[0];
+
+                                const resSub = await fetch('/api/asaas?endpoint=subscriptions', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        customer: asaasId,
+                                        billingType: 'UNDEFINED',   // Cliente escolhe: Pix, Boleto ou Cartão
+                                        value: valorAssinatura,
+                                        nextDueDate,
+                                        cycle: cicloInfo.cycle,
+                                        description: `Gaditas Matriz — Plano ${planoSelecionado.label} — ${nome}`
+                                    })
+                                });
+                                const dadosSub = await resSub.json();
+                                if (dadosSub.id) {
+                                    asaasSubscriptionId = dadosSub.id;
+                                    console.log('✅ Assinatura Asaas criada:', asaasSubscriptionId);
+                                } else {
+                                    console.warn('⚠️ Assinatura não criada:', dadosSub);
+                                }
+                            } catch(errSub) { console.warn('Erro ao criar assinatura Asaas:', errSub.message); }
+                        }
+
+                        // 4. Salva no Firestore com plano + IDs Asaas
+                        btnReg.innerText = "SALVANDO DADOS...";
                         const novoAluno = {
                             id: uid, nome, email, cpf, telefone, nascimento,
                             cep, rua, numero, complemento, bairro, cidade, estado,
@@ -433,28 +475,33 @@
                                 ? { faixaMT: "Branco", aulasMT: 0 }
                                 : { aulasMT: 0 })
                         };
-                        if (qtdFamilia) novoAluno.qtdFamilia = qtdFamilia;
-                        if (asaasId) novoAluno.asaasId = asaasId;
+                        if (qtdFamilia)           novoAluno.qtdFamilia           = qtdFamilia;
+                        if (asaasId)              novoAluno.asaasId              = asaasId;
+                        if (asaasSubscriptionId)  novoAluno.asaasSubscriptionId  = asaasSubscriptionId;
                         await db.collection("alunos").doc(uid).set(novoAluno);
 
-                        // 4. Registra na coleção de novos cadastros para alerta do admin
+                        // 5. Registra na coleção de novos cadastros para alerta do admin
                         await db.collection("novos_cadastros").add({
                             alunoId: uid,
                             nome, email,
                             plano: planoSelecionado.key,
                             planoLabel: planoSelecionado.label,
                             planoValor: planoSelecionado.valor,
+                            asaasSubscriptionId: asaasSubscriptionId || null,
                             data: new Date().getTime(),
                             dataFormatada: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
                             lido: false
                         });
 
-                        alert("Matrícula realizada com sucesso! Faça login para acessar o tatame. OSS!");
+                        const msgSub = asaasSubscriptionId
+                            ? `\n\n💳 Assinatura criada no Asaas! O link de pagamento será enviado para ${email}.`
+                            : '';
+                        alert("Matrícula realizada com sucesso! Faça login para acessar o tatame. OSS!" + msgSub);
                         window.location.href = "index.html";
 
                     } catch(error) {
                         btnReg.disabled = false;
-                        btnReg.innerText = "FINALIZAR MEU CADASTRO";
+                        btnReg.innerText = "TENTAR NOVAMENTE";
                         if (error.code === 'auth/email-already-in-use') {
                             alert("Este e-mail já está cadastrado na plataforma.");
                         } else {

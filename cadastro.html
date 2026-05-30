@@ -424,7 +424,7 @@
                         // Mensal → PIX (gera Pix novo a cada mês)
                         // Trimestral/Semestral/Anual → CREDIT_CARD recorrente (sem data final)
                         const ciclosAsaas = {
-                            mensal:     { cycle: 'MONTHLY',    meses: 1,  billingType: 'PIX'         },
+                            mensal:     { cycle: 'MONTHLY',    meses: 1,  billingType: 'UNDEFINED'   },
                             trimestral: { cycle: 'QUARTERLY',  meses: 3,  billingType: 'CREDIT_CARD' },
                             semestral:  { cycle: 'SEMIANNUAL', meses: 6,  billingType: 'CREDIT_CARD' },
                             anual:      { cycle: 'YEARLY',     meses: 12, billingType: 'CREDIT_CARD' }
@@ -540,7 +540,7 @@
                             msgFinal += "\n\n💰 Taxa de matrícula: R$ 30,00 via PIX (vence em 3 dias).";
                         }
                         if (asaasSubscriptionId) {
-                            const tipoPag = cicloInfo?.billingType === 'PIX' ? 'Pix mensal' : 'Cartão de crédito recorrente';
+                            const tipoPag = cicloInfo?.billingType === 'UNDEFINED' ? 'Pix ou Cartão (você escolhe)' : 'Cartão de crédito recorrente';
                             msgFinal += `\n💳 Assinatura ${planoSelecionado.label}: ${tipoPag}.`;
                         }
                         alert(msgFinal);

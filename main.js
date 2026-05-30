@@ -962,6 +962,7 @@ const academia = {
                     <div style="display:flex; gap:5px; flex-shrink:0;">
                         <button onclick="academia.editarAluno('${doc.id}')" style="background:#16161a; border:1px solid #2d2d34; color:#94a3b8; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-eye"></i></button>
                         ${telLimpo ? `<button onclick="academia.abrirWhatsappBusiness('${telLimpo}')" title="WhatsApp Business" style="background:#064e3b; border:none; color:#25d366; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : ''}
+                        <button onclick="academia.verFichaSaudeAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Ficha de Saúde" style="background:#0c2344; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-notes-medical"></i></button>
                         ${isAdmin ? `<button onclick="academia.verFinanceiroAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#064e3b; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-dollar-sign"></i></button>` : ''}
                         ${isAdmin ? (trancado
                             ? `<button onclick="academia.ativarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Reativar matrícula" style="background:#1e3a8a; border:none; color:#60a5fa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-lock-open"></i></button>`
@@ -2321,6 +2322,148 @@ Ele voltará a ser aluno normal.`)) return;
                 setTimeout(() => { aviso.remove(); card.classList.add('hidden'); }, 3000);
             }
         } catch(e) { alert("Erro ao registrar recuperação."); }
+    },
+
+    // ══════════════════════════════════════════
+    // FICHA DE SAÚDE E EMERGÊNCIA
+    // ══════════════════════════════════════════
+    toggleFichaSaude() {
+        const card = document.getElementById('card-ficha-saude');
+        const btn  = document.getElementById('btn-ficha-saude-trigger');
+        if (!card) return;
+        const isOpen = !card.classList.contains('hidden');
+        if (isOpen) {
+            card.classList.add('hidden');
+            const icon = btn?.querySelector('.fa-chevron-down');
+            if (icon) icon.style.transform = '';
+        } else {
+            card.classList.remove('hidden');
+            const icon = btn?.querySelector('.fa-chevron-down');
+            if (icon) icon.style.transform = 'rotate(180deg)';
+            this.carregarFichaSaude();
+        }
+    },
+
+    async carregarFichaSaude() {
+        if (!auth.currentUser) return;
+        try {
+            const doc = await db.collection("alunos").doc(auth.currentUser.id).get();
+            if (!doc.exists) return;
+            const ficha = doc.data().fichaSaude || {};
+            const set = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.value = val || '';
+            };
+            set('ficha-grupo', ficha.grupo);
+            set('ficha-rh', ficha.rh);
+            set('ficha-comorbidades', ficha.comorbidades);
+            set('ficha-alergias', ficha.alergias);
+            set('ficha-plano', ficha.plano);
+            set('ficha-hospital', ficha.hospital);
+            set('ficha-emerg1-nome', ficha.emerg1Nome);
+            set('ficha-emerg1-tel', ficha.emerg1Tel);
+            set('ficha-emerg2-nome', ficha.emerg2Nome);
+            set('ficha-emerg2-tel', ficha.emerg2Tel);
+            const chkGest = document.getElementById('ficha-gestante');
+            if (chkGest) chkGest.checked = !!ficha.gestante;
+            // Badge se ficha tem algum dado preenchido
+            const temDados = !!(ficha.grupo || ficha.rh || ficha.comorbidades || ficha.alergias ||
+                ficha.plano || ficha.hospital || ficha.emerg1Nome || ficha.emerg1Tel ||
+                ficha.emerg2Nome || ficha.emerg2Tel || ficha.gestante);
+            const badge = document.getElementById('badge-ficha-salva');
+            if (badge) badge.classList.toggle('hidden', !temDados);
+        } catch(e) { console.warn('carregarFichaSaude error:', e.message); }
+    },
+
+    async salvarFichaSaude() {
+        if (!auth.currentUser) return;
+        const get = (id) => {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        };
+        const chkGest = document.getElementById('ficha-gestante');
+        const ficha = {
+            grupo:        get('ficha-grupo'),
+            rh:           get('ficha-rh'),
+            comorbidades: get('ficha-comorbidades'),
+            alergias:     get('ficha-alergias'),
+            gestante:     chkGest ? chkGest.checked : false,
+            plano:        get('ficha-plano'),
+            hospital:     get('ficha-hospital'),
+            emerg1Nome:   get('ficha-emerg1-nome'),
+            emerg1Tel:    get('ficha-emerg1-tel'),
+            emerg2Nome:   get('ficha-emerg2-nome'),
+            emerg2Tel:    get('ficha-emerg2-tel'),
+            atualizadoEm: new Date().toLocaleDateString('pt-BR') + ' às ' +
+                new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
+        };
+        try {
+            await db.collection("alunos").doc(auth.currentUser.id).update({ fichaSaude: ficha });
+            const badge = document.getElementById('badge-ficha-salva');
+            if (badge) badge.classList.remove('hidden');
+            // Feedback visual no botão
+            const btnSalvar = document.querySelector('#card-ficha-saude > button[onclick="academia.salvarFichaSaude()"]');
+            if (btnSalvar) {
+                const origHTML  = btnSalvar.innerHTML;
+                const origStyle = btnSalvar.getAttribute('style');
+                btnSalvar.innerHTML = '<i class="fas fa-check-circle"></i> FICHA SALVA COM SUCESSO!';
+                btnSalvar.style.background = 'linear-gradient(135deg,#1e3a5f,#1e40af)';
+                btnSalvar.style.borderColor = '#3b82f6';
+                btnSalvar.style.color = '#93c5fd';
+                setTimeout(() => {
+                    btnSalvar.innerHTML = origHTML;
+                    btnSalvar.setAttribute('style', origStyle);
+                }, 2500);
+            }
+        } catch(e) { alert('Erro ao salvar ficha: ' + e.message); }
+    },
+
+    // Exibe ficha de saúde de um aluno específico (uso admin/professor em emergência)
+    async verFichaSaudeAluno(alunoId, nomeAluno) {
+        try {
+            const doc = await db.collection("alunos").doc(alunoId).get();
+            const ficha = doc.exists ? (doc.data().fichaSaude || {}) : {};
+            const sangue = (ficha.grupo && ficha.rh) ? `${ficha.grupo} ${ficha.rh}` : (ficha.grupo || '—');
+            const linha = (label, val) => val
+                ? `<div style="margin-bottom:8px;"><small style="color:#64748b;font-size:0.6rem;font-weight:800;display:block;">${label}</small><span style="color:#f1f5f9;font-size:0.8rem;">${val}</span></div>`
+                : '';
+            const contatoBloco = (n, tel) => (n || tel)
+                ? `<div style="background:#0f172a;border-radius:8px;padding:8px;margin-bottom:6px;"><span style="color:#f1f5f9;font-size:0.8rem;font-weight:700;">${n||'—'}</span><br><span style="color:#94a3b8;font-size:0.75rem;">${tel||'—'}</span></div>`
+                : '';
+            const html = `
+                <div style="background:#0f172a;border-radius:10px;padding:14px;margin-bottom:10px;">
+                    ${linha('TIPO SANGUÍNEO', sangue !== '—' ? sangue : '')}
+                    ${linha('COMORBIDADES', ficha.comorbidades)}
+                    ${linha('ALERGIAS MEDICAMENTOSAS', ficha.alergias)}
+                    ${ficha.gestante ? '<div style="background:#7f1d1d;border-radius:8px;padding:8px;margin-bottom:8px;text-align:center;"><span style="color:#fca5a5;font-size:0.8rem;font-weight:800;">🤰 GESTANTE</span></div>' : ''}
+                    ${linha('PLANO DE SAÚDE', ficha.plano)}
+                    ${linha('HOSPITAL PREFERENCIAL', ficha.hospital)}
+                </div>
+                ${(ficha.emerg1Nome || ficha.emerg1Tel || ficha.emerg2Nome || ficha.emerg2Tel) ? `
+                <small style="color:#f59e0b;font-size:0.6rem;font-weight:800;display:block;margin-bottom:6px;">📞 CONTATOS DE EMERGÊNCIA</small>
+                ${contatoBloco(ficha.emerg1Nome, ficha.emerg1Tel)}
+                ${contatoBloco(ficha.emerg2Nome, ficha.emerg2Tel)}` : ''}
+                ${ficha.atualizadoEm ? `<small style="color:#475569;font-size:0.6rem;">Atualizado em: ${ficha.atualizadoEm}</small>` : ''}
+            `;
+            // Reutiliza modal genérico ou cria um temporário
+            let modal = document.getElementById('modal-ficha-saude-admin');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'modal-ficha-saude-admin';
+                modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+                document.body.appendChild(modal);
+            }
+            modal.innerHTML = `
+                <div style="background:#1e293b;border:1px solid #10b981;border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                        <span style="color:#10b981;font-size:0.85rem;font-weight:800;"><i class="fas fa-notes-medical"></i> FICHA DE SAÚDE</span>
+                        <button onclick="document.getElementById('modal-ficha-saude-admin').style.display='none'" style="background:none;border:none;color:#64748b;font-size:1.2rem;cursor:pointer;">✕</button>
+                    </div>
+                    <div style="color:#10b981;font-size:0.7rem;font-weight:800;margin-bottom:10px;padding:6px 10px;background:#064e3b44;border-radius:6px;">${(nomeAluno||'').toUpperCase()}</div>
+                    ${html}
+                </div>`;
+            modal.style.display = 'flex';
+        } catch(e) { alert('Erro ao carregar ficha: ' + e.message); }
     },
 
     async carregarRelatosSaude() {

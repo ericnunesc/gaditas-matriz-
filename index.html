@@ -269,6 +269,85 @@
                         </div>
 
                     </div>
+
+                    <!-- ── FICHA DE SAÚDE E EMERGÊNCIA (aluno) ── -->
+                    <button id="btn-ficha-saude-trigger" onclick="academia.toggleFichaSaude()" class="btn-save" style="background:#1e293b; border:1px solid #10b98144; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
+                        <span><i class="fas fa-notes-medical" style="color:#10b981; margin-right:8px; font-size:1.1rem;"></i> SAÚDE E EMERGÊNCIA
+                            <span id="badge-ficha-salva" class="hidden" style="background:#10b981; color:white; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800;">✓ PREENCHIDA</span>
+                        </span>
+                        <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
+                    </button>
+                    <div id="card-ficha-saude" class="hidden" style="background:#1e293b; border:1px solid #10b98144; padding:15px; border-radius:12px; margin-bottom:8px;">
+                        <small style="color:#10b981; font-size:0.6rem; font-weight:800; display:block; margin-bottom:14px; letter-spacing:0.5px; text-align:center;">🩺 FICHA DE SAÚDE E EMERGÊNCIA</small>
+
+                        <!-- Tipo sanguíneo + Fator Rh -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+                            <div>
+                                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">GRUPO SANGUÍNEO</small>
+                                <select id="ficha-grupo" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;">
+                                    <option value="">Não sei</option>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="AB">AB</option>
+                                    <option value="O">O</option>
+                                </select>
+                            </div>
+                            <div>
+                                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">FATOR Rh</small>
+                                <select id="ficha-rh" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;">
+                                    <option value="">Não sei</option>
+                                    <option value="+">Positivo (+)</option>
+                                    <option value="-">Negativo (−)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Comorbidades -->
+                        <div style="margin-bottom:12px;">
+                            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">COMORBIDADES / CONDIÇÕES MÉDICAS</small>
+                            <textarea id="ficha-comorbidades" placeholder="Ex: hipertensão, diabetes, asma..." rows="2" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; resize:none; box-sizing:border-box;"></textarea>
+                        </div>
+
+                        <!-- Alergias -->
+                        <div style="margin-bottom:12px;">
+                            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">ALERGIAS MEDICAMENTOSAS</small>
+                            <textarea id="ficha-alergias" placeholder="Ex: dipirona, penicilina, AAS..." rows="2" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; resize:none; box-sizing:border-box;"></textarea>
+                        </div>
+
+                        <!-- Gestante -->
+                        <div style="margin-bottom:12px; display:flex; align-items:center; gap:10px; padding:10px; background:#0f172a; border-radius:8px; border:1px solid #334155;">
+                            <input type="checkbox" id="ficha-gestante" style="width:18px; height:18px; accent-color:#f43f5e; cursor:pointer;">
+                            <label for="ficha-gestante" style="color:#f8fafc; font-size:0.8rem; font-weight:700; cursor:pointer;">Estou grávida / gestante</label>
+                        </div>
+
+                        <!-- Plano de saúde -->
+                        <div style="margin-bottom:12px;">
+                            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">PLANO DE SAÚDE</small>
+                            <input type="text" id="ficha-plano" placeholder="Nome do plano (ou deixe vazio)" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; box-sizing:border-box;">
+                        </div>
+
+                        <!-- Hospital preferencial -->
+                        <div style="margin-bottom:12px;">
+                            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">HOSPITAL / PRONTO-SOCORRO PREFERENCIAL</small>
+                            <input type="text" id="ficha-hospital" placeholder="Ex: UPA Zona Sul, Hospital X..." style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; box-sizing:border-box;">
+                        </div>
+
+                        <!-- Contatos de emergência -->
+                        <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">📞 CONTATOS DE EMERGÊNCIA</small>
+                        <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:10px; margin-bottom:8px;">
+                            <small style="color:#64748b; font-size:0.6rem; font-weight:700; display:block; margin-bottom:6px;">CONTATO 1</small>
+                            <input type="text" id="ficha-emerg1-nome" placeholder="Nome do familiar" style="width:100%; padding:9px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;">
+                            <input type="tel" id="ficha-emerg1-tel" placeholder="(00) 00000-0000" style="width:100%; padding:9px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; box-sizing:border-box;">
+                        </div>
+                        <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:10px; margin-bottom:14px;">
+                            <small style="color:#64748b; font-size:0.6rem; font-weight:700; display:block; margin-bottom:6px;">CONTATO 2</small>
+                            <input type="text" id="ficha-emerg2-nome" placeholder="Nome do familiar" style="width:100%; padding:9px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;">
+                            <input type="tel" id="ficha-emerg2-tel" placeholder="(00) 00000-0000" style="width:100%; padding:9px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; box-sizing:border-box;">
+                        </div>
+
+                        <button onclick="academia.salvarFichaSaude()" style="width:100%; padding:13px; background:linear-gradient(135deg,#064e3b,#065f46); border:1px solid #10b981; color:#34d399; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.8rem; letter-spacing:0.3px;"><i class="fas fa-save"></i> SALVAR FICHA DE SAÚDE</button>
+                    </div>
+
                 </div>
 
             </div>
@@ -565,8 +644,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="main.js?v=20260530b"></script>
-    <script src="filtros-academia.js?v=20260530b"></script>
+    <script src="main.js?v=20260530c"></script>
+    <script src="filtros-academia.js?v=20260530c"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>

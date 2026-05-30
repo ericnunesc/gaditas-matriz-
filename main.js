@@ -588,14 +588,14 @@ const academia = {
             prontos.forEach(({ id, a }) => {
                 const convocado = a.aspiranteGraduacao === true;
                 const nomeEsc = (a.nome || '').replace(/'/g, "\\'");
-                html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; border:1px solid ${convocado ? '#f59e0b' : '#78350f'}; border-radius:8px; padding:10px 12px; margin-bottom:6px;">
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; background:${convocado ? '#052e16' : '#0f172a'}; border:1px solid ${convocado ? '#10b981' : '#78350f'}; border-radius:8px; padding:10px 12px; margin-bottom:6px;">
                     <div style="flex:1; min-width:0;">
                         <div style="font-size:0.85rem; font-weight:800; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome.toUpperCase()}</div>
                         <div style="font-size:0.65rem; color:#94a3b8;">${a.faixa} • ${a.grau}º Grau • ${a.aulas || 0} aulas</div>
                     </div>
                     <div style="display:flex; gap:6px; align-items:center; flex-shrink:0; margin-left:8px;">
                         ${convocado
-                            ? `<span style="background:#92400e; color:#fbbf24; font-size:0.6rem; padding:4px 8px; border-radius:6px; font-weight:800; white-space:nowrap;">⭐ CONVOCADO</span>
+                            ? `<span style="background:#064e3b; color:#10b981; font-size:0.6rem; padding:4px 8px; border-radius:6px; font-weight:800; white-space:nowrap; border:1px solid #10b981;">✅ CONVOCADO</span>
                                <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar convocação" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.85rem; padding:2px 4px;">✕</button>`
                             : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}')" style="background:#92400e; border:1px solid #f59e0b; color:#fbbf24; font-size:0.6rem; padding:5px 10px; border-radius:6px; cursor:pointer; font-weight:800; white-space:nowrap;">🥋 CONVOCAR</button>`
                         }
@@ -615,14 +615,14 @@ const academia = {
             const percent = Math.round(s.percent);
             const convocado = a.aspiranteGraduacao === true;
             const nomeEsc = (a.nome || '').replace(/'/g, "\\'");
-            html += `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid var(--border-light); padding:10px 0; ${convocado ? 'background:#451a0322; border-radius:8px; padding:10px 8px;' : ''}">
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid var(--border-light); padding:10px 0; ${convocado ? 'background:#052e1622; border-radius:8px; padding:10px 8px;' : ''}">
                 <div style="flex:1; min-width:0;">
-                    <div style="font-size:0.82rem; color:#e2e8f0; font-weight:600;">${a.nome}${convocado ? ' <span style="font-size:0.55rem; color:#fbbf24; font-weight:800;">⭐</span>' : ''}</div>
+                    <div style="font-size:0.82rem; color:#e2e8f0; font-weight:600;">${a.nome}${convocado ? ' <span style="font-size:0.55rem; color:#10b981; font-weight:800;">✅</span>' : ''}</div>
                     <small style="color:var(--text-muted);">${a.faixa} • ${a.grau}º G • ${a.aulas || 0}/${s.meta} (${percent}%)</small>
                 </div>
                 <div style="display:flex; gap:4px; align-items:center; flex-shrink:0;">
                     ${convocado
-                        ? `<span style="background:#92400e; color:#fbbf24; font-size:0.55rem; padding:3px 7px; border-radius:6px; font-weight:800; white-space:nowrap;">⭐ CONV.</span>
+                        ? `<span style="background:#064e3b; color:#10b981; font-size:0.55rem; padding:3px 7px; border-radius:6px; font-weight:800; white-space:nowrap; border:1px solid #10b98155;">✅ CONV.</span>
                            <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar convocação" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.75rem; padding:2px 4px;">✕</button>`
                         : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}')" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:0.55rem; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:700; white-space:nowrap;">🥋 CONVOCAR</button>`
                     }
@@ -3574,10 +3574,10 @@ const ui = {
 
             // Banner de convocação para exame de faixa
             const bannerConvocado = d.aspiranteGraduacao === true
-                ? `<div style="background:linear-gradient(135deg,#78350f,#92400e); border:2px solid #f59e0b; border-radius:14px; padding:16px 14px; margin-bottom:14px; text-align:center;">
-                       <div style="font-size:1.6rem; margin-bottom:4px;">🥋⭐</div>
-                       <div style="color:#fbbf24; font-size:0.95rem; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">Você foi convocado!</div>
-                       <div style="color:#fde68a; font-size:0.75rem; margin-top:6px; line-height:1.5;">Você está apto para o exame de faixa.<br>Entre em contato com a academia. <strong>OSS! 🙏</strong></div>
+                ? `<div style="background:linear-gradient(135deg,#052e16,#064e3b); border:2px solid #10b981; border-radius:14px; padding:16px 14px; margin-bottom:14px; text-align:center;">
+                       <div style="font-size:1.6rem; margin-bottom:4px;">🥋✅</div>
+                       <div style="color:#10b981; font-size:0.95rem; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">Você foi convocado!</div>
+                       <div style="color:#a7f3d0; font-size:0.75rem; margin-top:6px; line-height:1.5;">Você está apto para o exame de faixa.<br>Entre em contato com a academia. <strong>OSS! 🙏</strong></div>
                    </div>`
                 : '';
 

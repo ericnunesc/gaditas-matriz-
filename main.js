@@ -3679,6 +3679,107 @@ Ele voltará a ser aluno normal.`)) return;
         } catch(e) { console.warn("Erro QR:", e.message); }
     },
 
+    // ── SCANNER QR CODE IN-APP ─────────────────────────────────
+    _html5QrScanner: null,
+
+    abrirScannerQR() {
+        const modal = document.getElementById('modal-scanner-qr');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        const status = document.getElementById('qr-scanner-status');
+
+        // Garante que o #qr-reader esteja limpo antes de instanciar
+        const readerEl = document.getElementById('qr-reader');
+        if (readerEl) readerEl.innerHTML = '';
+
+        if (typeof Html5Qrcode === 'undefined') {
+            if (status) status.innerHTML = '<small style="color:#ef4444; font-size:0.65rem;">❌ Biblioteca de scanner não carregou. Verifique sua conexão.</small>';
+            return;
+        }
+
+        try {
+            this._html5QrScanner = new Html5Qrcode("qr-reader");
+            const config = {
+                fps: 10,
+                qrbox: { width: 200, height: 200 },
+                aspectRatio: 1.0,
+                showTorchButtonIfSupported: true,
+                showZoomSliderIfSupported: false,
+            };
+
+            this._html5QrScanner.start(
+                { facingMode: "environment" }, // câmera traseira
+                config,
+                (decodedText) => {
+                    // QR lido com sucesso
+                    this._processarQRLido(decodedText);
+                },
+                (errorMsg) => { /* erros de frame — ignorar */ }
+            ).catch(err => {
+                if (status) status.innerHTML = '<small style="color:#ef4444; font-size:0.65rem;">❌ Câmera não permitida. Verifique as permissões do navegador.</small>';
+                console.warn('QR scanner err:', err);
+            });
+
+        } catch(e) {
+            if (status) status.innerHTML = '<small style="color:#ef4444; font-size:0.65rem;">❌ Erro ao iniciar câmera: ' + e.message + '</small>';
+        }
+    },
+
+    fecharScannerQR() {
+        if (this._html5QrScanner) {
+            this._html5QrScanner.stop().then(() => {
+                this._html5QrScanner.clear();
+                this._html5QrScanner = null;
+            }).catch(() => {
+                this._html5QrScanner = null;
+            });
+        }
+        const modal = document.getElementById('modal-scanner-qr');
+        if (modal) modal.style.display = 'none';
+        const readerEl = document.getElementById('qr-reader');
+        if (readerEl) readerEl.innerHTML = '';
+        const status = document.getElementById('qr-scanner-status');
+        if (status) status.innerHTML = '<small style="color:#64748b; font-size:0.65rem;">Aponte a câmera para o QR Code da turma</small>';
+    },
+
+    _processarQRLido(decodedText) {
+        const status = document.getElementById('qr-scanner-status');
+        try {
+            // Extrai o parâmetro ?checkin= da URL lida
+            let turma = null;
+            try {
+                const url  = new URL(decodedText);
+                turma = url.searchParams.get('checkin') || url.searchParams.get('turma');
+            } catch(_) {
+                // Não é URL — tenta usar o texto direto como nome da turma
+                turma = decodedText.trim();
+            }
+
+            if (!turma) {
+                if (status) status.innerHTML = '<small style="color:#f59e0b; font-size:0.65rem;">⚠️ QR Code não reconhecido. Tente novamente.</small>';
+                return;
+            }
+
+            // Feedback visual imediato
+            if (status) status.innerHTML = '<small style="color:#10b981; font-size:0.65rem; font-weight:800;">✅ QR lido! Processando check-in para: ' + turma + '</small>';
+
+            // Para o scanner
+            this.fecharScannerQR();
+
+            // Processa o check-in (já logado, usa o aluno atual)
+            const alunoId = auth.currentUser?.id;
+            if (!alunoId) {
+                alert('❌ Nenhum aluno logado. Faça login primeiro.');
+                return;
+            }
+
+            setTimeout(() => this.processarCheckinQR(turma, alunoId), 300);
+
+        } catch(e) {
+            if (status) status.innerHTML = '<small style="color:#ef4444; font-size:0.65rem;">❌ Erro ao processar QR: ' + e.message + '</small>';
+        }
+    },
+
     getGrade() {
         return this.gradeFirebase || this.gradeHorarios;
     },

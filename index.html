@@ -163,8 +163,46 @@
                         <small style="font-size:0.55rem; color:#64748b; display:block; font-weight:800; margin-bottom:6px;">QUEM JÁ CONFIRMOU NESSA TURMA:</small>
                         <div id="quem-treina-hoje"></div>
                     </div>
+                    <!-- Botão scanner QR in-app -->
+                    <button onclick="academia.abrirScannerQR()" style="width:100%; padding:12px; background:#1e3a8a; color:#93c5fd; border:1px solid #3b82f6; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <span style="font-size:1.1rem;">📷</span> ESCANEAR QR CODE DA TURMA
+                    </button>
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                        <div style="flex:1; height:1px; background:#334155;"></div>
+                        <small style="color:#475569; font-size:0.6rem; font-weight:700;">OU SELECIONE A TURMA ACIMA</small>
+                        <div style="flex:1; height:1px; background:#334155;"></div>
+                    </div>
                     <button onclick="academia.alunoEnviaCheckin()" style="width:100%; padding:12px; background:#10b981; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer;">ENVIAR CHECK-IN AGORA</button>
                     <div id="meus-checkins-pendentes" style="margin-top:10px;"></div>
+                </div>
+
+                <!-- ══ MODAL SCANNER QR CODE ══ -->
+                <div id="modal-scanner-qr" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.97); z-index:10000; flex-direction:column; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
+                    <div style="width:100%; max-width:400px; background:#1e293b; border-radius:16px; overflow:hidden; border:1px solid #334155;">
+                        <!-- Header -->
+                        <div style="background:#1e3a8a; padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-size:0.65rem; color:#93c5fd; font-weight:700; letter-spacing:0.5px;">CHECK-IN</div>
+                                <div style="font-size:0.9rem; font-weight:800; color:white; margin-top:2px;">📷 Escanear QR Code</div>
+                            </div>
+                            <button onclick="academia.fecharScannerQR()" style="background:#1e40af; border:1px solid #3b82f6; color:#93c5fd; width:36px; height:36px; border-radius:8px; font-size:1.1rem; cursor:pointer; font-weight:700; display:flex; align-items:center; justify-content:center;">✕</button>
+                        </div>
+                        <!-- Viewfinder -->
+                        <div style="padding:16px 16px 8px; position:relative;">
+                            <div id="qr-reader" style="width:100%; border-radius:10px; overflow:hidden; background:#0f172a;"></div>
+                            <!-- Mira -->
+                            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; width:160px; height:160px; margin-top:-4px;">
+                                <div style="position:absolute; top:0; left:0; width:30px; height:30px; border-top:3px solid #3b82f6; border-left:3px solid #3b82f6; border-radius:3px 0 0 0;"></div>
+                                <div style="position:absolute; top:0; right:0; width:30px; height:30px; border-top:3px solid #3b82f6; border-right:3px solid #3b82f6; border-radius:0 3px 0 0;"></div>
+                                <div style="position:absolute; bottom:0; left:0; width:30px; height:30px; border-bottom:3px solid #3b82f6; border-left:3px solid #3b82f6; border-radius:0 0 0 3px;"></div>
+                                <div style="position:absolute; bottom:0; right:0; width:30px; height:30px; border-bottom:3px solid #3b82f6; border-right:3px solid #3b82f6; border-radius:0 0 3px 0;"></div>
+                            </div>
+                        </div>
+                        <!-- Status -->
+                        <div id="qr-scanner-status" style="padding:8px 16px 16px; text-align:center;">
+                            <small style="color:#64748b; font-size:0.65rem;">Aponte a câmera para o QR Code da turma</small>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="plano-aula-professor" class="hidden" style="margin-top:15px;"></div>
@@ -693,11 +731,14 @@
         </nav>
     </div>
 
+    <!-- QR Code Scanner library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="main.js?v=20260530m"></script>
-    <script src="filtros-academia.js?v=20260530m"></script>
+    <script src="main.js?v=20260530n"></script>
+    <script src="filtros-academia.js?v=20260530n"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>

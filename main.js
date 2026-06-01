@@ -43,7 +43,7 @@ const graduacaoMT = {
 };
 
 const auth = {
-    adminCreds: { user: "admin", pass: "admin", nome: "Eric (Adm)" },
+    adminCreds: { user: "admin", pass: "admin", nome: "Eric (Adm)", faixa: "Preta", grau: 3, modalidade: "jiujitsu" },
     role: null, currentUser: null,
 
     // Carrega credenciais do admin salvas no Firestore
@@ -52,9 +52,12 @@ const auth = {
             const doc = await db.collection('configuracoes').doc('admin_config').get();
             if (doc.exists) {
                 const d = doc.data();
-                if (d.user) this.adminCreds.user = d.user;
-                if (d.pass) this.adminCreds.pass = d.pass;
-                if (d.nome) this.adminCreds.nome = d.nome;
+                if (d.user)       this.adminCreds.user      = d.user;
+                if (d.pass)       this.adminCreds.pass      = d.pass;
+                if (d.nome)       this.adminCreds.nome      = d.nome;
+                if (d.faixa)      this.adminCreds.faixa     = d.faixa;
+                if (d.grau  != null) this.adminCreds.grau   = d.grau;
+                if (d.modalidade) this.adminCreds.modalidade = d.modalidade;
             }
         } catch(e) { console.warn('carregarCredenciaisAdmin:', e.message); }
     },
@@ -65,7 +68,13 @@ const auth = {
 
         // Login admin local
         if (u === this.adminCreds.user && p === this.adminCreds.pass) {
-            this.role = 'admin'; this.currentUser = { id: 'admin', nome: this.adminCreds.nome || "Admin" };
+            this.role = 'admin'; this.currentUser = {
+                id: 'admin',
+                nome:      this.adminCreds.nome       || 'Admin',
+                faixa:     this.adminCreds.faixa      || 'Preta',
+                grau:      this.adminCreds.grau       ?? 3,
+                modalidade: this.adminCreds.modalidade || 'jiujitsu'
+            };
             // Aguarda auth anônimo antes de entrar (necessário para Firestore/Storage)
             try { await firebase.auth().signInAnonymously(); }
             catch(e) { console.warn('anon-auth admin:', e.message); }
@@ -185,7 +194,7 @@ const auth = {
     _renderFaixaHeader() {
         try {
             const el = document.getElementById('display-faixa-header');
-            if (!el || this.role !== 'aluno') return;
+            if (!el || (this.role !== 'aluno' && this.role !== 'admin')) return;
             const u = this.currentUser;
             const mod = u.modalidade || 'jiujitsu';
             let html = '';
@@ -739,14 +748,77 @@ const academia = {
     },
 
     async atualizarPresencaAntecipada() {
-        const s = document.getElementById('select-turma-aluno'); const lD = document.getElementById('quem-treina-hoje'); if(!s || !lD) return;
+        const s  = document.getElementById('select-turma-aluno');
+        const lD = document.getElementById('quem-treina-hoje');
+        if (!s || !lD) return;
         const snap = await db.collection("checkins").where("turma", "==", s.value).get();
-        if (snap.empty) { lD.innerHTML = `<small style="color:var(--text-muted);">Nenhum atleta confirmado.</small>`; } else {
-            const nomes = snap.docs.map(doc => { const n = doc.data().alunoNome.split(' '); return n.length > 1 ? `${n[0]} ${n[1][0]}.` : n[0]; });
-            lD.innerHTML = `<div style="display:flex; flex-wrap:wrap; gap:4px;">${nomes.map(n => `<span style="background:#0f172a; color:#ccc; padding:4px 10px; border-radius:6px; font-size:0.65rem; border:1px solid var(--border-light); font-weight:600;">${n}</span>`).join('')}</div>`;
+        if (snap.empty) {
+            lD.innerHTML = `<small style="color:var(--text-muted);">Nenhum atleta confirmado.</small>`;
+        } else {
+            const chips = snap.docs.map(doc => {
+                const d = doc.data();
+                const partes = (d.alunoNome || '').split(' ');
+                const nome = partes.length > 1 ? `${partes[0]} ${partes[1][0]}.` : partes[0];
+                if (d.tipo === 'visual') {
+                    return `<span style="background:#1c1400; color:#f59e0b; padding:4px 10px; border-radius:6px; font-size:0.65rem; border:1px solid #f59e0b66; font-weight:800;">🥋 ${nome}</span>`;
+                }
+                return `<span style="background:#0f172a; color:#ccc; padding:4px 10px; border-radius:6px; font-size:0.65rem; border:1px solid var(--border-light); font-weight:600;">${nome}</span>`;
+            });
+            lD.innerHTML = `<div style="display:flex; flex-wrap:wrap; gap:4px;">${chips.join('')}</div>`;
         }
-        // Mostra o plano da aula para o aluno ao trocar turma
         if (auth.role === 'aluno') this.carregarPlanoAulaTurma(s.value);
+    },
+
+    // ── PRESENÇA VISUAL ADMIN NAS TURMAS ─────────────────────
+    async renderPresencaAdmin() {
+        const container = document.getElementById('lista-turmas-presenca-admin');
+        if (!container) return;
+        const grade  = this.getGrade();
+        const diaSem = new Date().getDay();
+        const turmas = (grade[diaSem] || grade[String(diaSem)] || []).filter(t => !t.includes('Sem treinos'));
+
+        const snap = await db.collection('checkins')
+            .where('alunoId', '==', 'admin_visual')
+            .where('tipo', '==', 'visual')
+            .get();
+        const turmasComPresenca = new Set(snap.docs.map(d => d.data().turma));
+
+        if (turmas.length === 0) {
+            container.innerHTML = '<small style="color:#64748b; font-size:0.7rem;">Sem turmas hoje.</small>';
+            return;
+        }
+        container.innerHTML = turmas.map(turma => {
+            const ativo = turmasComPresenca.has(turma);
+            return `<div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; border:1px solid ${ativo ? '#f59e0b55' : '#334155'}; border-radius:10px; padding:10px 14px;">
+                <span style="color:${ativo ? '#f59e0b' : '#94a3b8'}; font-size:0.8rem; font-weight:700;">${ativo ? '🥋' : '📍'} ${turma}</span>
+                <button onclick="academia.togglePresencaAdmin('${turma.replace(/'/g,"\\'")}', ${ativo})"
+                    style="background:${ativo ? '#78350f' : '#1e293b'}; border:1px solid ${ativo ? '#f59e0b' : '#334155'}; color:${ativo ? '#fbbf24' : '#64748b'}; padding:6px 14px; border-radius:8px; font-size:0.72rem; font-weight:800; cursor:pointer;">
+                    ${ativo ? '✓ CONFIRMADO' : 'CONFIRMAR'}
+                </button>
+            </div>`;
+        }).join('');
+    },
+
+    async togglePresencaAdmin(turma, jaEstaPresente) {
+        const nome = auth.currentUser?.nome || auth.adminCreds?.nome || 'Prof';
+        if (jaEstaPresente) {
+            const snap = await db.collection('checkins')
+                .where('alunoId', '==', 'admin_visual')
+                .where('turma', '==', turma)
+                .where('tipo', '==', 'visual')
+                .get();
+            await Promise.all(snap.docs.map(d => d.ref.delete()));
+        } else {
+            await db.collection('checkins').add({
+                alunoId:   'admin_visual',
+                alunoNome: nome,
+                turma,
+                tipo:      'visual',
+                data:      new Date().getTime()
+            });
+        }
+        this.renderPresencaAdmin();
+        this.atualizarPresencaAntecipada();
     },
 
     async salvarEventoAdmin() {
@@ -1048,7 +1120,9 @@ const academia = {
         let snap = await db.collection("checkins").get(); const aSnap = await db.collection("alunos").get();
         const info = {}; aSnap.forEach(d => info[d.id] = d.data()); const g = {};
         snap.docs.forEach(doc => {
-            const c = doc.data(); if (auth.role === 'admin' || (auth.currentUser.turmasAcesso && auth.currentUser.turmasAcesso.includes(c.turma))) {
+            const c = doc.data();
+            if (c.tipo === 'visual') return; // presença visual do admin — não aparece na chamada
+            if (auth.role === 'admin' || (auth.currentUser.turmasAcesso && auth.currentUser.turmasAcesso.includes(c.turma))) {
                 if (!g[c.turma]) g[c.turma] = []; g[c.turma].push({ id: doc.id, ...c });
             }
         });
@@ -3398,6 +3472,21 @@ Ele voltará a ser aluno normal.`)) return;
                 <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">NOVA SENHA (deixe em branco para manter)</small>
                 <input type="password" id="cfg-admin-pass" placeholder="••••••••" style="${inp}"/>
                 <input type="password" id="cfg-admin-pass2" placeholder="Confirmar nova senha" style="${inp}"/>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div>
+                        <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">MINHA FAIXA</small>
+                        <select id="cfg-admin-faixa" style="${inp} margin-bottom:0;">
+                            ${['Branca','Azul','Roxa','Marrom','Preta'].map(f => `<option value="${f}" ${(auth.adminCreds.faixa||'Preta')===f?'selected':''}>${f}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">GRAU</small>
+                        <select id="cfg-admin-grau" style="${inp} margin-bottom:0;">
+                            ${[0,1,2,3,4,5,6].map(g => `<option value="${g}" ${(auth.adminCreds.grau??3)===g?'selected':''}>${g}º Grau</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div style="height:10px;"></div>
                 <button onclick="academia.salvarConfigAdmin()" style="width:100%;padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">💾 SALVAR CONFIGURAÇÕES</button>
             </div>`;
     },
@@ -3409,18 +3498,25 @@ Ele voltará a ser aluno normal.`)) return;
         const pass2 = document.getElementById('cfg-admin-pass2')?.value;
         if (!nome || !user) return alert('Nome e usuário são obrigatórios.');
         if (pass1 && pass1 !== pass2) return alert('As senhas não coincidem.');
-        const dados = { nome, user };
+        const faixa = document.getElementById('cfg-admin-faixa')?.value || 'Preta';
+        const grau  = parseInt(document.getElementById('cfg-admin-grau')?.value ?? 3);
+        const dados = { nome, user, faixa, grau };
         if (pass1) dados.pass = pass1;
         try {
             await db.collection('configuracoes').doc('admin_config').set(dados, { merge: true });
             // Atualiza em memória imediatamente
-            auth.adminCreds.nome = nome;
-            auth.adminCreds.user = user;
+            auth.adminCreds.nome  = nome;
+            auth.adminCreds.user  = user;
+            auth.adminCreds.faixa = faixa;
+            auth.adminCreds.grau  = grau;
             if (pass1) auth.adminCreds.pass = pass1;
             if (auth.currentUser?.id === 'admin') {
-                auth.currentUser.nome = nome;
+                auth.currentUser.nome  = nome;
+                auth.currentUser.faixa = faixa;
+                auth.currentUser.grau  = grau;
                 const el = document.getElementById('display-user');
                 if (el) el.innerText = nome;
+                auth._renderFaixaHeader();
             }
             document.getElementById('modal-config-admin')?.remove();
             alert('✅ Configurações salvas!');
@@ -4072,7 +4168,7 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
-        if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } }
+        if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); } }
         if(id === 'tab-relatorios') { if(auth.role === 'admin') academia.renderDashboardAdmin(); academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
     },
@@ -4190,6 +4286,9 @@ const ui = {
         // Card depoimentos pendentes — só admin, usa display block/none
         const cardDepAdmin = document.getElementById('card-depoimentos-admin');
         if (cardDepAdmin) cardDepAdmin.style.display = isAdmin ? 'block' : 'none';
+        // Card presença visual admin
+        const cardPresAdmin = document.getElementById('card-presenca-admin');
+        if (cardPresAdmin) cardPresAdmin.style.display = isAdmin ? 'block' : 'none';
         // Professor vê o wrapper de perfil (alterar senha, dados)
         const wrapperPerfil = document.getElementById('wrapper-perfil-proprio');
         if (wrapperPerfil && isProf) wrapperPerfil.classList.remove('hidden');

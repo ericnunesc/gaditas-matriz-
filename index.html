@@ -169,6 +169,15 @@
 
                 <div id="plano-aula-professor" class="hidden" style="margin-top:15px;"></div>
 
+                <!-- ══ PRESENÇA VISUAL DO ADMIN NAS TURMAS ══ -->
+                <div id="card-presenca-admin" style="display:none; background:#1e293b; border:1px solid #f59e0b44; border-radius:12px; padding:15px; margin-top:15px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                        <span style="font-size:0.85rem; font-weight:800; color:#f59e0b;">🥋 MINHA PRESENÇA NA AULA HOJE</span>
+                    </div>
+                    <small style="color:#94a3b8; font-size:0.65rem; display:block; margin-bottom:10px;">Marque as turmas que você estará presente. Os alunos verão seu nome destacado no "quem treina hoje". <strong style="color:#f59e0b;">Não conta como frequência.</strong></small>
+                    <div id="lista-turmas-presenca-admin" style="display:flex; flex-direction:column; gap:8px;"></div>
+                </div>
+
                 <div id="area-professor-checkin" class="card hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-top:15px;">
                     <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-user-check"></i> Check-ins Pendentes no Tatame</div>
                     <div id="list-checkins" class="list-container"></div>
@@ -687,8 +696,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="main.js?v=20260530l"></script>
-    <script src="filtros-academia.js?v=20260530l"></script>
+    <script src="main.js?v=20260530m"></script>
+    <script src="filtros-academia.js?v=20260530m"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>

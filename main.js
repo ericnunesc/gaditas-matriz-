@@ -1304,17 +1304,36 @@ const academia = {
     async salvarPlanoAula(turma, conteudo) {
         const dataHoje = this._getDataHoje();
         const profNome = auth.currentUser?.nome || '';
+        const texto    = (conteudo || '').trim();
+        // Garante sessão Firebase Auth antes de escrever
+        if (!firebase.auth().currentUser) {
+            try { await firebase.auth().signInAnonymously(); }
+            catch(e) { console.warn('re-auth plano:', e.message); }
+        }
         try {
             await db.collection('plano_aula').doc(dataHoje).set(
-                { [turma]: { conteudo: conteudo.trim(), profNome } },
+                { [turma]: { conteudo: texto, profNome } },
                 { merge: true }
             );
-            const btn = event.target.closest ? event.target : event.srcElement;
-            const txtOriginal = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-check"></i> SALVO!';
-            btn.style.background = '#10b981';
-            setTimeout(() => { btn.innerHTML = txtOriginal; btn.style.background = '#8b5cf6'; }, 2000);
-        } catch(e) { alert('Erro ao salvar plano.'); }
+            // Feedback visual no botão
+            const btnEl = document.activeElement && document.activeElement.tagName === 'BUTTON'
+                ? document.activeElement
+                : null;
+            if (btnEl) {
+                const orig = btnEl.innerHTML;
+                btnEl.innerHTML = '<i class="fas fa-check"></i> SALVO!';
+                btnEl.style.background = '#10b981';
+                setTimeout(() => { btnEl.innerHTML = orig; btnEl.style.background = '#8b5cf6'; }, 2000);
+            }
+        } catch(e) {
+            console.error('salvarPlanoAula:', e.code, e.message);
+            // Mensagem específica por tipo de erro
+            if (e.code === 'permission-denied') {
+                alert('Sem permissão para salvar. Faça logout e entre novamente.');
+            } else {
+                alert('Erro ao salvar plano: ' + e.message);
+            }
+        }
     },
 
     async carregarPlanoAulaTurma(turma) {

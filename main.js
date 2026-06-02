@@ -4272,6 +4272,7 @@ const ui = {
         if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); } }
         if(id === 'tab-relatorios') { if(auth.role === 'admin') academia.renderDashboardAdmin(); academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
+        if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') loja.renderAdminLoja(); }
     },
     getCorFaixa(f) {
         if(!f) return "#fff";
@@ -4390,6 +4391,9 @@ const ui = {
         // Card presença visual admin
         const cardPresAdmin = document.getElementById('card-presenca-admin');
         if (cardPresAdmin) cardPresAdmin.style.display = isAdmin ? 'block' : 'none';
+        // Card gestão da loja — só admin
+        const cardLojaAdmin = document.getElementById('card-loja-admin');
+        if (cardLojaAdmin) cardLojaAdmin.style.display = isAdmin ? 'block' : 'none';
         // Professor vê o wrapper de perfil (alterar senha, dados)
         const wrapperPerfil = document.getElementById('wrapper-perfil-proprio');
         if (wrapperPerfil && isProf) wrapperPerfil.classList.remove('hidden');
@@ -4527,6 +4531,597 @@ const ui = {
                 if (wp) wp.classList.remove('hidden');
             }
         }
+    }
+};
+
+// ══════════════════════════════════════════════════════════
+// LOJA VIRTUAL — Vitrine, Pedidos, Gestão Admin
+// ══════════════════════════════════════════════════════════
+const loja = {
+    _produtos: [],
+    _categoriaAtual: 'todas',
+    _produtoAtual: null,
+    _variacaoAtual: null,
+    _variacoesTemp: [],
+    _abaAdminAtual: 'prods',
+
+    // ── VITRINE (alunos) ─────────────────────────────────
+    async renderVitrine() {
+        const grid = document.getElementById('loja-grid');
+        const filtrosEl = document.getElementById('loja-filtros');
+        if (!grid) return;
+        grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#475569; font-size:0.75rem;">Carregando...</div>';
+        try {
+            const snap = await db.collection('loja_produtos').where('ativo', '==', true).get();
+            this._produtos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => (b.destaque ? 1 : 0) - (a.destaque ? 1 : 0) || (a.ordem || 0) - (b.ordem || 0));
+
+            const cats = ['todas', ...new Set(this._produtos.map(p => p.categoria).filter(Boolean))];
+            if (filtrosEl) {
+                filtrosEl.innerHTML = cats.map(cat => `
+                    <button onclick="loja._filtrar('${cat}')" id="loja-filtro-${cat.replace(/\s/g,'_')}"
+                        style="background:${cat === this._categoriaAtual ? '#3b82f6' : '#1e293b'};
+                               border:1px solid ${cat === this._categoriaAtual ? '#3b82f6' : '#334155'};
+                               color:${cat === this._categoriaAtual ? 'white' : '#94a3b8'};
+                               padding:6px 14px; border-radius:20px; font-size:0.62rem; font-weight:700;
+                               cursor:pointer; white-space:nowrap; flex-shrink:0;">
+                        ${cat === 'todas' ? '🛒 TODOS' : cat.toUpperCase()}
+                    </button>`).join('');
+            }
+            this._renderGrid();
+
+            // Mostra botão meus pedidos para alunos
+            const btnP = document.getElementById('btn-ver-meus-pedidos');
+            if (btnP && auth.role === 'aluno') { btnP.style.display = 'block'; this._carregarBadgePedidos(); }
+        } catch(e) {
+            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:30px; color:#ef4444; font-size:0.72rem;">Erro ao carregar loja: ${e.message}</div>`;
+        }
+    },
+
+    _filtrar(cat) {
+        this._categoriaAtual = cat;
+        document.querySelectorAll('[id^="loja-filtro-"]').forEach(btn => {
+            const active = btn.id === 'loja-filtro-' + cat.replace(/\s/g,'_');
+            btn.style.background = active ? '#3b82f6' : '#1e293b';
+            btn.style.borderColor = active ? '#3b82f6' : '#334155';
+            btn.style.color = active ? 'white' : '#94a3b8';
+        });
+        this._renderGrid();
+    },
+
+    _renderGrid() {
+        const grid = document.getElementById('loja-grid');
+        if (!grid) return;
+        const prods = this._categoriaAtual === 'todas'
+            ? this._produtos
+            : this._produtos.filter(p => p.categoria === this._categoriaAtual);
+        if (prods.length === 0) {
+            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#475569; font-size:0.75rem;">Nenhum produto encontrado.</div>';
+            return;
+        }
+        grid.innerHTML = prods.map(p => {
+            const totalEstoque = (p.variacoes || []).reduce((s, v) => s + (v.estoque || 0), 0);
+            const esgotado = (p.variacoes || []).length > 0 && totalEstoque === 0;
+            return `
+                <div onclick="loja.abrirProduto('${p.id}')" style="background:#1e293b; border:1px solid ${p.destaque ? '#f59e0b55' : '#334155'}; border-radius:12px; overflow:hidden; cursor:pointer; position:relative; ${esgotado ? 'opacity:0.65;' : ''}">
+                    ${p.destaque ? '<div style="position:absolute; top:6px; left:6px; z-index:2; background:#f59e0b; color:#000; border-radius:6px; padding:2px 7px; font-size:0.48rem; font-weight:800; letter-spacing:0.5px;">⭐ DESTAQUE</div>' : ''}
+                    ${esgotado ? '<div style="position:absolute; top:6px; right:6px; z-index:2; background:#ef4444; color:white; border-radius:6px; padding:2px 7px; font-size:0.48rem; font-weight:800;">ESGOTADO</div>' : ''}
+                    <div style="aspect-ratio:1; background:#0f172a; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                        ${p.foto ? `<img src="${p.foto}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=font-size:3rem>🛒</span>'">` : '<span style="font-size:3rem;">🛒</span>'}
+                    </div>
+                    <div style="padding:10px;">
+                        <div style="font-size:0.55rem; color:#64748b; font-weight:700; margin-bottom:3px;">${(p.categoria || 'produto').toUpperCase()}</div>
+                        <div style="font-size:0.78rem; font-weight:800; color:white; margin-bottom:6px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${p.nome}</div>
+                        <div style="font-size:0.88rem; font-weight:800; color:#10b981;">R$ ${(p.preco || 0).toFixed(2).replace('.', ',')}</div>
+                    </div>
+                </div>`;
+        }).join('');
+    },
+
+    // ── DETALHE DO PRODUTO ───────────────────────────────
+    abrirProduto(id) {
+        const p = this._produtos.find(x => x.id === id);
+        if (!p) return;
+        const anterior = document.getElementById('modal-produto-detalhe');
+        if (anterior) anterior.remove();
+
+        this._produtoAtual = p;
+        const variacoes = p.variacoes || [];
+        const temVar = variacoes.length > 0;
+        const primeiraDisp = temVar ? Math.max(0, variacoes.findIndex(v => (v.estoque || 0) > 0)) : -1;
+        this._variacaoAtual = temVar ? variacoes[primeiraDisp >= 0 ? primeiraDisp : 0] : null;
+
+        const btnComprarOk = !temVar || (this._variacaoAtual && (this._variacaoAtual.estoque || 0) > 0);
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-produto-detalhe';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.98); z-index:10001; overflow-y:auto; padding:20px; box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="max-width:440px; margin:0 auto; padding-bottom:80px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <button onclick="loja.fecharProduto()" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:8px 14px; border-radius:8px; font-size:0.7rem; font-weight:700; cursor:pointer;">← VOLTAR</button>
+                    ${auth.role === 'admin' ? `<button onclick="loja.fecharProduto(); loja.abrirModalProduto('${id}')" style="background:#1e3a8a; border:1px solid #3b82f655; color:#93c5fd; padding:8px 14px; border-radius:8px; font-size:0.62rem; font-weight:700; cursor:pointer;">✏️ EDITAR</button>` : ''}
+                </div>
+                <div style="width:100%; aspect-ratio:1.2; background:#1e293b; border-radius:14px; overflow:hidden; margin-bottom:16px; display:flex; align-items:center; justify-content:center;">
+                    ${p.foto ? `<img src="${p.foto}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=font-size:4rem>🛒</span>'">` : '<span style="font-size:4rem;">🛒</span>'}
+                </div>
+                <div style="font-size:0.6rem; color:#64748b; font-weight:700; letter-spacing:0.5px; margin-bottom:4px;">${(p.categoria || 'produto').toUpperCase()}</div>
+                <div style="font-size:1.1rem; font-weight:800; color:white; margin-bottom:8px;">${p.nome}</div>
+                <div style="font-size:1.3rem; font-weight:800; color:#10b981; margin-bottom:${p.descricao ? '12px' : '16px'};">R$ ${(p.preco || 0).toFixed(2).replace('.', ',')}</div>
+                ${p.descricao ? `<div style="font-size:0.75rem; color:#94a3b8; line-height:1.6; margin-bottom:16px; background:#0f172a; border-radius:10px; padding:12px;">${p.descricao}</div>` : ''}
+                ${temVar ? `
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:0.65rem; color:#94a3b8; font-weight:700; margin-bottom:8px;">TAMANHO / VARIAÇÃO:</div>
+                    <div id="variacao-selector" style="display:flex; flex-wrap:wrap; gap:8px;">
+                        ${variacoes.map((v, i) => {
+                            const sem = (v.estoque || 0) === 0;
+                            const sel = i === (primeiraDisp >= 0 ? primeiraDisp : 0);
+                            return `<button onclick="loja._selecionarVariacao(${i})" id="var-btn-${i}"
+                                style="background:${sel && !sem ? '#1e3a8a' : '#1e293b'};
+                                       border:${sel && !sem ? '1px solid #3b82f6' : '1px solid #334155'};
+                                       color:${sem ? '#475569' : sel ? '#93c5fd' : '#94a3b8'};
+                                       padding:8px 14px; border-radius:8px; font-size:0.72rem; font-weight:800;
+                                       cursor:${sem ? 'not-allowed' : 'pointer'};
+                                       text-decoration:${sem ? 'line-through' : 'none'};
+                                       opacity:${sem ? '0.5' : '1'};">
+                                ${v.nome}
+                            </button>`;
+                        }).join('')}
+                    </div>
+                    <div id="variacao-info" style="font-size:0.6rem; color:#64748b; margin-top:8px;">
+                        ${this._variacaoAtual ? `Estoque: <strong style="color:${(this._variacaoAtual.estoque||0)>0?'#10b981':'#ef4444'}">${this._variacaoAtual.estoque||0} unid.</strong>` : ''}
+                    </div>
+                </div>` : ''}
+                <button id="btn-fazer-pedido" onclick="loja._confirmarPedido('${id}')"
+                    style="width:100%; padding:16px; background:${btnComprarOk ? '#10b981' : '#334155'}; color:white; border:none; border-radius:12px; font-weight:800; font-size:0.9rem; cursor:pointer; margin-top:8px;"
+                    ${!btnComprarOk ? 'disabled' : ''}>
+                    ${btnComprarOk ? '🛒 FAZER PEDIDO' : '❌ ESGOTADO'}
+                </button>
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px; margin-top:10px; font-size:0.62rem; color:#64748b; text-align:center; line-height:1.6;">
+                    📍 Retirada na academia · Pagamento via link externo
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    _selecionarVariacao(index) {
+        const p = this._produtoAtual;
+        if (!p) return;
+        const v = (p.variacoes || [])[index];
+        if (!v) return;
+        this._variacaoAtual = v;
+        (p.variacoes || []).forEach((vx, i) => {
+            const btn = document.getElementById('var-btn-' + i);
+            if (!btn) return;
+            const sem = (vx.estoque || 0) === 0;
+            btn.style.background = i === index && !sem ? '#1e3a8a' : '#1e293b';
+            btn.style.borderColor = i === index && !sem ? '#3b82f6' : '#334155';
+            btn.style.color = sem ? '#475569' : i === index ? '#93c5fd' : '#94a3b8';
+        });
+        const info = document.getElementById('variacao-info');
+        if (info) info.innerHTML = `Estoque: <strong style="color:${(v.estoque||0)>0?'#10b981':'#ef4444'}">${v.estoque||0} unid.</strong>`;
+        const btn = document.getElementById('btn-fazer-pedido');
+        if (btn) {
+            const sem = (v.estoque || 0) === 0;
+            btn.disabled = sem;
+            btn.style.background = sem ? '#334155' : '#10b981';
+            btn.innerHTML = sem ? '❌ ESGOTADO' : '🛒 FAZER PEDIDO';
+        }
+    },
+
+    fecharProduto() {
+        document.getElementById('modal-produto-detalhe')?.remove();
+        this._produtoAtual = null; this._variacaoAtual = null;
+    },
+
+    async _confirmarPedido(produtoId) {
+        const p = this._produtoAtual;
+        if (!p) return;
+        if (auth.role !== 'aluno') { alert('Apenas alunos podem fazer pedidos.'); return; }
+        const btn = document.getElementById('btn-fazer-pedido');
+        if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Processando...'; }
+        try {
+            const ref = await db.collection('loja_pedidos').add({
+                alunoId: auth.currentUser.id, alunoNome: auth.currentUser.nome,
+                produtoId, produtoNome: p.nome,
+                variacao: this._variacaoAtual ? this._variacaoAtual.nome : null,
+                preco: p.preco, linkPagamento: p.linkPagamento || null,
+                status: 'pendente', data: new Date().getTime()
+            });
+            this.fecharProduto();
+            this._mostrarModalPagamento(p, this._variacaoAtual, ref.id);
+        } catch(e) {
+            if (btn) { btn.disabled = false; btn.innerHTML = '🛒 FAZER PEDIDO'; }
+            alert('Erro ao registrar pedido: ' + e.message);
+        }
+    },
+
+    _mostrarModalPagamento(p, variacao, pedidoId) {
+        document.getElementById('modal-pagamento-loja')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-pagamento-loja';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.98); z-index:10002; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b; border:1px solid #10b98155; border-radius:16px; padding:24px; max-width:380px; width:100%; text-align:center;">
+                <div style="font-size:2.5rem; margin-bottom:8px;">✅</div>
+                <div style="font-size:0.95rem; font-weight:800; color:#10b981; margin-bottom:4px;">PEDIDO REGISTRADO!</div>
+                <div style="font-size:0.65rem; color:#64748b; margin-bottom:18px;">Protocolo #${pedidoId.slice(-6).toUpperCase()}</div>
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:14px; margin-bottom:16px; text-align:left;">
+                    <div style="font-size:0.62rem; color:#64748b; font-weight:700; margin-bottom:4px;">PRODUTO</div>
+                    <div style="font-size:0.82rem; font-weight:800; color:white;">${p.nome}</div>
+                    ${variacao ? `<div style="font-size:0.62rem; color:#94a3b8; margin-top:3px;">Tamanho: <strong>${variacao.nome}</strong></div>` : ''}
+                    <div style="font-size:0.9rem; font-weight:800; color:#10b981; margin-top:8px;">R$ ${(p.preco||0).toFixed(2).replace('.', ',')}</div>
+                </div>
+                ${p.linkPagamento ? `
+                <a href="${p.linkPagamento}" target="_blank" rel="noopener"
+                    style="display:block; width:100%; padding:14px; background:#10b981; color:white; border-radius:12px; font-weight:800; font-size:0.85rem; text-decoration:none; margin-bottom:8px; box-sizing:border-box;">
+                    💳 IR PARA O PAGAMENTO
+                </a>
+                <div style="font-size:0.58rem; color:#64748b; margin-bottom:14px;">Você será redirecionado para a página de pagamento</div>
+                ` : `
+                <div style="background:#1e3a8a22; border:1px solid #3b82f633; border-radius:10px; padding:12px; margin-bottom:14px;">
+                    <div style="font-size:0.65rem; color:#93c5fd; font-weight:700; margin-bottom:4px;">💬 PRÓXIMO PASSO</div>
+                    <div style="font-size:0.7rem; color:#94a3b8; line-height:1.5;">Combine o pagamento diretamente com a academia. Seu pedido está registrado!</div>
+                </div>`}
+                <div style="font-size:0.6rem; color:#475569; margin-bottom:16px;">📍 Retirada na academia após confirmação do pagamento</div>
+                <button onclick="document.getElementById('modal-pagamento-loja').remove()" style="background:#334155; border:none; color:white; padding:10px 24px; border-radius:8px; font-size:0.7rem; font-weight:700; cursor:pointer;">FECHAR</button>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    // ── MEUS PEDIDOS (aluno) ─────────────────────────────
+    async verMeusPedidos() {
+        const card = document.getElementById('loja-meus-pedidos');
+        const lista = document.getElementById('loja-lista-meus-pedidos');
+        if (!card || !lista) return;
+        if (card.style.display !== 'none') { card.style.display = 'none'; return; }
+        card.style.display = 'block';
+        lista.innerHTML = '<small style="color:#475569; font-size:0.65rem;">Carregando...</small>';
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        try {
+            const snap = await db.collection('loja_pedidos')
+                .where('alunoId', '==', auth.currentUser.id)
+                .orderBy('data', 'desc').get();
+            if (snap.empty) {
+                lista.innerHTML = '<small style="color:#475569; font-size:0.65rem;">Você ainda não fez nenhum pedido.</small>';
+                return;
+            }
+            const statusCor   = { pendente:'#f59e0b', pago:'#3b82f6', entregue:'#10b981', cancelado:'#ef4444' };
+            const statusLabel = { pendente:'⏳ Pendente', pago:'💳 Pago', entregue:'✅ Entregue', cancelado:'❌ Cancelado' };
+            lista.innerHTML = snap.docs.map(d => {
+                const o = d.data(); const cor = statusCor[o.status]||'#64748b';
+                return `
+                    <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div style="flex:1; margin-right:8px;">
+                                <div style="font-size:0.75rem; font-weight:800; color:white; margin-bottom:2px;">${o.produtoNome}</div>
+                                ${o.variacao ? `<div style="font-size:0.6rem; color:#64748b;">Tamanho: ${o.variacao}</div>` : ''}
+                                <div style="font-size:0.58rem; color:#64748b; margin-top:3px;">${new Date(o.data).toLocaleDateString('pt-BR')} · #${d.id.slice(-6).toUpperCase()}</div>
+                            </div>
+                            <div style="text-align:right; flex-shrink:0;">
+                                <div style="font-size:0.8rem; font-weight:800; color:#10b981;">R$ ${(o.preco||0).toFixed(2).replace('.', ',')}</div>
+                                <div style="font-size:0.55rem; font-weight:800; color:${cor}; margin-top:4px;">${statusLabel[o.status]||o.status}</div>
+                            </div>
+                        </div>
+                        ${o.linkPagamento && o.status === 'pendente' ? `
+                        <a href="${o.linkPagamento}" target="_blank" rel="noopener"
+                            style="display:block; text-align:center; padding:8px; background:#10b98122; border:1px solid #10b98144; color:#10b981; border-radius:8px; font-size:0.62rem; font-weight:800; text-decoration:none; margin-top:8px;">
+                            💳 IR PARA O PAGAMENTO
+                        </a>` : ''}
+                    </div>`;
+            }).join('');
+        } catch(e) {
+            lista.innerHTML = `<small style="color:#ef4444; font-size:0.65rem;">Erro: ${e.message}</small>`;
+        }
+    },
+
+    async _carregarBadgePedidos() {
+        if (auth.role !== 'aluno') return;
+        try {
+            const snap = await db.collection('loja_pedidos')
+                .where('alunoId', '==', auth.currentUser.id)
+                .where('status', '==', 'pendente').get();
+            const badge = document.getElementById('badge-meus-pedidos');
+            if (badge && snap.size > 0) { badge.textContent = snap.size; badge.style.display = 'block'; }
+        } catch(e) {}
+    },
+
+    // ── ADMIN — GESTÃO ───────────────────────────────────
+    mostrarTabAdmin(aba) {
+        this._abaAdminAtual = aba;
+        const elProds   = document.getElementById('loja-admin-prods');
+        const elPedidos = document.getElementById('loja-admin-pedidos');
+        const btnP      = document.getElementById('loja-tab-btn-prods');
+        const btnO      = document.getElementById('loja-tab-btn-pedidos');
+        const ativo   = 'background:#10b981; border:none; color:white;';
+        const inativo = 'background:#1e293b; border:1px solid #334155; color:#94a3b8;';
+        if (aba === 'prods') {
+            if (elProds)   elProds.style.display = 'block';
+            if (elPedidos) elPedidos.style.display = 'none';
+            if (btnP) btnP.style.cssText = ativo + 'flex:1; padding:7px; border-radius:7px; font-size:0.62rem; font-weight:800; cursor:pointer;';
+            if (btnO) btnO.style.cssText = inativo + 'flex:1; padding:7px; border-radius:7px; font-size:0.62rem; font-weight:800; cursor:pointer; position:relative;';
+            this.renderAdminLoja();
+        } else {
+            if (elProds)   elProds.style.display = 'none';
+            if (elPedidos) elPedidos.style.display = 'block';
+            if (btnP) btnP.style.cssText = inativo + 'flex:1; padding:7px; border-radius:7px; font-size:0.62rem; font-weight:800; cursor:pointer;';
+            if (btnO) btnO.style.cssText = ativo + 'flex:1; padding:7px; border-radius:7px; font-size:0.62rem; font-weight:800; cursor:pointer; position:relative;';
+            this.renderPedidosAdmin();
+        }
+    },
+
+    async renderAdminLoja() {
+        const container = document.getElementById('loja-admin-prods');
+        if (!container) return;
+        container.innerHTML = '<small style="color:#475569; font-size:0.65rem;">Carregando...</small>';
+        try {
+            const snap = await db.collection('loja_produtos').get();
+            const prods = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => (b.destaque ? 1 : 0) - (a.destaque ? 1 : 0) || (a.ordem || 0) - (b.ordem || 0));
+            if (prods.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#475569; font-size:0.7rem;">Nenhum produto cadastrado.<br><br>Clique em <strong>+ PRODUTO</strong> para adicionar.</div>';
+                return;
+            }
+            container.innerHTML = prods.map(p => {
+                const totalEst = (p.variacoes || []).reduce((s, v) => s + (v.estoque || 0), 0);
+                return `
+                    <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; gap:10px; align-items:center;">
+                        <div style="width:48px; height:48px; background:#1e293b; border-radius:8px; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                            ${p.foto ? `<img src="${p.foto}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='🛒'">` : '🛒'}
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:0.75rem; font-weight:800; color:${p.ativo ? 'white' : '#475569'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.nome}</div>
+                            <div style="font-size:0.65rem; color:#10b981; font-weight:700;">R$ ${(p.preco||0).toFixed(2).replace('.', ',')}</div>
+                            <div style="font-size:0.55rem; color:#64748b; margin-top:2px;">
+                                ${(p.variacoes||[]).length} variações · estoque: ${totalEst}
+                                ${totalEst === 0 && (p.variacoes||[]).length > 0 ? '<span style="color:#ef4444; font-weight:700;"> ⚠️ ESGOTADO</span>' : ''}
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:5px; flex-shrink:0;">
+                            <button onclick="loja.toggleAtivoProduto('${p.id}', ${p.ativo})"
+                                style="background:${p.ativo ? '#10b98122' : '#33415522'}; border:1px solid ${p.ativo ? '#10b981' : '#475569'}; color:${p.ativo ? '#10b981' : '#64748b'}; padding:4px 8px; border-radius:6px; font-size:0.55rem; font-weight:800; cursor:pointer;">
+                                ${p.ativo ? '✓ ATIVO' : '— INATIVO'}
+                            </button>
+                            <button onclick="loja.abrirModalProduto('${p.id}')"
+                                style="background:#1e3a8a; border:1px solid #3b82f655; color:#93c5fd; padding:4px 8px; border-radius:6px; font-size:0.55rem; font-weight:700; cursor:pointer;">
+                                ✏️ EDITAR
+                            </button>
+                        </div>
+                    </div>`;
+            }).join('');
+        } catch(e) {
+            container.innerHTML = `<small style="color:#ef4444; font-size:0.65rem;">Erro: ${e.message}</small>`;
+        }
+    },
+
+    async renderPedidosAdmin() {
+        const container = document.getElementById('loja-admin-pedidos');
+        if (!container) return;
+        container.innerHTML = '<small style="color:#475569; font-size:0.65rem;">Carregando...</small>';
+        try {
+            const snap = await db.collection('loja_pedidos').orderBy('data', 'desc').get();
+            if (snap.empty) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#475569; font-size:0.7rem;">Nenhum pedido ainda.</div>';
+                return;
+            }
+            const pendentes = snap.docs.filter(d => d.data().status === 'pendente').length;
+            const badge = document.getElementById('badge-pedidos-loja');
+            if (badge) { badge.textContent = pendentes; badge.style.display = pendentes > 0 ? 'block' : 'none'; }
+
+            const statusCor   = { pendente:'#f59e0b', pago:'#3b82f6', entregue:'#10b981', cancelado:'#ef4444' };
+            const statusLabel = { pendente:'⏳ Pendente', pago:'💳 Pago', entregue:'✅ Entregue', cancelado:'❌ Cancelado' };
+            container.innerHTML = snap.docs.map(d => {
+                const o = { id: d.id, ...d.data() };
+                const cor = statusCor[o.status] || '#64748b';
+                return `
+                    <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                            <div>
+                                <div style="font-size:0.75rem; font-weight:800; color:white;">${o.alunoNome}</div>
+                                <div style="font-size:0.65rem; color:#94a3b8; margin-top:2px;">${o.produtoNome}${o.variacao ? ' · ' + o.variacao : ''}</div>
+                                <div style="font-size:0.55rem; color:#64748b; margin-top:2px;">${new Date(o.data).toLocaleDateString('pt-BR')} · #${o.id.slice(-6).toUpperCase()}</div>
+                            </div>
+                            <div style="text-align:right; flex-shrink:0;">
+                                <div style="font-size:0.8rem; font-weight:800; color:#10b981;">R$ ${(o.preco||0).toFixed(2).replace('.', ',')}</div>
+                                <div style="font-size:0.55rem; font-weight:800; color:${cor}; margin-top:4px;">${statusLabel[o.status]||o.status}</div>
+                            </div>
+                        </div>
+                        ${o.status !== 'entregue' && o.status !== 'cancelado' ? `
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            ${o.status === 'pendente' ? `<button onclick="loja.atualizarStatusPedido('${o.id}','pago','${o.produtoId}','${o.variacao||''}')" style="background:#3b82f622; border:1px solid #3b82f6; color:#93c5fd; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">✓ MARCAR PAGO</button>` : ''}
+                            ${o.status === 'pago' ? `<button onclick="loja.atualizarStatusPedido('${o.id}','entregue','${o.produtoId}','${o.variacao||''}')" style="background:#10b98122; border:1px solid #10b981; color:#10b981; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">📦 ENTREGAR</button>` : ''}
+                            <button onclick="loja.atualizarStatusPedido('${o.id}','cancelado','${o.produtoId}','${o.variacao||''}')" style="background:#ef444422; border:1px solid #ef4444; color:#ef4444; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">✕ CANCELAR</button>
+                        </div>` : ''}
+                    </div>`;
+            }).join('');
+        } catch(e) {
+            container.innerHTML = `<small style="color:#ef4444; font-size:0.65rem;">Erro: ${e.message}</small>`;
+        }
+    },
+
+    async atualizarStatusPedido(pedidoId, novoStatus, produtoId, variacaoNome) {
+        try {
+            await db.collection('loja_pedidos').doc(pedidoId).update({ status: novoStatus });
+            // Decrementa estoque ao marcar como PAGO
+            if (novoStatus === 'pago' && produtoId && variacaoNome) {
+                try {
+                    const pd = await db.collection('loja_produtos').doc(produtoId).get();
+                    if (pd.exists) {
+                        const vars = pd.data().variacoes || [];
+                        const idx = vars.findIndex(v => v.nome === variacaoNome);
+                        if (idx >= 0) {
+                            vars[idx].estoque = Math.max(0, (vars[idx].estoque || 0) - 1);
+                            await db.collection('loja_produtos').doc(produtoId).update({ variacoes: vars });
+                        }
+                    }
+                } catch(_) {}
+            }
+            this.renderPedidosAdmin();
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async toggleAtivoProduto(id, ativo) {
+        try {
+            await db.collection('loja_produtos').doc(id).update({ ativo: !ativo });
+            this.renderAdminLoja();
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    // ── MODAL ADD/EDIT PRODUTO (admin) ───────────────────
+    abrirModalProduto(id) {
+        document.getElementById('modal-editar-produto')?.remove();
+        const p = id ? (this._produtos.find(x => x.id === id) || null) : null;
+        this._variacoesTemp = p ? JSON.parse(JSON.stringify(p.variacoes || [])) : [];
+
+        const categorias = ['kimono', 'rashguard', 'camisa', 'boné', 'bandagem', 'protetor', 'luva', 'acessório', 'outro'];
+        const modal = document.createElement('div');
+        modal.id = 'modal-editar-produto';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.98); z-index:10003; overflow-y:auto; padding:20px; box-sizing:border-box;';
+
+        const inp = (lbl, id2, val, type='text', ph='') =>
+            `<div><small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:5px;">${lbl}</small>
+             <input id="${id2}" type="${type}" value="${val||''}" placeholder="${ph}"
+                style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;"></div>`;
+
+        modal.innerHTML = `
+            <div style="max-width:440px; margin:0 auto; padding-bottom:80px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <div style="font-size:0.9rem; font-weight:800; color:white;">${id ? '✏️ EDITAR PRODUTO' : '➕ NOVO PRODUTO'}</div>
+                    <div style="display:flex; gap:8px;">
+                        ${id ? `<button onclick="loja.excluirProduto('${id}')" style="background:#ef444422; border:1px solid #ef4444; color:#ef4444; padding:8px 12px; border-radius:8px; font-size:0.62rem; font-weight:700; cursor:pointer;">🗑 EXCLUIR</button>` : ''}
+                        <button onclick="document.getElementById('modal-editar-produto').remove()" style="background:#334155; border:none; color:white; padding:8px 14px; border-radius:8px; font-size:0.7rem; font-weight:700; cursor:pointer;">✕</button>
+                    </div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    ${inp('NOME DO PRODUTO *', 'prod-nome', p?.nome, 'text', 'Ex: Kimono Gaditas')}
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        ${inp('PREÇO (R$) *', 'prod-preco', p?.preco, 'number', '0,00')}
+                        <div>
+                            <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:5px;">CATEGORIA</small>
+                            <select id="prod-categoria" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.78rem;box-sizing:border-box;">
+                                ${categorias.map(c => `<option value="${c}" ${p?.categoria===c?'selected':''}>${c}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:5px;">DESCRIÇÃO</small>
+                        <textarea id="prod-descricao" rows="3" placeholder="Descreva o produto..." style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.78rem;resize:vertical;box-sizing:border-box;">${p?.descricao||''}</textarea>
+                    </div>
+                    ${inp('URL DA FOTO', 'prod-foto', p?.foto, 'url', 'https://...')}
+                    <div>
+                        ${inp('LINK DE PAGAMENTO', 'prod-link', p?.linkPagamento, 'url', 'https://infinitypay.io/... ou mercadolivre.com.br/...')}
+                        <small style="font-size:0.55rem;color:#475569;margin-top:3px;display:block;">Cole o link do InfinityPay, Mercado Livre, etc.</small>
+                    </div>
+                    <!-- Variações -->
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <small style="font-size:0.6rem;color:#64748b;font-weight:700;">TAMANHOS / VARIAÇÕES (+ ESTOQUE)</small>
+                            <button onclick="loja._adicionarVariacaoTemp()" style="background:#1e3a8a;border:1px solid #3b82f655;color:#93c5fd;padding:5px 10px;border-radius:6px;font-size:0.6rem;font-weight:700;cursor:pointer;">+ ADICIONAR</button>
+                        </div>
+                        <div id="lista-variacoes-temp"></div>
+                        <small style="font-size:0.55rem;color:#475569;display:block;margin-top:4px;">Deixe vazio se o produto tem tamanho único ou sem variações.</small>
+                    </div>
+                    <!-- Opções -->
+                    <div style="display:flex; gap:20px; padding:10px 0;">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                            <input type="checkbox" id="prod-ativo" ${p?.ativo!==false?'checked':''} style="accent-color:#10b981;width:16px;height:16px;">
+                            <span style="font-size:0.7rem;color:#94a3b8;font-weight:700;">ATIVO</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                            <input type="checkbox" id="prod-destaque" ${p?.destaque?'checked':''} style="accent-color:#f59e0b;width:16px;height:16px;">
+                            <span style="font-size:0.7rem;color:#94a3b8;font-weight:700;">⭐ DESTAQUE</span>
+                        </label>
+                    </div>
+                    <button onclick="loja.salvarProduto('${id||''}')" id="btn-salvar-produto"
+                        style="width:100%;padding:14px;background:#10b981;color:white;border:none;border-radius:10px;font-weight:800;font-size:0.85rem;cursor:pointer;">
+                        ${id ? '💾 SALVAR ALTERAÇÕES' : '✅ CRIAR PRODUTO'}
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        this._renderVariacoesTemp();
+    },
+
+    _renderVariacoesTemp() {
+        const container = document.getElementById('lista-variacoes-temp');
+        if (!container) return;
+        if (this._variacoesTemp.length === 0) {
+            container.innerHTML = '<small style="color:#475569;font-size:0.62rem;">Nenhuma variação cadastrada.</small>';
+            return;
+        }
+        container.innerHTML = this._variacoesTemp.map((v, i) => `
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+                <input type="text" value="${v.nome||''}" placeholder="Ex: A1, P, M, G, GG..."
+                    onchange="loja._variacoesTemp[${i}].nome=this.value"
+                    style="flex:1;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:7px;font-size:0.75rem;">
+                <input type="number" value="${v.estoque||0}" min="0" placeholder="Qtd"
+                    onchange="loja._variacoesTemp[${i}].estoque=parseInt(this.value)||0"
+                    style="width:65px;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:7px;font-size:0.75rem;text-align:center;">
+                <button onclick="loja._removerVariacaoTemp(${i})"
+                    style="background:#ef444422;border:1px solid #ef4444;color:#ef4444;width:32px;height:34px;border-radius:7px;cursor:pointer;font-size:0.8rem;flex-shrink:0;">✕</button>
+            </div>`).join('');
+    },
+
+    _adicionarVariacaoTemp() {
+        this._variacoesTemp.push({ nome: '', estoque: 0 });
+        this._renderVariacoesTemp();
+        setTimeout(() => {
+            const inputs = document.querySelectorAll('#lista-variacoes-temp input[type="text"]');
+            if (inputs.length) inputs[inputs.length - 1].focus();
+        }, 50);
+    },
+
+    _removerVariacaoTemp(i) {
+        this._variacoesTemp.splice(i, 1);
+        this._renderVariacoesTemp();
+    },
+
+    async salvarProduto(id) {
+        const nome      = document.getElementById('prod-nome')?.value.trim();
+        const preco     = parseFloat(document.getElementById('prod-preco')?.value);
+        const categoria = document.getElementById('prod-categoria')?.value;
+        const descricao = document.getElementById('prod-descricao')?.value.trim();
+        const foto      = document.getElementById('prod-foto')?.value.trim();
+        const link      = document.getElementById('prod-link')?.value.trim();
+        const ativo     = document.getElementById('prod-ativo')?.checked ?? true;
+        const destaque  = document.getElementById('prod-destaque')?.checked ?? false;
+
+        if (!nome)             { alert('Nome do produto é obrigatório.'); return; }
+        if (isNaN(preco)||preco<=0) { alert('Preço inválido.'); return; }
+
+        const variacoes = this._variacoesTemp.filter(v => v.nome.trim() !== '');
+        const dados = {
+            nome, preco, categoria, descricao: descricao||'',
+            foto: foto||'', linkPagamento: link||'',
+            variacoes, ativo, destaque, ordem: 0,
+            atualizadoEm: new Date().getTime()
+        };
+
+        const btn = document.getElementById('btn-salvar-produto');
+        if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Salvando...'; }
+        try {
+            if (id) {
+                await db.collection('loja_produtos').doc(id).update(dados);
+            } else {
+                dados.criadoEm = new Date().getTime();
+                await db.collection('loja_produtos').add(dados);
+            }
+            document.getElementById('modal-editar-produto')?.remove();
+            this.renderAdminLoja();
+        } catch(e) {
+            if (btn) { btn.disabled = false; btn.innerHTML = id ? '💾 SALVAR ALTERAÇÕES' : '✅ CRIAR PRODUTO'; }
+            alert('Erro ao salvar: ' + e.message);
+        }
+    },
+
+    async excluirProduto(id) {
+        if (!confirm('Excluir este produto permanentemente?')) return;
+        try {
+            await db.collection('loja_produtos').doc(id).delete();
+            document.getElementById('modal-editar-produto')?.remove();
+            document.getElementById('modal-produto-detalhe')?.remove();
+            this.renderAdminLoja();
+        } catch(e) { alert('Erro ao excluir: ' + e.message); }
     }
 };
 

@@ -4783,12 +4783,13 @@ const loja = {
         card.scrollIntoView({ behavior: 'smooth', block: 'start' });
         try {
             const snap = await db.collection('loja_pedidos')
-                .where('alunoId', '==', auth.currentUser.id)
-                .orderBy('data', 'desc').get();
+                .where('alunoId', '==', auth.currentUser.id).get();
             if (snap.empty) {
                 lista.innerHTML = '<small style="color:#475569; font-size:0.65rem;">Você ainda não fez nenhum pedido.</small>';
                 return;
             }
+            // Ordena client-side (evita índice composto no Firestore)
+            snap.docs.sort((a, b) => (b.data().data || 0) - (a.data().data || 0));
             const statusCor   = { pendente:'#f59e0b', pago:'#3b82f6', entregue:'#10b981', cancelado:'#ef4444' };
             const statusLabel = { pendente:'⏳ Pendente', pago:'💳 Pago', entregue:'✅ Entregue', cancelado:'❌ Cancelado' };
             lista.innerHTML = snap.docs.map(d => {
@@ -4822,10 +4823,11 @@ const loja = {
         if (auth.role !== 'aluno') return;
         try {
             const snap = await db.collection('loja_pedidos')
-                .where('alunoId', '==', auth.currentUser.id)
-                .where('status', '==', 'pendente').get();
+                .where('alunoId', '==', auth.currentUser.id).get();
+            // Filtra client-side (evita índice composto)
+            const pendentes = snap.docs.filter(d => d.data().status === 'pendente').length;
             const badge = document.getElementById('badge-meus-pedidos');
-            if (badge && snap.size > 0) { badge.textContent = snap.size; badge.style.display = 'block'; }
+            if (badge && pendentes > 0) { badge.textContent = pendentes; badge.style.display = 'block'; }
         } catch(e) {}
     },
 
@@ -4931,11 +4933,13 @@ const loja = {
         if (!container) return;
         container.innerHTML = '<small style="color:#475569; font-size:0.65rem;">Carregando...</small>';
         try {
-            const snap = await db.collection('loja_pedidos').orderBy('data', 'desc').get();
+            const snap = await db.collection('loja_pedidos').get();
             if (snap.empty) {
                 container.innerHTML = '<div style="text-align:center; padding:20px; color:#475569; font-size:0.7rem;">Nenhum pedido ainda.</div>';
                 return;
             }
+            // Ordena client-side (evita necessidade de índice)
+            snap.docs.sort((a, b) => (b.data().data || 0) - (a.data().data || 0));
             const pendentes = snap.docs.filter(d => d.data().status === 'pendente').length;
             const badge = document.getElementById('badge-pedidos-loja');
             if (badge) { badge.textContent = pendentes; badge.style.display = pendentes > 0 ? 'block' : 'none'; }

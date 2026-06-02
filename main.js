@@ -1588,30 +1588,29 @@ const academia = {
                 </div>`).join('') || "<small style='color:var(--text-muted);'>Nenhum treino em " + nomeMes + ".</small>";
         });
 
-        // ── MUAY THAI ────────────────────────────────────────────────
-        const listasMT = { kids: [], adulto: [] };
+        // ── MUAY THAI — lista única (kids + adulto juntos) ───────────
+        const listaMTGeral = [];
         snap.forEach(doc => {
             const a = doc.data();
             const mod = a.modalidade || 'jiujitsu';
             if (mod !== 'muaythai' && mod !== 'ambos') return;
-            const idade = anoAtual - new Date(a.nascimento).getFullYear();
             const aulasMTMes = aulasDoMes(a.historico, true);
-            const entrada = { ...a, _aulasRanking: aulasMTMes };
-            if (idade <= 14) listasMT.kids.push(entrada);
-            else             listasMT.adulto.push(entrada);
+            const idade = anoAtual - new Date(a.nascimento).getFullYear();
+            const tag = idade <= 14 ? ' <span style="font-size:0.5rem;color:#f59e0b;font-weight:800;background:#1c1400;border:1px solid #f59e0b44;border-radius:4px;padding:1px 5px;margin-left:3px;">KIDS</span>' : '';
+            listaMTGeral.push({ ...a, _aulasRanking: aulasMTMes, _tag: tag });
         });
-        ['kids','adulto'].forEach(id => {
-            const c = document.getElementById(`lista-ranking-mt-${id}`); if (!c) return;
-            const ordenado = listasMT[id].sort((x, y) => y._aulasRanking - x._aulasRanking);
-            c.innerHTML = ordenado.slice(0, 5).map((a, i) => `
+        const cMTG = document.getElementById('lista-ranking-mt-geral');
+        if (cMTG) {
+            const ordenadoMT = listaMTGeral.sort((x, y) => y._aulasRanking - x._aulasRanking);
+            cMTG.innerHTML = ordenadoMT.slice(0, 5).map((a, i) => `
                 <div class="ranking-item">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:0.85rem; font-weight:700;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>
-                        <span style="font-weight:600; color:#cbd5e1; font-size:0.8rem;">${a.nome}</span>
+                    <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:0;">
+                        <span style="font-size:0.85rem; font-weight:700; flex-shrink:0;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>
+                        <span style="font-weight:600; color:#cbd5e1; font-size:0.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}${a._tag}</span>
                     </div>
-                    <div style="text-align:right;"><b style="color:#f43f5e; font-size:0.85rem; font-weight:800;">${a._aulasRanking}</b></div>
-                </div>`).join('') || "<small style='color:var(--text-muted);'>Nenhum treino em " + nomeMes + ".</small>";
-        });
+                    <div style="text-align:right; flex-shrink:0;"><b style="color:#f43f5e; font-size:0.85rem; font-weight:800;">${a._aulasRanking}</b></div>
+                </div>`).join('') || `<small style='color:var(--text-muted);'>Nenhum treino em ${nomeMes}.</small>`;
+        }
     },
 
     async editarAluno(id) {

@@ -9,6 +9,7 @@ const firebaseConfig = {
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const storage = firebase.storage();
 
 const graduacao = {
     regrasAulas: {
@@ -5007,7 +5008,26 @@ const loja = {
                         <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:5px;">DESCRIÇÃO</small>
                         <textarea id="prod-descricao" rows="3" placeholder="Descreva o produto..." style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.78rem;resize:vertical;box-sizing:border-box;">${p?.descricao||''}</textarea>
                     </div>
-                    ${inp('URL DA FOTO', 'prod-foto', p?.foto, 'url', 'https://...')}
+                    <!-- Foto com upload de arquivo -->
+                    <div>
+                        <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:6px;">FOTO DO PRODUTO</small>
+                        <div style="display:flex;gap:10px;align-items:flex-start;">
+                            <div id="prod-foto-preview" style="width:64px;height:64px;background:#0f172a;border:1px solid #334155;border-radius:10px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.8rem;">
+                                ${p?.foto ? `<img src="${p.foto}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='🛒'">` : '🛒'}
+                            </div>
+                            <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+                                <button type="button" onclick="document.getElementById('prod-foto-file').click()"
+                                    style="width:100%;padding:9px;background:#1e3a8a;border:1px solid #3b82f655;color:#93c5fd;border-radius:8px;font-size:0.68rem;font-weight:800;cursor:pointer;">
+                                    📁 BUSCAR ARQUIVO
+                                </button>
+                                <input type="file" id="prod-foto-file" accept="image/*" onchange="loja._uploadFoto(this.files[0])" style="display:none;">
+                                <input id="prod-foto" type="url" value="${p?.foto||''}" placeholder="ou cole a URL: https://..."
+                                    oninput="loja._atualizarPreviewFoto(this.value)"
+                                    style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;box-sizing:border-box;">
+                            </div>
+                        </div>
+                        <div id="prod-foto-status" style="font-size:0.58rem;color:#64748b;margin-top:5px;min-height:14px;"></div>
+                    </div>
                     <div>
                         ${inp('LINK DE PAGAMENTO', 'prod-link', p?.linkPagamento, 'url', 'https://infinitypay.io/... ou mercadolivre.com.br/...')}
                         <small style="font-size:0.55rem;color:#475569;margin-top:3px;display:block;">Cole o link do InfinityPay, Mercado Livre, etc.</small>
@@ -5122,6 +5142,55 @@ const loja = {
             document.getElementById('modal-produto-detalhe')?.remove();
             this.renderAdminLoja();
         } catch(e) { alert('Erro ao excluir: ' + e.message); }
+    },
+
+    // ── UPLOAD DE FOTO ───────────────────────────────────
+    async _uploadFoto(file) {
+        if (!file) return;
+        const status  = document.getElementById('prod-foto-status');
+        const preview = document.getElementById('prod-foto-preview');
+        const urlInput = document.getElementById('prod-foto');
+
+        // Validações
+        if (!file.type.startsWith('image/')) {
+            if (status) status.innerHTML = '<span style="color:#ef4444;">❌ Apenas imagens são aceitas.</span>';
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            if (status) status.innerHTML = '<span style="color:#ef4444;">❌ Arquivo muito grande (máx. 5MB).</span>';
+            return;
+        }
+
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando imagem...</span>';
+
+        // Preview local imediato
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (preview) preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+        };
+        reader.readAsDataURL(file);
+
+        try {
+            const nomeArquivo = 'loja/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const ref = storage.ref(nomeArquivo);
+            const snap = await ref.put(file);
+            const url = await snap.ref.getDownloadURL();
+
+            if (urlInput) urlInput.value = url;
+            if (status) status.innerHTML = '<span style="color:#10b981;">✅ Imagem enviada com sucesso!</span>';
+        } catch(e) {
+            if (status) status.innerHTML = `<span style="color:#ef4444;">❌ Erro no upload: ${e.message}</span>`;
+        }
+    },
+
+    _atualizarPreviewFoto(url) {
+        const preview = document.getElementById('prod-foto-preview');
+        if (!preview) return;
+        if (url && url.startsWith('http')) {
+            preview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='🛒'">`;
+        } else {
+            preview.innerHTML = '🛒';
+        }
     }
 };
 

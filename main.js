@@ -1531,53 +1531,86 @@ const academia = {
 
     async renderRanking() {
         const snap = await db.collection("alunos").get();
-        const ano  = new Date().getFullYear();
+        const agora    = new Date();
+        const anoAtual = agora.getFullYear();
+        const mesAtual = agora.getMonth(); // 0-indexed
 
-        // ── JIU-JITSU (por aulas JJ) ───────────────────────────────
+        const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                        'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        const nomeMes = meses[mesAtual];
+
+        // Atualiza títulos com o mês atual
+        const tJJ = document.getElementById('titulo-ranking-jj');
+        const tMT = document.getElementById('titulo-ranking-mt');
+        if (tJJ) tJJ.innerHTML = `<i class="fas fa-trophy"></i> 🥋 Top 5 Jiu-Jitsu — ${nomeMes}`;
+        if (tMT) tMT.innerHTML = `<i class="fas fa-trophy"></i> 🥊 Top 5 Muay Thai — ${nomeMes}`;
+
+        // ── Helper: conta treinos NO MÊS ATUAL pelo histórico ──────
+        // historico[].data formato: "DD/MM/AAAA, HH:MM:SS" (toLocaleString pt-BR)
+        const aulasDoMes = (historico, isMT) => {
+            if (!historico || !historico.length) return 0;
+            return historico.filter(h => {
+                if (!h.data) return false;
+                // Extrai dia, mês, ano da string "DD/MM/AAAA..."
+                const partes = h.data.split('/');
+                if (partes.length < 3) return false;
+                const mes = parseInt(partes[1]) - 1;         // 0-indexed
+                const ano = parseInt(partes[2]);              // "2026, 15:30" → parseInt pega 2026
+                if (mes !== mesAtual || ano !== anoAtual) return false;
+                // Filtra por modalidade (JJ ou MT)
+                const ehMT = this._isTurmaMT(h.turma || '');
+                return isMT ? ehMT : !ehMT;
+            }).length;
+        };
+
+        // ── JIU-JITSU ────────────────────────────────────────────────
         const listasJJ = { kids1: [], kids2: [], adulto: [] };
         snap.forEach(doc => {
             const a = doc.data();
-            const mod = a.modalidade || 'jiujitsu';
-            if (mod === 'muaythai') return; // só MT puro fica fora do ranking JJ
-            const idade = ano - new Date(a.nascimento).getFullYear();
-            if      (idade <= 8)  listasJJ.kids1.push(a);
-            else if (idade <= 14) listasJJ.kids2.push(a);
-            else                  listasJJ.adulto.push(a);
+            if ((a.modalidade || 'jiujitsu') === 'muaythai') return;
+            const idade = anoAtual - new Date(a.nascimento).getFullYear();
+            const aulasJJMes = aulasDoMes(a.historico, false);
+            const entrada = { ...a, _aulasRanking: aulasJJMes };
+            if      (idade <= 8)  listasJJ.kids1.push(entrada);
+            else if (idade <= 14) listasJJ.kids2.push(entrada);
+            else                  listasJJ.adulto.push(entrada);
         });
         ['kids1','kids2','adulto'].forEach(id => {
-            const c = document.getElementById(`lista-ranking-${id}`); if(!c) return;
-            const ordenado = listasJJ[id].sort((x,y) => (y.aulas||0)-(x.aulas||0));
-            c.innerHTML = ordenado.slice(0,5).map((a,i) => `
+            const c = document.getElementById(`lista-ranking-${id}`); if (!c) return;
+            const ordenado = listasJJ[id].sort((x, y) => y._aulasRanking - x._aulasRanking);
+            c.innerHTML = ordenado.slice(0, 5).map((a, i) => `
                 <div class="ranking-item">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span style="font-size:0.85rem; font-weight:700;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>
                         <span style="font-weight:600; color:#cbd5e1; font-size:0.8rem;">${a.nome}</span>
                     </div>
-                    <div style="text-align:right;"><b style="color:#3b82f6; font-size:0.85rem; font-weight:800;">${a.aulas||0}</b></div>
-                </div>`).join('') || "<small style='color:var(--text-muted);'>Nenhum registro.</small>";
+                    <div style="text-align:right;"><b style="color:#3b82f6; font-size:0.85rem; font-weight:800;">${a._aulasRanking}</b></div>
+                </div>`).join('') || "<small style='color:var(--text-muted);'>Nenhum treino em " + nomeMes + ".</small>";
         });
 
-        // ── MUAY THAI (por aulasMT, apenas modalidade MT ou AMBOS) ─
+        // ── MUAY THAI ────────────────────────────────────────────────
         const listasMT = { kids: [], adulto: [] };
         snap.forEach(doc => {
             const a = doc.data();
             const mod = a.modalidade || 'jiujitsu';
             if (mod !== 'muaythai' && mod !== 'ambos') return;
-            const idade = ano - new Date(a.nascimento).getFullYear();
-            if (idade <= 14) listasMT.kids.push(a);
-            else             listasMT.adulto.push(a);
+            const idade = anoAtual - new Date(a.nascimento).getFullYear();
+            const aulasMTMes = aulasDoMes(a.historico, true);
+            const entrada = { ...a, _aulasRanking: aulasMTMes };
+            if (idade <= 14) listasMT.kids.push(entrada);
+            else             listasMT.adulto.push(entrada);
         });
         ['kids','adulto'].forEach(id => {
-            const c = document.getElementById(`lista-ranking-mt-${id}`); if(!c) return;
-            const ordenado = listasMT[id].sort((x,y) => (y.aulasMT||0)-(x.aulasMT||0));
-            c.innerHTML = ordenado.slice(0,5).map((a,i) => `
+            const c = document.getElementById(`lista-ranking-mt-${id}`); if (!c) return;
+            const ordenado = listasMT[id].sort((x, y) => y._aulasRanking - x._aulasRanking);
+            c.innerHTML = ordenado.slice(0, 5).map((a, i) => `
                 <div class="ranking-item">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span style="font-size:0.85rem; font-weight:700;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>
                         <span style="font-weight:600; color:#cbd5e1; font-size:0.8rem;">${a.nome}</span>
                     </div>
-                    <div style="text-align:right;"><b style="color:#f43f5e; font-size:0.85rem; font-weight:800;">${a.aulasMT||0}</b></div>
-                </div>`).join('') || "<small style='color:var(--text-muted);'>Nenhum registro.</small>";
+                    <div style="text-align:right;"><b style="color:#f43f5e; font-size:0.85rem; font-weight:800;">${a._aulasRanking}</b></div>
+                </div>`).join('') || "<small style='color:var(--text-muted);'>Nenhum treino em " + nomeMes + ".</small>";
         });
     },
 

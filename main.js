@@ -1682,7 +1682,12 @@ const academia = {
                 <div id="candidato-prof-selecionado" class="hidden" style="background:#0f172a; border:1px solid #3b82f6; border-radius:10px; padding:12px; margin-bottom:14px;"></div>
                 <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">TURMAS DE RESPONSABILIDADE:</small>
                 <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:16px; max-height:220px; overflow-y:auto;">
-                    ${[...new Set(Object.values(academia.getGrade()).flat())].filter(t => !t.includes("Sem treinos")).sort().map(t => `
+                    ${[...new Set(
+                        Object.values(academia.getGrade())
+                            .filter(v => Array.isArray(v))
+                            .flat()
+                            .filter(t => typeof t === 'string' && !t.includes("Sem treinos"))
+                    )].sort().map(t => `
                         <label style="display:flex; align-items:center; gap:8px; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px; cursor:pointer; font-size:0.75rem; color:#e2e8f0; font-weight:600;">
                             <input type="checkbox" class="check-turma-prof" value="${t}" style="accent-color:#3b82f6; width:16px; height:16px;"> ${t}
                         </label>`).join('')}
@@ -1703,12 +1708,12 @@ const academia = {
         const lista = document.getElementById('lista-candidatos-prof');
         if (!termo || termo.length < 2) { lista.innerHTML = ''; return; }
 
-        const snap = await db.collection("alunos").orderBy("nome").get();
+        const snap = await db.collection("alunos").get();
         const faixasOk = ['Roxa', 'Marrom', 'Preta'];
         const resultados = snap.docs.filter(doc => {
             const a = doc.data();
-            return a.nome.toLowerCase().includes(termo) && faixasOk.includes(a.faixa);
-        }).slice(0, 5);
+            return a.nome && a.nome.toLowerCase().includes(termo) && faixasOk.includes(a.faixa);
+        }).sort((a, b) => a.data().nome.localeCompare(b.data().nome)).slice(0, 5);
 
         if (resultados.length === 0) {
             lista.innerHTML = `<small style="color:#64748b; font-size:0.75rem; padding:8px; display:block;">Nenhum atleta Roxa/Marrom/Preta encontrado.</small>`;

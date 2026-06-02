@@ -5149,46 +5149,76 @@ const loja = {
     // ── UPLOAD DE FOTO ───────────────────────────────────
     async _uploadFoto(file) {
         if (!file) return;
-        const status  = document.getElementById('prod-foto-status');
-        const preview = document.getElementById('prod-foto-preview');
+        const status   = document.getElementById('prod-foto-status');
+        const preview  = document.getElementById('prod-foto-preview');
         const urlInput = document.getElementById('prod-foto');
 
-        // Validações
         if (!file.type.startsWith('image/')) {
             if (status) status.innerHTML = '<span style="color:#ef4444;">❌ Apenas imagens são aceitas.</span>';
             return;
         }
-        if (file.size > 5 * 1024 * 1024) {
-            if (status) status.innerHTML = '<span style="color:#ef4444;">❌ Arquivo muito grande (máx. 5MB).</span>';
+
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Processando imagem...</span>';
+
+        // 1. Comprime e gera base64 (sempre — serve como preview e fallback)
+        let base64;
+        try {
+            base64 = await this._comprimirImagem(file, 600, 0.82);
+        } catch(e) {
+            if (status) status.innerHTML = '<span style="color:#ef4444;">❌ Erro ao ler imagem.</span>';
             return;
         }
 
-        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando imagem...</span>';
+        // Preview imediato com a versão comprimida
+        if (preview) preview.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;">`;
 
-        // Preview local imediato
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            if (preview) preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
-        };
-        reader.readAsDataURL(file);
-
+        // 2. Tenta Firebase Storage
         try {
+            if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando para o servidor...</span>';
             const nomeArquivo = 'loja/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-            const ref = getStorage().ref(nomeArquivo);
+            const ref  = getStorage().ref(nomeArquivo);
             const snap = await ref.put(file);
-            const url = await snap.ref.getDownloadURL();
-
+            const url  = await snap.ref.getDownloadURL();
             if (urlInput) urlInput.value = url;
-            if (status) status.innerHTML = '<span style="color:#10b981;">✅ Imagem enviada com sucesso!</span>';
-        } catch(e) {
-            if (status) status.innerHTML = `<span style="color:#ef4444;">❌ Erro no upload: ${e.message}</span>`;
+            if (status) status.innerHTML = '<span style="color:#10b981;">✅ Imagem salva no servidor!</span>';
+            return;
+        } catch(storageErr) {
+            console.warn('Firebase Storage falhou, usando base64:', storageErr.message);
         }
+
+        // 3. Fallback: salva base64 comprimida direto no campo
+        if (urlInput) urlInput.value = base64;
+        const kb = Math.round(base64.length * 0.75 / 1024);
+        if (status) status.innerHTML = `<span style="color:#10b981;">✅ Imagem salva localmente (${kb} KB).</span>`;
+    },
+
+    // Comprime imagem usando Canvas → retorna base64 JPEG
+    _comprimirImagem(file, maxLado = 600, qualidade = 0.82) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = reject;
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onerror = reject;
+                img.onload = () => {
+                    const ratio  = Math.min(maxLado / img.width, maxLado / img.height, 1);
+                    const canvas = document.createElement('canvas');
+                    canvas.width  = Math.round(img.width  * ratio);
+                    canvas.height = Math.round(img.height * ratio);
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', qualidade));
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
     },
 
     _atualizarPreviewFoto(url) {
         const preview = document.getElementById('prod-foto-preview');
         if (!preview) return;
-        if (url && url.startsWith('http')) {
+        if (url && (url.startsWith('http') || url.startsWith('data:'))) {
             preview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='🛒'">`;
         } else {
             preview.innerHTML = '🛒';

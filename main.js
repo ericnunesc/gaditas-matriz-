@@ -9,7 +9,9 @@ const firebaseConfig = {
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const storage = firebase.storage();
+// Storage inicializado de forma lazy para não quebrar se o script carregar fora de ordem
+let _storage = null;
+function getStorage() { if (!_storage) _storage = firebase.storage(); return _storage; }
 
 const graduacao = {
     regrasAulas: {
@@ -5172,7 +5174,7 @@ const loja = {
 
         try {
             const nomeArquivo = 'loja/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-            const ref = storage.ref(nomeArquivo);
+            const ref = getStorage().ref(nomeArquivo);
             const snap = await ref.put(file);
             const url = await snap.ref.getDownloadURL();
 

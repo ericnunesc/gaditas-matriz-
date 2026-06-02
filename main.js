@@ -4275,7 +4275,7 @@ const ui = {
         if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); } }
         if(id === 'tab-relatorios') { if(auth.role === 'admin') academia.renderDashboardAdmin(); academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
-        if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') loja.renderAdminLoja(); }
+        if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }
     },
     getCorFaixa(f) {
         if(!f) return "#fff";
@@ -4394,9 +4394,9 @@ const ui = {
         // Card presença visual admin
         const cardPresAdmin = document.getElementById('card-presenca-admin');
         if (cardPresAdmin) cardPresAdmin.style.display = isAdmin ? 'block' : 'none';
-        // Card gestão da loja — só admin
-        const cardLojaAdmin = document.getElementById('card-loja-admin');
-        if (cardLojaAdmin) cardLojaAdmin.style.display = isAdmin ? 'block' : 'none';
+        // Toggle VITRINE/GERENCIAR na aba loja — só admin
+        const lojaToggle = document.getElementById('loja-admin-toggle');
+        if (lojaToggle) lojaToggle.style.display = isAdmin ? 'flex' : 'none';
         // Professor vê o wrapper de perfil (alterar senha, dados)
         const wrapperPerfil = document.getElementById('wrapper-perfil-proprio');
         if (wrapperPerfil && isProf) wrapperPerfil.classList.remove('hidden');
@@ -4827,6 +4827,35 @@ const loja = {
             const badge = document.getElementById('badge-meus-pedidos');
             if (badge && snap.size > 0) { badge.textContent = snap.size; badge.style.display = 'block'; }
         } catch(e) {}
+    },
+
+    // ── ADMIN — MODO VITRINE / GERENCIAR ────────────────
+    _modoAdmin: 'vitrine',
+
+    mudarModoAdmin(modo) {
+        this._modoAdmin = modo;
+        const vitrine   = document.getElementById('loja-painel-vitrine');
+        const gerenciar = document.getElementById('loja-painel-gerenciar');
+        const btnV      = document.getElementById('loja-toggle-vitrine');
+        const btnG      = document.getElementById('loja-toggle-gerenciar');
+
+        if (modo === 'vitrine') {
+            if (vitrine)   vitrine.style.display = 'block';
+            if (gerenciar) gerenciar.style.display = 'none';
+            if (btnV) { btnV.style.background = '#3b82f6'; btnV.style.color = 'white'; }
+            if (btnG) { btnG.style.background = 'transparent'; btnG.style.color = '#64748b'; }
+        } else {
+            if (vitrine)   vitrine.style.display = 'none';
+            if (gerenciar) gerenciar.style.display = 'block';
+            if (btnV) { btnV.style.background = 'transparent'; btnV.style.color = '#64748b'; }
+            if (btnG) { btnG.style.background = '#10b981'; btnG.style.color = 'white'; }
+            this.mostrarTabAdmin(this._abaAdminAtual || 'prods');
+        }
+    },
+
+    _refreshAdmin() {
+        if (this._abaAdminAtual === 'pedidos') this.renderPedidosAdmin();
+        else this.renderAdminLoja();
     },
 
     // ── ADMIN — GESTÃO ───────────────────────────────────

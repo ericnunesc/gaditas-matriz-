@@ -477,27 +477,6 @@
                     <div id="lista-dep-pendentes"></div>
                 </div>
 
-                <!-- ══ GESTÃO DA LOJA (admin) ══ -->
-                <div id="card-loja-admin" style="display:none; background:#1e293b; border:1px solid #10b98144; border-radius:12px; padding:15px; margin-bottom:15px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <span style="font-size:0.8rem; font-weight:800; color:#10b981;">🛒 GESTÃO DA LOJA</span>
-                        <div style="display:flex; gap:6px;">
-                            <button onclick="loja.abrirModalProduto(null)" style="background:#10b981; border:none; color:white; padding:6px 12px; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">+ PRODUTO</button>
-                            <button onclick="loja.renderAdminLoja()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem; font-weight:700;"><i class="fas fa-sync-alt"></i></button>
-                        </div>
-                    </div>
-                    <!-- mini-tabs: Produtos / Pedidos -->
-                    <div style="display:flex; gap:6px; margin-bottom:12px;">
-                        <button id="loja-tab-btn-prods" onclick="loja.mostrarTabAdmin('prods')" style="flex:1; background:#10b981; border:none; color:white; padding:7px; border-radius:7px; font-size:0.62rem; font-weight:800; cursor:pointer;">📦 PRODUTOS</button>
-                        <button id="loja-tab-btn-pedidos" onclick="loja.mostrarTabAdmin('pedidos')" style="flex:1; background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:7px; border-radius:7px; font-size:0.62rem; font-weight:800; cursor:pointer; position:relative;">
-                            🛍️ PEDIDOS
-                            <span id="badge-pedidos-loja" style="display:none; position:absolute; top:-5px; right:-5px; background:#f59e0b; color:#000; border-radius:10px; padding:0 5px; font-size:0.5rem; font-weight:800;"></span>
-                        </button>
-                    </div>
-                    <div id="loja-admin-prods"><small style="color:#475569; font-size:0.65rem;">Clique em atualizar para carregar.</small></div>
-                    <div id="loja-admin-pedidos" style="display:none;"></div>
-                </div>
-
                 <!-- ═══ SEÇÃO: PROFESSOR ═══ -->
                 <div id="gestao-header-professor" style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6; border-radius: 0 10px 10px 0; padding: 10px 14px; margin: 0 0 14px 0; display:flex; align-items:center; gap:10px;">
                     <i class="fas fa-chalkboard-teacher" style="color:#8b5cf6; font-size:1rem;"></i>
@@ -746,30 +725,63 @@
             <!-- ══════════════════════════════════════════════ -->
             <div id="tab-loja" class="tab-content hidden" style="padding:15px 15px 90px;">
 
-                <!-- Header -->
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <!-- Header com toggle admin -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                     <div>
                         <div style="font-size:0.55rem; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Gaditas Matriz</div>
                         <div style="font-size:1rem; font-weight:800; color:white;">🛒 LOJA</div>
                     </div>
+                    <!-- Botão meus pedidos (alunos) -->
                     <button id="btn-ver-meus-pedidos" onclick="loja.verMeusPedidos()" style="display:none; background:#1e3a8a; border:1px solid #3b82f655; color:#93c5fd; padding:8px 13px; border-radius:8px; font-size:0.62rem; font-weight:700; cursor:pointer; position:relative;">
                         📦 MEUS PEDIDOS
                         <span id="badge-meus-pedidos" style="display:none; position:absolute; top:-5px; right:-5px; background:#f59e0b; color:#000; border-radius:10px; padding:0 5px; font-size:0.5rem; font-weight:800;"></span>
                     </button>
                 </div>
 
-                <!-- Filtros de categoria -->
-                <div id="loja-filtros" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:14px; scrollbar-width:none; -webkit-overflow-scrolling:touch;"></div>
-
-                <!-- Grid de produtos -->
-                <div id="loja-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                    <div style="grid-column:1/-1; text-align:center; padding:40px; color:#475569; font-size:0.75rem;">Carregando loja...</div>
+                <!-- Toggle VITRINE / GERENCIAR (só admin) -->
+                <div id="loja-admin-toggle" style="display:none; background:#0f172a; border:1px solid #334155; border-radius:10px; padding:4px; display:none; gap:4px; margin-bottom:14px;">
+                    <button id="loja-toggle-vitrine" onclick="loja.mudarModoAdmin('vitrine')"
+                        style="flex:1; padding:9px; background:#3b82f6; border:none; color:white; border-radius:7px; font-size:0.68rem; font-weight:800; cursor:pointer;">
+                        🛒 VITRINE
+                    </button>
+                    <button id="loja-toggle-gerenciar" onclick="loja.mudarModoAdmin('gerenciar')"
+                        style="flex:1; padding:9px; background:transparent; border:none; color:#64748b; border-radius:7px; font-size:0.68rem; font-weight:800; cursor:pointer; position:relative;">
+                        ⚙️ GERENCIAR
+                        <span id="badge-pedidos-loja" style="display:none; position:absolute; top:-4px; right:4px; background:#f59e0b; color:#000; border-radius:10px; padding:0 5px; font-size:0.5rem; font-weight:800;"></span>
+                    </button>
                 </div>
 
-                <!-- Meus pedidos (collapsível) -->
-                <div id="loja-meus-pedidos" style="display:none; margin-top:16px; background:#1e293b; border:1px solid #334155; border-radius:12px; padding:15px;">
-                    <div style="font-size:0.8rem; font-weight:800; color:white; margin-bottom:12px;">📦 MEUS PEDIDOS</div>
-                    <div id="loja-lista-meus-pedidos"><small style="color:#475569; font-size:0.65rem;">Carregando...</small></div>
+                <!-- ── VITRINE ── -->
+                <div id="loja-painel-vitrine">
+                    <!-- Filtros de categoria -->
+                    <div id="loja-filtros" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:14px; scrollbar-width:none; -webkit-overflow-scrolling:touch;"></div>
+                    <!-- Grid de produtos -->
+                    <div id="loja-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div style="grid-column:1/-1; text-align:center; padding:40px; color:#475569; font-size:0.75rem;">Carregando loja...</div>
+                    </div>
+                    <!-- Meus pedidos (collapsível — alunos) -->
+                    <div id="loja-meus-pedidos" style="display:none; margin-top:16px; background:#1e293b; border:1px solid #334155; border-radius:12px; padding:15px;">
+                        <div style="font-size:0.8rem; font-weight:800; color:white; margin-bottom:12px;">📦 MEUS PEDIDOS</div>
+                        <div id="loja-lista-meus-pedidos"><small style="color:#475569; font-size:0.65rem;">Carregando...</small></div>
+                    </div>
+                </div>
+
+                <!-- ── GERENCIAR (admin) ── -->
+                <div id="loja-painel-gerenciar" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="font-size:0.75rem; font-weight:800; color:#10b981;">⚙️ GERENCIAR LOJA</span>
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="loja.abrirModalProduto(null)" style="background:#10b981; border:none; color:white; padding:7px 14px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">+ PRODUTO</button>
+                            <button onclick="loja._refreshAdmin()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.8rem;"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </div>
+                    <!-- sub-tabs: Produtos / Pedidos -->
+                    <div style="display:flex; gap:6px; margin-bottom:12px;">
+                        <button id="loja-tab-btn-prods" onclick="loja.mostrarTabAdmin('prods')" style="flex:1; background:#10b981; border:none; color:white; padding:8px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">📦 PRODUTOS</button>
+                        <button id="loja-tab-btn-pedidos" onclick="loja.mostrarTabAdmin('pedidos')" style="flex:1; background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:8px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🛍️ PEDIDOS</button>
+                    </div>
+                    <div id="loja-admin-prods"><small style="color:#475569; font-size:0.65rem;">Carregando...</small></div>
+                    <div id="loja-admin-pedidos" style="display:none;"></div>
                 </div>
 
             </div>
@@ -794,8 +806,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-    <script src="main.js?v=20260602a"></script>
-    <script src="filtros-academia.js?v=20260602a"></script>
+    <script src="main.js?v=20260602b"></script>
+    <script src="filtros-academia.js?v=20260602b"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>
     <script>

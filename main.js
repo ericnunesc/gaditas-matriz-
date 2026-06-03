@@ -1148,6 +1148,19 @@ const academia = {
         const r = db.collection("alunos").doc(aId); const doc = await r.get();
         if(doc.exists) {
             const d = doc.data(); const h = d.historico || [];
+
+            // Bloqueia duplicata: se já tem presença nessa turma hoje (ex: aprovado via QR)
+            const hoje = new Date().toLocaleDateString('pt-BR');
+            const jaTemHoje = h.some(entry => entry.turma === t && entry.data && entry.data.startsWith(hoje));
+
+            if (jaTemHoje) {
+                // Já tem presença via QR — só exclui o checkin pendente, não contabiliza de novo
+                await db.collection("checkins").doc(cId).delete();
+                this.renderCheckins();
+                alert(`⚠️ Presença de ${d.nome} na turma "${t}" já estava registrada hoje (via QR Code).\n\nCheck-in removido da fila sem duplicar.`);
+                return;
+            }
+
             h.unshift({ data: new Date().toLocaleString('pt-BR'), turma: t });
             const isMT = this._isTurmaMT(t);
             const upd = { historico: h };
@@ -1155,7 +1168,8 @@ const academia = {
             else       upd.aulas   = (d.aulas   || 0) + 1;
             await r.update(upd);
         }
-        await db.collection("checkins").doc(cId).delete(); this.renderCheckins(); academia.renderRanking(); academia.carregarConquistas();
+        await db.collection("checkins").doc(cId).delete();
+        this.renderCheckins(); academia.renderRanking(); academia.carregarConquistas();
     },
 
     async recusarCheckin(cId) { if(confirm("Remover?")) { await db.collection("checkins").doc(cId).delete(); this.renderCheckins(); } },
@@ -1517,12 +1531,22 @@ const academia = {
         }
         // Verifica duplicata — mesmo aluno, mesma turma, mesmo dia
         try {
+            // 1) Verifica checkin pendente na fila
             const snapCI = await db.collection("checkins")
                 .where("alunoId", "==", auth.currentUser.id)
                 .where("turma", "==", t).get();
             const inicioHoje = new Date(); inicioHoje.setHours(0,0,0,0);
-            const jaMandou = snapCI.docs.some(d => d.data().data >= inicioHoje.getTime());
-            if (jaMandou) return alert("⚠️ Você já enviou check-in para esta turma hoje! OSS!");
+            const jaPendente = snapCI.docs.some(d => d.data().data >= inicioHoje.getTime());
+            if (jaPendente) return alert("⚠️ Você já enviou check-in para esta turma hoje! OSS!");
+
+            // 2) Verifica se já foi aprovado hoje (via QR ou aprovação anterior) no histórico
+            const alunoDoc = await db.collection("alunos").doc(auth.currentUser.id).get();
+            if (alunoDoc.exists) {
+                const hoje = new Date().toLocaleDateString('pt-BR');
+                const jaNoHistorico = (alunoDoc.data().historico || [])
+                    .some(h => h.turma === t && h.data && h.data.startsWith(hoje));
+                if (jaNoHistorico) return alert("✅ Sua presença nesta turma já está registrada hoje! OSS!");
+            }
         } catch(e) { console.warn("Verificação duplicado falhou:", e.message); }
 
         await db.collection("checkins").add({ alunoId: auth.currentUser.id, alunoNome: auth.currentUser.nome, turma: t, data: new Date().getTime() });

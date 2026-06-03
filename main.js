@@ -4986,10 +4986,12 @@ const loja = {
             container.innerHTML = snap.docs.map(d => {
                 const o = { id: d.id, ...d.data() };
                 const cor = statusCor[o.status] || '#64748b';
+                const pid = o.produtoId || '';
+                const vari = (o.variacao || '').replace(/'/g, "\\'");
                 return `
                     <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:8px;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-                            <div>
+                            <div style="flex:1; min-width:0; margin-right:8px;">
                                 <div style="font-size:0.75rem; font-weight:800; color:white;">${o.alunoNome}</div>
                                 <div style="font-size:0.65rem; color:#94a3b8; margin-top:2px;">${o.produtoNome}${o.variacao ? ' · ' + o.variacao : ''}</div>
                                 <div style="font-size:0.55rem; color:#64748b; margin-top:2px;">${new Date(o.data).toLocaleDateString('pt-BR')} · #${o.id.slice(-6).toUpperCase()}</div>
@@ -4999,12 +5001,25 @@ const loja = {
                                 <div style="font-size:0.55rem; font-weight:800; color:${cor}; margin-top:4px;">${statusLabel[o.status]||o.status}</div>
                             </div>
                         </div>
-                        ${o.status !== 'entregue' && o.status !== 'cancelado' ? `
-                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                            ${o.status === 'pendente' ? `<button onclick="loja.atualizarStatusPedido('${o.id}','pago','${o.produtoId}','${o.variacao||''}')" style="background:#3b82f622; border:1px solid #3b82f6; color:#93c5fd; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">✓ MARCAR PAGO</button>` : ''}
-                            ${o.status === 'pago' ? `<button onclick="loja.atualizarStatusPedido('${o.id}','entregue','${o.produtoId}','${o.variacao||''}')" style="background:#10b98122; border:1px solid #10b981; color:#10b981; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">📦 ENTREGAR</button>` : ''}
-                            <button onclick="loja.atualizarStatusPedido('${o.id}','cancelado','${o.produtoId}','${o.variacao||''}')" style="background:#ef444422; border:1px solid #ef4444; color:#ef4444; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">✕ CANCELAR</button>
-                        </div>` : ''}
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                            ${o.status === 'pendente' ? `
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','pago','${pid}','${vari}')" style="background:#3b82f622; border:1px solid #3b82f6; color:#93c5fd; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">✓ MARCAR PAGO</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','cancelado','${pid}','${vari}')" style="background:#ef444422; border:1px solid #ef4444; color:#ef4444; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">✕ CANCELAR</button>
+                            ` : ''}
+                            ${o.status === 'pago' ? `
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','entregue','${pid}','${vari}')" style="background:#10b98122; border:1px solid #10b981; color:#10b981; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">📦 ENTREGAR</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','pendente','${pid}','${vari}')" style="background:#f59e0b22; border:1px solid #f59e0b; color:#f59e0b; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">↩ DESFAZER PAGTO</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','cancelado','${pid}','${vari}')" style="background:#ef444422; border:1px solid #ef4444; color:#ef4444; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">✕ CANCELAR</button>
+                            ` : ''}
+                            ${o.status === 'entregue' ? `
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','pago','${pid}','${vari}')" style="background:#f59e0b22; border:1px solid #f59e0b; color:#f59e0b; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">↩ DESFAZER ENTREGA</button>
+                            ` : ''}
+                            ${o.status === 'cancelado' ? `
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','pendente','${pid}','${vari}')" style="background:#3b82f622; border:1px solid #3b82f6; color:#93c5fd; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">↩ REATIVAR</button>
+                            ` : ''}
+                            <!-- Excluir sempre disponível -->
+                            <button onclick="loja.excluirPedido('${o.id}','${o.status}','${pid}','${vari}')" style="background:none; border:1px solid #475569; color:#64748b; padding:5px 8px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer; margin-left:auto;">🗑</button>
+                        </div>
                     </div>`;
             }).join('');
         } catch(e) {
@@ -5014,23 +5029,55 @@ const loja = {
 
     async atualizarStatusPedido(pedidoId, novoStatus, produtoId, variacaoNome) {
         try {
+            // Busca status atual antes de atualizar
+            const pedidoDoc = await db.collection('loja_pedidos').doc(pedidoId).get();
+            const statusAtual = pedidoDoc.exists ? pedidoDoc.data().status : null;
+
             await db.collection('loja_pedidos').doc(pedidoId).update({ status: novoStatus });
-            // Decrementa estoque ao marcar como PAGO
-            if (novoStatus === 'pago' && produtoId && variacaoNome) {
-                try {
-                    const pd = await db.collection('loja_produtos').doc(produtoId).get();
-                    if (pd.exists) {
-                        const vars = pd.data().variacoes || [];
-                        const idx = vars.findIndex(v => v.nome === variacaoNome);
-                        if (idx >= 0) {
-                            vars[idx].estoque = Math.max(0, (vars[idx].estoque || 0) - 1);
-                            await db.collection('loja_produtos').doc(produtoId).update({ variacoes: vars });
-                        }
-                    }
-                } catch(_) {}
+
+            // ── Lógica de estoque ────────────────────────────────
+            // pendente → pago        : -1 (reserva o item)
+            // pago     → pendente    : +1 (desfaz reserva)
+            // pago     → cancelado   : +1 (devolve ao estoque)
+            // entregue → pago        : sem mudança (item continua reservado)
+            // cancelado→ pendente    : sem mudança (não havia reserva)
+            let deltaEstoque = 0;
+            if (statusAtual === 'pendente' && novoStatus === 'pago')     deltaEstoque = -1;
+            if (statusAtual === 'pago'     && novoStatus === 'pendente') deltaEstoque = +1;
+            if (statusAtual === 'pago'     && novoStatus === 'cancelado')deltaEstoque = +1;
+
+            if (deltaEstoque !== 0 && produtoId && variacaoNome) {
+                await this._ajustarEstoque(produtoId, variacaoNome, deltaEstoque);
             }
+
             this.renderPedidosAdmin();
         } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async excluirPedido(pedidoId, statusAtual, produtoId, variacaoNome) {
+        if (!confirm('Excluir este pedido permanentemente?\n\nSe o status era PAGO ou ENTREGUE, o estoque será devolvido automaticamente.')) return;
+        try {
+            // Devolve estoque se o item estava reservado
+            const deveDevolver = statusAtual === 'pago' || statusAtual === 'entregue';
+            if (deveDevolver && produtoId && variacaoNome) {
+                await this._ajustarEstoque(produtoId, variacaoNome, +1);
+            }
+            await db.collection('loja_pedidos').doc(pedidoId).delete();
+            this.renderPedidosAdmin();
+        } catch(e) { alert('Erro ao excluir: ' + e.message); }
+    },
+
+    async _ajustarEstoque(produtoId, variacaoNome, delta) {
+        try {
+            const pd = await db.collection('loja_produtos').doc(produtoId).get();
+            if (!pd.exists) return;
+            const vars = pd.data().variacoes || [];
+            const idx = vars.findIndex(v => v.nome === variacaoNome);
+            if (idx >= 0) {
+                vars[idx].estoque = Math.max(0, (vars[idx].estoque || 0) + delta);
+                await db.collection('loja_produtos').doc(produtoId).update({ variacoes: vars });
+            }
+        } catch(_) {}
     },
 
     async toggleAtivoProduto(id, ativo) {

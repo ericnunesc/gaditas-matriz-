@@ -1504,26 +1504,25 @@ const academia = {
         const nascimento = auth.currentUser?.nascimento;
         if (nascimento) {
             const idade = anoAtual - new Date(nascimento).getFullYear();
-            const isKids        = idade <= 13;
-            const isIntermediario = idade === 14 || idade === 15; // 14-15 anos: livre em qualquer turma
-            const turmaKids     = this._isTurmaKids(t);
-            const turmaMT       = this._isTurmaMT(t);
-            const alunoMod      = auth.currentUser?.modalidade || 'jiujitsu';
+            const isKids          = idade <= 13;
+            const isIntermediario = idade === 14 || idade === 15;
+            const turmaKids       = this._isTurmaKids(t);
+            const turmaMT         = this._isTurmaMT(t);
+            const alunoMod        = auth.currentUser?.modalidade || 'jiujitsu';
+            const ehAlunoMT       = alunoMod === 'muaythai' || alunoMod === 'ambos';
 
-            if (isIntermediario) {
-                // 14 e 15 anos: sem restrição de faixa etária
+            if (turmaMT && ehAlunoMT) {
+                // Aluno de Muay Thai + turma MT → LIVRE em qualquer idade
+            } else if (isIntermediario) {
+                // 14-15 anos → livre em qualquer turma
             } else if (!isKids && turmaKids) {
-                // Adulto (>15 anos) não pode entrar em turma infantil/kids
+                // Adulto (>15 anos) bloqueado em turma infantil
                 alert("🚫 Esta turma é exclusiva para alunos até 13 anos.");
                 return;
             } else if (isKids && !turmaKids) {
-                // Criança (≤13 anos) não pode fazer check-in em turma adulto
-                if (turmaMT && (alunoMod === 'muaythai' || alunoMod === 'ambos')) {
-                    // Exceção: kids MT liberado em turmas MT
-                } else {
-                    alert("🚫 Alunos até 13 anos não podem fazer check-in nas turmas adulto.");
-                    return;
-                }
+                // Criança (≤13 anos) bloqueada em turma adulto
+                alert("🚫 Alunos até 13 anos não podem fazer check-in nas turmas adulto.");
+                return;
             }
         }
         // Verifica se matrícula está trancada (leitura direta no Firestore)
@@ -3706,19 +3705,18 @@ Ele voltará a ser aluno normal.`)) return;
                 const turmaKids       = this._isTurmaKids(turmaQR);
                 const turmaMT         = this._isTurmaMT(turmaQR);
                 const alunoMod        = d.modalidade || 'jiujitsu';
+                const ehAlunoMT       = alunoMod === 'muaythai' || alunoMod === 'ambos';
 
-                if (isIntermediario) {
-                    // 14 e 15 anos: sem restrição
+                if (turmaMT && ehAlunoMT) {
+                    // Aluno MT + turma MT → livre em qualquer idade
+                } else if (isIntermediario) {
+                    // 14-15 anos → livre em qualquer turma
                 } else if (!isKids && turmaKids) {
                     alert("🚫 Esta turma é exclusiva para alunos até 13 anos.");
                     return;
                 } else if (isKids && !turmaKids) {
-                    if (turmaMT && (alunoMod === 'muaythai' || alunoMod === 'ambos')) {
-                        // Kids MT liberado
-                    } else {
-                        alert("🚫 Alunos até 13 anos não podem fazer check-in nas turmas adulto.");
-                        return;
-                    }
+                    alert("🚫 Alunos até 13 anos não podem fazer check-in nas turmas adulto.");
+                    return;
                 }
             }
 

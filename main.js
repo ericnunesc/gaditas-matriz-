@@ -994,7 +994,7 @@ const academia = {
             const nomeAtleta = a.nome ? a.nome.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") : "";
             const buscaNorm = this.textoBuscaNome.normalize("NFD").replace(/[̀-ͯ]/g, "");
             const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
-            const isKids = idade <= 14;
+            const isKids = idade <= 13;
             if (buscaNorm !== "" && !nomeAtleta.includes(buscaNorm)) return;
             if (this.categoriaFiltroAtual === "adult" && isKids) return;
             if (this.categoriaFiltroAtual === "kids" && !isKids) return;
@@ -1090,7 +1090,7 @@ const academia = {
             const a = doc.data();
             const nomeAtleta = a.nome ? a.nome.toLowerCase() : "";
             const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
-            const isKids = idade <= 14;
+            const isKids = idade <= 13;
             if (this.textoBuscaNome !== "" && !nomeAtleta.includes(this.textoBuscaNome)) return false;
             if (this.categoriaFiltroAtual === "adult" && isKids) return false;
             if (this.categoriaFiltroAtual === "kids" && !isKids) return false;

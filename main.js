@@ -1504,20 +1504,22 @@ const academia = {
         const nascimento = auth.currentUser?.nascimento;
         if (nascimento) {
             const idade = anoAtual - new Date(nascimento).getFullYear();
-            const isKids    = idade <= 13;
-            const turmaKids = this._isTurmaKids(t);
-            const turmaMT   = this._isTurmaMT(t);
-            const alunoMod  = auth.currentUser?.modalidade || 'jiujitsu';
-            // Adulto (>13 anos) não pode entrar em turma infantil/kids
-            if (!isKids && turmaKids) {
+            const isKids        = idade <= 13;
+            const isIntermediario = idade === 14 || idade === 15; // 14-15 anos: livre em qualquer turma
+            const turmaKids     = this._isTurmaKids(t);
+            const turmaMT       = this._isTurmaMT(t);
+            const alunoMod      = auth.currentUser?.modalidade || 'jiujitsu';
+
+            if (isIntermediario) {
+                // 14 e 15 anos: sem restrição de faixa etária
+            } else if (!isKids && turmaKids) {
+                // Adulto (>15 anos) não pode entrar em turma infantil/kids
                 alert("🚫 Esta turma é exclusiva para alunos até 13 anos.");
                 return;
-            }
-            // Criança (≤13 anos) não pode fazer check-in em turma adulto
-            if (isKids && !turmaKids) {
-                // Exceção: kids de Muay Thai podem entrar em turmas MT
+            } else if (isKids && !turmaKids) {
+                // Criança (≤13 anos) não pode fazer check-in em turma adulto
                 if (turmaMT && (alunoMod === 'muaythai' || alunoMod === 'ambos')) {
-                    // Liberado
+                    // Exceção: kids MT liberado em turmas MT
                 } else {
                     alert("🚫 Alunos até 13 anos não podem fazer check-in nas turmas adulto.");
                     return;
@@ -3699,17 +3701,20 @@ Ele voltará a ser aluno normal.`)) return;
             // Bloqueia adulto em turma kids e vice-versa
             if (d.nascimento) {
                 const idade = new Date().getFullYear() - new Date(d.nascimento).getFullYear();
-                const isKids    = idade <= 13;
-                const turmaKids = this._isTurmaKids(turmaQR);
-                const turmaMT   = this._isTurmaMT(turmaQR);
-                const alunoMod  = d.modalidade || 'jiujitsu';
-                if (!isKids && turmaKids) {
+                const isKids          = idade <= 13;
+                const isIntermediario = idade === 14 || idade === 15;
+                const turmaKids       = this._isTurmaKids(turmaQR);
+                const turmaMT         = this._isTurmaMT(turmaQR);
+                const alunoMod        = d.modalidade || 'jiujitsu';
+
+                if (isIntermediario) {
+                    // 14 e 15 anos: sem restrição
+                } else if (!isKids && turmaKids) {
                     alert("🚫 Esta turma é exclusiva para alunos até 13 anos.");
                     return;
-                }
-                if (isKids && !turmaKids) {
+                } else if (isKids && !turmaKids) {
                     if (turmaMT && (alunoMod === 'muaythai' || alunoMod === 'ambos')) {
-                        // Kids MT liberado em turmas MT
+                        // Kids MT liberado
                     } else {
                         alert("🚫 Alunos até 13 anos não podem fazer check-in nas turmas adulto.");
                         return;

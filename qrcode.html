@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaditas — QR Code Check-in</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #020617;
+            color: white;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── HEADER ── */
+        header {
+            background: #0f172a;
+            border-bottom: 1px solid #1e3a8a44;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .header-logo { display: flex; align-items: center; gap: 12px; }
+        .header-logo img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; }
+        .header-title { font-size: 1rem; font-weight: 800; color: white; }
+        .header-sub { font-size: 0.62rem; color: #64748b; font-weight: 600; margin-top: 1px; }
+        .header-clock {
+            text-align: right;
+        }
+        .clock-time {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #3b82f6;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 2px;
+        }
+        .clock-date {
+            font-size: 0.62rem;
+            color: #64748b;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* ── MAIN ── */
+        main {
+            flex: 1;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* ── STATUS BAR ── */
+        .status-bar {
+            width: 100%;
+            max-width: 900px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .status-label { font-size: 0.65rem; color: #64748b; font-weight: 700; }
+        .status-value { font-size: 0.75rem; color: white; font-weight: 700; margin-top: 2px; }
+        .refresh-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 7px 14px;
+            border-radius: 7px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .refresh-btn:hover { border-color: #3b82f6; color: #93c5fd; }
+        #countdown { color: #f59e0b; }
+
+        /* ── GRADE CONTAINER ── */
+        #qr-container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        /* ── QR CARD ── */
+        .qr-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px 18px;
+            text-align: center;
+            width: 240px;
+            flex-shrink: 0;
+            position: relative;
+            box-shadow: 0 0 30px rgba(59,130,246,0.15);
+            border: 2px solid transparent;
+            animation: pulseCard 2s infinite;
+        }
+        @keyframes pulseCard {
+            0%, 100% { box-shadow: 0 0 20px rgba(59,130,246,0.1); }
+            50%       { box-shadow: 0 0 40px rgba(59,130,246,0.3); }
+        }
+        .qr-card-badge {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #3b82f6;
+            color: white;
+            font-size: 0.5rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .qr-card-turma {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 14px;
+            line-height: 1.4;
+        }
+        .qr-card-img {
+            display: block;
+            margin: 0 auto;
+            border-radius: 8px;
+            width: 200px;
+            height: 200px;
+        }
+        .qr-card-footer {
+            font-size: 0.45rem;
+            color: #94a3b8;
+            margin-top: 10px;
+            line-height: 1.6;
+        }
+        .qr-card-window {
+            font-size: 0.5rem;
+            font-weight: 700;
+            color: #10b981;
+            margin-top: 6px;
+            background: #f0fdf4;
+            border-radius: 6px;
+            padding: 3px 8px;
+        }
+
+        /* ── VAZIO ── */
+        #msg-vazio {
+            display: none;
+            text-align: center;
+            padding: 60px 20px;
+        }
+        #msg-vazio .icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.4; }
+        #msg-vazio .titulo { font-size: 1.2rem; font-weight: 800; color: #475569; margin-bottom: 8px; }
+        #msg-vazio .sub { font-size: 0.8rem; color: #334155; }
+
+        /* ── LOADING ── */
+        #msg-loading { text-align: center; padding: 60px 20px; color: #475569; font-size: 0.85rem; }
+
+        /* ── FOOTER ── */
+        footer {
+            background: #0f172a;
+            border-top: 1px solid #1e293b;
+            padding: 10px 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+        .footer-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+        .footer-text { font-size: 0.6rem; color: #475569; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-logo">
+        <img src="foto_gaditas.png" onerror="this.style.display='none'" alt="Logo">
+        <div>
+            <div class="header-title">🥋 Gaditas Matriz</div>
+            <div class="header-sub">QR CODE — CHECK-IN AO VIVO</div>
+        </div>
+    </div>
+    <div class="header-clock">
+        <div class="clock-time" id="clock">--:--</div>
+        <div class="clock-date" id="clock-date">---</div>
+    </div>
+</header>
+
+<main>
+    <div class="status-bar">
+        <div>
+            <div class="status-label">TURMAS ATIVAS AGORA</div>
+            <div class="status-value" id="status-turmas">Carregando...</div>
+        </div>
+        <div>
+            <div class="status-label">JANELA DE CHECK-IN</div>
+            <div class="status-value">15 min antes · 15 min após o término</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <span style="font-size:0.6rem; color:#475569;">Próx. atualização: <span id="countdown">30s</span></span>
+            <button class="refresh-btn" onclick="atualizar()"><i class="fas fa-sync-alt"></i> ATUALIZAR</button>
+        </div>
+    </div>
+
+    <div id="msg-loading"><i class="fas fa-spinner fa-spin"></i> Carregando grade...</div>
+    <div id="msg-vazio">
+        <div class="icon">🕐</div>
+        <div class="titulo">Nenhuma turma ativa agora</div>
+        <div class="sub" id="msg-proxima">A página atualiza automaticamente quando uma turma estiver dentro da janela de horário.</div>
+    </div>
+    <div id="qr-container"></div>
+</main>
+
+<footer>
+    <div class="footer-dot"></div>
+    <span class="footer-text">Gaditas Matriz · Alunos escaneiem com a câmera ou pelo botão no app</span>
+    <div class="footer-dot"></div>
+</footer>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script>
+// ── CONFIG FIREBASE ──────────────────────────────────────────
+const firebaseConfig = {
+    apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+    authDomain: "gaditasmatriz.firebaseapp.com",
+    projectId: "gaditasmatriz",
+    storageBucket: "gaditasmatriz.firebasestorage.app",
+    messagingSenderId: "166834416988",
+    appId: "1:166834416988:web:2921c95c87c42019282599"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ── ESTADO ───────────────────────────────────────────────────
+let gradeFirebase  = null;
+let countdownSecs  = 30;
+let countdownTimer = null;
+
+const diasSemana = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+const diasAbrev  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const meses      = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+// ── RELÓGIO ──────────────────────────────────────────────────
+function atualizarRelogio() {
+    const agora = new Date();
+    const h  = String(agora.getHours()).padStart(2,'0');
+    const m  = String(agora.getMinutes()).padStart(2,'0');
+    const s  = String(agora.getSeconds()).padStart(2,'0');
+    document.getElementById('clock').textContent = h + ':' + m;
+    const diaNome = diasSemana[agora.getDay()];
+    const dia  = String(agora.getDate()).padStart(2,'0');
+    const mes  = meses[agora.getMonth()];
+    const ano  = agora.getFullYear();
+    document.getElementById('clock-date').textContent = diaNome + ', ' + dia + ' ' + mes + ' ' + ano;
+}
+setInterval(atualizarRelogio, 1000);
+atualizarRelogio();
+
+// ── COUNTDOWN ────────────────────────────────────────────────
+function iniciarCountdown() {
+    clearInterval(countdownTimer);
+    countdownSecs = 30;
+    countdownTimer = setInterval(() => {
+        countdownSecs--;
+        const el = document.getElementById('countdown');
+        if (el) el.textContent = countdownSecs + 's';
+        if (countdownSecs <= 0) {
+            atualizar();
+        }
+    }, 1000);
+}
+
+// ── LÓGICA DE JANELA ─────────────────────────────────────────
+function estaAtivo(slot, duracoes, duracaoAula) {
+    const match = slot.match(/^(\d{2}):(\d{2})/);
+    if (!match) return true; // sem horário no nome = sempre ativo
+    const agora = new Date();
+    const minAgora = agora.getHours() * 60 + agora.getMinutes();
+    const minInicio = parseInt(match[1]) * 60 + parseInt(match[2]);
+    const duracao = (duracoes && duracoes[slot]) || duracaoAula || 90;
+    const minFim  = minInicio + duracao;
+    return minAgora >= (minInicio - 15) && minAgora <= (minFim + 15);
+}
+
+function formatarJanela(slot, duracoes, duracaoAula) {
+    const match = slot.match(/^(\d{2}):(\d{2})/);
+    if (!match) return '';
+    const minInicio = parseInt(match[1]) * 60 + parseInt(match[2]);
+    const duracao = (duracoes && duracoes[slot]) || duracaoAula || 90;
+    const minFim  = minInicio + duracao;
+    const fmt = (min) => {
+        const hh = String(Math.floor(min / 60) % 24).padStart(2,'0');
+        const mm = String(min % 60).padStart(2,'0');
+        return hh + ':' + mm;
+    };
+    const abertura = minInicio - 15;
+    const fechamento = minFim + 15;
+    return 'Aberto: ' + fmt(abertura < 0 ? 0 : abertura) + ' – ' + fmt(fechamento);
+}
+
+function proximaAbertura(grade, duracoes, duracaoAula) {
+    const diaSemana = new Date().getDay();
+    const agora = new Date();
+    const minAgora = agora.getHours() * 60 + agora.getMinutes();
+    const turmasHoje = (grade[diaSemana] || grade[String(diaSemana)] || []).filter(t => !t.includes('Sem treinos'));
+    let proxMin = null;
+    let proxSlot = null;
+    turmasHoje.forEach(slot => {
+        const match = slot.match(/^(\d{2}):(\d{2})/);
+        if (!match) return;
+        const minInicio = parseInt(match[1]) * 60 + parseInt(match[2]);
+        const abertura = minInicio - 15;
+        if (abertura > minAgora) {
+            if (proxMin === null || abertura < proxMin) {
+                proxMin = abertura;
+                proxSlot = slot;
+            }
+        }
+    });
+    if (!proxSlot) return null;
+    const hh = String(Math.floor(proxMin / 60)).padStart(2,'0');
+    const mm = String(proxMin % 60).padStart(2,'0');
+    return 'Próxima turma: ' + proxSlot + ' (check-in abre às ' + hh + ':' + mm + ')';
+}
+
+// ── RENDERIZAR QR CODES ──────────────────────────────────────
+function renderQRCodes() {
+    if (!gradeFirebase) return;
+
+    const diaSemana = new Date().getDay();
+    const turmasHoje = (gradeFirebase[diaSemana] || gradeFirebase[String(diaSemana)] || [])
+        .filter(t => !t.includes('Sem treinos'));
+
+    const duracoes   = gradeFirebase.duracoes || {};
+    const duracaoAula = gradeFirebase.duracaoAula || 90;
+
+    const ativas = turmasHoje.filter(slot => estaAtivo(slot, duracoes, duracaoAula));
+
+    const container = document.getElementById('qr-container');
+    const msgVazio  = document.getElementById('msg-vazio');
+    const msgLoad   = document.getElementById('msg-loading');
+    const msgProx   = document.getElementById('msg-proxima');
+    const statusEl  = document.getElementById('status-turmas');
+
+    msgLoad.style.display = 'none';
+
+    if (ativas.length === 0) {
+        container.innerHTML = '';
+        msgVazio.style.display = 'block';
+        statusEl.textContent = '0 turmas ativas';
+        const prox = proximaAbertura(gradeFirebase, duracoes, duracaoAula);
+        if (prox) msgProx.textContent = prox;
+        else      msgProx.textContent = 'Nenhuma turma restante hoje. Até amanhã!';
+        return;
+    }
+
+    msgVazio.style.display = 'none';
+    statusEl.textContent = ativas.length + ' turma' + (ativas.length > 1 ? 's' : '') + ' ativa' + (ativas.length > 1 ? 's' : '');
+
+    const baseUrl = window.location.origin + window.location.pathname.replace(/qrcode\.html$/, '');
+
+    container.innerHTML = ativas.map(slot => {
+        const url    = baseUrl + 'index.html?checkin=' + encodeURIComponent(slot);
+        const qrSize = window.innerWidth > 600 ? 300 : 220;
+        const qrUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=' + qrSize + 'x' + qrSize +
+                       '&data=' + encodeURIComponent(url) + '&format=png&margin=4&color=000000&bgcolor=FFFFFF';
+        const janela = formatarJanela(slot, duracoes, duracaoAula);
+        const diaNome = diasAbrev[new Date().getDay()];
+        return `
+            <div class="qr-card">
+                <div class="qr-card-badge">✅ ATIVO — ${diaNome.toUpperCase()}</div>
+                <div class="qr-card-turma">${slot.toUpperCase()}</div>
+                <img class="qr-card-img" src="${qrUrl}" alt="QR Code ${slot}" width="${qrSize}" height="${qrSize}">
+                <div class="qr-card-window">${janela}</div>
+                <div class="qr-card-footer">Gaditas Matriz · escaneie para registrar presença</div>
+            </div>`;
+    }).join('');
+}
+
+// ── CARREGAR GRADE ───────────────────────────────────────────
+async function carregarGrade() {
+    try {
+        const doc = await db.collection('configuracoes').doc('horarios').get();
+        gradeFirebase = doc.exists ? doc.data() : {};
+    } catch(e) {
+        console.warn('Erro ao carregar grade:', e);
+        gradeFirebase = gradeFirebase || {};
+    }
+    renderQRCodes();
+}
+
+// ── ATUALIZAR (manual ou automático) ────────────────────────
+function atualizar() {
+    carregarGrade();
+    iniciarCountdown();
+}
+
+// ── INICIALIZAR ──────────────────────────────────────────────
+(async () => {
+    try {
+        await firebase.auth().signInAnonymously();
+    } catch(e) {}
+    atualizar();
+})();
+</script>
+</body>
+</html>

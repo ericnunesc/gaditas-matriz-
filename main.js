@@ -1495,19 +1495,12 @@ const academia = {
             const turmaKids = t.toLowerCase().includes('kids');
             const turmaMT   = this._isTurmaMT(t);
             const alunoMod  = auth.currentUser?.modalidade || 'jiujitsu';
+            // Adulto não pode entrar em turma Kids
             if (!isKids && turmaKids) {
                 alert("🚫 Você está matriculado nas turmas adulto e não pode fazer check-in nas turmas Kids.");
                 return;
             }
-            if (isKids && !turmaKids) {
-                // Kids de Muay Thai podem fazer check-in em turmas MT
-                if (turmaMT && (alunoMod === 'muaythai' || alunoMod === 'ambos')) {
-                    // Liberado — aluno kids na modalidade MT
-                } else {
-                    alert("🚫 Você está matriculado nas turmas Kids e não pode fazer check-in nas turmas adulto.");
-                    return;
-                }
-            }
+            // Kids podem entrar em qualquer turma — sem restrição de nome
         }
         // Verifica se matrícula está trancada (leitura direta no Firestore)
         try {
@@ -4202,13 +4195,18 @@ Ele voltará a ser aluno normal.`)) return;
             const url    = baseUrl + '?checkin=' + encodeURIComponent(slot);
             const qrUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(url) + '&format=png&margin=2&color=000000&bgcolor=FFFFFF';
             const dias   = slotDias[slot].map(d => diasAbrev[d]).join(' · ');
+            const slotEnc = encodeURIComponent(slot);
             return '<div class="qr-card" style="background:white; border-radius:12px; padding:14px 12px; text-align:center;">' +
                 '<div style="font-size:0.5rem; font-weight:800; color:#64748b; letter-spacing:0.8px; margin-bottom:3px;">📅 ' + dias.toUpperCase() + '</div>' +
                 '<div style="font-size:0.75rem; font-weight:800; color:#0f172a; margin-bottom:10px; line-height:1.3;">' + slot.toUpperCase() + '</div>' +
                 '<img src="' + qrUrl + '" width="170" height="170" style="display:block; margin:0 auto; border-radius:6px;"/>' +
-                '<div style="font-size:0.42rem; color:#94a3b8; margin-top:8px; line-height:1.5;">Gaditas Matriz — escaneie para check-in</div>' +
+                '<div style="font-size:0.42rem; color:#94a3b8; margin-top:8px; margin-bottom:8px; line-height:1.5;">Gaditas Matriz — escaneie para check-in</div>' +
+                '<button onclick="academia.abrirQRIndividual(\'' + slotEnc + '\')" ' +
+                    'style="background:#0f172a; border:1px solid #334155; color:#64748b; padding:5px 10px; border-radius:6px; font-size:0.48rem; font-weight:700; cursor:pointer; width:100%;">📺 VER SÓ ESTE</button>' +
                 '</div>';
         }).join('');
+
+        const displayUrl = baseUrl + 'qrcode.html';
 
         modal.innerHTML =
             '<div style="max-width:860px; margin:0 auto;">' +
@@ -4218,7 +4216,8 @@ Ele voltará a ser aluno normal.`)) return;
                         '<div style="font-size:1rem; font-weight:800; color:white; margin-top:3px;">📱 QR Codes de Check-in</div>' +
                         '<div style="font-size:0.65rem; color:#64748b; margin-top:4px;">Imprima e cole nas paredes — alunos escaneiam para registrar presença</div>' +
                     '</div>' +
-                    '<div style="display:flex; gap:8px; flex-shrink:0;">' +
+                    '<div style="display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end;">' +
+                        '<a href="' + displayUrl + '" target="_blank" style="background:#1e3a8a; border:1px solid #3b82f6; color:#93c5fd; padding:10px 14px; border-radius:8px; font-weight:800; font-size:0.75rem; text-decoration:none; display:flex; align-items:center; gap:5px;">📺 DISPLAY AO VIVO</a>' +
                         '<button onclick="academia.imprimirQRCodes()" style="background:#10b981; border:none; color:white; padding:10px 18px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;">🖨️ IMPRIMIR / PDF</button>' +
                         '<button onclick="document.getElementById(\'modal-qr-horarios\').remove()" style="background:#334155; border:none; color:white; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:700; font-size:1rem;">✕</button>' +
                     '</div>' +
@@ -4229,6 +4228,28 @@ Ele voltará a ser aluno normal.`)) return;
             '</div>';
 
         document.body.appendChild(modal);
+    },
+
+    abrirQRIndividual(slotEnc) {
+        const slot   = decodeURIComponent(slotEnc);
+        const base   = window.location.origin + window.location.pathname.replace(/index\.html$/, '');
+        const url    = base + '?checkin=' + encodeURIComponent(slot);
+        const qrUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(url) + '&format=png&margin=4&color=000000&bgcolor=FFFFFF';
+
+        const ant = document.getElementById('modal-qr-individual'); if(ant) ant.remove();
+        const m = document.createElement('div');
+        m.id = 'modal-qr-individual';
+        m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.98);z-index:10010;display:flex;align-items:center;justify-content:center;';
+        m.innerHTML = `
+            <div style="background:white;border-radius:20px;padding:30px 24px;text-align:center;max-width:360px;width:90%;position:relative;">
+                <button onclick="document.getElementById('modal-qr-individual').remove()"
+                    style="position:absolute;top:10px;right:12px;background:#f1f5f9;border:none;border-radius:6px;padding:4px 10px;font-size:0.8rem;cursor:pointer;font-weight:700;color:#475569;">✕</button>
+                <div style="font-size:0.6rem;font-weight:800;color:#64748b;letter-spacing:1px;margin-bottom:6px;">GADITAS MATRIZ — CHECK-IN</div>
+                <div style="font-size:1.1rem;font-weight:800;color:#0f172a;margin-bottom:16px;line-height:1.3;">${slot.toUpperCase()}</div>
+                <img src="${qrUrl}" width="280" height="280" style="display:block;margin:0 auto;border-radius:10px;"/>
+                <div style="font-size:0.55rem;color:#94a3b8;margin-top:12px;line-height:1.6;">Escaneie com a câmera do celular ou pelo botão no app</div>
+            </div>`;
+        document.body.appendChild(m);
     },
 
     imprimirQRCodes() {

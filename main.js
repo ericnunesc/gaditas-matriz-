@@ -248,6 +248,11 @@ const academia = {
     filtroInativos: false,
     _gradFiltroCategoria: "all",   // 'all' | 'kids' | 'adulto'
     _gradFiltroFaixa: "all",       // 'all' | nome da faixa
+    _calMes: new Date().getMonth(),
+    _calAno: new Date().getFullYear(),
+    _calHistorico: [],
+    _calDia: null,
+    _calVista: 'calendario',       // 'calendario' | 'lista'
     leoesFichaTemp: { leaoAtencao: 0, leaoComportamento: 0, leaoCompanheirismo: 0, leaoDisciplina: 0 },
 
     gradeHorarios: {
@@ -4642,11 +4647,11 @@ const ui = {
                 cardLeoes.classList.add('hidden');
             }
             const listaHistorico = d.historico || [];
-            const htmlLinhaTempo = listaHistorico.map(t => `
-                <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:10px 14px; border-radius:10px; margin-bottom:6px; border:1px solid var(--border-light);">
-                    <div style="font-size:0.8rem; color:#e2e8f0; font-weight:600;"><i class="fas fa-check-circle" style="color:var(--accent-green); margin-right:6px;"></i> ${t.turma.toUpperCase()}</div>
-                    <div style="font-size:0.65rem; color:var(--text-muted); font-weight:500;">${t.data.split(' ')[0]} às ${t.data.split(' ')[1] || ''}</div>
-                </div>`).join('') || `<p style="color:var(--text-muted); text-align:center; font-size:0.75rem; padding:10px;">Nenhum treino registrado.</p>`;
+            // Armazena para as funções do calendário
+            this._calHistorico = listaHistorico;
+            // Reseta mês/ano para o atual se necessário
+            if (!this._calMes && this._calMes !== 0) this._calMes = new Date().getMonth();
+            if (!this._calAno) this._calAno = new Date().getFullYear();
             // ── Blocos condicionais por modalidade ────────────────
             const modPerfil = d.modalidade || 'jiujitsu';
             const corJJ = this.getCorFaixa(d.faixa);
@@ -4705,15 +4710,199 @@ const ui = {
                     ${beltHtml}
                     ${statsHtml}
                     ${progressHtml}
-                    <button onclick="academia.toggleHistoricoTreinos()" class="btn-clean" style="margin-top:0; color:#60a5fa; text-align:center; display:block; width:100%; font-size:0.75rem; font-weight:700;"><i class="fas fa-history"></i> VER MEU HISTÓRICO DE TREINOS</button>
-                    <div id="secao-historico-treinos-aluno" class="hidden" style="margin-top:15px; padding-top:12px; border-top:1px solid var(--border-light); max-height:200px; overflow-y:auto; padding-right:4px;">${htmlLinhaTempo}</div>
+                    <!-- ── CALENDÁRIO / LISTA DE TREINOS ── -->
+                    <div style="margin-top:14px; border-top:1px solid var(--border-light); padding-top:14px;">
+                        <div style="display:flex; gap:6px; margin-bottom:12px;">
+                            <button id="cal-btn-cal" onclick="academia._calVista='calendario'; academia._renderCal()"
+                                style="flex:1; padding:8px; background:${this._calVista==='calendario'?'#1e3a8a':'#0f172a'}; border:1px solid ${this._calVista==='calendario'?'#3b82f6':'#334155'}; color:${this._calVista==='calendario'?'#93c5fd':'#64748b'}; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">
+                                📅 CALENDÁRIO
+                            </button>
+                            <button id="cal-btn-lista" onclick="academia._calVista='lista'; academia._renderCal()"
+                                style="flex:1; padding:8px; background:${this._calVista==='lista'?'#1e3a8a':'#0f172a'}; border:1px solid ${this._calVista==='lista'?'#3b82f6':'#334155'}; color:${this._calVista==='lista'?'#93c5fd':'#64748b'}; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">
+                                📋 LISTA
+                            </button>
+                        </div>
+                        <div id="cal-treinos-container"></div>
+                    </div>
                 </div>`;
+            // Renderiza calendário/lista após o HTML do perfil ser inserido
+            setTimeout(() => this._renderCal(), 50);
             // Mostra wrapper de perfil (só para aluno)
             if (auth.role === 'aluno') {
                 const wp = document.getElementById('wrapper-perfil-proprio');
                 if (wp) wp.classList.remove('hidden');
             }
         }
+    },
+
+    // ── CALENDÁRIO DE TREINOS ──────────────────────────────
+    _parseDateKey(dataStr) {
+        // Converte "DD/MM/YYYY HH:MM:SS" ou "DD/MM/YYYY, HH:MM:SS" → "YYYY-MM-DD"
+        const m = (dataStr || '').match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+        return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
+    },
+
+    _renderCal() {
+        const container = document.getElementById('cal-treinos-container');
+        if (!container) return;
+
+        // Atualiza estilo dos botões de aba
+        const btnCal  = document.getElementById('cal-btn-cal');
+        const btnLista = document.getElementById('cal-btn-lista');
+        if (btnCal) {
+            const ativo = this._calVista === 'calendario';
+            btnCal.style.background   = ativo ? '#1e3a8a' : '#0f172a';
+            btnCal.style.borderColor  = ativo ? '#3b82f6' : '#334155';
+            btnCal.style.color        = ativo ? '#93c5fd' : '#64748b';
+        }
+        if (btnLista) {
+            const ativo = this._calVista === 'lista';
+            btnLista.style.background  = ativo ? '#1e3a8a' : '#0f172a';
+            btnLista.style.borderColor = ativo ? '#3b82f6' : '#334155';
+            btnLista.style.color       = ativo ? '#93c5fd' : '#64748b';
+        }
+
+        if (this._calVista === 'lista') {
+            container.innerHTML = this._buildLista();
+        } else {
+            container.innerHTML = this._buildCalendario();
+        }
+    },
+
+    _corTurma(turma) {
+        if (this._isTurmaMT(turma))   return '#ef4444'; // vermelho MT
+        if (this._isTurmaKids(turma)) return '#f59e0b'; // dourado Kids
+        return '#3b82f6';                                 // azul JJ adulto
+    },
+
+    _buildCalendario() {
+        const hist  = this._calHistorico || [];
+        const mes   = this._calMes;
+        const ano   = this._calAno;
+        const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                       'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+        // Monta mapa YYYY-MM-DD → [treinos]
+        const mapaD = {};
+        hist.forEach(t => {
+            const key = this._parseDateKey(t.data);
+            if (!key) return;
+            if (!mapaD[key]) mapaD[key] = [];
+            mapaD[key].push(t);
+        });
+
+        const primeiroDia = new Date(ano, mes, 1).getDay();
+        const ultimoDia   = new Date(ano, mes + 1, 0).getDate();
+        const hoje        = new Date();
+
+        // Conta treinos do mês
+        let totalMes = 0;
+        for (let d = 1; d <= ultimoDia; d++) {
+            const key = `${ano}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            totalMes += (mapaD[key] || []).length;
+        }
+
+        // Células em branco antes do dia 1
+        let cells = Array(primeiroDia).fill(`<div></div>`).join('');
+
+        for (let d = 1; d <= ultimoDia; d++) {
+            const key      = `${ano}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const treinos  = mapaD[key] || [];
+            const isHoje   = ano === hoje.getFullYear() && mes === hoje.getMonth() && d === hoje.getDate();
+            const isSel    = this._calDia === key;
+
+            if (treinos.length > 0) {
+                // Determina a cor dominante do dia
+                const hasMT   = treinos.some(t => this._isTurmaMT(t.turma));
+                const hasKids = treinos.some(t => this._isTurmaKids(t.turma));
+                const cor     = hasMT ? '#ef4444' : hasKids ? '#f59e0b' : '#3b82f6';
+                const label   = treinos.length > 1 ? treinos.length : '●';
+
+                cells += `<div onclick="academia._calDia='${key}'; academia._renderCal()"
+                    style="text-align:center; cursor:pointer; border-radius:7px; padding:4px 2px;
+                           background:${isSel ? cor + '33' : cor + '18'};
+                           border:1px solid ${isSel ? cor : cor + '44'};">
+                    <div style="font-size:0.55rem; color:#94a3b8; font-weight:600; line-height:1.2;">${d}</div>
+                    <div style="font-size:${treinos.length > 1 ? '0.6rem' : '0.72rem'}; color:${cor}; font-weight:800; line-height:1.2;">${label}</div>
+                </div>`;
+            } else {
+                cells += `<div style="text-align:center; padding:4px 2px;
+                    ${isHoje ? 'border:1px solid #3b82f644; border-radius:7px; background:#1e3a8a18;' : ''}">
+                    <div style="font-size:0.55rem; color:${isHoje ? '#3b82f6' : '#334155'}; font-weight:${isHoje ? '800' : '400'}; line-height:1.2;">${d}</div>
+                    <div style="font-size:0.5rem; color:transparent; line-height:1.2;">·</div>
+                </div>`;
+            }
+        }
+
+        // Detalhe do dia selecionado
+        let detalhe = '';
+        if (this._calDia && mapaD[this._calDia]) {
+            const [ay, am, ad] = this._calDia.split('-');
+            detalhe = `
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px; margin-top:10px;">
+                    <div style="font-size:0.6rem; color:#64748b; font-weight:700; margin-bottom:6px;">📅 ${ad}/${am}/${ay}</div>
+                    ${mapaD[this._calDia].map(t => {
+                        const cor = this._corTurma(t.turma);
+                        const hora = (t.data || '').split(/[\s,]+/)[1] || '';
+                        return `<div style="font-size:0.72rem; color:#e2e8f0; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                            <span style="color:${cor}; font-size:0.65rem;">●</span>
+                            <span>${t.turma}</span>
+                            ${hora ? `<span style="color:#64748b; font-size:0.58rem;">às ${hora}</span>` : ''}
+                        </div>`;
+                    }).join('')}
+                </div>`;
+        }
+
+        return `
+            <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px;">
+                <!-- Navegação mês -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <button onclick="academia._calMes--; if(academia._calMes<0){academia._calMes=11;academia._calAno--;} academia._calDia=null; academia._renderCal();"
+                        style="background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:700;">◄</button>
+                    <span style="font-size:0.78rem; font-weight:800; color:white;">${meses[mes]} ${ano}</span>
+                    <button onclick="academia._calMes++; if(academia._calMes>11){academia._calMes=0;academia._calAno++;} academia._calDia=null; academia._renderCal();"
+                        style="background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:700;">►</button>
+                </div>
+                <!-- Cabeçalho dias da semana -->
+                <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:4px;">
+                    ${['D','S','T','Q','Q','S','S'].map(d =>
+                        `<div style="text-align:center; font-size:0.5rem; color:#475569; font-weight:700;">${d}</div>`
+                    ).join('')}
+                </div>
+                <!-- Grid de dias -->
+                <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px;">
+                    ${cells}
+                </div>
+                ${detalhe}
+                <!-- Legenda -->
+                <div style="display:flex; gap:12px; margin-top:10px; justify-content:center; flex-wrap:wrap;">
+                    <span style="font-size:0.55rem; color:#3b82f6; font-weight:700;">● JJ Adulto</span>
+                    <span style="font-size:0.55rem; color:#f59e0b; font-weight:700;">● Kids</span>
+                    <span style="font-size:0.55rem; color:#ef4444; font-weight:700;">● Muay Thai</span>
+                </div>
+                <!-- Total -->
+                <div style="font-size:0.65rem; color:#64748b; margin-top:8px; text-align:center; font-weight:600;">
+                    ${totalMes} treino${totalMes !== 1 ? 's' : ''} em ${meses[mes]}
+                </div>
+            </div>`;
+    },
+
+    _buildLista() {
+        const hist = this._calHistorico || [];
+        if (hist.length === 0) {
+            return `<p style="color:var(--text-muted); text-align:center; font-size:0.75rem; padding:10px;">Nenhum treino registrado.</p>`;
+        }
+        return `<div style="max-height:220px; overflow-y:auto; padding-right:4px;">` +
+            hist.map(t => {
+                const cor  = this._corTurma(t.turma);
+                const data = (t.data || '').split(/[\s,]+/);
+                return `<div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:9px 12px; border-radius:8px; margin-bottom:5px; border-left:3px solid ${cor};">
+                    <div style="font-size:0.78rem; color:#e2e8f0; font-weight:600;">
+                        <span style="color:${cor}; margin-right:5px;">●</span>${t.turma}
+                    </div>
+                    <div style="font-size:0.6rem; color:var(--text-muted); white-space:nowrap; margin-left:8px;">${data[0] || ''} ${data[1] ? 'às ' + data[1] : ''}</div>
+                </div>`;
+            }).join('') + `</div>`;
     }
 };
 

@@ -174,9 +174,14 @@ const auth = {
         // Badge de depoimentos aprovados (carrega em background)
         academia._carregarBadgeDepoimentos();
 
+        // ── ANIVERSÁRIO — popup para o aluno ─────────────
+        if (this.role === 'aluno') {
+            setTimeout(() => aniversario.verificarAniversario(), 800);
+        }
+
         // ── ENQUETE ATIVA (aparece como popup bloqueante) ─
         if (this.role === 'aluno') {
-            setTimeout(() => enquetes.verificarEnqueteAtiva(), 1000);
+            setTimeout(() => enquetes.verificarEnqueteAtiva(), 2000);
         }
 
         // ── CHECK-IN AUTOMÁTICO VIA QR CODE ──────────────
@@ -4431,6 +4436,7 @@ const ui = {
             if (auth.role === 'admin') {
                 academia.carregarDepoimentosPendentes();
                 enquetes.renderAdminEnquetes();
+                aniversario.renderAdminAniversariantes();
             }
             if (auth.role === 'admin') academia.carregarVideosPendentesAdmin();
             if (auth.role === 'professor') {
@@ -4565,6 +4571,9 @@ const ui = {
         // Card enquetes admin
         const cardEnq = document.getElementById('card-enquetes-admin');
         if (cardEnq) cardEnq.style.display = isAdmin ? 'block' : 'none';
+        // Card aniversariantes admin
+        const cardAniv = document.getElementById('card-aniversariantes-admin');
+        if (cardAniv) cardAniv.style.display = isAdmin ? 'block' : 'none';
         // Toggle VITRINE/GERENCIAR na aba loja — só admin
         const lojaToggle = document.getElementById('loja-admin-toggle');
         if (lojaToggle) lojaToggle.style.display = isAdmin ? 'flex' : 'none';
@@ -4704,6 +4713,153 @@ const ui = {
                 const wp = document.getElementById('wrapper-perfil-proprio');
                 if (wp) wp.classList.remove('hidden');
             }
+        }
+    }
+};
+
+// ══════════════════════════════════════════════════════════
+// ANIVERSÁRIO — Popup para aluno + card admin
+// ══════════════════════════════════════════════════════════
+const aniversario = {
+
+    // ── VERIFICA E MOSTRA POPUP PARA O ALUNO ──────────────
+    async verificarAniversario() {
+        if (auth.role !== 'aluno') return;
+        try {
+            const nascimento = auth.currentUser?.nascimento;
+            if (!nascimento) return;
+
+            const hoje  = new Date();
+            const nasc  = new Date(nascimento);
+            const ehAniversario = nasc.getDate()  === hoje.getDate() &&
+                                  nasc.getMonth() === hoje.getMonth();
+            if (!ehAniversario) return;
+
+            // Verifica se já dispensou hoje (localStorage)
+            const chave = `gaditas_aniv_${auth.currentUser.id}_${hoje.toISOString().split('T')[0]}`;
+            if (localStorage.getItem(chave)) return;
+
+            this._mostrarPopupAniversario(auth.currentUser.nome, chave);
+        } catch(e) { console.warn('Aniversário:', e.message); }
+    },
+
+    _mostrarPopupAniversario(nomeCompleto, chaveLocalStorage) {
+        document.getElementById('modal-aniversario')?.remove();
+        // Pega o primeiro nome
+        const primeiroNome = (nomeCompleto || '').split(' ')[0];
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-aniversario';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.96);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+
+        modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#1e1040,#1e293b);border:2px solid #f59e0b;border-radius:24px;padding:36px 28px;max-width:400px;width:100%;text-align:center;box-shadow:0 0 80px rgba(245,158,11,0.3);position:relative;overflow:hidden;">
+                <!-- Confetes de fundo -->
+                <div style="position:absolute;top:-10px;left:0;right:0;font-size:1.4rem;opacity:0.15;user-select:none;line-height:1.8;pointer-events:none;">
+                    🎉🎊🎈🎁🥳🎉🎊🎈🎁🥳🎉🎊🎈🎁🥳🎉🎊🎈🎁🥳🎉🎊🎈🎁🥳
+                </div>
+
+                <div style="font-size:4rem;margin-bottom:8px;animation:bounce 0.8s infinite alternate;">🎂</div>
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Gaditas Matriz</div>
+
+                <div style="font-size:1.5rem;font-weight:800;color:white;line-height:1.3;margin-bottom:6px;">
+                    Feliz Aniversário,<br>
+                    <span style="color:#f59e0b;">${primeiroNome}!</span>
+                </div>
+
+                <div style="font-size:0.8rem;color:#94a3b8;line-height:1.7;margin:16px 0 24px;">
+                    A família <strong style="color:white;">Gaditas</strong> celebra este dia especial com você! 🎉<br><br>
+                    Que o tatame continue sendo seu lugar de <strong style="color:#f59e0b;">crescimento</strong>, conquistas e muita alegria.<br><br>
+                    <span style="font-size:1rem;">OSS! 🥋💪</span>
+                </div>
+
+                <button onclick="aniversario._dispensar('${chaveLocalStorage}')"
+                    style="width:100%;padding:16px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:12px;font-weight:800;font-size:0.9rem;cursor:pointer;letter-spacing:0.5px;">
+                    🙏 MUITO OBRIGADO!
+                </button>
+            </div>
+            <style>
+                @keyframes bounce { from { transform:translateY(0); } to { transform:translateY(-10px); } }
+            </style>`;
+
+        document.body.appendChild(modal);
+    },
+
+    _dispensar(chave) {
+        if (chave) localStorage.setItem(chave, '1');
+        document.getElementById('modal-aniversario')?.remove();
+    },
+
+    // ── CARD ADMIN — HOJE E ESTA SEMANA ───────────────────
+    async renderAdminAniversariantes() {
+        const container = document.getElementById('lista-aniversariantes');
+        if (!container) return;
+        container.innerHTML = '<small style="color:#475569;font-size:0.65rem;">Carregando...</small>';
+
+        try {
+            const snap = await db.collection('alunos').get();
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+
+            const hoje7 = [];  // próximos 7 dias (inclui hoje)
+
+            snap.docs.forEach(doc => {
+                const a  = { id: doc.id, ...doc.data() };
+                if (!a.nascimento) return;
+                const nasc = new Date(a.nascimento);
+                for (let d = 0; d < 7; d++) {
+                    const dia = new Date(hoje);
+                    dia.setDate(hoje.getDate() + d);
+                    if (nasc.getDate() === dia.getDate() && nasc.getMonth() === dia.getMonth()) {
+                        const idade = hoje.getFullYear() - nasc.getFullYear();
+                        hoje7.push({ ...a, _diasRestantes: d, _idade: idade });
+                        break;
+                    }
+                }
+            });
+
+            if (hoje7.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:12px;color:#475569;font-size:0.7rem;">Nenhum aniversariante nos próximos 7 dias.</div>';
+                return;
+            }
+
+            // Ordena por dias restantes
+            hoje7.sort((a, b) => a._diasRestantes - b._diasRestantes);
+
+            const hojeList   = hoje7.filter(a => a._diasRestantes === 0);
+            const semanaList = hoje7.filter(a => a._diasRestantes > 0);
+
+            const diasSemana = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+            const renderItem = (a) => {
+                const isHoje = a._diasRestantes === 0;
+                const diaRef = isHoje ? '🎂 HOJE!' : (() => {
+                    const d = new Date(hoje);
+                    d.setDate(hoje.getDate() + a._diasRestantes);
+                    return diasSemana[d.getDay()] + ' ' + d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+                })();
+                return `
+                    <div style="display:flex;justify-content:space-between;align-items:center;background:${isHoje ? '#1c1400' : '#0f172a'};border:1px solid ${isHoje ? '#f59e0b' : '#334155'};border-radius:8px;padding:9px 12px;margin-bottom:6px;">
+                        <div>
+                            <div style="font-size:0.75rem;font-weight:800;color:${isHoje ? '#f59e0b' : 'white'};">${a.nome}</div>
+                            <div style="font-size:0.58rem;color:#64748b;margin-top:2px;">${a.faixa || '—'} · ${a._idade} anos</div>
+                        </div>
+                        <div style="font-size:0.6rem;font-weight:800;color:${isHoje ? '#f59e0b' : '#64748b'};white-space:nowrap;">${diaRef}</div>
+                    </div>`;
+            };
+
+            let html = '';
+            if (hojeList.length > 0) {
+                html += `<div style="font-size:0.58rem;color:#f59e0b;font-weight:800;margin-bottom:6px;letter-spacing:0.8px;">🎂 HOJE</div>`;
+                html += hojeList.map(renderItem).join('');
+            }
+            if (semanaList.length > 0) {
+                html += `<div style="font-size:0.58rem;color:#64748b;font-weight:800;margin:${hojeList.length ? '12px' : '0'} 0 6px;letter-spacing:0.8px;">📅 ESTA SEMANA</div>`;
+                html += semanaList.map(renderItem).join('');
+            }
+
+            container.innerHTML = html;
+        } catch(e) {
+            container.innerHTML = `<small style="color:#ef4444;font-size:0.65rem;">Erro: ${e.message}</small>`;
         }
     }
 };

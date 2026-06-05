@@ -444,6 +444,15 @@
 
             <div id="tab-alunos" class="tab-content hidden" style="padding:15px;">
 
+                <!-- ══ ANIVERSARIANTES (admin) ══ -->
+                <div id="card-aniversariantes-admin" style="display:none; background:linear-gradient(135deg,#1e1040,#1e293b); border:1px solid #f59e0b55; border-radius:12px; padding:15px; margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="font-size:0.8rem; font-weight:800; color:#f59e0b;">🎂 ANIVERSARIANTES</span>
+                        <button onclick="aniversario.renderAdminAniversariantes()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem;"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div id="lista-aniversariantes"><small style="color:#475569; font-size:0.65rem;">Carregando...</small></div>
+                </div>
+
                 <!-- ══ ALERTAS DE SAÚDE (professor/admin) ══ -->
                 <div id="card-alertas-saude" style="background:#1e293b; border:1px solid #f43f5e55; border-radius:12px; padding:15px; margin-bottom:15px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -816,8 +825,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-    <script src="main.js?v=20260602o"></script>
-    <script src="filtros-academia.js?v=20260602o"></script>
+    <script src="main.js?v=20260602p"></script>
+    <script src="filtros-academia.js?v=20260602p"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>
     <script>

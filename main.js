@@ -156,6 +156,11 @@ const auth = {
         this._renderFaixaHeader();
         ui.configurarVisao();
         ui.showTab('tab-checkin');
+        ui.renderCardContrato();
+        // Exibe popup de contrato para aluno que ainda não assinou
+        if ((this.role === 'aluno' || this.role === 'professor') && !this.currentUser?.contrato?.assinaturaImg) {
+            setTimeout(() => { if (typeof contrato !== 'undefined') contrato.abrir(); }, 800);
+        }
         academia.carregarGradeFirebase();
         academia.carregarMural();
         academia.carregarConquistas();
@@ -278,7 +283,7 @@ const academia = {
             const ref = db.collection("alunos").doc(alunoId); const doc = await ref.get(); if (!doc.exists) return;
             const d = doc.data(); const h = d.historico || [];
             const turmaSel = turmasDisponiveis[index];
-            h.unshift({ data: new Date().toLocaleString('pt-BR'), turma: turmaSel, tipo: "Presença Manual (Adm/Prof)" });
+            h.unshift({ data: new Date().toLocaleDateString('pt-BR'), turma: turmaSel, tipo: "Presença Manual (Adm/Prof)" });
             const isMTManual = this._isTurmaMT(turmaSel);
             const updManual = { historico: h };
             if (isMTManual) updManual.aulasMT = (d.aulasMT || 0) + 1;
@@ -777,6 +782,7 @@ const academia = {
                     <small style="color:var(--text-muted);">${a.faixa} • ${a.grau}º G • ${a.aulas || 0}/${s.meta} (${percent}%)</small>
                 </div>
                 <div style="display:flex; gap:4px; align-items:center; flex-shrink:0;">
+                    ${typeof contrato !== 'undefined' ? contrato.badgeContrato({ ...a, id }) : ''}
                     ${convocado
                         ? `<span style="background:#064e3b; color:#10b981; font-size:0.55rem; padding:3px 7px; border-radius:6px; font-weight:800; white-space:nowrap; border:1px solid #10b98155;">✅ CONV.</span>
                            <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.75rem; padding:2px 4px;">✕</button>`
@@ -1252,7 +1258,13 @@ const academia = {
                 return;
             }
 
-            h.unshift({ data: new Date().toLocaleString('pt-BR'), turma: t });
+            // Usa o timestamp original do check-in (quando o aluno clicou), não a hora de aprovação
+            const ciDoc = await db.collection("checkins").doc(cId).get();
+            const dataOriginal = ciDoc.exists && ciDoc.data().data
+                ? new Date(ciDoc.data().data).toLocaleDateString('pt-BR')
+                : new Date().toLocaleDateString('pt-BR');
+
+            h.unshift({ data: dataOriginal, turma: t });
             const isMT = this._isTurmaMT(t);
             const upd = { historico: h };
             if (isMT) upd.aulasMT = (d.aulasMT || 0) + 1;
@@ -1468,7 +1480,7 @@ const academia = {
         if (btn) { btn.disabled = true; btn.innerText = `⏳ Salvando ${ids.length} presenças...`; }
 
         const isMT  = this._isTurmaMT(turma);
-        const dataStr = new Date().toLocaleString('pt-BR');
+        const dataStr = new Date().toLocaleDateString('pt-BR');
         let salvos = 0; let erros = 0;
 
         await Promise.all(ids.map(async (alunoId) => {
@@ -1771,8 +1783,21 @@ const academia = {
 
     async editarAluno(id) {
         const doc = await db.collection("alunos").doc(id).get(); const a = doc.data(); const isAdmin = auth.role === 'admin';
-        document.getElementById('edit-aluno-id').value = id; document.getElementById('nome-aluno').value = a.nome;
-        document.getElementById('email-aluno').value = a.email; document.getElementById('nascimento-aluno').value = a.nascimento || '';
+        document.getElementById('edit-aluno-id').value = id;
+        document.getElementById('nome-aluno').value = a.nome || '';
+        document.getElementById('email-aluno').value = a.email || '';
+        document.getElementById('nascimento-aluno').value = a.nascimento || '';
+        // Campos de endereço/contato
+        const _set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
+        _set('cpf-aluno', a.cpf);
+        _set('telefone-aluno', a.telefone);
+        _set('cep-aluno', a.cep);
+        _set('rua-aluno', a.rua);
+        _set('numero-aluno', a.numero);
+        _set('bairro-aluno', a.bairro);
+        _set('complemento-aluno', a.complemento);
+        _set('cidade-aluno', a.cidade);
+        _set('estado-aluno', a.estado);
         // Modalidade
         const mod = a.modalidade || 'jiujitsu';
         this.selecionarModalidade(mod);
@@ -2105,6 +2130,7 @@ Ele voltará a ser aluno normal.`)) return;
     },
 
     async salvarAluno() {
+      try {
         const id = document.getElementById('edit-aluno-id').value;
         const novaFaixa = document.getElementById('select-faixa').value;
         const modalidadeSalva = this._modalidadeAtual || 'jiujitsu';
@@ -2165,6 +2191,10 @@ Ele voltará a ser aluno normal.`)) return;
             await db.collection("alunos").add({...dados, aulas: 0, historico: [], historicoLeoes: []});
         }
         alert("Atleta salvo!"); this.limparAl(); this.renderAlunos(); academia.carregarConquistas();
+      } catch(err) {
+        console.error('salvarAluno erro:', err);
+        alert('Erro ao salvar atleta: ' + err.message);
+      }
     },
 
     async carregarMural() {
@@ -3850,7 +3880,7 @@ Ele voltará a ser aluno normal.`)) return;
             if (dentroJanela) {
                 // Computa presença automaticamente
                 const h = d.historico || [];
-                h.unshift({ data: new Date().toLocaleString('pt-BR'), turma: turmaQR });
+                h.unshift({ data: new Date().toLocaleDateString('pt-BR'), turma: turmaQR });
                 const isMTqr = this._isTurmaMT(turmaQR);
                 const updQR = { historico: h };
                 if (isMTqr) updQR.aulasMT = (d.aulasMT || 0) + 1;
@@ -4510,7 +4540,7 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
-        if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); } }
+        if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); } }
         if(id === 'tab-relatorios') { if(auth.role === 'admin') academia.renderDashboardAdmin(); academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }
@@ -4650,6 +4680,41 @@ const ui = {
         const t = [...new Set(Object.values(academia.getGrade()).flat())].filter(i => !i.includes("Sem treinos")).sort();
         c.innerHTML = t.map(i => `<label style="display:block; font-size:0.65rem; color:#94a3b8; margin-bottom:5px; font-weight:600;"><input type="checkbox" class="check-turma" value="${i}"> ${i}</label>`).join('');
     },
+    renderCardContrato() {
+        const card = document.getElementById('card-contrato-aluno');
+        if (!card) return;
+        if (auth.role !== 'aluno' && auth.role !== 'professor') { card.classList.add('hidden'); return; }
+        const assinado = !!(auth.currentUser?.contrato?.assinaturaImg);
+        card.classList.remove('hidden');
+        if (assinado) {
+            const data = auth.currentUser.contrato.assinadoEm?.toDate
+                ? auth.currentUser.contrato.assinadoEm.toDate().toLocaleDateString('pt-BR')
+                : (auth.currentUser.contrato.assinadoEm || '');
+            card.innerHTML = `
+<div style="background:#064e3b; border:1px solid #10b981; border-radius:12px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+  <div>
+    <div style="font-size:0.7rem; font-weight:800; color:#10b981;">✅ CONTRATO ASSINADO</div>
+    <div style="font-size:0.6rem; color:#6ee7b7; margin-top:2px;">Assinado em ${data} — ${auth.currentUser.contrato.planoLabel || ''} ${auth.currentUser.contrato.valorPlano || ''}</div>
+  </div>
+  <button onclick="contrato.abrir()" style="background:#0f172a; border:1px solid #10b981; color:#10b981; padding:8px 12px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0;">
+    VER 📋
+  </button>
+</div>`;
+        } else {
+            card.innerHTML = `
+<div style="background:#1c0a00; border:2px solid #f59e0b; border-radius:12px; padding:14px; display:flex; align-items:center; gap:12px;">
+  <div style="font-size:1.5rem; flex-shrink:0;">📋</div>
+  <div style="flex:1; min-width:0;">
+    <div style="font-size:0.75rem; font-weight:800; color:#f59e0b; margin-bottom:3px;">CONTRATO PENDENTE</div>
+    <div style="font-size:0.62rem; color:#92400e; line-height:1.4;">Você ainda não assinou seu contrato digital. Clique para ler e assinar.</div>
+  </div>
+  <button onclick="contrato.abrir()" style="background:#f59e0b; border:none; color:#000; padding:10px 14px; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer; flex-shrink:0; white-space:nowrap;">
+    ASSINAR
+  </button>
+</div>`;
+        }
+    },
+
     atualizarTurmasDinamicas() {
         const s = document.getElementById('select-turma-aluno'); if (!s) return;
         const t = academia.getGrade()[new Date().getDay()] || academia.getGrade()[String(new Date().getDay())] || ["Sem treinos hoje"];
@@ -4781,6 +4846,14 @@ const ui = {
                             </button>
                         </div>
                         <div id="cal-treinos-container"></div>
+                    </div>
+                    <!-- Botão contrato digital -->
+                    <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-light);">
+                        <button id="btn-meu-contrato" onclick="contrato.abrir()"
+                            style="width:100%; padding:11px; background:${d.contrato?.assinaturaImg ? '#064e3b' : '#1e293b'}; border:1px solid ${d.contrato?.assinaturaImg ? '#10b981' : '#334155'}; color:${d.contrato?.assinaturaImg ? '#10b981' : '#94a3b8'}; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; gap:8px;">
+                            <i class="fas fa-file-contract"></i>
+                            ${d.contrato?.assinaturaImg ? 'VER MEU CONTRATO ✅' : 'ASSINAR CONTRATO DIGITAL 📋'}
+                        </button>
                     </div>
                 </div>`;
             // Renderiza calendário/lista após o HTML do perfil ser inserido
@@ -4919,11 +4992,9 @@ const ui = {
                     <div style="font-size:0.6rem; color:#64748b; font-weight:700; margin-bottom:6px;">📅 ${ad}/${am}/${ay}</div>
                     ${mapaD[this._calDia].map(t => {
                         const cor = this._corTurma(t.turma);
-                        const hora = (t.data || '').split(/[\s,]+/)[1] || '';
                         return `<div style="font-size:0.72rem; color:#e2e8f0; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
                             <span style="color:${cor}; font-size:0.65rem;">●</span>
                             <span>${t.turma}</span>
-                            ${hora ? `<span style="color:#64748b; font-size:0.58rem;">às ${hora}</span>` : ''}
                         </div>`;
                     }).join('')}
                 </div>`;
@@ -4976,7 +5047,7 @@ const ui = {
                     <div style="font-size:0.78rem; color:#e2e8f0; font-weight:600;">
                         <span style="color:${cor}; margin-right:5px;">●</span>${t.turma}
                     </div>
-                    <div style="font-size:0.6rem; color:var(--text-muted); white-space:nowrap; margin-left:8px;">${data[0] || ''} ${data[1] ? 'às ' + data[1] : ''}</div>
+                    <div style="font-size:0.6rem; color:var(--text-muted); white-space:nowrap; margin-left:8px;">${data[0] || ''}</div>
                 </div>`;
             }).join('') + `</div>`;
     }

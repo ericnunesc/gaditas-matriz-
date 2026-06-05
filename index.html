@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gaditas Matriz - Oficial</title>
     <link rel="icon" type="image/png" href="gaditasstore.png?v=2">
-    <link rel="apple-touch-icon" href="gaditasstore.png?v=2">
-    <link rel="manifest" href="manifest.json?v=2">
+    <link rel="apple-touch-icon" href="gaditasstore.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Gaditas">
+    <meta name="mobile-web-app-capable" content="yes">
     <link rel="stylesheet" href="style.css?v=2">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -115,6 +120,9 @@
                     <div class="card-title" style="color: #f59e0b; font-weight: 800; font-size: 0.85rem; margin-bottom: 10px;"><i class="fas fa-bullseye"></i> Conquistas & Notificações do Dia</div>
                     <div id="lista-conquistas" class="list-container"></div>
                 </div>
+
+                <!-- Card contrato — preenchido via ui.renderCardContrato() -->
+                <div id="card-contrato-aluno" class="hidden" style="margin-bottom:12px;"></div>
 
                 <div id="meu-status-card"></div>
 
@@ -818,6 +826,22 @@
         </nav>
     </div>
 
+    <!-- ══ MODAL CONTRATO DIGITAL ══ -->
+    <div id="modal-contrato" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.97); z-index:10500; flex-direction:column;">
+        <!-- Header -->
+        <div style="background:#0f172a; border-bottom:1px solid #334155; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+            <div>
+                <div style="font-size:0.6rem; color:#94a3b8; font-weight:700; letter-spacing:0.5px; text-transform:uppercase;">Gaditas Academy</div>
+                <div style="font-size:0.9rem; font-weight:800; color:white; margin-top:2px;">📋 Contrato de Prestação de Serviços</div>
+            </div>
+            <button onclick="contrato.fechar()" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; width:36px; height:36px; border-radius:8px; font-size:1.1rem; cursor:pointer; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;">✕</button>
+        </div>
+        <!-- Body (scrollável) -->
+        <div id="contrato-body" style="flex:1; overflow-y:auto; padding:16px; -webkit-overflow-scrolling:touch;"></div>
+        <!-- Footer fixo -->
+        <div id="contrato-footer" style="padding:12px 16px; background:#0f172a; border-top:1px solid #334155; flex-shrink:0;"></div>
+    </div>
+
     <!-- QR Code Scanner library -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
@@ -829,6 +853,7 @@
     <script src="filtros-academia.js?v=20260602v"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>
+    <script src="gaditas-contrato.js"></script>
     <script>
         function alterarSenhaToggle() {
             // Abre o card correto dependendo do role
@@ -894,6 +919,81 @@
                 if (e.code === 'auth/requires-recent-login') alert("Por segurança, faça logout e login novamente.");
                 else alert("Erro: " + e.message);
             }
+        }
+    </script>
+
+    <!-- ══ PWA: banner instalar + registro SW ══ -->
+    <div id="pwa-banner" style="display:none; position:fixed; bottom:70px; left:12px; right:12px; z-index:20000;
+        background:#1e293b; border:1px solid #3b82f6; border-radius:14px; padding:14px 16px;
+        box-shadow:0 8px 32px rgba(0,0,0,0.6); align-items:center; gap:12px;">
+        <img src="gaditasstore.png" style="width:44px; height:44px; border-radius:10px; flex-shrink:0;">
+        <div style="flex:1; min-width:0;">
+            <div style="font-size:0.78rem; font-weight:800; color:white;">Instalar Gaditas Academy</div>
+            <div style="font-size:0.65rem; color:#94a3b8; margin-top:2px;">Adicione à tela inicial e use como app nativo</div>
+        </div>
+        <button id="pwa-btn-instalar" style="background:#3b82f6; border:none; color:white; padding:9px 14px;
+            border-radius:8px; font-size:0.72rem; font-weight:800; cursor:pointer; flex-shrink:0;">
+            INSTALAR
+        </button>
+        <button onclick="document.getElementById('pwa-banner').style.display='none'; localStorage.setItem('pwa-ignorado','1')"
+            style="background:none; border:none; color:#64748b; font-size:1.1rem; cursor:pointer; flex-shrink:0; padding:0;">✕</button>
+    </div>
+
+    <!-- iOS: instrução manual (Safari não suporta beforeinstallprompt) -->
+    <div id="pwa-ios-banner" style="display:none; position:fixed; bottom:70px; left:12px; right:12px; z-index:20000;
+        background:#1e293b; border:1px solid #f59e0b; border-radius:14px; padding:14px 16px;
+        box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div style="font-size:0.78rem; font-weight:800; color:white;">📲 Instalar no iPhone/iPad</div>
+            <button onclick="document.getElementById('pwa-ios-banner').style.display='none'; localStorage.setItem('pwa-ignorado','1')"
+                style="background:none; border:none; color:#64748b; font-size:1.1rem; cursor:pointer; padding:0;">✕</button>
+        </div>
+        <div style="font-size:0.68rem; color:#94a3b8; line-height:1.6;">
+            1. Toque em <strong style="color:#f59e0b;">Compartilhar</strong> <span style="font-size:0.9rem;">⎙</span> na barra do Safari<br>
+            2. Role para baixo e toque em <strong style="color:#f59e0b;">"Adicionar à Tela de Início"</strong><br>
+            3. Toque em <strong style="color:#f59e0b;">Adicionar</strong> — pronto!
+        </div>
+    </div>
+
+    <script>
+        // ── Registro do Service Worker ──────────────────────
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                .catch(err => console.warn('SW registro:', err));
+        }
+
+        // ── Install prompt (Android/Chrome) ─────────────────
+        let _pwaPrompt = null;
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            _pwaPrompt = e;
+            if (!localStorage.getItem('pwa-ignorado')) {
+                const b = document.getElementById('pwa-banner');
+                b.style.display = 'flex';
+            }
+        });
+
+        document.getElementById('pwa-btn-instalar').addEventListener('click', async () => {
+            if (!_pwaPrompt) return;
+            _pwaPrompt.prompt();
+            const { outcome } = await _pwaPrompt.userChoice;
+            _pwaPrompt = null;
+            document.getElementById('pwa-banner').style.display = 'none';
+            if (outcome === 'accepted') localStorage.setItem('pwa-instalado', '1');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            document.getElementById('pwa-banner').style.display = 'none';
+            localStorage.setItem('pwa-instalado', '1');
+        });
+
+        // ── iOS Safari ───────────────────────────────────────
+        const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const isStandalone = window.navigator.standalone === true;
+        if (isIos && !isStandalone && !localStorage.getItem('pwa-ignorado')) {
+            setTimeout(() => {
+                document.getElementById('pwa-ios-banner').style.display = 'block';
+            }, 3000);
         }
     </script>
 </body>

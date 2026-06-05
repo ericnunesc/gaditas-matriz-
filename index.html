@@ -468,6 +468,18 @@
                     <div id="lista-dep-pendentes"></div>
                 </div>
 
+                <!-- ══ ENQUETES (admin) ══ -->
+                <div id="card-enquetes-admin" style="display:none; background:#1e293b; border:1px solid #8b5cf655; border-radius:12px; padding:15px; margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="font-size:0.8rem; font-weight:800; color:#a78bfa;">📋 ENQUETES</span>
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="enquetes.abrirModalCriarEnquete()" style="background:#8b5cf6; border:none; color:white; padding:6px 12px; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">+ ENQUETE</button>
+                            <button onclick="enquetes.renderAdminEnquetes()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem;"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </div>
+                    <div id="enquetes-admin-lista"><small style="color:#475569; font-size:0.65rem;">Clique em atualizar para carregar.</small></div>
+                </div>
+
                 <!-- ═══ SEÇÃO: PROFESSOR ═══ -->
                 <div id="gestao-header-professor" style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6; border-radius: 0 10px 10px 0; padding: 10px 14px; margin: 0 0 14px 0; display:flex; align-items:center; gap:10px;">
                     <i class="fas fa-chalkboard-teacher" style="color:#8b5cf6; font-size:1rem;"></i>
@@ -804,8 +816,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-    <script src="main.js?v=20260602m"></script>
-    <script src="filtros-academia.js?v=20260602m"></script>
+    <script src="main.js?v=20260602n"></script>
+    <script src="filtros-academia.js?v=20260602n"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>
     <script>

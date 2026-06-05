@@ -174,6 +174,11 @@ const auth = {
         // Badge de depoimentos aprovados (carrega em background)
         academia._carregarBadgeDepoimentos();
 
+        // ── ENQUETE ATIVA (aparece como popup bloqueante) ─
+        if (this.role === 'aluno') {
+            setTimeout(() => enquetes.verificarEnqueteAtiva(), 1000);
+        }
+
         // ── CHECK-IN AUTOMÁTICO VIA QR CODE ──────────────
         if (this.role === 'aluno') {
             const turmaQR = sessionStorage.getItem('qr_turma');
@@ -4376,6 +4381,7 @@ const ui = {
             // Depoimentos pendentes — carrega ao entrar na aba (card já visível via configurarVisao)
             if (auth.role === 'admin') {
                 academia.carregarDepoimentosPendentes();
+                enquetes.renderAdminEnquetes();
             }
             if (auth.role === 'admin') academia.carregarVideosPendentesAdmin();
             if (auth.role === 'professor') {
@@ -4507,6 +4513,9 @@ const ui = {
         // Card presença visual admin
         const cardPresAdmin = document.getElementById('card-presenca-admin');
         if (cardPresAdmin) cardPresAdmin.style.display = isAdmin ? 'block' : 'none';
+        // Card enquetes admin
+        const cardEnq = document.getElementById('card-enquetes-admin');
+        if (cardEnq) cardEnq.style.display = isAdmin ? 'block' : 'none';
         // Toggle VITRINE/GERENCIAR na aba loja — só admin
         const lojaToggle = document.getElementById('loja-admin-toggle');
         if (lojaToggle) lojaToggle.style.display = isAdmin ? 'flex' : 'none';
@@ -4647,6 +4656,300 @@ const ui = {
                 if (wp) wp.classList.remove('hidden');
             }
         }
+    }
+};
+
+// ══════════════════════════════════════════════════════════
+// ENQUETES
+// ══════════════════════════════════════════════════════════
+const enquetes = {
+
+    // ── VERIFICAR ENQUETE ATIVA (chamado no login do aluno) ──
+    async verificarEnqueteAtiva() {
+        if (auth.role !== 'aluno') return;
+        try {
+            const snap = await db.collection('enquetes').where('status', '==', 'ativa').get();
+            if (snap.empty) return;
+
+            // Busca dados completos do aluno (faixa, nascimento, modalidade)
+            const alunoDoc = await db.collection('alunos').doc(auth.currentUser.id).get();
+            if (!alunoDoc.exists) return;
+            const aluno = { id: alunoDoc.id, ...alunoDoc.data() };
+
+            for (const doc of snap.docs) {
+                const enquete = { id: doc.id, ...doc.data() };
+
+                // Encerra automaticamente se passou a data
+                if (enquete.dataEncerramento && enquete.dataEncerramento < Date.now()) {
+                    db.collection('enquetes').doc(enquete.id).update({ status: 'encerrada' }).catch(() => {});
+                    continue;
+                }
+                // Verifica público-alvo
+                if (!this._correspondePublico(aluno, enquete.publico)) continue;
+                // Verifica se já votou
+                if ((enquete.votantes || []).includes(auth.currentUser.id)) continue;
+
+                // Mostra popup (uma por vez)
+                this.abrirPopupEnquete(enquete);
+                return;
+            }
+        } catch(e) { console.warn('Enquete:', e.message); }
+    },
+
+    _correspondePublico(aluno, publico) {
+        if (publico === 'todos') return true;
+        const anoAtual = new Date().getFullYear();
+        const idade  = aluno.nascimento ? (anoAtual - new Date(aluno.nascimento).getFullYear()) : 99;
+        const isKids = idade <= 13;
+        const mod    = aluno.modalidade || 'jiujitsu';
+        const faixa  = aluno.faixa || 'Branca';
+        switch (publico) {
+            case 'kids':             return isKids;
+            case 'adulto':           return !isKids && mod !== 'muaythai';
+            case 'muaythai':         return mod === 'muaythai' || mod === 'ambos';
+            case 'branca':           return faixa === 'Branca';
+            case 'azul-roxa-marrom': return ['Azul','Roxa','Marrom'].includes(faixa);
+            case 'preta':            return faixa === 'Preta';
+            default:                 return false;
+        }
+    },
+
+    // ── POPUP BLOQUEANTE PARA O ALUNO ───────────────────────
+    abrirPopupEnquete(enquete) {
+        document.getElementById('modal-enquete-popup')?.remove();
+        const opcoes = enquete.opcoes || [];
+        const modal  = document.createElement('div');
+        modal.id = 'modal-enquete-popup';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+
+        modal.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #8b5cf655;border-radius:20px;padding:28px 22px;max-width:420px;width:100%;box-shadow:0 0 60px rgba(139,92,246,0.25);">
+                <div style="text-align:center;margin-bottom:22px;">
+                    <div style="font-size:2rem;margin-bottom:10px;">📋</div>
+                    <div style="font-size:0.58rem;color:#a78bfa;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">ENQUETE DA ACADEMIA</div>
+                    <div style="font-size:1rem;font-weight:800;color:white;line-height:1.5;">${enquete.titulo}</div>
+                    <div style="font-size:0.6rem;color:#64748b;margin-top:6px;">Responda para continuar. Sua opinião é importante! OSS 🥋</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    ${opcoes.map((op, i) => `
+                        <button id="enq-btn-${i}" onclick="enquetes.votar('${enquete.id}', ${i})"
+                            style="width:100%;padding:14px 16px;background:#0f172a;border:2px solid #334155;color:white;border-radius:12px;font-size:0.82rem;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;"
+                            onmouseover="this.style.borderColor='#8b5cf6';this.style.background='#1e1040'"
+                            onmouseout="this.style.borderColor='#334155';this.style.background='#0f172a'">
+                            <span style="width:22px;height:22px;border:2px solid #475569;border-radius:50%;flex-shrink:0;display:inline-block;"></span>
+                            ${op}
+                        </button>`).join('')}
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async votar(enqueteId, opcaoIndex) {
+        // Desabilita todos os botões imediatamente (evita duplo clique)
+        document.querySelectorAll('#modal-enquete-popup button').forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
+        // Destaca o botão selecionado
+        const btnSel = document.getElementById(`enq-btn-${opcaoIndex}`);
+        if (btnSel) { btnSel.style.borderColor = '#8b5cf6'; btnSel.style.background = '#1e1040'; btnSel.style.opacity = '1'; }
+
+        try {
+            const ref = db.collection('enquetes').doc(enqueteId);
+            // Leitura para checar duplicata
+            const doc = await ref.get();
+            if (!doc.exists) { document.getElementById('modal-enquete-popup')?.remove(); return; }
+            if ((doc.data().votantes || []).includes(auth.currentUser.id)) {
+                document.getElementById('modal-enquete-popup')?.remove(); return;
+            }
+            // Atualização atômica: incrementa votos + adiciona ao array de votantes
+            await ref.update({
+                [`votos.${opcaoIndex}`]: firebase.firestore.FieldValue.increment(1),
+                votantes: firebase.firestore.FieldValue.arrayUnion(auth.currentUser.id)
+            });
+
+            // Confirmação visual e fecha
+            const modal = document.getElementById('modal-enquete-popup');
+            if (modal) {
+                modal.innerHTML = `
+                    <div style="background:#1e293b;border:1px solid #10b98155;border-radius:20px;padding:48px 28px;max-width:380px;width:100%;text-align:center;">
+                        <div style="font-size:3.5rem;margin-bottom:14px;">✅</div>
+                        <div style="font-size:1.1rem;font-weight:800;color:#10b981;margin-bottom:8px;">Voto registrado!</div>
+                        <div style="font-size:0.75rem;color:#64748b;">Obrigado pela sua opinião. OSS! 🥋</div>
+                    </div>`;
+                setTimeout(() => modal.remove(), 2000);
+            }
+        } catch(e) {
+            document.querySelectorAll('#modal-enquete-popup button').forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+            alert('Erro ao votar: ' + e.message);
+        }
+    },
+
+    // ── ADMIN — LISTAR ENQUETES COM RESULTADOS ───────────────
+    async renderAdminEnquetes() {
+        const container = document.getElementById('enquetes-admin-lista');
+        if (!container) return;
+        container.innerHTML = '<small style="color:#475569;font-size:0.65rem;">Carregando...</small>';
+        try {
+            const snap = await db.collection('enquetes').get();
+            if (snap.empty) {
+                container.innerHTML = '<div style="text-align:center;padding:20px;color:#475569;font-size:0.7rem;">Nenhuma enquete.<br>Clique em <strong>+ ENQUETE</strong> para criar.</div>';
+                return;
+            }
+            const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => (b.criadaEm || 0) - (a.criadaEm || 0));
+
+            const pubLabel = {
+                todos: '👥 Todos', kids: '🧒 Kids', adulto: '🥋 Adulto BJJ',
+                muaythai: '🥊 Muay Thai', branca: '⬜ Faixa Branca',
+                'azul-roxa-marrom': '🟦 Azul/Roxa/Marrom', preta: '⬛ Faixa Preta'
+            };
+
+            container.innerHTML = lista.map(e => {
+                const opcoes     = e.opcoes || [];
+                const votos      = e.votos  || {};
+                const totalVotos = Object.values(votos).reduce((s, v) => s + v, 0);
+                const ativa      = e.status === 'ativa';
+                const enc        = e.dataEncerramento ? new Date(e.dataEncerramento).toLocaleDateString('pt-BR') : '—';
+                const totalVotantes = (e.votantes || []).length;
+
+                const barras = opcoes.map((op, i) => {
+                    const qtd = votos[i] || 0;
+                    const pct = totalVotos > 0 ? Math.round((qtd / totalVotos) * 100) : 0;
+                    const cor = ['#3b82f6','#8b5cf6','#10b981','#f59e0b'][i] || '#3b82f6';
+                    return `
+                        <div style="margin-bottom:10px;">
+                            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+                                <span style="font-size:0.68rem;color:#e2e8f0;font-weight:600;flex:1;margin-right:8px;">${op}</span>
+                                <span style="font-size:0.68rem;font-weight:800;color:${cor};white-space:nowrap;">${pct}% <span style="color:#64748b;font-weight:500;">(${qtd} voto${qtd !== 1 ? 's' : ''})</span></span>
+                            </div>
+                            <div style="background:#0f172a;border-radius:6px;height:10px;overflow:hidden;">
+                                <div style="background:${cor};width:${pct}%;height:100%;border-radius:6px;"></div>
+                            </div>
+                        </div>`;
+                }).join('');
+
+                return `
+                    <div style="background:#0f172a;border:1px solid ${ativa ? '#8b5cf633' : '#33415533'};border-radius:12px;padding:14px;margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                            <div style="flex:1;min-width:0;margin-right:8px;">
+                                <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap;">
+                                    <span style="font-size:0.52rem;font-weight:800;padding:2px 8px;border-radius:10px;background:${ativa ? '#1e1040' : '#1e293b'};color:${ativa ? '#a78bfa' : '#475569'};">${ativa ? '✅ ATIVA' : '⏹ ENCERRADA'}</span>
+                                    <span style="font-size:0.55rem;color:#64748b;">${pubLabel[e.publico] || e.publico}</span>
+                                </div>
+                                <div style="font-size:0.8rem;font-weight:800;color:white;line-height:1.3;">${e.titulo}</div>
+                                <div style="font-size:0.58rem;color:#64748b;margin-top:4px;">Encerra: ${enc} · <strong style="color:#94a3b8;">${totalVotantes} responderam</strong></div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">
+                                ${ativa ? `<button onclick="enquetes.encerrarEnquete('${e.id}')" style="background:#f59e0b22;border:1px solid #f59e0b;color:#f59e0b;padding:5px 10px;border-radius:6px;font-size:0.55rem;font-weight:800;cursor:pointer;">⏹ ENCERRAR</button>` : ''}
+                                <button onclick="enquetes.excluirEnquete('${e.id}')" style="background:#ef444422;border:1px solid #ef4444;color:#ef4444;padding:5px 10px;border-radius:6px;font-size:0.55rem;font-weight:800;cursor:pointer;">🗑 EXCLUIR</button>
+                            </div>
+                        </div>
+                        ${totalVotos > 0 ? barras : '<small style="color:#475569;font-size:0.62rem;">Nenhum voto ainda.</small>'}
+                    </div>`;
+            }).join('');
+        } catch(e) {
+            container.innerHTML = `<small style="color:#ef4444;font-size:0.65rem;">Erro: ${e.message}</small>`;
+        }
+    },
+
+    // ── ADMIN — CRIAR ENQUETE ────────────────────────────────
+    abrirModalCriarEnquete() {
+        document.getElementById('modal-criar-enquete')?.remove();
+        const amanha = new Date();
+        amanha.setDate(amanha.getDate() + 7);
+        const dataDefault = amanha.toISOString().split('T')[0];
+        const publicos = [
+            { v:'todos',            l:'👥 Todos' },
+            { v:'kids',             l:'🧒 Kids (≤13 anos)' },
+            { v:'adulto',           l:'🥋 Adulto BJJ' },
+            { v:'muaythai',         l:'🥊 Muay Thai' },
+            { v:'branca',           l:'⬜ Faixa Branca' },
+            { v:'azul-roxa-marrom', l:'🟦 Azul / Roxa / Marrom' },
+            { v:'preta',            l:'⬛ Faixa Preta' },
+        ];
+        const modal = document.createElement('div');
+        modal.id = 'modal-criar-enquete';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.98);z-index:10000;overflow-y:auto;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="max-width:440px;margin:0 auto;padding-bottom:60px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <div style="font-size:0.9rem;font-weight:800;color:white;">📋 NOVA ENQUETE</div>
+                    <button onclick="document.getElementById('modal-criar-enquete').remove()" style="background:#334155;border:none;color:white;padding:8px 14px;border-radius:8px;font-size:0.8rem;font-weight:700;cursor:pointer;">✕</button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div>
+                        <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:5px;">PERGUNTA / TÍTULO *</small>
+                        <input id="enq-titulo" type="text" maxlength="120" placeholder="Ex: Qual horário você prefere para treino?"
+                            style="width:100%;padding:11px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;outline:none;">
+                    </div>
+                    <div>
+                        <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:8px;">OPÇÕES DE RESPOSTA (mín. 2, máx. 4) *</small>
+                        ${[1,2,3,4].map(n => `
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+                                <span style="font-size:0.65rem;color:#64748b;font-weight:800;width:16px;text-align:center;flex-shrink:0;">${n}</span>
+                                <input id="enq-opcao-${n}" type="text" maxlength="80" placeholder="Opção ${n}${n > 2 ? ' (opcional)' : ' *'}"
+                                    style="flex:1;padding:9px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.78rem;box-sizing:border-box;outline:none;">
+                            </div>`).join('')}
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div>
+                            <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:5px;">ENCERRAMENTO</small>
+                            <input id="enq-data" type="date" value="${dataDefault}"
+                                style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.78rem;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:5px;">PÚBLICO-ALVO</small>
+                            <select id="enq-publico" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;box-sizing:border-box;">
+                                ${publicos.map(p => `<option value="${p.v}">${p.l}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="enquetes.salvarEnquete()" id="btn-salvar-enquete"
+                        style="width:100%;padding:14px;background:#8b5cf6;color:white;border:none;border-radius:10px;font-weight:800;font-size:0.85rem;cursor:pointer;margin-top:4px;">
+                        ✅ CRIAR ENQUETE
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        setTimeout(() => document.getElementById('enq-titulo')?.focus(), 100);
+    },
+
+    async salvarEnquete() {
+        const titulo  = document.getElementById('enq-titulo')?.value.trim();
+        const opcoes  = [1,2,3,4].map(n => document.getElementById(`enq-opcao-${n}`)?.value.trim()).filter(v => v);
+        const dataEnc = document.getElementById('enq-data')?.value;
+        const publico = document.getElementById('enq-publico')?.value;
+        if (!titulo)          { alert('Digite a pergunta da enquete.'); return; }
+        if (opcoes.length < 2){ alert('Adicione pelo menos 2 opções de resposta.'); return; }
+        const btn = document.getElementById('btn-salvar-enquete');
+        if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Salvando...'; }
+        try {
+            await db.collection('enquetes').add({
+                titulo, opcoes, publico,
+                dataEncerramento: dataEnc ? new Date(dataEnc + 'T23:59:59').getTime() : null,
+                status: 'ativa', votos: {}, votantes: [],
+                criadaEm: Date.now()
+            });
+            document.getElementById('modal-criar-enquete')?.remove();
+            this.renderAdminEnquetes();
+        } catch(e) {
+            if (btn) { btn.disabled = false; btn.innerHTML = '✅ CRIAR ENQUETE'; }
+            alert('Erro ao salvar: ' + e.message);
+        }
+    },
+
+    async encerrarEnquete(id) {
+        if (!confirm('Encerrar esta enquete? Ninguém mais poderá votar.')) return;
+        try {
+            await db.collection('enquetes').doc(id).update({ status: 'encerrada' });
+            this.renderAdminEnquetes();
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async excluirEnquete(id) {
+        if (!confirm('Excluir esta enquete permanentemente?')) return;
+        try {
+            await db.collection('enquetes').doc(id).delete();
+            this.renderAdminEnquetes();
+        } catch(e) { alert('Erro: ' + e.message); }
     }
 };
 

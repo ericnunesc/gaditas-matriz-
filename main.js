@@ -4846,9 +4846,9 @@ const ui = {
     },
 
     _corTurma(turma) {
-        if (this._isTurmaMT(turma))   return '#ef4444'; // vermelho MT
-        if (this._isTurmaKids(turma)) return '#f59e0b'; // dourado Kids
-        return '#3b82f6';                                 // azul JJ adulto
+        if (academia._isTurmaMT(turma))   return '#ef4444'; // vermelho MT
+        if (academia._isTurmaKids(turma)) return '#f59e0b'; // dourado Kids
+        return '#3b82f6';                                     // azul JJ adulto
     },
 
     _buildCalendario() {
@@ -4889,8 +4889,8 @@ const ui = {
 
             if (treinos.length > 0) {
                 // Determina a cor dominante do dia
-                const hasMT   = treinos.some(t => this._isTurmaMT(t.turma));
-                const hasKids = treinos.some(t => this._isTurmaKids(t.turma));
+                const hasMT   = treinos.some(t => academia._isTurmaMT(t.turma));
+                const hasKids = treinos.some(t => academia._isTurmaKids(t.turma));
                 const cor     = hasMT ? '#ef4444' : hasKids ? '#f59e0b' : '#3b82f6';
                 const label   = treinos.length > 1 ? treinos.length : '●';
 

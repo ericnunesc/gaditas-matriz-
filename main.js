@@ -818,6 +818,25 @@ const academia = {
         const s  = document.getElementById('select-turma-aluno');
         const lD = document.getElementById('quem-treina-hoje');
         if (!s || !lD) return;
+
+        // ── Verifica se a turma está cancelada hoje ───────────
+        const preview = document.getElementById('preview-plano-aula');
+        try {
+            const docCanc = await db.collection('aulas_canceladas').doc(this._getDataHoje()).get();
+            if (docCanc.exists && docCanc.data()[s.value] === true) {
+                lD.innerHTML = '';
+                if (preview) preview.innerHTML = `
+                    <div style="background:#1a0404; border:1px solid #ef444466; border-radius:8px; padding:12px; margin:8px 0; text-align:center;">
+                        <div style="font-size:0.85rem; font-weight:800; color:#ef4444; margin-bottom:4px;">🚫 AULA CANCELADA</div>
+                        <div style="font-size:0.65rem; color:#94a3b8;">Esta turma foi cancelada hoje.<br>Entre em contato com a academia.</div>
+                    </div>`;
+                return;
+            } else {
+                // Limpa aviso de cancelamento se existia
+                if (preview?.innerHTML.includes('AULA CANCELADA')) preview.innerHTML = '';
+            }
+        } catch(e) {}
+
         const snap = await db.collection("checkins").where("turma", "==", s.value).get();
         if (snap.empty) {
             lD.innerHTML = `<small style="color:var(--text-muted);">Nenhum atleta confirmado.</small>`;
@@ -1285,22 +1304,42 @@ const academia = {
             if (doc.exists) planosExistentes = doc.data();
         } catch(e) {}
 
+        // Verifica quais turmas estão canceladas hoje
+        let canceladas = {};
+        try {
+            const docCanc = await db.collection('aulas_canceladas').doc(dataHoje).get();
+            if (docCanc.exists) canceladas = docCanc.data();
+        } catch(e) {}
+
         container.innerHTML = `
             <div style="background:#1e293b; border:1px solid #8b5cf644; border-left:3px solid #8b5cf6; border-radius:12px; padding:15px;">
                 <div style="font-size:0.75rem; font-weight:800; color:#8b5cf6; margin-bottom:12px; letter-spacing:0.3px;">
                     <i class="fas fa-clipboard-list"></i> PLANO DA AULA DE HOJE
                 </div>
                 ${turmasVisiveis.map(turma => {
-                    const inputId = 'plano_' + turma.replace(/[^a-z0-9]/gi, '_');
+                    const inputId     = 'plano_' + turma.replace(/[^a-z0-9]/gi, '_');
                     const conteudoSalvo = this._planoConteudo(planosExistentes[turma]);
-                    return `<div style="margin-bottom:12px;">
-                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:5px; letter-spacing:0.5px;">📍 ${turma.toUpperCase()}</small>
-                        <textarea id="${inputId}" placeholder="Ex: Raspagens da guarda fechada + finalização kimura..." rows="2"
-                            style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; font-size:0.8rem; outline:none; resize:none; margin-bottom:6px;">${conteudoSalvo}</textarea>
-                        <button onclick="academia.salvarPlanoAula('${turma.replace(/'/g,"\\'")}', document.getElementById('${inputId}').value)"
-                            style="width:100%; padding:9px; background:#8b5cf6; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem;">
-                            <i class="fas fa-save"></i> SALVAR CONTEÚDO DA AULA
-                        </button>
+                    const turmaCancelada = canceladas[turma] === true;
+                    const turmaEsc = turma.replace(/'/g,"\\'");
+                    return `<div style="margin-bottom:14px; ${turmaCancelada ? 'opacity:0.7;' : ''}">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                            <small style="color:${turmaCancelada ? '#ef4444' : '#94a3b8'}; font-size:0.6rem; font-weight:800; letter-spacing:0.5px;">
+                                ${turmaCancelada ? '🚫 CANCELADA — ' : '📍 '}${turma.toUpperCase()}
+                            </small>
+                            <button onclick="academia.toggleCancelamentoAula('${turmaEsc}', ${turmaCancelada})"
+                                style="background:${turmaCancelada ? '#064e3b' : '#1a0a0a'}; border:1px solid ${turmaCancelada ? '#10b981' : '#ef4444'}; color:${turmaCancelada ? '#10b981' : '#ef4444'}; padding:3px 10px; border-radius:6px; font-size:0.55rem; font-weight:800; cursor:pointer; white-space:nowrap;">
+                                ${turmaCancelada ? '✓ REATIVAR' : '🚫 CANCELAR AULA'}
+                            </button>
+                        </div>
+                        ${turmaCancelada
+                            ? `<div style="background:#1a0404; border:1px solid #ef444444; border-radius:8px; padding:10px; font-size:0.7rem; color:#ef4444; font-weight:700; text-align:center;">Alunos verão aviso de aula cancelada.</div>`
+                            : `<textarea id="${inputId}" placeholder="Ex: Raspagens da guarda fechada + finalização kimura..." rows="2"
+                                style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; font-size:0.8rem; outline:none; resize:none; margin-bottom:6px;">${conteudoSalvo}</textarea>
+                               <button onclick="academia.salvarPlanoAula('${turmaEsc}', document.getElementById('${inputId}').value)"
+                                style="width:100%; padding:9px; background:#8b5cf6; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem;">
+                                <i class="fas fa-save"></i> SALVAR CONTEÚDO DA AULA
+                               </button>`
+                        }
                     </div>`;
                 }).join('')}
             </div>`;
@@ -1468,6 +1507,24 @@ const academia = {
     // Helpers: suporta dados antigos (string) e novos (objeto {conteudo, profNome})
     _planoConteudo(val) { return val ? (typeof val === 'object' ? val.conteudo || '' : val) : ''; },
     _planoProf(val)     { return val && typeof val === 'object' ? val.profNome || '' : ''; },
+
+    async toggleCancelamentoAula(turma, estaCancelada) {
+        const acao = estaCancelada ? 'reativar' : 'cancelar';
+        if (!confirm(`${estaCancelada ? 'Reativar' : 'Cancelar'} a aula "${turma}" hoje?\n${!estaCancelada ? 'Os alunos verão um aviso de aula cancelada.' : 'A aula voltará a aparecer normalmente.'}`)) return;
+        const dataHoje = this._getDataHoje();
+        try {
+            if (!firebase.auth().currentUser) await firebase.auth().signInAnonymously().catch(() => {});
+            await db.collection('aulas_canceladas').doc(dataHoje).set(
+                { [turma]: !estaCancelada },
+                { merge: true }
+            );
+            this.renderPlanoAulaProf();
+            // Atualiza área de check-in dos alunos
+            this.atualizarPresencaAntecipada();
+        } catch(e) {
+            alert('Erro ao ' + acao + ' aula: ' + e.message);
+        }
+    },
 
     async salvarPlanoAula(turma, conteudo) {
         const dataHoje = this._getDataHoje();
@@ -4713,12 +4770,12 @@ const ui = {
                     <!-- ── CALENDÁRIO / LISTA DE TREINOS ── -->
                     <div style="margin-top:14px; border-top:1px solid var(--border-light); padding-top:14px;">
                         <div style="display:flex; gap:6px; margin-bottom:12px;">
-                            <button id="cal-btn-cal" onclick="academia._calVista='calendario'; academia._renderCal()"
-                                style="flex:1; padding:8px; background:${this._calVista==='calendario'?'#1e3a8a':'#0f172a'}; border:1px solid ${this._calVista==='calendario'?'#3b82f6':'#334155'}; color:${this._calVista==='calendario'?'#93c5fd':'#64748b'}; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">
+                            <button id="cal-btn-cal" onclick="academia.mudarVistaCalendario('calendario')"
+                                style="flex:1; padding:8px; background:#1e3a8a; border:1px solid #3b82f6; color:#93c5fd; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">
                                 📅 CALENDÁRIO
                             </button>
-                            <button id="cal-btn-lista" onclick="academia._calVista='lista'; academia._renderCal()"
-                                style="flex:1; padding:8px; background:${this._calVista==='lista'?'#1e3a8a':'#0f172a'}; border:1px solid ${this._calVista==='lista'?'#3b82f6':'#334155'}; color:${this._calVista==='lista'?'#93c5fd':'#64748b'}; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">
+                            <button id="cal-btn-lista" onclick="academia.mudarVistaCalendario('lista')"
+                                style="flex:1; padding:8px; background:#0f172a; border:1px solid #334155; color:#64748b; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">
                                 📋 LISTA
                             </button>
                         </div>
@@ -4733,6 +4790,24 @@ const ui = {
                 if (wp) wp.classList.remove('hidden');
             }
         }
+    },
+
+    // ── HELPERS PÚBLICOS DO CALENDÁRIO (usados nos onclicks) ─
+    mudarVistaCalendario(vista) {
+        this._calVista = vista;
+        this._calDia   = null;
+        this._renderCal();
+    },
+    navMesCalendario(delta) {
+        this._calMes += delta;
+        if (this._calMes > 11) { this._calMes = 0;  this._calAno++; }
+        if (this._calMes < 0)  { this._calMes = 11; this._calAno--; }
+        this._calDia = null;
+        this._renderCal();
+    },
+    selecionarDiaCal(key) {
+        this._calDia = (this._calDia === key) ? null : key;
+        this._renderCal();
     },
 
     // ── CALENDÁRIO DE TREINOS ──────────────────────────────
@@ -4818,7 +4893,7 @@ const ui = {
                 const cor     = hasMT ? '#ef4444' : hasKids ? '#f59e0b' : '#3b82f6';
                 const label   = treinos.length > 1 ? treinos.length : '●';
 
-                cells += `<div onclick="academia._calDia='${key}'; academia._renderCal()"
+                cells += `<div onclick="academia.selecionarDiaCal('${key}')"
                     style="text-align:center; cursor:pointer; border-radius:7px; padding:4px 2px;
                            background:${isSel ? cor + '33' : cor + '18'};
                            border:1px solid ${isSel ? cor : cor + '44'};">
@@ -4857,10 +4932,10 @@ const ui = {
             <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px;">
                 <!-- Navegação mês -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <button onclick="academia._calMes--; if(academia._calMes<0){academia._calMes=11;academia._calAno--;} academia._calDia=null; academia._renderCal();"
+                    <button onclick="academia.navMesCalendario(-1)"
                         style="background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:700;">◄</button>
                     <span style="font-size:0.78rem; font-weight:800; color:white;">${meses[mes]} ${ano}</span>
-                    <button onclick="academia._calMes++; if(academia._calMes>11){academia._calMes=0;academia._calAno++;} academia._calDia=null; academia._renderCal();"
+                    <button onclick="academia.navMesCalendario(1)"
                         style="background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:700;">►</button>
                 </div>
                 <!-- Cabeçalho dias da semana -->

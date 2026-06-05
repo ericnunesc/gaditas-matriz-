@@ -248,11 +248,6 @@ const academia = {
     filtroInativos: false,
     _gradFiltroCategoria: "all",   // 'all' | 'kids' | 'adulto'
     _gradFiltroFaixa: "all",       // 'all' | nome da faixa
-    _calMes: new Date().getMonth(),
-    _calAno: new Date().getFullYear(),
-    _calHistorico: [],
-    _calDia: null,
-    _calVista: 'calendario',       // 'calendario' | 'lista'
     leoesFichaTemp: { leaoAtencao: 0, leaoComportamento: 0, leaoCompanheirismo: 0, leaoDisciplina: 0 },
 
     gradeHorarios: {
@@ -4477,6 +4472,13 @@ Ele voltará a ser aluno normal.`)) return;
 };
 
 const ui = {
+    // ── Estado do calendário de treinos ──────────────────
+    _calMes: new Date().getMonth(),
+    _calAno: new Date().getFullYear(),
+    _calHistorico: [],
+    _calDia: null,
+    _calVista: 'calendario',
+
     showTab(id) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
@@ -4704,10 +4706,10 @@ const ui = {
                 cardLeoes.classList.add('hidden');
             }
             const listaHistorico = d.historico || [];
-            // Armazena para as funções do calendário (academia, não ui)
-            academia._calHistorico = listaHistorico;
-            if (!academia._calMes && academia._calMes !== 0) academia._calMes = new Date().getMonth();
-            if (!academia._calAno) academia._calAno = new Date().getFullYear();
+            // Armazena no ui (onde estão todos os métodos do calendário)
+            this._calHistorico = listaHistorico;
+            if (this._calMes == null) this._calMes = new Date().getMonth();
+            if (this._calAno == null) this._calAno = new Date().getFullYear();
             // ── Blocos condicionais por modalidade ────────────────
             const modPerfil = d.modalidade || 'jiujitsu';
             const corJJ = this.getCorFaixa(d.faixa);
@@ -4769,11 +4771,11 @@ const ui = {
                     <!-- ── CALENDÁRIO / LISTA DE TREINOS ── -->
                     <div style="margin-top:14px; border-top:1px solid var(--border-light); padding-top:14px;">
                         <div style="display:flex; gap:6px; margin-bottom:12px;">
-                            <button id="cal-btn-cal" onclick="academia.mudarVistaCalendario('calendario')"
+                            <button id="cal-btn-cal" onclick="ui.mudarVistaCalendario('calendario')"
                                 style="flex:1; padding:8px; background:#1e3a8a; border:1px solid #3b82f6; color:#93c5fd; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">
                                 📅 CALENDÁRIO
                             </button>
-                            <button id="cal-btn-lista" onclick="academia.mudarVistaCalendario('lista')"
+                            <button id="cal-btn-lista" onclick="ui.mudarVistaCalendario('lista')"
                                 style="flex:1; padding:8px; background:#0f172a; border:1px solid #334155; color:#64748b; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">
                                 📋 LISTA
                             </button>
@@ -4782,7 +4784,7 @@ const ui = {
                     </div>
                 </div>`;
             // Renderiza calendário/lista após o HTML do perfil ser inserido
-            setTimeout(() => academia._renderCal(), 50);
+            setTimeout(() => this._renderCal(), 50);
             // Mostra wrapper de perfil (só para aluno)
             if (auth.role === 'aluno') {
                 const wp = document.getElementById('wrapper-perfil-proprio');
@@ -4892,7 +4894,7 @@ const ui = {
                 const cor     = hasMT ? '#ef4444' : hasKids ? '#f59e0b' : '#3b82f6';
                 const label   = treinos.length > 1 ? treinos.length : '●';
 
-                cells += `<div onclick="academia.selecionarDiaCal('${key}')"
+                cells += `<div onclick="ui.selecionarDiaCal('${key}')"
                     style="text-align:center; cursor:pointer; border-radius:7px; padding:4px 2px;
                            background:${isSel ? cor + '33' : cor + '18'};
                            border:1px solid ${isSel ? cor : cor + '44'};">
@@ -4931,10 +4933,10 @@ const ui = {
             <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px;">
                 <!-- Navegação mês -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <button onclick="academia.navMesCalendario(-1)"
+                    <button onclick="ui.navMesCalendario(-1)"
                         style="background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:700;">◄</button>
                     <span style="font-size:0.78rem; font-weight:800; color:white;">${meses[mes]} ${ano}</span>
-                    <button onclick="academia.navMesCalendario(1)"
+                    <button onclick="ui.navMesCalendario(1)"
                         style="background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:700;">►</button>
                 </div>
                 <!-- Cabeçalho dias da semana -->

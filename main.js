@@ -241,6 +241,8 @@ const academia = {
     _modalidadeAtual: "jiujitsu",
     textoBuscaNome: "",
     filtroInativos: false,
+    _gradFiltroCategoria: "all",   // 'all' | 'kids' | 'adulto'
+    _gradFiltroFaixa: "all",       // 'all' | nome da faixa
     leoesFichaTemp: { leaoAtencao: 0, leaoComportamento: 0, leaoCompanheirismo: 0, leaoDisciplina: 0 },
 
     gradeHorarios: {
@@ -660,36 +662,75 @@ const academia = {
     async generarRelatorioGraduacao() {
         const snap = await db.collection("alunos").orderBy("nome").get();
         const container = document.getElementById('resultado-relatorios');
+        const anoAtual  = new Date().getFullYear();
+
+        // ── Coleta faixas únicas para o filtro ────────────────
+        const faixasUnicas = [...new Set(
+            snap.docs.map(d => d.data().faixa).filter(Boolean)
+        )].sort();
+
+        // ── Aplica filtros de categoria e faixa ───────────────
+        const _passaFiltro = (a) => {
+            const idade  = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
+            const isKids = idade <= 13;
+            if (this._gradFiltroCategoria === 'kids'   && !isKids) return false;
+            if (this._gradFiltroCategoria === 'adulto' && isKids)  return false;
+            if (this._gradFiltroFaixa !== 'all' && a.faixa !== this._gradFiltroFaixa) return false;
+            return true;
+        };
 
         const prontos = [];
-        const outros = [];
-
+        const outros  = [];
         snap.forEach(doc => {
             const a = doc.data();
+            if (!_passaFiltro(a)) return;
             const s = academia.verificarMeta(a);
-            // Sobe para destaque: atingiu a meta OU foi convocado pelo admin
             if (s.pronto || a.aspiranteGraduacao === true) prontos.push({ id: doc.id, a, s });
             else outros.push({ id: doc.id, a, s });
         });
 
-        let html = '';
+        // ── Botões de filtro ──────────────────────────────────
+        const btnCat = (v, l) => {
+            const ativo = this._gradFiltroCategoria === v;
+            return `<button onclick="academia._gradFiltroCategoria='${v}'; academia.generarRelatorioGraduacao()"
+                style="padding:7px 12px; background:${ativo ? '#3b82f6' : '#1e293b'}; border:1px solid ${ativo ? '#3b82f6' : '#334155'}; color:${ativo ? 'white' : '#94a3b8'}; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer; white-space:nowrap;">${l}</button>`;
+        };
+        const btnFaixa = (v, l) => {
+            const ativo = this._gradFiltroFaixa === v;
+            return `<button onclick="academia._gradFiltroFaixa='${v}'; academia.generarRelatorioGraduacao()"
+                style="padding:7px 12px; background:${ativo ? '#f59e0b' : '#1e293b'}; border:1px solid ${ativo ? '#f59e0b' : '#334155'}; color:${ativo ? '#000' : '#94a3b8'}; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer; white-space:nowrap;">${l}</button>`;
+        };
 
-        // ── Prontos para graduar — destaque AMARELO ────────────────────
+        let html = `
+            <!-- Filtros -->
+            <div style="margin-bottom:14px;">
+                <div style="font-size:0.55rem; color:#64748b; font-weight:700; letter-spacing:0.8px; margin-bottom:6px;">CATEGORIA</div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+                    ${btnCat('all', '👥 Todos')}
+                    ${btnCat('kids', '🧒 Kids')}
+                    ${btnCat('adulto', '🥋 Adulto')}
+                </div>
+                <div style="font-size:0.55rem; color:#64748b; font-weight:700; letter-spacing:0.8px; margin-bottom:6px;">FAIXA</div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    ${btnFaixa('all', '🥋 Todas')}
+                    ${faixasUnicas.map(f => btnFaixa(f, f)).join('')}
+                </div>
+            </div>`;
+
+        // ── Prontos para graduar — destaque AMARELO ────────────
         if (prontos.length > 0) {
-            const totalProntos   = prontos.filter(({ s }) => s.pronto).length;
+            const totalProntos    = prontos.filter(({ s }) => s.pronto).length;
             const totalConvocados = prontos.filter(({ a }) => a.aspiranteGraduacao).length;
             const subtitulo = [
-                totalProntos   ? `${totalProntos} atingiu a meta`  : '',
+                totalProntos    ? `${totalProntos} atingiu a meta`  : '',
                 totalConvocados ? `${totalConvocados} convocado${totalConvocados > 1 ? 's' : ''}` : ''
             ].filter(Boolean).join(' · ');
             html += `<div style="background:#451a03; border:2px solid #f59e0b; border-radius:12px; padding:14px; margin-bottom:16px;">
-                <div style="color:#fbbf24; font-size:0.7rem; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">
-                    ⭐ EM DESTAQUE — ${prontos.length} atleta${prontos.length > 1 ? 's' : ''}
-                </div>
+                <div style="color:#fbbf24; font-size:0.7rem; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">⭐ EM DESTAQUE — ${prontos.length} atleta${prontos.length > 1 ? 's' : ''}</div>
                 <div style="color:#92400e; font-size:0.6rem; margin-bottom:10px;">${subtitulo}</div>`;
             prontos.forEach(({ id, a }) => {
                 const convocado = a.aspiranteGraduacao === true;
-                const nomeEsc = (a.nome || '').replace(/'/g, "\\'");
+                const nomeEsc   = (a.nome || '').replace(/'/g, "\\'");
                 html += `<div style="display:flex; justify-content:space-between; align-items:center; background:${convocado ? '#052e16' : '#0f172a'}; border:1px solid ${convocado ? '#10b981' : '#78350f'}; border-radius:8px; padding:10px 12px; margin-bottom:6px;">
                     <div style="flex:1; min-width:0;">
                         <div style="font-size:0.85rem; font-weight:800; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome.toUpperCase()}</div>
@@ -698,7 +739,7 @@ const academia = {
                     <div style="display:flex; gap:6px; align-items:center; flex-shrink:0; margin-left:8px;">
                         ${convocado
                             ? `<span style="background:#064e3b; color:#10b981; font-size:0.6rem; padding:4px 8px; border-radius:6px; font-weight:800; white-space:nowrap; border:1px solid #10b981;">✅ CONVOCADO</span>
-                               <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar convocação" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.85rem; padding:2px 4px;">✕</button>`
+                               <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.85rem; padding:2px 4px;">✕</button>`
                             : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}')" style="background:#92400e; border:1px solid #f59e0b; color:#fbbf24; font-size:0.6rem; padding:5px 10px; border-radius:6px; cursor:pointer; font-weight:800; white-space:nowrap;">🥋 CONVOCAR</button>`
                         }
                     </div>
@@ -707,16 +748,24 @@ const academia = {
             html += `</div>`;
         } else {
             html += `<div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:14px; text-align:center; margin-bottom:16px;">
-                <div style="color:#64748b; font-size:0.8rem;">Nenhum atleta atingiu a meta ainda.</div>
+                <div style="color:#64748b; font-size:0.8rem;">Nenhum atleta em destaque com os filtros selecionados.</div>
             </div>`;
         }
 
-        // ── Demais alunos ──────────────────────────────────────────────
-        html += `<div style="font-size:0.65rem; color:#64748b; font-weight:800; margin-bottom:8px; letter-spacing:0.5px;">TODOS OS ATLETAS</div>`;
+        // ── Demais alunos ──────────────────────────────────────
+        const labelFiltro = this._gradFiltroCategoria !== 'all' || this._gradFiltroFaixa !== 'all'
+            ? `ATLETAS FILTRADOS (${prontos.length + outros.length})`
+            : 'TODOS OS ATLETAS';
+        html += `<div style="font-size:0.65rem; color:#64748b; font-weight:800; margin-bottom:8px; letter-spacing:0.5px;">${labelFiltro}</div>`;
+
+        if (outros.length === 0) {
+            html += `<div style="color:#475569; font-size:0.75rem; text-align:center; padding:20px;">Nenhum atleta nesta combinação de filtros.</div>`;
+        }
+
         outros.forEach(({ id, a, s }) => {
-            const percent = Math.round(s.percent);
+            const percent   = Math.round(s.percent);
             const convocado = a.aspiranteGraduacao === true;
-            const nomeEsc = (a.nome || '').replace(/'/g, "\\'");
+            const nomeEsc   = (a.nome || '').replace(/'/g, "\\'");
             html += `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid var(--border-light); padding:10px 0; ${convocado ? 'background:#052e1622; border-radius:8px; padding:10px 8px;' : ''}">
                 <div style="flex:1; min-width:0;">
                     <div style="font-size:0.82rem; color:#e2e8f0; font-weight:600;">${a.nome}${convocado ? ' <span style="font-size:0.55rem; color:#10b981; font-weight:800;">✅</span>' : ''}</div>
@@ -725,7 +774,7 @@ const academia = {
                 <div style="display:flex; gap:4px; align-items:center; flex-shrink:0;">
                     ${convocado
                         ? `<span style="background:#064e3b; color:#10b981; font-size:0.55rem; padding:3px 7px; border-radius:6px; font-weight:800; white-space:nowrap; border:1px solid #10b98155;">✅ CONV.</span>
-                           <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar convocação" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.75rem; padding:2px 4px;">✕</button>`
+                           <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.75rem; padding:2px 4px;">✕</button>`
                         : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}')" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:0.55rem; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:700; white-space:nowrap;">🥋 CONVOCAR</button>`
                     }
                 </div>

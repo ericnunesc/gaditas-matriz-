@@ -4726,17 +4726,30 @@ const aniversario = {
     async verificarAniversario() {
         if (auth.role !== 'aluno') return;
         try {
-            const nascimento = auth.currentUser?.nascimento;
+            // Busca sempre do Firestore (garante que nascimento está lá)
+            let nascimento = auth.currentUser?.nascimento;
+            if (!nascimento) {
+                const doc = await db.collection('alunos').doc(auth.currentUser.id).get();
+                if (doc.exists) nascimento = doc.data().nascimento;
+            }
             if (!nascimento) return;
 
-            const hoje  = new Date();
-            const nasc  = new Date(nascimento);
-            const ehAniversario = nasc.getDate()  === hoje.getDate() &&
-                                  nasc.getMonth() === hoje.getMonth();
-            if (!ehAniversario) return;
+            // Usa data LOCAL (evita bug de fuso horário do UTC)
+            // nascimento formato: "YYYY-MM-DD"
+            const partes = nascimento.split('-');
+            if (partes.length < 3) return;
+            const diaNasc = parseInt(partes[2], 10);
+            const mesNasc = parseInt(partes[1], 10) - 1; // 0-indexed
 
-            // Verifica se já dispensou hoje (localStorage)
-            const chave = `gaditas_aniv_${auth.currentUser.id}_${hoje.toISOString().split('T')[0]}`;
+            const hoje     = new Date();
+            const diaHoje  = hoje.getDate();
+            const mesHoje  = hoje.getMonth();
+
+            if (diaNasc !== diaHoje || mesNasc !== mesHoje) return;
+
+            // Chave do dia em local time (não UTC)
+            const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+            const chave   = `gaditas_aniv_${auth.currentUser.id}_${hojeStr}`;
             if (localStorage.getItem(chave)) return;
 
             this._mostrarPopupAniversario(auth.currentUser.nome, chave);
@@ -4806,12 +4819,17 @@ const aniversario = {
             snap.docs.forEach(doc => {
                 const a  = { id: doc.id, ...doc.data() };
                 if (!a.nascimento) return;
-                const nasc = new Date(a.nascimento);
+                // Parse sem timezone (evita bug UTC-3)
+                const partes = a.nascimento.split('-');
+                if (partes.length < 3) return;
+                const diaNasc = parseInt(partes[2], 10);
+                const mesNasc = parseInt(partes[1], 10) - 1;
+                const anoNasc = parseInt(partes[0], 10);
                 for (let d = 0; d < 7; d++) {
                     const dia = new Date(hoje);
                     dia.setDate(hoje.getDate() + d);
-                    if (nasc.getDate() === dia.getDate() && nasc.getMonth() === dia.getMonth()) {
-                        const idade = hoje.getFullYear() - nasc.getFullYear();
+                    if (diaNasc === dia.getDate() && mesNasc === dia.getMonth()) {
+                        const idade = hoje.getFullYear() - anoNasc;
                         hoje7.push({ ...a, _diasRestantes: d, _idade: idade });
                         break;
                     }

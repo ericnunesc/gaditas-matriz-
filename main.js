@@ -4704,11 +4704,10 @@ const ui = {
                 cardLeoes.classList.add('hidden');
             }
             const listaHistorico = d.historico || [];
-            // Armazena para as funções do calendário
-            this._calHistorico = listaHistorico;
-            // Reseta mês/ano para o atual se necessário
-            if (!this._calMes && this._calMes !== 0) this._calMes = new Date().getMonth();
-            if (!this._calAno) this._calAno = new Date().getFullYear();
+            // Armazena para as funções do calendário (academia, não ui)
+            academia._calHistorico = listaHistorico;
+            if (!academia._calMes && academia._calMes !== 0) academia._calMes = new Date().getMonth();
+            if (!academia._calAno) academia._calAno = new Date().getFullYear();
             // ── Blocos condicionais por modalidade ────────────────
             const modPerfil = d.modalidade || 'jiujitsu';
             const corJJ = this.getCorFaixa(d.faixa);
@@ -4783,7 +4782,7 @@ const ui = {
                     </div>
                 </div>`;
             // Renderiza calendário/lista após o HTML do perfil ser inserido
-            setTimeout(() => this._renderCal(), 50);
+            setTimeout(() => academia._renderCal(), 50);
             // Mostra wrapper de perfil (só para aluno)
             if (auth.role === 'aluno') {
                 const wp = document.getElementById('wrapper-perfil-proprio');

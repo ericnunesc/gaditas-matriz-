@@ -5092,13 +5092,6 @@ const ui = {
                             🎖️ HISTÓRICO DE GRADUAÇÕES
                         </button>
                     </div>
-                    <!-- Botão avaliação física -->
-                    <div style="margin-top:8px;">
-                        <button onclick="avaliacaoFisica.abrirMenu('${auth.currentUser.id}')"
-                            style="width:100%; padding:11px; background:#0c2a1a; border:1px solid #10b98155; color:#10b981; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; gap:8px;">
-                            📊 AVALIAÇÃO FÍSICA
-                        </button>
-                    </div>
                 </div>`;
             // Renderiza calendário/lista após o HTML do perfil ser inserido
             setTimeout(() => this._renderCal(), 50);

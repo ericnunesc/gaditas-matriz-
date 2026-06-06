@@ -840,12 +840,14 @@ const academia = {
         } catch(e) {}
 
         const snap = await db.collection("checkins").where("turma", "==", s.value).get();
-        // Busca experimentais para esta turma hoje
-        const snapExp = await db.collection("experimentais")
-            .where("turma", "==", s.value)
-            .where("data", "==", this._getDataHoje())
-            .where("status", "in", ["pendente","aprovado"])
-            .get();
+        // Busca experimentais para esta turma hoje (aceita formato ISO e pt-BR)
+        const hoje = this._getDataHoje(); // YYYY-MM-DD
+        const hojeFormatado = hoje.split('-').reverse().join('/'); // DD/MM/YYYY
+        const [snapExp, snapExpLegacy] = await Promise.all([
+            db.collection("experimentais").where("turma","==",s.value).where("data","==",hoje).get(),
+            db.collection("experimentais").where("turma","==",s.value).where("data","==",hojeFormatado).get()
+        ]);
+        const docsExp = [...snapExp.docs, ...snapExpLegacy.docs];
 
         const chips = [];
         snap.docs.forEach(doc => {
@@ -858,8 +860,9 @@ const academia = {
                 chips.push(`<span style="background:#0f172a; color:#ccc; padding:4px 10px; border-radius:6px; font-size:0.65rem; border:1px solid var(--border-light); font-weight:600;">${nome}</span>`);
             }
         });
-        snapExp.docs.forEach(doc => {
+        docsExp.forEach(doc => {
             const d = doc.data();
+            if (d.status === 'excluido') return; // ignora cancelados
             const partes = (d.nome || '').split(' ');
             const nome = partes.length > 1 ? `${partes[0]} ${partes[1][0]}.` : partes[0];
             chips.push(`<span style="background:#0c1a3a; color:#60a5fa; padding:4px 10px; border-radius:6px; font-size:0.65rem; border:1px solid #3b82f666; font-weight:800;">🆕 ${nome}</span>`);
@@ -1478,18 +1481,21 @@ const academia = {
             });
 
             // Busca experimentais para esta turma hoje
-            const snapExp = await db.collection('experimentais')
-                .where('turma','==', turma)
-                .where('data','==', this._getDataHoje())
-                .where('status','in',['pendente','aprovado'])
-                .get();
+            const hojeExp = this._getDataHoje();
+            const hojeExpFmt = hojeExp.split('-').reverse().join('/');
+            const [snapExp, snapExpLeg] = await Promise.all([
+                db.collection('experimentais').where('turma','==',turma).where('data','==',hojeExp).get(),
+                db.collection('experimentais').where('turma','==',turma).where('data','==',hojeExpFmt).get()
+            ]);
+            const docsExpChamada = [...snapExp.docs, ...snapExpLeg.docs];
 
-            if (!snapExp.empty) {
+            if (docsExpChamada.length > 0) {
                 listaHtml += `
                     <div style="margin-top:10px; padding:12px; background:#0c1a3a; border:1px solid #3b82f644; border-radius:10px; margin-bottom:12px;">
-                        <div style="font-size:0.65rem; color:#60a5fa; font-weight:800; margin-bottom:10px; letter-spacing:1px;">🆕 EXPERIMENTAIS HOJE (${snapExp.size})</div>`;
-                snapExp.docs.forEach(doc => {
+                        <div style="font-size:0.65rem; color:#60a5fa; font-weight:800; margin-bottom:10px; letter-spacing:1px;">🆕 EXPERIMENTAIS HOJE (${docsExpChamada.length})</div>`;
+                docsExpChamada.forEach(doc => {
                     const e = doc.data();
+                    if (e.status === 'excluido') return;
                     const modalLabel = e.modalidade === 'muaythai' ? '🥊 MT' : e.modalidade === 'ambos' ? '⚔️ Ambos' : '🥋 JJ';
                     const isAprovado = e.status === 'aprovado';
                     listaHtml += `

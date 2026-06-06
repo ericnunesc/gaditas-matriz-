@@ -182,6 +182,7 @@ const auth = {
         // ── ANIVERSÁRIO — popup para o aluno ─────────────
         if (this.role === 'aluno') {
             setTimeout(() => aniversario.verificarAniversario(), 800);
+            setTimeout(() => aniversario.verificarGraduacao(), 1500);
         }
 
         // ── ENQUETE ATIVA (aparece como popup bloqueante) ─
@@ -273,7 +274,7 @@ const academia = {
     },
 
     async lancarPresencaManualAdmin(alunoId, alunoNome) {
-        const turmasDisponiveis = [...new Set(Object.values(this.getGrade()).flat())].filter(t => !t.includes("Sem treinos"));
+        const turmasDisponiveis = [...new Set(Object.values(this.getGrade()).filter(v => Array.isArray(v)).flat())].filter(t => !t.includes("Sem treinos"));
         let mMenu = `Selecione o número da turma para ${alunoNome.toUpperCase()}:\n\n`;
         turmasDisponiveis.forEach((t, i) => { mMenu += `${i + 1}. ${t}\n`; });
         const escolha = prompt(mMenu); if (!escolha) return; 
@@ -1155,6 +1156,7 @@ const academia = {
                         <button onclick="academia.editarAluno('${doc.id}')" style="background:#16161a; border:1px solid #2d2d34; color:#94a3b8; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-eye"></i></button>
                         ${telLimpo ? `<button onclick="academia.abrirWhatsappBusiness('${telLimpo}')" title="WhatsApp Business" style="background:#064e3b; border:none; color:#25d366; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : ''}
                         <button onclick="academia.verFichaSaudeAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Ficha de Saúde" style="background:#0c2344; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-notes-medical"></i></button>
+                        <button onclick="graduacaoHistorico.abrirModal('${doc.id}')" title="Histórico de Graduações" style="background:#1e1040; border:none; color:#a78bfa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-medal"></i></button>
                         ${isAdmin ? `<button onclick="academia.verFinanceiroAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#064e3b; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-dollar-sign"></i></button>` : ''}
                         ${isAdmin ? (trancado
                             ? `<button onclick="academia.ativarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Reativar matrícula" style="background:#1e3a8a; border:none; color:#60a5fa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-lock-open"></i></button>`
@@ -2178,12 +2180,35 @@ Ele voltará a ser aluno normal.`)) return;
             } catch (err) { console.error(err); }
         }
         if(id) {
-            // Se a faixa ou grau mudou, o aluno foi graduado — limpa convocação
+            // Se a faixa ou grau mudou, o aluno foi graduado — limpa convocação e marca celebração
             try {
                 const docAtual = await db.collection("alunos").doc(id).get();
                 const dadosAtuais = docAtual.data() || {};
-                if (dadosAtuais.aspiranteGraduacao && (dadosAtuais.faixa !== dados.faixa || dadosAtuais.grau !== dados.grau)) {
+                const faixaMudou = dadosAtuais.faixa !== dados.faixa;
+                const grauMudou  = dadosAtuais.grau  !== dados.grau;
+                const faixaMTMudou = dados.faixaMT && dadosAtuais.faixaMT !== dados.faixaMT;
+                if (dadosAtuais.aspiranteGraduacao && (faixaMudou || grauMudou)) {
                     dados.aspiranteGraduacao = false;
+                }
+                if (faixaMudou || grauMudou || faixaMTMudou) {
+                    dados.graduacaoPendente = {
+                        faixa:   dados.faixa,
+                        grau:    dados.grau || 0,
+                        faixaMT: dados.faixaMT || null,
+                        modalidade: dados.modalidade || dadosAtuais.modalidade || 'jiujitsu'
+                    };
+                    // Registrar no histórico de graduações
+                    const hoje = new Date();
+                    const dataFormatada = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
+                    const historicoGrad = dadosAtuais.historicoGraduacao || [];
+                    historicoGrad.push({
+                        faixa:      dados.faixa,
+                        grau:       dados.grau || 0,
+                        faixaMT:    dados.faixaMT || null,
+                        modalidade: dados.modalidade || dadosAtuais.modalidade || 'jiujitsu',
+                        data:       dataFormatada
+                    });
+                    dados.historicoGraduacao = historicoGrad;
                 }
             } catch(e) { /* ignora */ }
             await db.collection("alunos").doc(id).update(dados);
@@ -3356,6 +3381,7 @@ Ele voltará a ser aluno normal.`)) return;
             const primeiroDiaMes = new Date(agora.getFullYear(), agora.getMonth(), 1).getTime();
             const anoAtual = agora.getFullYear();
             let total = 0, ativos7 = 0, inativos30 = 0, kids = 0, adulto = 0, jj = 0, mt = 0, ambos = 0;
+            const kidsGraus = {};
 
             snap.forEach(doc => {
                 const a = doc.data();
@@ -3370,7 +3396,11 @@ Ele voltará a ser aluno normal.`)) return;
                 if (ultimaDataMs && ultimaDataMs >= ms7)  ativos7++;
                 if (!ultimaDataMs || ultimaDataMs < ms30) inativos30++;
                 const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
-                if (idade <= 14) kids++; else adulto++;
+                if (idade <= 14) {
+                    kids++;
+                    const fk = a.faixa || 'Branca';
+                    kidsGraus[fk] = (kidsGraus[fk] || 0) + 1;
+                } else adulto++;
                 const mod = a.modalidade || 'jiujitsu';
                 if (mod === 'muaythai') mt++; else if (mod === 'ambos') ambos++; else jj++;
             });
@@ -3406,7 +3436,7 @@ Ele voltará a ser aluno normal.`)) return;
                             <span style="font-size:2rem;font-weight:900;color:#f59e0b;">${novosMes}</span>
                         </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
                         <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;">
                             <span style="font-size:0.5rem;color:#94a3b8;font-weight:800;display:block;margin-bottom:6px;">FAIXA ETÁRIA</span>
                             <div style="font-size:0.7rem;display:flex;justify-content:space-between;">
@@ -3421,6 +3451,27 @@ Ele voltará a ser aluno normal.`)) return;
                             </div>
                         </div>
                     </div>
+                    ${kids > 0 ? (() => {
+                        const ordemKids = ["Branca","Cinza/Branca","Cinza","Cinza/Preta","Amarela/Branca","Amarela","Amarela/Preta","Laranja/Branca","Laranja","Laranja/Preta","Verde/Branca","Verde","Verde/Preta"];
+                        const pills = ordemKids
+                            .filter(f => kidsGraus[f])
+                            .map(f => {
+                                const partes = f.split('/');
+                                const c1 = ui._corJJSingle(partes[0]);
+                                const c2 = partes[1] ? ui._corJJSingle(partes[1]) : null;
+                                const bg = c2 ? `linear-gradient(90deg,${c1} 60%,${c2} 60%)` : c1;
+                                const textColor = ['Branca','Cinza/Branca','Amarela/Branca','Amarela','Laranja/Branca','Laranja','Verde/Branca'].includes(f) ? '#111' : '#fff';
+                                return `<div style="display:flex;align-items:center;gap:5px;background:#0f172a;border:1px solid #334155;border-radius:7px;padding:5px 8px;">
+                                    <div style="width:20px;height:8px;border-radius:3px;background:${bg};flex-shrink:0;"></div>
+                                    <span style="font-size:0.58rem;color:#e2e8f0;font-weight:700;white-space:nowrap;">${f}</span>
+                                    <span style="font-size:0.65rem;font-weight:900;color:#fbbf24;margin-left:auto;">${kidsGraus[f]}</span>
+                                </div>`;
+                            }).join('');
+                        return `<div style="background:#0f172a;border:1px solid #f59e0b44;border-radius:8px;padding:10px;">
+                            <span style="font-size:0.5rem;color:#fbbf24;font-weight:800;display:block;margin-bottom:7px;">🧒 GRAU COLORIDO — KIDS</span>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">${pills}</div>
+                        </div>`;
+                    })() : ''}
                 </div>`;
         } catch(e) {
             container.innerHTML = `<div style="color:#f43f5e;text-align:center;font-size:0.75rem;padding:10px;">Erro: ${e.message}</div>`;
@@ -4855,6 +4906,13 @@ const ui = {
                             ${d.contrato?.assinaturaImg ? 'VER MEU CONTRATO ✅' : 'ASSINAR CONTRATO DIGITAL 📋'}
                         </button>
                     </div>
+                    <!-- Botão histórico de graduações -->
+                    <div style="margin-top:8px;">
+                        <button onclick="graduacaoHistorico.abrirModal('${auth.currentUser.id}')"
+                            style="width:100%; padding:11px; background:#1e1040; border:1px solid #7c3aed55; color:#a78bfa; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; gap:8px;">
+                            🎖️ HISTÓRICO DE GRADUAÇÕES
+                        </button>
+                    </div>
                 </div>`;
             // Renderiza calendário/lista após o HTML do perfil ser inserido
             setTimeout(() => this._renderCal(), 50);
@@ -5137,6 +5195,76 @@ const aniversario = {
     _dispensar(chave) {
         if (chave) localStorage.setItem(chave, '1');
         document.getElementById('modal-aniversario')?.remove();
+    },
+
+    // ── PARABÉNS POR GRADUAÇÃO ─────────────────────────────
+    async verificarGraduacao() {
+        if (auth.role !== 'aluno') return;
+        try {
+            const doc = await db.collection('alunos').doc(auth.currentUser.id).get();
+            if (!doc.exists) return;
+            const dados = doc.data();
+            if (!dados.graduacaoPendente) return;
+            const g = dados.graduacaoPendente;
+            await db.collection('alunos').doc(auth.currentUser.id).update({ graduacaoPendente: firebase.firestore.FieldValue.delete() });
+            this._mostrarPopupGraduacao(auth.currentUser.nome, g);
+        } catch(e) { console.warn('Graduação:', e.message); }
+    },
+
+    _mostrarPopupGraduacao(nomeCompleto, g) {
+        document.getElementById('modal-graduacao')?.remove();
+        const primeiroNome = (nomeCompleto || '').split(' ')[0];
+
+        const coresFaixa = {
+            'Branco': '#e2e8f0', 'Cinza': '#94a3b8', 'Amarelo': '#fbbf24',
+            'Laranja': '#f97316', 'Verde': '#22c55e', 'Azul': '#3b82f6',
+            'Roxo': '#a855f7', 'Marrom': '#92400e', 'Preto': '#1e293b',
+            'Vermelho': '#ef4444', 'Vermelho e Preto': '#ef4444',
+            'Vermelho e Branco': '#ef4444', 'Coral': '#fb7185'
+        };
+
+        const isMT = g.modalidade === 'muaythai' || (g.modalidade === 'ambos' && g.faixaMT);
+        const faixaExibir = isMT ? (g.faixaMT || g.faixa) : g.faixa;
+        const cor = coresFaixa[faixaExibir] || '#8b5cf6';
+        const isEscura = ['Preto', 'Marrom', 'Roxo', 'Azul'].includes(faixaExibir);
+        const textoBtn = isEscura ? '#fff' : '#000';
+
+        const grauStr = (!isMT && g.grau > 0) ? ` — ${g.grau}° Grau` : '';
+        const modalidade = isMT ? '🥊 Muay Thai' : '🥋 Jiu-Jitsu';
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-graduacao';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+
+        modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#0f172a,#1e293b);border:2px solid ${cor};border-radius:24px;padding:36px 28px;max-width:400px;width:100%;text-align:center;box-shadow:0 0 80px ${cor}55;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:-10px;left:0;right:0;font-size:1.4rem;opacity:0.12;user-select:none;line-height:1.8;pointer-events:none;">
+                    🥋🏆🎖️🥋🏆🎖️🥋🏆🎖️🥋🏆🎖️🥋🏆🎖️🥋🏆🎖️🥋🏆🎖️🥋🏆🎖️
+                </div>
+                <div style="font-size:3.5rem;margin-bottom:8px;animation:bounce 0.8s infinite alternate;">🏆</div>
+                <div style="font-size:0.6rem;color:${cor};font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">${modalidade}</div>
+                <div style="font-size:1.5rem;font-weight:800;color:white;line-height:1.3;margin-bottom:6px;">
+                    Parabéns,<br>
+                    <span style="color:${cor};">${primeiroNome}!</span>
+                </div>
+                <div style="display:inline-block;background:${cor};color:${textoBtn};font-weight:800;font-size:1rem;padding:8px 24px;border-radius:999px;margin:12px 0;letter-spacing:1px;">
+                    Faixa ${faixaExibir}${grauStr}
+                </div>
+                <div style="font-size:0.82rem;color:#94a3b8;line-height:1.7;margin:16px 0 24px;">
+                    Sua dedicação no tatame chegou a um novo nível! 🔥<br><br>
+                    A família <strong style="color:white;">Gaditas</strong> celebra essa conquista com muito orgulho.<br><br>
+                    <span style="font-size:1.1rem;font-weight:800;color:white;">OSS! 💪🥋</span>
+                </div>
+                <button onclick="document.getElementById('modal-graduacao').remove()"
+                    style="width:100%;padding:16px;background:linear-gradient(135deg,${cor},${cor}cc);color:${textoBtn};border:none;border-radius:12px;font-weight:800;font-size:0.9rem;cursor:pointer;letter-spacing:0.5px;">
+                    🙏 OSS, MUITO OBRIGADO!
+                </button>
+            </div>
+            <style>
+                @keyframes bounce { from { transform:translateY(0); } to { transform:translateY(-10px); } }
+            </style>`;
+
+        document.body.appendChild(modal);
     },
 
     // ── CARD ADMIN — HOJE E ESTA SEMANA ───────────────────
@@ -6278,6 +6406,199 @@ const loja = {
         } else {
             preview.innerHTML = '🛒';
         }
+    }
+};
+
+// ── HISTÓRICO DE GRADUAÇÕES ────────────────────────────────────────────────
+const graduacaoHistorico = {
+
+    _coresFaixa: {
+        'Branco':'#e2e8f0','Cinza':'#94a3b8','Amarelo':'#fbbf24','Laranja':'#f97316',
+        'Verde':'#22c55e','Azul':'#3b82f6','Roxo':'#a855f7','Marrom':'#92400e',
+        'Preto':'#334155','Vermelho':'#ef4444','Vermelho e Preto':'#ef4444',
+        'Vermelho e Branco':'#fca5a5','Coral':'#fb7185'
+    },
+
+    async abrirModal(alunoId) {
+        document.getElementById('modal-hist-grad')?.remove();
+        const doc = await db.collection('alunos').doc(alunoId).get();
+        if (!doc.exists) return;
+        const d = doc.data();
+        const hist = d.historicoGraduacao || [];
+        const isAdmin = auth.role === 'admin';
+        const nomeAluno = d.nome || '';
+        const academia = d.academia || 'Gaditas Matriz';
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-hist-grad';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:9999;overflow-y:auto;padding:20px;box-sizing:border-box;';
+
+        modal.innerHTML = `
+            <div style="max-width:520px;margin:0 auto;">
+                <!-- Cabeçalho -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                    <div style="color:#a78bfa;font-size:0.65rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;">🎖️ Histórico de Graduações</div>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="graduacaoHistorico.imprimir('${alunoId}')"
+                            style="padding:8px 14px;background:#1e1040;border:1px solid #7c3aed;color:#a78bfa;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;">
+                            🖨️ IMPRIMIR
+                        </button>
+                        <button onclick="document.getElementById('modal-hist-grad').remove()"
+                            style="padding:8px 14px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;">
+                            ✕ FECHAR
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card imprimível -->
+                <div id="hist-grad-card" style="background:#0f172a;border:1px solid #7c3aed44;border-radius:20px;padding:28px 24px;">
+                    <!-- Topo -->
+                    <div style="text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #1e293b;">
+                        <div style="font-size:2rem;margin-bottom:6px;">🥋</div>
+                        <div style="font-size:1.1rem;font-weight:800;color:white;letter-spacing:0.5px;">${nomeAluno.toUpperCase()}</div>
+                        <div style="font-size:0.7rem;color:#64748b;margin-top:4px;letter-spacing:1px;text-transform:uppercase;">${academia}</div>
+                        <div style="font-size:0.65rem;color:#475569;margin-top:2px;">Documento gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div id="hist-grad-timeline">
+                        ${this._renderTimeline(hist, alunoId, isAdmin)}
+                    </div>
+
+                    ${hist.length === 0 ? `<p style="color:#475569;text-align:center;font-size:0.8rem;padding:20px 0;">Nenhuma graduação registrada ainda.</p>` : ''}
+                </div>
+            </div>`;
+
+        document.body.appendChild(modal);
+    },
+
+    _renderTimeline(hist, alunoId, isAdmin) {
+        if (!hist || hist.length === 0) return '';
+        return hist.map((g, i) => {
+            const isMT = g.modalidade === 'muaythai' || (g.modalidade === 'ambos' && g.faixaMT);
+            const faixaExibir = isMT ? (g.faixaMT || g.faixa) : g.faixa;
+            const grauStr = (!isMT && g.grau > 0) ? ` • ${g.grau}° Grau` : '';
+            const cor = this._coresFaixa[faixaExibir] || '#8b5cf6';
+            const isEscura = ['Preto','Marrom','Roxo','Azul'].includes(faixaExibir);
+            const textoFaixa = isEscura ? '#fff' : '#000';
+            const modalIcon = isMT ? '🥊' : '🥋';
+            const modalLabel = isMT ? 'Muay Thai' : 'Jiu-Jitsu';
+            const isUltimo = i === hist.length - 1;
+
+            const btnEditData = isAdmin
+                ? `<button onclick="graduacaoHistorico.editarData('${alunoId}', ${i})"
+                        style="background:none;border:1px solid #334155;color:#64748b;border-radius:6px;padding:3px 8px;font-size:0.6rem;cursor:pointer;margin-left:8px;">
+                        ✏️ editar data
+                   </button>`
+                : '';
+
+            return `
+                <div style="display:flex;gap:14px;margin-bottom:${isUltimo ? '0' : '16px'};">
+                    <!-- Linha vertical + ponto -->
+                    <div style="display:flex;flex-direction:column;align-items:center;min-width:28px;">
+                        <div style="width:28px;height:28px;border-radius:50%;background:${cor};display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:${textoFaixa};font-weight:800;flex-shrink:0;">${i+1}</div>
+                        ${!isUltimo ? `<div style="width:2px;flex:1;background:#1e293b;margin-top:4px;min-height:20px;"></div>` : ''}
+                    </div>
+                    <!-- Conteúdo -->
+                    <div style="flex:1;background:#1e293b;border-radius:12px;padding:14px 16px;border-left:3px solid ${cor};">
+                        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+                            <span style="background:${cor};color:${textoFaixa};font-weight:800;font-size:0.75rem;padding:4px 12px;border-radius:999px;">
+                                ${modalIcon} ${faixaExibir}${grauStr}
+                            </span>
+                            ${isUltimo ? `<span style="background:#7c3aed22;color:#a78bfa;font-size:0.6rem;font-weight:800;padding:3px 8px;border-radius:999px;border:1px solid #7c3aed44;">ATUAL</span>` : ''}
+                        </div>
+                        <div style="font-size:0.7rem;color:#64748b;">${modalIcon} ${modalLabel}</div>
+                        <div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;display:flex;align-items:center;">
+                            📅 <span id="data-grad-${alunoId}-${i}" style="margin-left:4px;">${g.data || '—'}</span>
+                            ${btnEditData}
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+    },
+
+    async editarData(alunoId, index) {
+        const novaData = prompt('Nova data desta graduação (DD/MM/AAAA):');
+        if (!novaData) return;
+        if (!/^\d{2}\/\d{2}\/\d{4}$/.test(novaData)) { alert('Formato inválido. Use DD/MM/AAAA'); return; }
+        try {
+            const doc = await db.collection('alunos').doc(alunoId).get();
+            const hist = doc.data().historicoGraduacao || [];
+            if (!hist[index]) return;
+            hist[index].data = novaData;
+            await db.collection('alunos').doc(alunoId).update({ historicoGraduacao: hist });
+            // Atualiza só o span de data sem reabrir o modal
+            const span = document.getElementById(`data-grad-${alunoId}-${index}`);
+            if (span) span.textContent = novaData;
+            const el = document.getElementById(`data-grad-${alunoId}-${index}`);
+            if (el) { el.style.color = '#10b981'; setTimeout(() => { if(el) el.style.color = '#94a3b8'; }, 1500); }
+        } catch(e) { alert('Erro ao salvar: ' + e.message); }
+    },
+
+    async imprimir(alunoId) {
+        const card = document.getElementById('hist-grad-card');
+        if (!card) return;
+        const win = window.open('', '_blank');
+        win.document.write(`<!DOCTYPE html><html><head>
+            <meta charset="UTF-8">
+            <title>Histórico de Graduações</title>
+            <style>
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                body { font-family: 'Segoe UI', sans-serif; background: #fff; color: #1e293b; padding: 32px; max-width: 600px; margin: 0 auto; }
+                h1 { font-size: 1.4rem; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+                .sub { font-size: 0.75rem; color: #64748b; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e2e8f0; }
+                .item { display: flex; gap: 14px; margin-bottom: 18px; }
+                .num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; flex-shrink: 0; }
+                .info { flex: 1; border-left: 3px solid #e2e8f0; padding-left: 14px; }
+                .faixa-pill { display: inline-block; padding: 4px 14px; border-radius: 999px; font-size: 0.8rem; font-weight: 800; margin-bottom: 6px; }
+                .mod { font-size: 0.7rem; color: #64748b; }
+                .data { font-size: 0.7rem; color: #94a3b8; margin-top: 4px; }
+                .atual { display: inline-block; background: #ede9fe; color: #7c3aed; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; margin-left: 8px; vertical-align: middle; }
+                .rodape { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 0.65rem; color: #94a3b8; text-align: center; }
+                @media print { body { padding: 20px; } }
+            </style>
+        </head><body>`);
+
+        const doc = await db.collection('alunos').doc(alunoId).get();
+        const d = doc.data();
+        const hist = d.historicoGraduacao || [];
+        const nome = d.nome || '';
+
+        win.document.write(`
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="font-size:2.5rem;">🥋</div>
+                <h1>${nome.toUpperCase()}</h1>
+                <div class="sub">Histórico de Graduações • Gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
+            </div>`);
+
+        if (hist.length === 0) {
+            win.document.write('<p style="color:#94a3b8;text-align:center;">Nenhuma graduação registrada.</p>');
+        } else {
+            hist.forEach((g, i) => {
+                const isMT = g.modalidade === 'muaythai' || (g.modalidade === 'ambos' && g.faixaMT);
+                const faixaExibir = isMT ? (g.faixaMT || g.faixa) : g.faixa;
+                const grauStr = (!isMT && g.grau > 0) ? ` • ${g.grau}° Grau` : '';
+                const cor = this._coresFaixa[faixaExibir] || '#8b5cf6';
+                const isEscura = ['Preto','Marrom','Roxo','Azul'].includes(faixaExibir);
+                const textoFaixa = isEscura ? '#fff' : '#000';
+                const isUltimo = i === hist.length - 1;
+                const modalLabel = isMT ? '🥊 Muay Thai' : '🥋 Jiu-Jitsu';
+                win.document.write(`
+                    <div class="item">
+                        <div class="num" style="background:${cor};color:${textoFaixa};">${i+1}</div>
+                        <div class="info" style="border-left-color:${cor};">
+                            <span class="faixa-pill" style="background:${cor};color:${textoFaixa};">${faixaExibir}${grauStr}</span>
+                            ${isUltimo ? '<span class="atual">ATUAL</span>' : ''}
+                            <div class="mod">${modalLabel}</div>
+                            <div class="data">📅 ${g.data || '—'}</div>
+                        </div>
+                    </div>`);
+            });
+        }
+
+        win.document.write(`<div class="rodape">Gaditas Matriz • Documento gerado pelo sistema</div></body></html>`);
+        win.document.close();
+        setTimeout(() => win.print(), 600);
     }
 };
 

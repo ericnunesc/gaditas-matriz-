@@ -4624,8 +4624,8 @@ Ele voltará a ser aluno normal.`)) return;
             container = document.createElement('div');
             container.id = 'painel-experimentais-admin';
             container.style.marginBottom = '16px';
-            const relTab = document.getElementById('tab-relatorios');
-            if (relTab) relTab.appendChild(container);
+            const checkinTab = document.getElementById('tab-checkin');
+            if (checkinTab) checkinTab.appendChild(container);
         }
         container.innerHTML = `<div style="text-align:center;padding:12px;color:#64748b;font-size:0.75rem;"><i class="fas fa-spinner fa-spin"></i></div>`;
 
@@ -4660,7 +4660,7 @@ Ele voltará a ser aluno normal.`)) return;
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
                             <div style="flex:1; min-width:150px;">
                                 <div style="font-size:0.82rem; font-weight:800; color:${isHoje ? '#60a5fa' : '#e2e8f0'};">${e.nome}</div>
-                                <div style="font-size:0.62rem; color:#64748b; margin-top:3px;">${e.turma} · ${e.data}</div>
+                                <div style="font-size:0.62rem; color:#64748b; margin-top:3px;">${e.turma} · ${e.data ? e.data.split('-').reverse().join('/') : '—'}</div>
                                 <div style="font-size:0.62rem; color:#64748b;">${modalLabel} · ${e.telefone || '—'}</div>
                             </div>
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0;">
@@ -4754,8 +4754,8 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
-        if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); } }
-        if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); academia.renderPainelExperimentais(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
+        if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
+        if(id === 'tab-relatorios') { if(auth.role === 'admin') academia.renderDashboardAdmin(); academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }
     },

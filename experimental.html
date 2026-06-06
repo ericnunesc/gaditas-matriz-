@@ -177,12 +177,14 @@
             const turmasDia = (grade[diaSem] || grade[String(diaSem)] || []).filter(t => !t.includes('Sem treinos'));
             if (turmasDia.length === 0) continue;
             const label = DIAS_NOMES[diaSem] + ' ' + d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+            // Formato YYYY-MM-DD para bater com _getDataHoje() do app
+            const dataISO = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.id = `dia-btn-${i}`;
             btn.dataset.idx = i;
             btn.dataset.diasem = diaSem;
-            btn.dataset.data = d.toLocaleDateString('pt-BR');
+            btn.dataset.data = dataISO;
             btn.dataset.label = label;
             btn.style.cssText = 'padding:8px 14px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#94a3b8; font-size:0.7rem; font-weight:700; cursor:pointer;';
             btn.textContent = label;
@@ -201,7 +203,7 @@
         const diaSem = parseInt(btn.dataset.diasem);
         diaSelecionado = { diaSemana: diaSem, dataFormatada: btn.dataset.data, label: btn.dataset.label };
         document.getElementById('exp-dia-semana').value = diaSem;
-        document.getElementById('exp-data-formatada').value = btn.dataset.data;
+        document.getElementById('exp-data-formatada').value = btn.dataset.data; // YYYY-MM-DD
 
         // Monta turmas do dia
         const turmasDia = (grade[diaSem] || grade[String(diaSem)] || []).filter(t => !t.includes('Sem treinos'));
@@ -294,9 +296,10 @@
             document.querySelector('.container').style.display = 'none';
             const tela = document.getElementById('tela-sucesso');
             tela.style.display = 'flex';
+            const dataLegivel = diaSelecionado?.label || data;
             document.getElementById('sucesso-info').innerHTML = `
                 <div>👤 <strong>${nome}</strong></div>
-                <div>📅 ${data}</div>
+                <div>📅 ${dataLegivel}</div>
                 <div>⏰ ${turma}</div>
                 <div>🥋 ${modalidade === 'jiujitsu' ? 'Jiu-Jitsu' : modalidade === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu + Muay Thai'}</div>
             `;

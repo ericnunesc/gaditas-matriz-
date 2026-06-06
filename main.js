@@ -7329,7 +7329,6 @@ const avaliacaoFisica = {
     iniciarListenerSolicitacoes() {
         db.collection('solicitacoesAvaliacao')
             .where('status','==','pendente')
-            .orderBy('criadoEm','desc')
             .onSnapshot(snap => {
                 const naolidas = snap.docs.filter(d => !d.data().lido).length;
                 // Atualiza badge na nav
@@ -7338,16 +7337,35 @@ const avaliacaoFisica = {
                     badge.textContent = naolidas;
                     badge.style.display = naolidas > 0 ? 'inline-block' : 'none';
                 }
-                // Garante container e renderiza (mesmo que aba esteja fechada, fica pronto)
+                // Ordena por data no JS (evita índice composto no Firestore)
+                const docsOrdenados = snap.docs.sort((a,b) => {
+                    const ta = a.data().criadoEm?.toMillis?.() || 0;
+                    const tb = b.data().criadoEm?.toMillis?.() || 0;
+                    return tb - ta;
+                });
+                // Garante container e renderiza
                 this._garantirPainelSolicitacoes();
                 const painel = document.getElementById('painel-solic-avaliacao');
-                if (painel) this._renderPainelSolicitacoes(snap.docs, painel);
+                if (painel) this._renderPainelSolicitacoes(docsOrdenados, painel);
             }, (err) => console.warn('Listener solicitações:', err.message));
     },
 
     _renderPainelSolicitacoes(docs, container) {
         const pendentes = docs.filter(d => d.data().status === 'pendente');
-        if (pendentes.length === 0) { container.innerHTML = ''; return; }
+        if (pendentes.length === 0) {
+            container.innerHTML = `
+                <div style="background:#0c2a1a;border:1px solid #10b98133;border-radius:14px;padding:14px;margin-bottom:14px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div style="font-size:0.75rem;font-weight:800;color:#10b981;">📊 AVALIAÇÕES FÍSICAS</div>
+                        <button onclick="avaliacaoFisica.abrirConfigAdmin()"
+                            style="font-size:0.6rem;color:#f59e0b;background:#1c1400;border:1px solid #f59e0b44;padding:5px 10px;border-radius:6px;cursor:pointer;font-weight:800;">
+                            ⚙️ Configurar valor
+                        </button>
+                    </div>
+                    <p style="font-size:0.72rem;color:#475569;margin-top:10px;text-align:center;">Nenhuma solicitação pendente.</p>
+                </div>`;
+            return;
+        }
 
         const naolidas = pendentes.filter(d => !d.data().lido).length;
         const badgeHtml = naolidas > 0

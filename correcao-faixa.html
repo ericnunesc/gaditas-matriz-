@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gaditas Matriz - Correção de Graduação</title>
+    <link rel="icon" type="image/png" href="gaditasstore.png?v=2">
+    <link rel="stylesheet" href="style.css?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body style="background:#0f172a; color:white; margin:0; font-family:'Inter',sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
+
+<div style="width:100%; max-width:440px;">
+
+    <!-- ══ TELA DE LOGIN ══ -->
+    <div id="tela-login">
+        <div style="text-align:center; margin-bottom:28px;">
+            <img src="gaditasstore.png" alt="Logo" style="height:60px; margin-bottom:12px;"/>
+            <div style="display:inline-block; background:#1e3a8a33; border:1px solid #3b82f644; border-radius:12px; padding:8px 20px; margin-bottom:10px;">
+                <span style="font-size:0.6rem; font-weight:800; color:#60a5fa; letter-spacing:2px;">🎖️ CORREÇÃO DE GRADUAÇÃO</span>
+            </div>
+            <h2 style="margin:0; font-size:1.1rem; font-weight:800;">Atualização de Faixa e Grau</h2>
+            <p style="color:#64748b; font-size:0.75rem; margin-top:8px; line-height:1.6;">
+                Entre com seu login e corrija sua graduação.<br>
+                <strong style="color:#f59e0b;">⚠️ Você só poderá usar esta página uma vez.</strong>
+            </p>
+        </div>
+
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:16px; padding:24px;">
+            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">SEU E-MAIL:</small>
+            <div class="input-group" style="margin-bottom:14px;">
+                <i class="fas fa-envelope"></i>
+                <input type="email" id="login-email" placeholder="seu-email@gmail.com" style="width:100%;"/>
+            </div>
+
+            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">SUA SENHA:</small>
+            <div class="input-group" style="margin-bottom:20px;">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="login-senha" placeholder="Sua senha do app"/>
+            </div>
+
+            <div id="login-erro" style="display:none; background:#2a0808; border:1px solid #f43f5e44; border-radius:8px; padding:10px; text-align:center; font-size:0.75rem; color:#f43f5e; margin-bottom:14px;"></div>
+
+            <button id="btn-login" onclick="fazerLogin()"
+                style="width:100%; padding:14px; background:linear-gradient(135deg,#1e3a8a,#2563eb); border:none; color:white; border-radius:12px; font-weight:800; font-size:0.9rem; cursor:pointer;">
+                <i class="fas fa-sign-in-alt"></i> ENTRAR
+            </button>
+        </div>
+    </div>
+
+    <!-- ══ TELA JÁ UTILIZADA ══ -->
+    <div id="tela-usada" style="display:none; text-align:center;">
+        <div style="background:#1e293b; border:1px solid #f59e0b44; border-radius:20px; padding:36px 28px;">
+            <div style="font-size:3.5rem; margin-bottom:12px;">🔒</div>
+            <div style="font-size:1rem; font-weight:800; color:#f59e0b; margin-bottom:10px;">Correção já realizada!</div>
+            <p style="color:#94a3b8; font-size:0.8rem; line-height:1.7;">
+                Você já utilizou esta página para corrigir sua graduação.<br><br>
+                Se houver algum erro, entre em contato com o admin da academia.
+            </p>
+            <a href="index.html" style="display:block; margin-top:20px; padding:12px; background:#1e293b; border:1px solid #334155; color:#64748b; border-radius:10px; text-decoration:none; font-weight:700; font-size:0.8rem;">
+                Voltar ao app
+            </a>
+        </div>
+    </div>
+
+    <!-- ══ TELA DE CORREÇÃO ══ -->
+    <div id="tela-correcao" style="display:none;">
+        <div style="text-align:center; margin-bottom:20px;">
+            <div style="font-size:2rem; margin-bottom:8px;">🎖️</div>
+            <div style="font-size:1rem; font-weight:800; color:white;" id="nome-aluno-correcao"></div>
+            <div style="font-size:0.7rem; color:#10b981; margin-top:4px; font-weight:700;">✅ Login confirmado — corrija sua graduação abaixo</div>
+        </div>
+
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:16px; padding:24px;">
+
+            <!-- Modalidade -->
+            <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:14px; margin-bottom:18px;">
+                <div style="font-size:0.6rem; font-weight:800; color:#94a3b8; letter-spacing:1px; margin-bottom:12px; text-align:center;">🏆 QUAL SUA MODALIDADE?</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+                    <button type="button" id="btn-mod-jj" onclick="selecionarMod('jiujitsu')"
+                        style="padding:12px 4px; border-radius:10px; border:2px solid #3b82f6; background:#1e3a8a55; color:#60a5fa; font-size:0.65rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px;">
+                        <span style="font-size:1.4rem;">🥋</span><span>JIU-JITSU</span>
+                    </button>
+                    <button type="button" id="btn-mod-mt" onclick="selecionarMod('muaythai')"
+                        style="padding:12px 4px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#64748b; font-size:0.65rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px;">
+                        <span style="font-size:1.4rem;">🥊</span><span>MUAY THAI</span>
+                    </button>
+                    <button type="button" id="btn-mod-ambos" onclick="selecionarMod('ambos')"
+                        style="padding:12px 4px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#64748b; font-size:0.65rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px;">
+                        <span style="font-size:1.4rem;">⚔️</span><span>AMBOS</span>
+                    </button>
+                </div>
+            </div>
+            <input type="hidden" id="mod-selecionada" value="jiujitsu"/>
+
+            <!-- JJ -->
+            <div id="bloco-jj">
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px;">SUA FAIXA (JIU-JITSU):</small>
+                <select id="sel-faixa" onchange="atualizarGraus()"
+                    style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:10px; font-size:0.9rem; font-weight:700; margin-bottom:14px; outline:none;">
+                </select>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px;">SEU GRAU:</small>
+                <div id="graus-container" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;"></div>
+                <input type="hidden" id="sel-grau" value="0"/>
+            </div>
+
+            <!-- MT -->
+            <div id="bloco-mt" style="display:none;">
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px;">SUA GRADUAÇÃO (MUAY THAI):</small>
+                <select id="sel-faixa-mt"
+                    style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:10px; font-size:0.85rem; font-weight:700; margin-bottom:18px; outline:none;">
+                </select>
+            </div>
+
+            <!-- Aviso -->
+            <div style="background:#1c1400; border:1px solid #f59e0b44; border-radius:10px; padding:12px; margin-bottom:18px; text-align:center;">
+                <div style="font-size:0.7rem; color:#f59e0b; font-weight:800;">⚠️ ATENÇÃO</div>
+                <div style="font-size:0.68rem; color:#94a3b8; margin-top:4px; line-height:1.6;">
+                    Após confirmar, <strong style="color:white;">não será possível alterar novamente</strong> por esta página.<br>
+                    Certifique-se de que as informações estão corretas.
+                </div>
+            </div>
+
+            <div id="correcao-erro" style="display:none; background:#2a0808; border:1px solid #f43f5e44; border-radius:8px; padding:10px; text-align:center; font-size:0.75rem; color:#f43f5e; margin-bottom:14px;"></div>
+
+            <button id="btn-confirmar" onclick="confirmarCorrecao()"
+                style="width:100%; padding:15px; background:linear-gradient(135deg,#10b981,#059669); border:none; color:white; border-radius:12px; font-weight:800; font-size:0.95rem; cursor:pointer;">
+                ✅ CONFIRMAR MINHA GRADUAÇÃO
+            </button>
+        </div>
+    </div>
+
+    <!-- ══ TELA DE SUCESSO ══ -->
+    <div id="tela-sucesso" style="display:none; text-align:center;">
+        <div style="background:#0c2a1a; border:2px solid #10b981; border-radius:20px; padding:36px 28px;">
+            <div style="font-size:3.5rem; margin-bottom:12px; animation:bounce 0.8s infinite alternate;">🏆</div>
+            <div style="font-size:1.1rem; font-weight:800; color:#10b981; margin-bottom:8px;">Graduação Atualizada!</div>
+            <div id="sucesso-info" style="font-size:0.85rem; color:#e2e8f0; margin:16px 0; line-height:2;"></div>
+            <p style="color:#64748b; font-size:0.75rem; line-height:1.6;">
+                Sua faixa e grau foram atualizados no sistema.<br>OSS! 🥋💪
+            </p>
+            <a href="index.html" style="display:block; margin-top:20px; padding:14px; background:linear-gradient(135deg,#10b981,#059669); color:white; border-radius:12px; text-decoration:none; font-weight:800; font-size:0.85rem;">
+                🏠 IR PARA O APP
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+    apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+    authDomain: "gaditasmatriz.firebaseapp.com",
+    projectId: "gaditasmatriz",
+    storageBucket: "gaditasmatriz.firebasestorage.app",
+    messagingSenderId: "166834416988",
+    appId: "1:166834416988:web:2921c95c87c42019282599"
+});
+const db   = firebase.firestore();
+const auth = firebase.auth();
+
+const FAIXAS_ADULTO   = ["Branca","Azul","Roxa","Marrom","Preta"];
+const FAIXAS_INFANTIL = ["Branca","Cinza/Branca","Cinza","Cinza/Preta","Amarela/Branca","Amarela","Amarela/Preta","Laranja/Branca","Laranja","Laranja/Preta","Verde/Branca","Verde","Verde/Preta"];
+const FAIXAS_MT       = ["Branco","Branco ponta Vermelha","Vermelha","Vermelha ponta Azul Clara","Azul Clara","Azul Clara ponta Azul Escura","Azul Escura","Azul Escura ponta Preta","Preta","Preta ponta Branca","Preta, Ponta Branca e Vermelha"];
+
+let alunoDoc = null; // dados do aluno logado
+
+async function fazerLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const senha = document.getElementById('login-senha').value;
+    const btn   = document.getElementById('btn-login');
+    const erro  = document.getElementById('login-erro');
+
+    if (!email || !senha) { mostrarErro(erro, 'Preencha e-mail e senha.'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+    erro.style.display = 'none';
+
+    try {
+        // Loga no Firebase Auth
+        const cred = await auth.signInWithEmailAndPassword(email, senha);
+        const uid  = cred.user.uid;
+
+        // Busca dados no Firestore
+        const snap = await db.collection('alunos').doc(uid).get();
+        if (!snap.exists) {
+            await auth.signOut();
+            mostrarErro(erro, 'Aluno não encontrado no sistema.');
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> ENTRAR';
+            return;
+        }
+
+        alunoDoc = { id: uid, ...snap.data() };
+
+        // Verifica se já usou esta página
+        if (alunoDoc.correcaoFaixaUsada === true) {
+            document.getElementById('tela-login').style.display = 'none';
+            document.getElementById('tela-usada').style.display = 'block';
+            return;
+        }
+
+        // Mostra tela de correção
+        document.getElementById('tela-login').style.display = 'none';
+        document.getElementById('tela-correcao').style.display = 'block';
+        document.getElementById('nome-aluno-correcao').textContent = alunoDoc.nome || '';
+
+        // Calcula idade
+        const anoAtual = new Date().getFullYear();
+        const idadeAluno = alunoDoc.nascimento
+            ? anoAtual - new Date(alunoDoc.nascimento).getFullYear()
+            : 99;
+
+        // Popula modalidade atual
+        const modAtual = alunoDoc.modalidade || 'jiujitsu';
+        selecionarMod(modAtual);
+
+        // Preenche faixa atual do aluno
+        const faixaAtual = alunoDoc.faixa || 'Branca';
+        const grauAtual  = alunoDoc.grau  || 0;
+        const faixasMT   = FAIXAS_MT;
+
+        // Popula select JJ com base na idade
+        const listFaixas = idadeAluno <= 14 ? FAIXAS_INFANTIL : FAIXAS_ADULTO;
+        const selFaixa = document.getElementById('sel-faixa');
+        selFaixa.innerHTML = listFaixas.map(f =>
+            `<option value="${f}" ${f === faixaAtual ? 'selected' : ''}>${f}</option>`
+        ).join('');
+        atualizarGraus(grauAtual);
+
+        // Popula MT
+        const faixaMTAtual = alunoDoc.faixaMT || 'Branco';
+        document.getElementById('sel-faixa-mt').innerHTML = faixasMT.map(f =>
+            `<option value="${f}" ${f === faixaMTAtual ? 'selected' : ''}>${f}</option>`
+        ).join('');
+
+    } catch(e) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> ENTRAR';
+        if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+            mostrarErro(erro, 'E-mail ou senha incorretos.');
+        } else {
+            mostrarErro(erro, 'Erro: ' + e.message);
+        }
+    }
+}
+
+function selecionarMod(mod) {
+    document.getElementById('mod-selecionada').value = mod;
+    const cores   = { jiujitsu:'#3b82f6', muaythai:'#f43f5e', ambos:'#8b5cf6' };
+    const textos  = { jiujitsu:'#60a5fa', muaythai:'#f43f5e', ambos:'#c4b5fd' };
+    const bgSel   = { jiujitsu:'#1e3a8a55', muaythai:'#4c051955', ambos:'#2e106555' };
+    const map     = { jiujitsu:'jj', muaythai:'mt', ambos:'ambos' };
+
+    ['jiujitsu','muaythai','ambos'].forEach(m => {
+        const b = document.getElementById(`btn-mod-${map[m]}`);
+        if (!b) return;
+        if (m === mod) {
+            b.style.borderColor = cores[m]; b.style.background = bgSel[m];
+            b.style.color = textos[m]; b.style.boxShadow = `0 0 12px ${cores[m]}44`;
+        } else {
+            b.style.borderColor = '#334155'; b.style.background = '#0f172a';
+            b.style.color = '#64748b'; b.style.boxShadow = 'none';
+        }
+    });
+
+    // Mostra/oculta blocos
+    const blocoJJ = document.getElementById('bloco-jj');
+    const blocoMT = document.getElementById('bloco-mt');
+    blocoJJ.style.display = mod === 'muaythai' ? 'none' : 'block';
+    blocoMT.style.display = mod === 'jiujitsu' ? 'none' : 'block';
+}
+
+function atualizarGraus(grauSelecionado = 0) {
+    const faixa = document.getElementById('sel-faixa')?.value || 'Branca';
+    const maxGrau = faixa === 'Preta' ? 6 : 4;
+    const cont = document.getElementById('graus-container');
+    if (!cont) return;
+    cont.innerHTML = '';
+    for (let g = 0; g <= maxGrau; g++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = g === 0 ? 'Sem grau' : `${g}° Grau`;
+        btn.dataset.grau = g;
+        const selecionado = g === parseInt(grauSelecionado);
+        btn.style.cssText = `padding:8px 14px; border-radius:8px; border:2px solid ${selecionado ? '#3b82f6' : '#334155'}; background:${selecionado ? '#1e3a8a55' : '#0f172a'}; color:${selecionado ? '#60a5fa' : '#64748b'}; font-size:0.7rem; font-weight:800; cursor:pointer;`;
+        if (selecionado) document.getElementById('sel-grau').value = g;
+        btn.onclick = () => {
+            cont.querySelectorAll('button').forEach(b => {
+                b.style.borderColor = '#334155'; b.style.background = '#0f172a'; b.style.color = '#64748b';
+            });
+            btn.style.borderColor = '#3b82f6'; btn.style.background = '#1e3a8a55'; btn.style.color = '#60a5fa';
+            document.getElementById('sel-grau').value = g;
+        };
+        cont.appendChild(btn);
+    }
+}
+
+async function confirmarCorrecao() {
+    const btn  = document.getElementById('btn-confirmar');
+    const erro = document.getElementById('correcao-erro');
+    const mod  = document.getElementById('mod-selecionada').value;
+    const faixa = document.getElementById('sel-faixa')?.value || 'Branca';
+    const grau  = parseInt(document.getElementById('sel-grau')?.value) || 0;
+    const faixaMT = document.getElementById('sel-faixa-mt')?.value || 'Branco';
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    erro.style.display = 'none';
+
+    try {
+        const upd = {
+            correcaoFaixaUsada: true,
+            modalidade: mod,
+            faixa: mod !== 'muaythai' ? faixa : (alunoDoc.faixa || 'Branca'),
+            grau:  mod !== 'muaythai' ? grau  : (alunoDoc.grau  || 0),
+        };
+        if (mod === 'muaythai' || mod === 'ambos') upd.faixaMT = faixaMT;
+
+        await db.collection('alunos').doc(alunoDoc.id).update(upd);
+
+        // Tela de sucesso
+        document.getElementById('tela-correcao').style.display = 'none';
+        document.getElementById('tela-sucesso').style.display = 'block';
+
+        const modLabel = mod === 'jiujitsu' ? '🥋 Jiu-Jitsu' : mod === 'muaythai' ? '🥊 Muay Thai' : '⚔️ Ambos';
+        let infoHtml = `<div>${modLabel}</div>`;
+        if (mod !== 'muaythai') infoHtml += `<div>🎽 Faixa: <strong>${faixa}</strong> — ${grau > 0 ? grau+'° Grau' : 'Sem grau'}</div>`;
+        if (mod === 'muaythai' || mod === 'ambos') infoHtml += `<div>🥊 MT: <strong>${faixaMT}</strong></div>`;
+        document.getElementById('sucesso-info').innerHTML = infoHtml;
+
+    } catch(e) {
+        btn.disabled = false;
+        btn.innerHTML = '✅ CONFIRMAR MINHA GRADUAÇÃO';
+        mostrarErro(erro, 'Erro ao salvar: ' + e.message);
+    }
+}
+
+function mostrarErro(el, msg) {
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+// Enter no campo de senha faz login
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('login-senha').addEventListener('keydown', e => {
+        if (e.key === 'Enter') fazerLogin();
+    });
+    document.getElementById('login-email').addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('login-senha').focus();
+    });
+});
+</script>
+<style>
+@keyframes bounce { from { transform:translateY(0); } to { transform:translateY(-8px); } }
+</style>
+</body>
+</html>

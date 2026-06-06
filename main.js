@@ -5240,6 +5240,10 @@ const aniversario = {
         const grauStr = (!isMT && g.grau > 0) ? ` — ${g.grau}° Grau` : '';
         const modalidade = isMT ? '🥊 Muay Thai' : '🥋 Jiu-Jitsu';
 
+        const beltVisual = isMT
+            ? ui.renderBeltMT(g.faixaMT).replace('height:10px', 'height:22px').replace('margin-top:4px', 'margin:16px 0')
+            : ui.renderBeltJJ(g.faixa, g.grau).replace('height:10px', 'height:22px').replace('margin-top:4px', 'margin:16px 0');
+
         const modal = document.createElement('div');
         modal.id = 'modal-graduacao';
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
@@ -5258,6 +5262,7 @@ const aniversario = {
                 <div style="display:inline-block;background:${cor};color:${textoBtn};font-weight:800;font-size:1rem;padding:8px 24px;border-radius:999px;margin:12px 0;letter-spacing:1px;">
                     Faixa ${faixaExibir}${grauStr}
                 </div>
+                <div style="padding:0 12px;">${beltVisual}</div>
                 <div style="font-size:0.82rem;color:#94a3b8;line-height:1.7;margin:16px 0 24px;">
                     Sua dedicação no tatame chegou a um novo nível! 🔥<br><br>
                     A família <strong style="color:white;">Gaditas</strong> celebra essa conquista com muito orgulho.<br><br>

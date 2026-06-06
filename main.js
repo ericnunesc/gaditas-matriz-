@@ -1176,6 +1176,7 @@ const academia = {
                         ${telLimpo ? `<button onclick="academia.abrirWhatsappBusiness('${telLimpo}')" title="WhatsApp Business" style="background:#064e3b; border:none; color:#25d366; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : ''}
                         <button onclick="academia.verFichaSaudeAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Ficha de Saúde" style="background:#0c2344; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-notes-medical"></i></button>
                         <button onclick="graduacaoHistorico.abrirModal('${doc.id}')" title="Histórico de Graduações" style="background:#1e1040; border:none; color:#a78bfa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-medal"></i></button>
+                        <button onclick="avaliacaoFisica.abrirMenu('${doc.id}')" title="Avaliação Física" style="background:#0c2a1a; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-chart-line"></i></button>
                         ${isAdmin ? `<button onclick="academia.verFinanceiroAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#064e3b; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-dollar-sign"></i></button>` : ''}
                         ${isAdmin ? (trancado
                             ? `<button onclick="academia.ativarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Reativar matrícula" style="background:#1e3a8a; border:none; color:#60a5fa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-lock-open"></i></button>`
@@ -5089,6 +5090,13 @@ const ui = {
                             🎖️ HISTÓRICO DE GRADUAÇÕES
                         </button>
                     </div>
+                    <!-- Botão avaliação física -->
+                    <div style="margin-top:8px;">
+                        <button onclick="avaliacaoFisica.abrirMenu('${auth.currentUser.id}')"
+                            style="width:100%; padding:11px; background:#0c2a1a; border:1px solid #10b98155; color:#10b981; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; gap:8px;">
+                            📊 AVALIAÇÃO FÍSICA
+                        </button>
+                    </div>
                 </div>`;
             // Renderiza calendário/lista após o HTML do perfil ser inserido
             setTimeout(() => this._renderCal(), 50);
@@ -6796,6 +6804,564 @@ const graduacaoHistorico = {
         }
 
         win.document.write(`<div class="rodape">Gaditas Matriz • Documento gerado pelo sistema</div></body></html>`);
+        win.document.close();
+        setTimeout(() => win.print(), 600);
+    }
+};
+
+// ── AVALIAÇÃO FÍSICA ─────────────────────────────────────────────────────────
+const avaliacaoFisica = {
+
+    // ── MENU PRINCIPAL ──────────────────────────────────────
+    async abrirMenu(alunoId) {
+        document.getElementById('modal-avaliacao-fisica')?.remove();
+        const isAdmin = auth.role === 'admin';
+        const isProf  = auth.role === 'professor';
+        const snap = await db.collection('avaliacoesFisicas').doc(alunoId)
+            .collection('fichas').orderBy('data','desc').limit(10).get();
+        const fichas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-avaliacao-fisica';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:9999;overflow-y:auto;padding:20px;box-sizing:border-box;';
+
+        const historicoHtml = fichas.length === 0
+            ? `<p style="color:#475569;font-size:0.8rem;text-align:center;padding:16px 0;">Nenhuma avaliação ainda.</p>`
+            : fichas.map((f,i) => {
+                const imc = f.imc ? `IMC ${parseFloat(f.imc).toFixed(1)}` : '';
+                const gord = f.percGordura ? `${f.percGordura}% gord.` : '';
+                const tipo = f.tipo === 'completa' ? '🟢 Completa' : '🔵 Básica';
+                const statusCompleta = f.tipo === 'completa' && f.status !== 'concluida'
+                    ? ` · <span style="color:#f59e0b;">⏳ ${f.status === 'aguardando_pagamento' ? 'Aguard. pagamento' : f.status === 'aguardando_avaliador' ? 'Aguard. avaliador' : f.status}</span>` : '';
+                return `
+                    <div onclick="avaliacaoFisica.verFicha('${alunoId}','${f.id}')"
+                        style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div style="font-size:0.8rem;font-weight:700;color:white;">${f.data ? f.data.split('-').reverse().join('/') : '—'} ${i===0?'<span style="font-size:0.55rem;color:#10b981;font-weight:800;background:#064e3b;padding:2px 6px;border-radius:999px;margin-left:4px;">ÚLTIMA</span>':''}</div>
+                            <div style="font-size:0.65rem;color:#64748b;margin-top:3px;">${tipo}${statusCompleta} ${imc ? '· '+imc : ''} ${gord ? '· '+gord : ''}</div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color:#475569;font-size:0.75rem;"></i>
+                    </div>`;
+            }).join('');
+
+        // Verifica se tem solicitação completa pendente
+        const temPendente = fichas.some(f => f.tipo === 'completa' && f.status !== 'concluida');
+
+        modal.innerHTML = `
+            <div style="max-width:520px;margin:0 auto;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                    <div style="color:#10b981;font-size:0.65rem;font-weight:800;letter-spacing:2px;">📊 AVALIAÇÃO FÍSICA</div>
+                    <button onclick="document.getElementById('modal-avaliacao-fisica').remove()"
+                        style="padding:8px 14px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;">✕ FECHAR</button>
+                </div>
+
+                <!-- Histórico -->
+                <div style="background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:16px;margin-bottom:14px;">
+                    <div style="font-size:0.7rem;font-weight:800;color:#94a3b8;margin-bottom:12px;letter-spacing:1px;">AVALIAÇÕES ANTERIORES</div>
+                    ${historicoHtml}
+                </div>
+
+                <!-- Botões de ação -->
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <button onclick="avaliacaoFisica.abrirFormBasica('${alunoId}')"
+                        style="padding:14px;background:linear-gradient(135deg,#064e3b,#065f46);border:1px solid #10b98155;color:#10b981;border-radius:12px;font-weight:800;font-size:0.85rem;cursor:pointer;">
+                        📋 NOVA AVALIAÇÃO BÁSICA <span style="font-size:0.65rem;opacity:0.8;">(você mesmo preenche)</span>
+                    </button>
+                    ${!temPendente ? `
+                    <button onclick="avaliacaoFisica.solicitarCompleta('${alunoId}')"
+                        style="padding:14px;background:linear-gradient(135deg,#1c1400,#292400);border:1px solid #f59e0b55;color:#f59e0b;border-radius:12px;font-weight:800;font-size:0.85rem;cursor:pointer;">
+                        ⭐ SOLICITAR AVALIAÇÃO COMPLETA <span style="font-size:0.65rem;opacity:0.8;">(com professor · paga)</span>
+                    </button>` : `
+                    <div style="padding:14px;background:#1c1400;border:1px solid #f59e0b33;border-radius:12px;text-align:center;font-size:0.75rem;color:#f59e0b;">
+                        ⏳ Você tem uma avaliação completa em andamento
+                    </div>`}
+                    ${(isAdmin || isProf) ? `
+                    <button onclick="avaliacaoFisica.painelAvaliador('${alunoId}')"
+                        style="padding:12px;background:#1e3a8a33;border:1px solid #3b82f644;color:#60a5fa;border-radius:10px;font-weight:800;font-size:0.75rem;cursor:pointer;">
+                        🔬 PAINEL DO AVALIADOR
+                    </button>` : ''}
+                </div>
+            </div>`;
+
+        document.body.appendChild(modal);
+    },
+
+    // ── FORMULÁRIO BÁSICO (aluno preenche) ──────────────────
+    abrirFormBasica(alunoId, fichaExistente = null) {
+        document.getElementById('modal-avaliacao-fisica')?.remove();
+        const f = fichaExistente || {};
+        const hoje = new Date();
+        const dataHoje = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+
+        const campo = (id, label, val='', tipo='number', step='0.01', placeholder='') => `
+            <div style="margin-bottom:10px;">
+                <small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:4px;">${label}</small>
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px;">
+                    <input type="${tipo}" id="af-${id}" value="${val}" step="${step}" placeholder="${placeholder}"
+                        style="background:none;border:none;color:white;width:100%;outline:none;font-size:0.85rem;font-family:inherit;"
+                        ${tipo==='number' ? 'oninput="avaliacaoFisica._calcIMC()"' : ''}/>
+                </div>
+            </div>`;
+
+        const circ = ['Tórax','Braço Dir. Contraído','Braço Esq. Contraído','Quadril','Braço Dir. Relaxado','Braço Esq. Relaxado','Abdômen','Cintura','Antebraço Direito','Antebraço Esquerdo','Coxa Direita','Coxa Esquerda','Escapular','Panturrilha Direita','Panturrilha Esquerda'];
+        const circIds = ['torax','bracoDirC','bracoEsqC','quadril','bracoDirR','bracoEsqR','abdomen','cintura','antebraçoDir','antebraçoEsq','coxaDireita','coxaEsquerda','escapular','pantuDireita','pantuEsquerda'];
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-avaliacao-fisica';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:9999;overflow-y:auto;padding:20px;box-sizing:border-box;';
+
+        modal.innerHTML = `
+            <div style="max-width:520px;margin:0 auto;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                    <div style="color:#10b981;font-size:0.65rem;font-weight:800;letter-spacing:2px;">📋 AVALIAÇÃO BÁSICA</div>
+                    <button onclick="avaliacaoFisica.abrirMenu('${alunoId}')"
+                        style="padding:8px 14px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.7rem;cursor:pointer;">← VOLTAR</button>
+                </div>
+
+                <!-- Data -->
+                <div style="margin-bottom:16px;">
+                    <small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:4px;">DATA DA AVALIAÇÃO</small>
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 12px;">
+                        <input type="date" id="af-data" value="${f.data||dataHoje}" style="background:none;border:none;color:white;width:100%;outline:none;font-size:0.85rem;"/>
+                    </div>
+                </div>
+
+                <!-- Peso e Altura -->
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:14px;padding:14px;margin-bottom:14px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#10b981;margin-bottom:12px;letter-spacing:1px;">⚖️ PESO E ALTURA</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        ${campo('peso','PESO (kg)',f.peso||'','number','0.1','74.90')}
+                        ${campo('altura','ALTURA (m)',f.altura||'','number','0.01','1.75')}
+                    </div>
+                    <div id="af-imc-resultado" style="background:#1e293b;border-radius:8px;padding:10px;text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:4px;">
+                        ${f.imc ? `IMC: <strong style="color:white;">${parseFloat(f.imc).toFixed(2)}</strong> — <span style="color:${this._corIMC(f.imc)};">${this._classIMC(f.imc)}</span>` : 'Preencha peso e altura para calcular o IMC'}
+                    </div>
+                </div>
+
+                <!-- Composição corporal -->
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:14px;padding:14px;margin-bottom:14px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#10b981;margin-bottom:12px;letter-spacing:1px;">🧬 COMPOSIÇÃO CORPORAL</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        ${campo('percGordura','% GORDURA (bioimpedância)',f.percGordura||'','number','0.1','36.10')}
+                        ${campo('pesoGordura','PESO GORDURA (kg)',f.pesoGordura||'','number','0.1','27.04')}
+                        ${campo('pesoMuscular','PESO MUSCULAR (kg)',f.pesoMuscular||'','number','0.1','')}
+                        ${campo('pesoOsseo','PESO ÓSSEO (kg)',f.pesoOsseo||'','number','0.1','')}
+                    </div>
+                </div>
+
+                <!-- Circunferências -->
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:14px;padding:14px;margin-bottom:14px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#10b981;margin-bottom:12px;letter-spacing:1px;">📏 CIRCUNFERÊNCIAS (cm)</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        ${circ.map((nome,i) => campo('circ_'+circIds[i], nome, (f.circunferencias||{})[circIds[i]]||'','number','0.1','')).join('')}
+                    </div>
+                </div>
+
+                <!-- Observações -->
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:14px;padding:14px;margin-bottom:14px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#10b981;margin-bottom:10px;letter-spacing:1px;">📝 OBSERVAÇÕES E METAS</div>
+                    <textarea id="af-obs" placeholder="Observações pessoais..." rows="3"
+                        style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px;color:white;font-size:0.8rem;resize:vertical;box-sizing:border-box;">${f.observacoes||''}</textarea>
+                </div>
+
+                <div style="display:flex;gap:8px;">
+                    <button onclick="avaliacaoFisica.salvarBasica('${alunoId}','${f.id||''}')"
+                        style="flex:1;padding:14px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:white;border-radius:12px;font-weight:800;font-size:0.9rem;cursor:pointer;">
+                        💾 SALVAR AVALIAÇÃO
+                    </button>
+                </div>
+            </div>`;
+
+        document.body.appendChild(modal);
+    },
+
+    _calcIMC() {
+        const peso = parseFloat(document.getElementById('af-peso')?.value);
+        const alt  = parseFloat(document.getElementById('af-altura')?.value);
+        const el   = document.getElementById('af-imc-resultado');
+        if (!el) return;
+        if (!peso || !alt || alt < 0.5) { el.innerHTML = 'Preencha peso e altura para calcular o IMC'; return; }
+        const imc = peso / (alt * alt);
+        el.innerHTML = `IMC: <strong style="color:white;">${imc.toFixed(2)}</strong> — <span style="color:${this._corIMC(imc)};">${this._classIMC(imc)}</span>`;
+    },
+
+    _corIMC(imc) {
+        if (imc < 18.5) return '#60a5fa';
+        if (imc < 25)   return '#10b981';
+        if (imc < 30)   return '#f59e0b';
+        if (imc < 35)   return '#f97316';
+        return '#ef4444';
+    },
+    _classIMC(imc) {
+        if (imc < 17)   return 'Muito abaixo do peso';
+        if (imc < 18.5) return 'Abaixo do peso';
+        if (imc < 25)   return 'Peso normal';
+        if (imc < 30)   return 'Acima do peso';
+        if (imc < 35)   return 'Obesidade I';
+        if (imc < 40)   return 'Obesidade II (Severa)';
+        return 'Obesidade III (Mórbida)';
+    },
+
+    async salvarBasica(alunoId, fichaId='') {
+        const btn = event?.target;
+        if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+        try {
+            const circIds = ['torax','bracoDirC','bracoEsqC','quadril','bracoDirR','bracoEsqR','abdomen','cintura','antebraçoDireito','antebraçoEsquerdo','coxaDireita','coxaEsquerda','escapular','pantuDireita','pantuEsquerda'];
+            const circ = {};
+            circIds.forEach(id => {
+                const v = parseFloat(document.getElementById('af-circ_'+id)?.value);
+                if (!isNaN(v) && v > 0) circ[id] = v;
+            });
+            const peso   = parseFloat(document.getElementById('af-peso')?.value) || 0;
+            const altura = parseFloat(document.getElementById('af-altura')?.value) || 0;
+            const imc    = (peso && altura) ? +(peso / (altura * altura)).toFixed(2) : 0;
+            const dados  = {
+                tipo: 'basica', status: 'concluida',
+                data: document.getElementById('af-data')?.value || '',
+                peso, altura, imc,
+                percGordura: parseFloat(document.getElementById('af-percGordura')?.value)||0,
+                pesoGordura: parseFloat(document.getElementById('af-pesoGordura')?.value)||0,
+                pesoMuscular: parseFloat(document.getElementById('af-pesoMuscular')?.value)||0,
+                pesoOsseo: parseFloat(document.getElementById('af-pesoOsseo')?.value)||0,
+                circunferencias: circ,
+                observacoes: document.getElementById('af-obs')?.value || '',
+                atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            const ref = db.collection('avaliacoesFisicas').doc(alunoId).collection('fichas');
+            if (fichaId) await ref.doc(fichaId).update(dados);
+            else await ref.add({ ...dados, criadoEm: firebase.firestore.FieldValue.serverTimestamp() });
+            await this.abrirMenu(alunoId);
+        } catch(e) {
+            if (btn) { btn.disabled = false; btn.textContent = '💾 SALVAR AVALIAÇÃO'; }
+            alert('Erro ao salvar: ' + e.message);
+        }
+    },
+
+    // ── VER FICHA COMPLETA ──────────────────────────────────
+    async verFicha(alunoId, fichaId) {
+        document.getElementById('modal-avaliacao-fisica')?.remove();
+        const doc = await db.collection('avaliacoesFisicas').doc(alunoId).collection('fichas').doc(fichaId).get();
+        if (!doc.exists) return;
+        const f = doc.data();
+        const isAdmin = auth.role === 'admin';
+        const isProf  = auth.role === 'professor';
+        const imc = f.imc || 0;
+
+        const linhaCirc = (nome, val) => val > 0 ? `
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1e293b;font-size:0.75rem;">
+                <span style="color:#94a3b8;">${nome}</span>
+                <strong style="color:white;">${val} cm</strong>
+            </div>` : '';
+
+        const circIds = {torax:'Tórax',bracoDirC:'Braço Dir. Contraído',bracoEsqC:'Braço Esq. Contraído',quadril:'Quadril',bracoDirR:'Braço Dir. Relaxado',bracoEsqR:'Braço Esq. Relaxado',abdomen:'Abdômen',cintura:'Cintura','antebraçoDireito':'Antebraço Direito','antebraçoEsquerdo':'Antebraço Esquerdo',coxaDireita:'Coxa Direita',coxaEsquerda:'Coxa Esquerda',escapular:'Escapular',pantuDireita:'Panturrilha Direita',pantuEsquerda:'Panturrilha Esquerda'};
+        const circHtml = Object.entries(f.circunferencias||{}).map(([k,v]) => linhaCirc(circIds[k]||k, v)).join('');
+
+        const dobrasHtml = f.dobras ? Object.entries(f.dobras).map(([k,v]) => `
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1e293b;font-size:0.75rem;">
+                <span style="color:#94a3b8;">${k}</span>
+                <strong style="color:white;">${v} mm</strong>
+            </div>`).join('') : '';
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-avaliacao-fisica';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:9999;overflow-y:auto;padding:20px;box-sizing:border-box;';
+
+        modal.innerHTML = `
+            <div style="max-width:520px;margin:0 auto;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                    <div style="color:#10b981;font-size:0.65rem;font-weight:800;letter-spacing:2px;">📊 ${f.data?f.data.split('-').reverse().join('/'):''} · ${f.tipo==='completa'?'🟢 COMPLETA':'🔵 BÁSICA'}</div>
+                    <div style="display:flex;gap:6px;">
+                        <button onclick="avaliacaoFisica.imprimir('${alunoId}','${fichaId}')"
+                            style="padding:7px 12px;background:#1e1040;border:1px solid #7c3aed44;color:#a78bfa;border-radius:8px;font-size:0.65rem;font-weight:800;cursor:pointer;">🖨️</button>
+                        ${(isAdmin||isProf) ? `<button onclick="avaliacaoFisica.abrirFormBasica('${alunoId}',${JSON.stringify(f).replace(/'/g,'&#39;')})" style="padding:7px 12px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.65rem;cursor:pointer;">✏️</button>` : ''}
+                        <button onclick="avaliacaoFisica.abrirMenu('${alunoId}')"
+                            style="padding:7px 12px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.65rem;cursor:pointer;">← VOLTAR</button>
+                    </div>
+                </div>
+
+                <!-- IMC -->
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:14px;padding:16px;margin-bottom:12px;">
+                    <div style="display:flex;gap:16px;margin-bottom:12px;">
+                        <div style="flex:1;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:white;">${f.peso||0}</div><div style="font-size:0.6rem;color:#64748b;">Peso (kg)</div></div>
+                        <div style="flex:1;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:white;">${f.altura||0}</div><div style="font-size:0.6rem;color:#64748b;">Altura (m)</div></div>
+                        <div style="flex:1;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:${this._corIMC(imc)};">${imc.toFixed(1)}</div><div style="font-size:0.6rem;color:#64748b;">IMC</div></div>
+                        <div style="flex:1;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#f43f5e;">${f.percGordura||0}%</div><div style="font-size:0.6rem;color:#64748b;">% Gordura</div></div>
+                    </div>
+                    <div style="background:#1e293b;border-radius:8px;padding:8px;text-align:center;font-size:0.75rem;color:${this._corIMC(imc)};font-weight:800;">${this._classIMC(imc)}</div>
+                </div>
+
+                <!-- Composição -->
+                ${(f.pesoGordura||f.pesoMuscular||f.pesoOsseo) ? `
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:14px;padding:16px;margin-bottom:12px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#10b981;margin-bottom:12px;">🧬 COMPOSIÇÃO CORPORAL</div>
+                    <div style="display:flex;gap:10px;">
+                        ${f.pesoGordura ? `<div style="flex:1;background:#1e293b;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:1rem;font-weight:800;color:#f43f5e;">${f.pesoGordura}kg</div><div style="font-size:0.55rem;color:#64748b;">Gordura</div></div>` : ''}
+                        ${f.pesoMuscular ? `<div style="flex:1;background:#1e293b;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:1rem;font-weight:800;color:#10b981;">${f.pesoMuscular}kg</div><div style="font-size:0.55rem;color:#64748b;">Músculo</div></div>` : ''}
+                        ${f.pesoOsseo ? `<div style="flex:1;background:#1e293b;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:1rem;font-weight:800;color:#94a3b8;">${f.pesoOsseo}kg</div><div style="font-size:0.55rem;color:#64748b;">Ósseo</div></div>` : ''}
+                    </div>
+                </div>` : ''}
+
+                <!-- Circunferências -->
+                ${circHtml ? `
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:14px;padding:16px;margin-bottom:12px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#10b981;margin-bottom:10px;">📏 CIRCUNFERÊNCIAS</div>
+                    ${circHtml}
+                </div>` : ''}
+
+                <!-- Dobras (se completa) -->
+                ${dobrasHtml ? `
+                <div style="background:#0f172a;border:1px solid #f59e0b33;border-radius:14px;padding:16px;margin-bottom:12px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#f59e0b;margin-bottom:10px;">📐 DOBRAS CUTÂNEAS (Pollock 7)</div>
+                    ${dobrasHtml}
+                    ${f.percGorduraPollock ? `<div style="margin-top:10px;background:#1e293b;border-radius:8px;padding:10px;text-align:center;font-size:0.8rem;color:white;">% Gordura (Pollock): <strong style="color:#f59e0b;">${f.percGorduraPollock}%</strong></div>` : ''}
+                </div>` : ''}
+
+                <!-- Anamnese (se completa) -->
+                ${f.anamnese ? `
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:14px;padding:16px;margin-bottom:12px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#60a5fa;margin-bottom:10px;">📋 ANAMNESE</div>
+                    <p style="font-size:0.8rem;color:#e2e8f0;line-height:1.6;white-space:pre-wrap;">${f.anamnese}</p>
+                </div>` : ''}
+
+                <!-- Laudo (se completa) -->
+                ${f.laudo ? `
+                <div style="background:#0c2a1a;border:1px solid #10b98133;border-radius:14px;padding:16px;margin-bottom:12px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#10b981;margin-bottom:10px;">📝 LAUDO DO AVALIADOR</div>
+                    <p style="font-size:0.8rem;color:#e2e8f0;line-height:1.6;white-space:pre-wrap;">${f.laudo}</p>
+                    ${f.avaliadorNome ? `<div style="font-size:0.65rem;color:#64748b;margin-top:8px;">Avaliador: ${f.avaliadorNome}</div>` : ''}
+                </div>` : ''}
+
+                ${f.observacoes ? `
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:14px;padding:16px;margin-bottom:12px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#94a3b8;margin-bottom:8px;">📝 OBSERVAÇÕES</div>
+                    <p style="font-size:0.8rem;color:#e2e8f0;line-height:1.6;">${f.observacoes}</p>
+                </div>` : ''}
+
+                ${isAdmin ? `
+                <button onclick="if(confirm('Excluir esta avaliação?')) db.collection('avaliacoesFisicas').doc('${alunoId}').collection('fichas').doc('${fichaId}').delete().then(()=>avaliacaoFisica.abrirMenu('${alunoId}'))"
+                    style="width:100%;padding:10px;background:#2a0808;border:1px solid #7f1d1d;color:#f87171;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;">🗑️ Excluir avaliação</button>` : ''}
+            </div>`;
+
+        document.body.appendChild(modal);
+    },
+
+    // ── SOLICITAR AVALIAÇÃO COMPLETA ────────────────────────
+    async solicitarCompleta(alunoId) {
+        document.getElementById('modal-avaliacao-fisica')?.remove();
+        // Busca valor configurado pelo admin
+        const configDoc = await db.collection('configuracoes').doc('avaliacaoFisica').get();
+        const valorConfig = configDoc.exists ? (configDoc.data().valor || 0) : 0;
+        const linkPag    = configDoc.exists ? (configDoc.data().linkPagamento || '') : '';
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-avaliacao-fisica';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:9999;overflow-y:auto;padding:20px;box-sizing:border-box;display:flex;align-items:center;';
+        modal.innerHTML = `
+            <div style="max-width:420px;margin:0 auto;width:100%;">
+                <div style="background:#1e293b;border:1px solid #f59e0b44;border-radius:20px;padding:28px;">
+                    <div style="text-align:center;margin-bottom:20px;">
+                        <div style="font-size:2.5rem;margin-bottom:8px;">⭐</div>
+                        <div style="font-size:1rem;font-weight:800;color:white;">Avaliação Completa com Professor</div>
+                        <div style="font-size:0.75rem;color:#94a3b8;margin-top:6px;line-height:1.6;">
+                            Inclui dobras cutâneas (Pollock 7), anamnese detalhada e laudo personalizado do avaliador.
+                        </div>
+                    </div>
+                    ${valorConfig > 0 ? `
+                    <div style="background:#1c1400;border:1px solid #f59e0b55;border-radius:12px;padding:16px;text-align:center;margin-bottom:20px;">
+                        <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:1px;">VALOR</div>
+                        <div style="font-size:1.8rem;font-weight:800;color:#f59e0b;">R$ ${parseFloat(valorConfig).toFixed(2).replace('.',',')}</div>
+                    </div>` : `
+                    <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:12px;text-align:center;margin-bottom:20px;font-size:0.75rem;color:#64748b;">
+                        Valor a combinar com a academia
+                    </div>`}
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        ${linkPag ? `
+                        <a href="${linkPag}" target="_blank"
+                            style="display:block;text-align:center;padding:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border-radius:12px;font-weight:800;font-size:0.85rem;text-decoration:none;">
+                            💳 PAGAR E SOLICITAR
+                        </a>` : ''}
+                        <button onclick="avaliacaoFisica._confirmarSolicitacao('${alunoId}')"
+                            style="padding:12px;background:#1e3a8a;border:none;color:#60a5fa;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;">
+                            ✉️ ${linkPag ? 'JÁ PAGUEI — SOLICITAR' : 'SOLICITAR AVALIAÇÃO'}
+                        </button>
+                        <button onclick="avaliacaoFisica.abrirMenu('${alunoId}')"
+                            style="padding:10px;background:none;border:1px solid #334155;color:#64748b;border-radius:10px;font-weight:700;font-size:0.75rem;cursor:pointer;">CANCELAR</button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async _confirmarSolicitacao(alunoId) {
+        try {
+            await db.collection('avaliacoesFisicas').doc(alunoId).collection('fichas').add({
+                tipo: 'completa', status: 'aguardando_avaliador',
+                data: new Date().toISOString().split('T')[0],
+                criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+                alunoId
+            });
+            alert('✅ Solicitação enviada! O professor entrará em contato para agendar.');
+            await this.abrirMenu(alunoId);
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    // ── PAINEL DO AVALIADOR (admin/professor preenche) ──────
+    async painelAvaliador(alunoId) {
+        document.getElementById('modal-avaliacao-fisica')?.remove();
+        // Busca fichas completas pendentes
+        const snap = await db.collection('avaliacoesFisicas').doc(alunoId)
+            .collection('fichas').where('tipo','==','completa').where('status','==','aguardando_avaliador').get();
+
+        if (snap.empty) {
+            alert('Nenhuma avaliação completa pendente para este aluno.');
+            return this.abrirMenu(alunoId);
+        }
+        const fichaId = snap.docs[0].id;
+        const f = snap.docs[0].data();
+
+        const campo = (id, label, val='', tipo='number') => `
+            <div style="margin-bottom:10px;">
+                <small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:4px;">${label}</small>
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 12px;">
+                    <input type="${tipo}" id="afc-${id}" value="${val||''}" style="background:none;border:none;color:white;width:100%;outline:none;font-size:0.85rem;" />
+                </div>
+            </div>`;
+
+        const dobras = ['Triciptal','Subescapular','Axilar Média','Abdominal','Coxa','Panturrilha','Biciptal','Peitoral','Supra Ilíaca'];
+        const dobrasIds = ['triciptal','subescapular','axilarMedia','abdominal','coxa','panturrilha','biciptal','peitoral','supraIliaca'];
+        const fd = f.dobras || {};
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-avaliacao-fisica';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:9999;overflow-y:auto;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="max-width:520px;margin:0 auto;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                    <div style="color:#f59e0b;font-size:0.65rem;font-weight:800;letter-spacing:2px;">⭐ AVALIAÇÃO COMPLETA</div>
+                    <button onclick="avaliacaoFisica.abrirMenu('${alunoId}')" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.7rem;cursor:pointer;">← VOLTAR</button>
+                </div>
+
+                <!-- Dobras Pollock 7 -->
+                <div style="background:#0f172a;border:1px solid #f59e0b44;border-radius:14px;padding:14px;margin-bottom:14px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#f59e0b;margin-bottom:12px;">📐 DOBRAS CUTÂNEAS — Pollock 7 (mm)</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        ${dobras.map((nome,i) => campo('d_'+dobrasIds[i], nome, fd[dobrasIds[i]])).join('')}
+                    </div>
+                    <div style="margin-top:10px;">
+                        ${campo('percGorduraPollock','% GORDURA CALCULADO (Pollock)',f.percGorduraPollock||'')}
+                    </div>
+                </div>
+
+                <!-- Anamnese -->
+                <div style="background:#0f172a;border:1px solid #3b82f644;border-radius:14px;padding:14px;margin-bottom:14px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#60a5fa;margin-bottom:10px;">📋 ANAMNESE DETALHADA</div>
+                    <textarea id="afc-anamnese" rows="5" placeholder="Histórico de saúde, lesões, medicamentos, hábitos, objetivos..." style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px;color:white;font-size:0.8rem;resize:vertical;box-sizing:border-box;">${f.anamnese||''}</textarea>
+                </div>
+
+                <!-- Laudo -->
+                <div style="background:#0c2a1a;border:1px solid #10b98133;border-radius:14px;padding:14px;margin-bottom:14px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#10b981;margin-bottom:10px;">📝 LAUDO DO AVALIADOR</div>
+                    <textarea id="afc-laudo" rows="5" placeholder="Parecer técnico, recomendações, observações do avaliador..." style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px;color:white;font-size:0.8rem;resize:vertical;box-sizing:border-box;">${f.laudo||''}</textarea>
+                </div>
+
+                <button onclick="avaliacaoFisica.salvarCompleta('${alunoId}','${fichaId}')"
+                    style="width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#000;border-radius:12px;font-weight:800;font-size:0.9rem;cursor:pointer;">
+                    ✅ SALVAR E CONCLUIR AVALIAÇÃO
+                </button>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async salvarCompleta(alunoId, fichaId) {
+        const btn = event?.target;
+        if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+        try {
+            const dobrasIds = ['triciptal','subescapular','axilarMedia','abdominal','coxa','panturrilha','biciptal','peitoral','supraIliaca'];
+            const dobras = {};
+            dobrasIds.forEach(id => {
+                const v = parseFloat(document.getElementById('afc-d_'+id)?.value);
+                if (!isNaN(v) && v > 0) dobras[id] = v;
+            });
+            await db.collection('avaliacoesFisicas').doc(alunoId).collection('fichas').doc(fichaId).update({
+                dobras,
+                percGorduraPollock: parseFloat(document.getElementById('afc-percGorduraPollock')?.value)||0,
+                anamnese: document.getElementById('afc-anamnese')?.value || '',
+                laudo: document.getElementById('afc-laudo')?.value || '',
+                avaliadorNome: auth.currentUser?.nome || '',
+                status: 'concluida',
+                concluidoEm: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            // Notifica aluno via campo no Firestore
+            await db.collection('alunos').doc(alunoId).update({ avaliacaoCompletaDisponivel: true });
+            alert('✅ Avaliação concluída! O aluno será notificado.');
+            await this.abrirMenu(alunoId);
+        } catch(e) {
+            if (btn) { btn.disabled = false; btn.textContent = '✅ SALVAR E CONCLUIR AVALIAÇÃO'; }
+            alert('Erro: ' + e.message);
+        }
+    },
+
+    // ── PAINEL ADMIN — configurar valor e ver todas ──────────
+    async abrirConfigAdmin() {
+        const doc = await db.collection('configuracoes').doc('avaliacaoFisica').get();
+        const cfg = doc.exists ? doc.data() : {};
+        const valor = prompt('Valor cobrado pela avaliação completa (R$):', cfg.valor || '');
+        if (valor === null) return;
+        const link = prompt('Link de pagamento (InfinityPay, MercadoPago, etc):', cfg.linkPagamento || '');
+        if (link === null) return;
+        await db.collection('configuracoes').doc('avaliacaoFisica').set({ valor: parseFloat(valor)||0, linkPagamento: link }, { merge: true });
+        alert('✅ Configurações salvas!');
+    },
+
+    // ── IMPRESSÃO ────────────────────────────────────────────
+    async imprimir(alunoId, fichaId) {
+        const docF = await db.collection('avaliacoesFisicas').doc(alunoId).collection('fichas').doc(fichaId).get();
+        const docA = await db.collection('alunos').doc(alunoId).get();
+        if (!docF.exists) return;
+        const f = docF.data();
+        const a = docA.data() || {};
+        const imc = f.imc || 0;
+        const circ = f.circunferencias || {};
+        const circNomes = {torax:'Tórax',bracoDirC:'Braço Dir. Contraído',bracoEsqC:'Braço Esq. Contraído',quadril:'Quadril',bracoDirR:'Braço Dir. Relaxado',bracoEsqR:'Braço Esq. Relaxado',abdomen:'Abdômen',cintura:'Cintura','antebraçoDireito':'Antebraço Direito','antebraçoEsquerdo':'Antebraço Esquerdo',coxaDireita:'Coxa Direita',coxaEsquerda:'Coxa Esquerda',escapular:'Escapular',pantuDireita:'Panturrilha Direita',pantuEsquerda:'Panturrilha Esquerda'};
+
+        const win = window.open('','_blank');
+        win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Avaliação Física</title>
+        <style>
+            *{box-sizing:border-box;margin:0;padding:0} body{font-family:'Segoe UI',sans-serif;color:#1e293b;padding:24px;max-width:700px;margin:0 auto}
+            h1{font-size:1.3rem;font-weight:800;margin-bottom:4px} .sub{font-size:0.75rem;color:#64748b;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #e2e8f0}
+            .section{margin-bottom:20px} .section-title{font-size:0.7rem;font-weight:800;color:#10b981;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}
+            .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+            .kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center}
+            .kpi-val{font-size:1.1rem;font-weight:800} .kpi-lab{font-size:0.6rem;color:#64748b}
+            table{width:100%;border-collapse:collapse;font-size:0.8rem} td,th{padding:7px 10px;border-bottom:1px solid #e2e8f0} th{background:#f8fafc;font-weight:700;text-align:left;font-size:0.7rem}
+            .laudo{background:#f0fdf4;border-left:3px solid #10b981;padding:12px;border-radius:4px;font-size:0.8rem;line-height:1.6}
+            .rodape{margin-top:24px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:0.65rem;color:#94a3b8;text-align:center}
+            @media print{body{padding:12px}}
+        </style></head><body>`);
+
+        win.document.write(`<h1>${a.nome||'Aluno'}</h1><div class="sub">Avaliação Física · ${f.data?f.data.split('-').reverse().join('/'):''} · ${f.tipo==='completa'?'Avaliação Completa':'Avaliação Básica'}</div>`);
+
+        win.document.write(`<div class="section"><div class="section-title">⚖️ Peso e Altura</div><div class="grid">
+            <div class="kpi"><div class="kpi-val">${f.peso||0} kg</div><div class="kpi-lab">Peso</div></div>
+            <div class="kpi"><div class="kpi-val">${f.altura||0} m</div><div class="kpi-lab">Altura</div></div>
+            <div class="kpi"><div class="kpi-val" style="color:#10b981">${imc.toFixed(1)}</div><div class="kpi-lab">IMC</div></div>
+            <div class="kpi"><div class="kpi-val" style="color:#ef4444">${f.percGordura||0}%</div><div class="kpi-lab">% Gordura</div></div>
+        </div><div style="background:#f0fdf4;border-radius:6px;padding:8px;text-align:center;font-size:0.8rem;font-weight:700;color:#10b981;">${this._classIMC(imc)}</div></div>`);
+
+        if (Object.keys(circ).length > 0) {
+            win.document.write(`<div class="section"><div class="section-title">📏 Circunferências</div><table><tr><th>Medida</th><th>Valor (cm)</th></tr>`);
+            Object.entries(circ).forEach(([k,v]) => { win.document.write(`<tr><td>${circNomes[k]||k}</td><td>${v}</td></tr>`); });
+            win.document.write(`</table></div>`);
+        }
+        if (f.dobras && Object.keys(f.dobras).length > 0) {
+            win.document.write(`<div class="section"><div class="section-title">📐 Dobras Cutâneas (Pollock 7)</div><table><tr><th>Dobra</th><th>mm</th></tr>`);
+            Object.entries(f.dobras).forEach(([k,v]) => { win.document.write(`<tr><td>${k}</td><td>${v}</td></tr>`); });
+            if (f.percGorduraPollock) win.document.write(`<tr style="font-weight:800"><td>% Gordura (Pollock)</td><td>${f.percGorduraPollock}%</td></tr>`);
+            win.document.write(`</table></div>`);
+        }
+        if (f.anamnese) win.document.write(`<div class="section"><div class="section-title">📋 Anamnese</div><p style="font-size:0.8rem;line-height:1.7;white-space:pre-wrap;">${f.anamnese}</p></div>`);
+        if (f.laudo) win.document.write(`<div class="section"><div class="section-title">📝 Laudo do Avaliador</div><div class="laudo">${f.laudo}</div>${f.avaliadorNome?`<div style="font-size:0.65rem;color:#64748b;margin-top:6px;">Avaliador: ${f.avaliadorNome}</div>`:''}</div>`);
+        win.document.write(`<div class="rodape">Gaditas Matriz · Documento gerado pelo sistema · ${new Date().toLocaleDateString('pt-BR')}</div></body></html>`);
         win.document.close();
         setTimeout(() => win.print(), 600);
     }

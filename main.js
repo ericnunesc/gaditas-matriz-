@@ -178,6 +178,8 @@ const auth = {
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerRelatosProf();
         // Badge de depoimentos aprovados (carrega em background)
         academia._carregarBadgeDepoimentos();
+        // Badge e painel de solicitações de avaliação física (admin/professor)
+        if (this.role === 'admin' || this.role === 'professor') avaliacaoFisica.iniciarListenerSolicitacoes();
 
         // ── ANIVERSÁRIO e GRADUAÇÃO — para aluno e professor promovido ─────────────
         if (this.role === 'aluno' || this.role === 'professor') {
@@ -4769,7 +4771,7 @@ const ui = {
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
         if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
-        if(id === 'tab-relatorios') { if(auth.role === 'admin') academia.renderDashboardAdmin(); academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
+        if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); avaliacaoFisica._garantirPainelSolicitacoes(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }
     },
@@ -7194,11 +7196,18 @@ const avaliacaoFisica = {
 
     async _confirmarSolicitacao(alunoId) {
         try {
-            await db.collection('avaliacoesFisicas').doc(alunoId).collection('fichas').add({
+            const data = new Date().toISOString().split('T')[0];
+            // Cria ficha na subcoleção do aluno
+            const fichaRef = await db.collection('avaliacoesFisicas').doc(alunoId).collection('fichas').add({
                 tipo: 'completa', status: 'aguardando_avaliador',
-                data: new Date().toISOString().split('T')[0],
-                criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-                alunoId
+                data, criadoEm: firebase.firestore.FieldValue.serverTimestamp(), alunoId
+            });
+            // Cria alerta top-level para o admin ver sem precisar entrar no perfil do aluno
+            const nomeAluno = auth.currentUser?.nome || '';
+            await db.collection('solicitacoesAvaliacao').add({
+                alunoId, fichaId: fichaRef.id, nomeAluno,
+                data, status: 'pendente', lido: false,
+                criadoEm: firebase.firestore.FieldValue.serverTimestamp()
             });
             alert('✅ Solicitação enviada! O professor entrará em contato para agendar.');
             await this.abrirMenu(alunoId);
@@ -7291,6 +7300,10 @@ const avaliacaoFisica = {
                 status: 'concluida',
                 concluidoEm: firebase.firestore.FieldValue.serverTimestamp()
             });
+            // Marca solicitação como concluída
+            const snapSolic = await db.collection('solicitacoesAvaliacao')
+                .where('alunoId','==',alunoId).where('fichaId','==',fichaId).get();
+            snapSolic.docs.forEach(d => d.ref.update({ status: 'concluida', lido: true }));
             // Notifica aluno via campo no Firestore
             await db.collection('alunos').doc(alunoId).update({ avaliacaoCompletaDisponivel: true });
             alert('✅ Avaliação concluída! O aluno será notificado.');
@@ -7299,6 +7312,94 @@ const avaliacaoFisica = {
             if (btn) { btn.disabled = false; btn.textContent = '✅ SALVAR E CONCLUIR AVALIAÇÃO'; }
             alert('Erro: ' + e.message);
         }
+    },
+
+    // ── GARANTE CONTAINER NA ABA RELATÓRIOS ─────────────────
+    _garantirPainelSolicitacoes() {
+        if (document.getElementById('painel-solic-avaliacao')) return;
+        const cont = document.createElement('div');
+        cont.id = 'painel-solic-avaliacao';
+        const relTab = document.getElementById('tab-relatorios');
+        const dash = document.getElementById('dashboard-admin-container');
+        if (dash) dash.after(cont);
+        else if (relTab) relTab.insertBefore(cont, relTab.firstChild);
+    },
+
+    // ── LISTENER DE SOLICITAÇÕES EM TEMPO REAL ──────────────
+    iniciarListenerSolicitacoes() {
+        db.collection('solicitacoesAvaliacao')
+            .where('status','==','pendente')
+            .orderBy('criadoEm','desc')
+            .onSnapshot(snap => {
+                const naolidas = snap.docs.filter(d => !d.data().lido).length;
+                // Atualiza badge
+                const badge = document.getElementById('badge-solic-avaliacao');
+                if (badge) {
+                    badge.textContent = naolidas;
+                    badge.style.display = naolidas > 0 ? 'inline-block' : 'none';
+                }
+                // Atualiza painel se estiver visível
+                const painel = document.getElementById('painel-solic-avaliacao');
+                if (painel) this._renderPainelSolicitacoes(snap.docs, painel);
+            }, () => {});
+    },
+
+    _renderPainelSolicitacoes(docs, container) {
+        const pendentes = docs.filter(d => d.data().status === 'pendente');
+        if (pendentes.length === 0) { container.innerHTML = ''; return; }
+
+        const naolidas = pendentes.filter(d => !d.data().lido).length;
+        const badgeHtml = naolidas > 0
+            ? `<span style="background:#f43f5e;color:white;font-size:0.55rem;padding:2px 7px;border-radius:999px;font-weight:800;margin-left:6px;">${naolidas} NOVA${naolidas>1?'S':''}</span>` : '';
+
+        container.innerHTML = `
+            <div style="background:#0c2a1a;border:1px solid #10b98155;border-radius:14px;padding:14px;margin-bottom:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <div style="font-size:0.75rem;font-weight:800;color:#10b981;">📊 AVALIAÇÕES FÍSICAS SOLICITADAS ${badgeHtml}</div>
+                    <div style="display:flex;gap:6px;">
+                        <button onclick="avaliacaoFisica.abrirConfigAdmin()"
+                            style="font-size:0.6rem;color:#f59e0b;background:#1c1400;border:1px solid #f59e0b44;padding:4px 8px;border-radius:6px;cursor:pointer;font-weight:800;">
+                            ⚙️ Configurar valor
+                        </button>
+                        ${naolidas > 0 ? `<button onclick="avaliacaoFisica._marcarTodasLidas()"
+                            style="font-size:0.6rem;color:#64748b;background:none;border:none;cursor:pointer;font-weight:700;">
+                            Marcar lidas
+                        </button>` : ''}
+                    </div>
+                </div>
+                ${pendentes.map(doc => {
+                    const d = doc.data();
+                    const isNovo = !d.lido;
+                    return `
+                        <div style="background:#0f172a;border:1px solid ${isNovo?'#10b98155':'#1e293b'};border-radius:10px;padding:12px;margin-bottom:8px;${isNovo?'border-left:3px solid #10b981;':''}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                                <div>
+                                    <div style="font-size:0.82rem;font-weight:800;color:${isNovo?'#10b981':'#e2e8f0'};">${d.nomeAluno||'—'}</div>
+                                    <div style="font-size:0.62rem;color:#64748b;margin-top:3px;">📅 ${d.data?d.data.split('-').reverse().join('/'):''} · ⭐ Avaliação Completa</div>
+                                </div>
+                                <button onclick="avaliacaoFisica._abrirSolicitacao('${doc.id}','${d.alunoId}','${d.fichaId}')"
+                                    style="background:#10b981;border:none;color:white;padding:8px 12px;border-radius:8px;font-size:0.65rem;font-weight:800;cursor:pointer;white-space:nowrap;">
+                                    📋 Avaliar
+                                </button>
+                            </div>
+                        </div>`;
+                }).join('')}
+            </div>`;
+    },
+
+    async _abrirSolicitacao(solicId, alunoId, fichaId) {
+        // Marca como lido
+        await db.collection('solicitacoesAvaliacao').doc(solicId).update({ lido: true });
+        // Abre painel do avaliador diretamente
+        await this.painelAvaliador(alunoId);
+    },
+
+    async _marcarTodasLidas() {
+        const snap = await db.collection('solicitacoesAvaliacao')
+            .where('status','==','pendente').where('lido','==',false).get();
+        const batch = db.batch();
+        snap.docs.forEach(d => batch.update(d.ref, { lido: true }));
+        await batch.commit();
     },
 
     // ── PAINEL ADMIN — configurar valor e ver todas ──────────

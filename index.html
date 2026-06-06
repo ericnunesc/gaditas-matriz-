@@ -821,7 +821,11 @@
             <button onclick="ui.showTab('tab-horarios')" id="menu-horarios" class="nav-item" style="background: transparent; border: none; color: #94a3b8; display: flex; flex-direction: column; align-items: center; font-size: 0.58rem; cursor: pointer;"><i class="fas fa-clock" style="font-size: 1.1rem; margin-bottom: 4px;"></i><span>HORÁRIOS</span></button>
             <button onclick="ui.showTab('tab-loja')" id="menu-loja" class="nav-item" style="background: transparent; border: none; color: #94a3b8; display: flex; flex-direction: column; align-items: center; font-size: 0.58rem; cursor: pointer; position:relative;"><i class="fas fa-shopping-bag" style="font-size: 1.1rem; margin-bottom: 4px;"></i><span>LOJA</span></button>
             <button onclick="ui.showTab('tab-alunos')" id="menu-alunos" class="nav-item" style="background: transparent; border: none; color: #94a3b8; display: flex; flex-direction: column; align-items: center; font-size: 0.58rem; cursor: pointer;"><i class="fas fa-users-cog" style="font-size: 1.1rem; margin-bottom: 4px;"></i><span>GESTÃO</span></button>
-            <button onclick="ui.showTab('tab-relatorios')" id="menu-relatorios" class="nav-item" style="background: transparent; border: none; color: #94a3b8; display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; cursor: pointer;"><i class="fas fa-file-invoice" style="font-size: 1.2rem; margin-bottom: 4px;"></i><span>RELATÓRIOS</span></button>
+            <button onclick="ui.showTab('tab-relatorios')" id="menu-relatorios" class="nav-item" style="background: transparent; border: none; color: #94a3b8; display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; cursor: pointer; position:relative;">
+                <i class="fas fa-file-invoice" style="font-size: 1.2rem; margin-bottom: 4px;"></i>
+                <span>RELATÓRIOS</span>
+                <span id="badge-solic-avaliacao" style="display:none;position:absolute;top:0;right:4px;background:#10b981;color:white;font-size:0.5rem;font-weight:800;padding:2px 5px;border-radius:999px;min-width:16px;text-align:center;"></span>
+            </button>
             <button onclick="auth.logout()" class="nav-item logout-item" style="background: transparent; border: none; color: #f43f5e; display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; cursor: pointer;"><i class="fas fa-sign-out-alt" style="font-size: 1.2rem; margin-bottom: 4px;"></i><span>SAIR</span></button>
         </nav>
     </div>

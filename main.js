@@ -7319,10 +7319,10 @@ const avaliacaoFisica = {
         if (document.getElementById('painel-solic-avaliacao')) return;
         const cont = document.createElement('div');
         cont.id = 'painel-solic-avaliacao';
+        cont.style.cssText = 'padding:0 15px;';
+        // Insere sempre no início da aba Relatórios
         const relTab = document.getElementById('tab-relatorios');
-        const dash = document.getElementById('dashboard-admin-container');
-        if (dash) dash.after(cont);
-        else if (relTab) relTab.insertBefore(cont, relTab.firstChild);
+        if (relTab) relTab.insertBefore(cont, relTab.firstChild);
     },
 
     // ── LISTENER DE SOLICITAÇÕES EM TEMPO REAL ──────────────
@@ -7332,16 +7332,17 @@ const avaliacaoFisica = {
             .orderBy('criadoEm','desc')
             .onSnapshot(snap => {
                 const naolidas = snap.docs.filter(d => !d.data().lido).length;
-                // Atualiza badge
+                // Atualiza badge na nav
                 const badge = document.getElementById('badge-solic-avaliacao');
                 if (badge) {
                     badge.textContent = naolidas;
                     badge.style.display = naolidas > 0 ? 'inline-block' : 'none';
                 }
-                // Atualiza painel se estiver visível
+                // Garante container e renderiza (mesmo que aba esteja fechada, fica pronto)
+                this._garantirPainelSolicitacoes();
                 const painel = document.getElementById('painel-solic-avaliacao');
                 if (painel) this._renderPainelSolicitacoes(snap.docs, painel);
-            }, () => {});
+            }, (err) => console.warn('Listener solicitações:', err.message));
     },
 
     _renderPainelSolicitacoes(docs, container) {

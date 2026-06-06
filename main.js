@@ -179,8 +179,8 @@ const auth = {
         // Badge de depoimentos aprovados (carrega em background)
         academia._carregarBadgeDepoimentos();
 
-        // ── ANIVERSÁRIO — popup para o aluno ─────────────
-        if (this.role === 'aluno') {
+        // ── ANIVERSÁRIO e GRADUAÇÃO — para aluno e professor promovido ─────────────
+        if (this.role === 'aluno' || this.role === 'professor') {
             setTimeout(() => aniversario.verificarAniversario(), 800);
             setTimeout(() => aniversario.verificarGraduacao(), 1500);
         }
@@ -213,7 +213,7 @@ const auth = {
     _renderFaixaHeader() {
         try {
             const el = document.getElementById('display-faixa-header');
-            if (!el || (this.role !== 'aluno' && this.role !== 'admin')) return;
+            if (!el || (this.role !== 'aluno' && this.role !== 'admin' && this.role !== 'professor')) return;
             const u = this.currentUser;
             const mod = u.modalidade || 'jiujitsu';
             let html = '';
@@ -5294,7 +5294,7 @@ const aniversario = {
 
     // ── VERIFICA E MOSTRA POPUP PARA O ALUNO ──────────────
     async verificarAniversario() {
-        if (auth.role !== 'aluno') return;
+        if (auth.role !== 'aluno' && auth.role !== 'professor') return;
         try {
             // Busca sempre do Firestore (garante que nascimento está lá)
             let nascimento = auth.currentUser?.nascimento;
@@ -5375,7 +5375,7 @@ const aniversario = {
 
     // ── PARABÉNS POR GRADUAÇÃO ─────────────────────────────
     async verificarGraduacao() {
-        if (auth.role !== 'aluno') return;
+        if (auth.role !== 'aluno' && auth.role !== 'professor') return;
         try {
             const doc = await db.collection('alunos').doc(auth.currentUser.id).get();
             if (!doc.exists) return;
@@ -5534,7 +5534,7 @@ const enquetes = {
 
     // ── VERIFICAR ENQUETE ATIVA (chamado no login do aluno) ──
     async verificarEnqueteAtiva() {
-        if (auth.role !== 'aluno') return;
+        if (auth.role !== 'aluno' && auth.role !== 'professor') return;
         try {
             const snap = await db.collection('enquetes').where('status', '==', 'ativa').get();
             if (snap.empty) return;
@@ -6104,7 +6104,7 @@ const loja = {
     },
 
     async _carregarBadgePedidos() {
-        if (auth.role !== 'aluno') return;
+        if (auth.role !== 'aluno' && auth.role !== 'professor') return;
         try {
             const snap = await db.collection('loja_pedidos')
                 .where('alunoId', '==', auth.currentUser.id).get();

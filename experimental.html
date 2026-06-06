@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gaditas Matriz - Aula Experimental</title>
+    <link rel="icon" type="image/png" href="gaditasstore.png?v=2">
+    <link rel="stylesheet" href="style.css?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body style="background-color:#0f172a; color:white; margin:0; font-family:'Inter',sans-serif;">
+
+<div class="container" style="padding:20px; display:flex; justify-content:center; align-items:flex-start; min-height:100vh;">
+    <div class="login-card" style="width:100%; max-width:450px; background:#1e293b; border:1px solid #334155; padding:25px; border-radius:20px; box-shadow:0 10px 25px rgba(0,0,0,0.3); margin:20px 0;">
+
+        <!-- Cabeçalho -->
+        <div style="text-align:center; margin-bottom:24px;">
+            <img src="gaditasstore.png" alt="Logo Gaditas" style="height:60px; margin-bottom:10px;"/>
+            <div style="display:inline-block; background:linear-gradient(135deg,#1e3a8a,#1e1040); border:1px solid #3b82f644; border-radius:12px; padding:8px 20px; margin-bottom:8px;">
+                <span style="font-size:0.65rem; font-weight:800; color:#60a5fa; letter-spacing:2px;">🥋 AULA EXPERIMENTAL GRATUITA</span>
+            </div>
+            <h2 style="margin:0; font-size:1.2rem; font-weight:800;">Quero conhecer a Gaditas!</h2>
+            <p style="color:#94a3b8; font-size:0.75rem; margin-top:6px;">Preencha seus dados, escolha o dia e a turma.<br>Sem compromisso! 💪</p>
+        </div>
+
+        <!-- Modalidade -->
+        <div style="background:#0f172a; border:1px solid #334155; border-radius:14px; padding:14px; margin-bottom:20px;">
+            <div style="text-align:center; margin-bottom:12px;">
+                <span style="font-size:0.65rem; font-weight:800; color:#94a3b8; letter-spacing:1px;">🏆 QUAL MODALIDADE VOCÊ QUER EXPERIMENTAR?</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+                <button type="button" id="btn-exp-jj" onclick="selecionarModalidade('jiujitsu')"
+                    style="padding:14px 6px; border-radius:12px; border:2px solid #3b82f6; background:#1e3a8a55; color:#60a5fa; font-size:0.7rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <span style="font-size:1.6rem;">🥋</span><span>JIU-JITSU</span>
+                </button>
+                <button type="button" id="btn-exp-mt" onclick="selecionarModalidade('muaythai')"
+                    style="padding:14px 6px; border-radius:12px; border:2px solid #334155; background:#0f172a; color:#64748b; font-size:0.7rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <span style="font-size:1.6rem;">🥊</span><span>MUAY THAI</span>
+                </button>
+                <button type="button" id="btn-exp-ambos" onclick="selecionarModalidade('ambos')"
+                    style="padding:14px 6px; border-radius:12px; border:2px solid #334155; background:#0f172a; color:#64748b; font-size:0.7rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <span style="font-size:1.6rem;">⚔️</span><span>AMBOS</span>
+                </button>
+            </div>
+        </div>
+        <input type="hidden" id="exp-modalidade" value="jiujitsu"/>
+
+        <!-- Dados pessoais -->
+        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">NOME COMPLETO:</small>
+        <div class="input-group" style="margin-bottom:12px;">
+            <i class="fas fa-user"></i>
+            <input type="text" id="exp-nome" placeholder="Seu nome completo"/>
+        </div>
+
+        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">E-MAIL:</small>
+        <div class="input-group" style="margin-bottom:12px;">
+            <i class="fas fa-envelope"></i>
+            <input type="email" id="exp-email" placeholder="seu-email@gmail.com"/>
+        </div>
+
+        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">TELEFONE COM DDD:</small>
+        <div class="input-group" style="margin-bottom:12px;">
+            <i class="fas fa-phone"></i>
+            <input type="text" id="exp-telefone" placeholder="(00) 00000-0000" maxlength="15"/>
+        </div>
+
+        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">DATA DE NASCIMENTO:</small>
+        <div class="input-group" style="margin-bottom:12px;">
+            <i class="fas fa-calendar-day"></i>
+            <input type="date" id="exp-nascimento" style="color:white; background:transparent; border:none; width:100%; outline:none; font-size:0.8rem;"/>
+        </div>
+
+        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">CPF (OPCIONAL):</small>
+        <div class="input-group" style="margin-bottom:20px;">
+            <i class="fas fa-id-card"></i>
+            <input type="text" id="exp-cpf" placeholder="000.000.000-00" maxlength="14"/>
+        </div>
+
+        <!-- Escolha do dia e turma -->
+        <div style="background:#0f172a; border:1px solid #334155; border-radius:14px; padding:16px; margin-bottom:20px;">
+            <div style="font-size:0.65rem; font-weight:800; color:#f59e0b; letter-spacing:1px; margin-bottom:14px;">📅 QUANDO VOCÊ QUER VIR?</div>
+
+            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px;">ESCOLHA O DIA:</small>
+            <div id="btn-dias" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">
+                <!-- preenchido pelo JS -->
+            </div>
+
+            <div id="bloco-turma" style="display:none;">
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px;">ESCOLHA A TURMA:</small>
+                <div id="btn-turmas" style="display:flex; flex-direction:column; gap:6px;">
+                    <!-- preenchido pelo JS -->
+                </div>
+            </div>
+        </div>
+        <input type="hidden" id="exp-dia-semana" value=""/>
+        <input type="hidden" id="exp-data-formatada" value=""/>
+        <input type="hidden" id="exp-turma" value=""/>
+
+        <!-- Botão enviar -->
+        <button id="btnExperimental" onclick="enviarExperimental()"
+            style="width:100%; padding:16px; font-weight:800; background:linear-gradient(135deg,#3b82f6,#2563eb); border:none; color:white; border-radius:12px; cursor:pointer; font-size:0.9rem; letter-spacing:0.5px;">
+            🥋 QUERO FAZER MINHA AULA EXPERIMENTAL!
+        </button>
+
+        <p style="text-align:center; margin-top:16px; font-size:0.75rem; color:#94a3b8;">
+            Já é aluno? <a href="index.html" style="color:#3b82f6; text-decoration:none; font-weight:700;">Acessar o app</a>
+        </p>
+    </div>
+</div>
+
+<!-- Tela de sucesso (oculta) -->
+<div id="tela-sucesso" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:9999; display:none; align-items:center; justify-content:center; padding:24px; box-sizing:border-box;">
+    <div style="max-width:400px; width:100%; text-align:center;">
+        <div style="font-size:4rem; margin-bottom:16px;">🎉</div>
+        <h2 style="color:#10b981; font-size:1.4rem; font-weight:800; margin-bottom:8px;">Aula Reservada!</h2>
+        <p style="color:#94a3b8; font-size:0.85rem; line-height:1.7; margin-bottom:24px;">
+            Sua vaga foi reservada com sucesso!<br>
+            Apareça no dia e horário combinado.<br><br>
+            <strong style="color:white;">Vista uma roupa confortável e boa sorte! OSS 🥋💪</strong>
+        </p>
+        <div id="sucesso-info" style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:16px; margin-bottom:20px; text-align:left; font-size:0.8rem; color:#e2e8f0; line-height:2;"></div>
+        <a href="index.html" style="display:block; padding:14px; background:#3b82f6; color:white; border-radius:10px; text-decoration:none; font-weight:800; font-size:0.85rem;">Voltar ao Início</a>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script>
+    firebase.initializeApp({
+        apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+        authDomain: "gaditasmatriz.firebaseapp.com",
+        projectId: "gaditasmatriz",
+        storageBucket: "gaditasmatriz.firebasestorage.app",
+        messagingSenderId: "166834416988",
+        appId: "1:166834416988:web:2921c95c87c42019282599"
+    });
+    const db = firebase.firestore();
+
+    // Grade padrão (fallback)
+    const GRADE_PADRAO = {
+        1: ["06:00 - BJJ","16:00 - BJJ","17:40 - Kids 1","18:30 - Kids 2","20:20 - BJJ"],
+        2: ["16:00 - Submission","19:00 - Kids 1 e 2","20:00 - Submission","22:30 - BJJ"],
+        3: ["06:00 - BJJ","16:00 - BJJ","17:40 - Kids 1","18:30 - Kids 2","20:20 - BJJ"],
+        4: ["16:00 - Submission","19:00 - Kids 1 e 2","20:00 - Submission","22:30 - BJJ"],
+        5: ["06:00 - BJJ","16:00 - BJJ","17:40 - Kids 1","18:30 - Kids 2","20:20 - BJJ"],
+        6: ["09:30 - Submission"],
+        0: []
+    };
+
+    let grade = GRADE_PADRAO;
+    let diaSelecionado = null; // { diaSemana: 1, data: Date, label: 'Seg 09/06' }
+    let turmaSelecionada = null;
+
+    const DIAS_NOMES = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+    async function inicializar() {
+        // Carrega grade do Firebase
+        try {
+            const doc = await db.collection('configuracoes').doc('horarios').get();
+            if (doc.exists) grade = doc.data();
+        } catch(e) {}
+
+        // Monta os próximos 7 dias com turmas
+        const hoje = new Date();
+        const container = document.getElementById('btn-dias');
+        container.innerHTML = '';
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(hoje);
+            d.setDate(hoje.getDate() + i);
+            const diaSem = d.getDay();
+            const turmasDia = (grade[diaSem] || grade[String(diaSem)] || []).filter(t => !t.includes('Sem treinos'));
+            if (turmasDia.length === 0) continue;
+            const label = DIAS_NOMES[diaSem] + ' ' + d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.id = `dia-btn-${i}`;
+            btn.dataset.idx = i;
+            btn.dataset.diasem = diaSem;
+            btn.dataset.data = d.toLocaleDateString('pt-BR');
+            btn.dataset.label = label;
+            btn.style.cssText = 'padding:8px 14px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#94a3b8; font-size:0.7rem; font-weight:700; cursor:pointer;';
+            btn.textContent = label;
+            btn.onclick = () => selecionarDia(btn);
+            container.appendChild(btn);
+        }
+    }
+
+    function selecionarDia(btn) {
+        // Reset visual
+        document.querySelectorAll('[id^="dia-btn-"]').forEach(b => {
+            b.style.borderColor = '#334155'; b.style.background = '#0f172a'; b.style.color = '#94a3b8';
+        });
+        btn.style.borderColor = '#3b82f6'; btn.style.background = '#1e3a8a55'; btn.style.color = '#60a5fa';
+
+        const diaSem = parseInt(btn.dataset.diasem);
+        diaSelecionado = { diaSemana: diaSem, dataFormatada: btn.dataset.data, label: btn.dataset.label };
+        document.getElementById('exp-dia-semana').value = diaSem;
+        document.getElementById('exp-data-formatada').value = btn.dataset.data;
+
+        // Monta turmas do dia
+        const turmasDia = (grade[diaSem] || grade[String(diaSem)] || []).filter(t => !t.includes('Sem treinos'));
+        const cont = document.getElementById('btn-turmas');
+        cont.innerHTML = '';
+        turmaSelecionada = null;
+        document.getElementById('exp-turma').value = '';
+        turmasDia.forEach(t => {
+            const btn2 = document.createElement('button');
+            btn2.type = 'button';
+            btn2.dataset.turma = t;
+            btn2.style.cssText = 'padding:10px 14px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#94a3b8; font-size:0.75rem; font-weight:700; cursor:pointer; text-align:left;';
+            btn2.innerHTML = `<i class="fas fa-dumbbell" style="margin-right:8px; color:#64748b;"></i>${t}`;
+            btn2.onclick = () => selecionarTurma(btn2, t);
+            cont.appendChild(btn2);
+        });
+        document.getElementById('bloco-turma').style.display = 'block';
+    }
+
+    function selecionarTurma(btn, turma) {
+        document.querySelectorAll('#btn-turmas button').forEach(b => {
+            b.style.borderColor = '#334155'; b.style.background = '#0f172a'; b.style.color = '#94a3b8';
+            b.querySelector('i').style.color = '#64748b';
+        });
+        btn.style.borderColor = '#3b82f6'; btn.style.background = '#1e3a8a55'; btn.style.color = '#60a5fa';
+        btn.querySelector('i').style.color = '#60a5fa';
+        turmaSelecionada = turma;
+        document.getElementById('exp-turma').value = turma;
+    }
+
+    function selecionarModalidade(mod) {
+        document.getElementById('exp-modalidade').value = mod;
+        const cores = { jiujitsu:'#3b82f6', muaythai:'#f43f5e', ambos:'#8b5cf6' };
+        const textos = { jiujitsu:'#60a5fa', muaythai:'#f43f5e', ambos:'#c4b5fd' };
+        const bg = { jiujitsu:'#1e3a8a55', muaythai:'#4c051955', ambos:'#2e106555' };
+        const map = { jiujitsu:'jj', muaythai:'mt', ambos:'ambos' };
+        ['jiujitsu','muaythai','ambos'].forEach(m => {
+            const b = document.getElementById(`btn-exp-${map[m]}`);
+            if (m === mod) {
+                b.style.borderColor = cores[m]; b.style.background = bg[m]; b.style.color = textos[m];
+                b.style.boxShadow = `0 0 14px ${cores[m]}55`;
+            } else {
+                b.style.borderColor = '#334155'; b.style.background = '#0f172a';
+                b.style.color = '#64748b'; b.style.boxShadow = 'none';
+            }
+        });
+    }
+
+    async function enviarExperimental() {
+        const nome       = document.getElementById('exp-nome').value.trim();
+        const email      = document.getElementById('exp-email').value.trim().toLowerCase();
+        const telefone   = document.getElementById('exp-telefone').value.replace(/\D/g,'');
+        const nascimento = document.getElementById('exp-nascimento').value;
+        const cpf        = document.getElementById('exp-cpf').value.replace(/\D/g,'');
+        const modalidade = document.getElementById('exp-modalidade').value;
+        const turma      = document.getElementById('exp-turma').value;
+        const data       = document.getElementById('exp-data-formatada').value;
+
+        if (!nome)       return alert('Informe seu nome completo.');
+        if (!email)      return alert('Informe seu e-mail.');
+        if (!telefone || telefone.length < 10) return alert('Informe um telefone válido com DDD.');
+        if (!nascimento) return alert('Informe sua data de nascimento.');
+        if (!turma)      return alert('Escolha o dia e a turma.');
+
+        const btn = document.getElementById('btnExperimental');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+        try {
+            // Verifica se já existe experimental com mesmo email/turma/data
+            const snap = await db.collection('experimentais')
+                .where('email','==',email)
+                .where('turma','==',turma)
+                .where('data','==',data)
+                .get();
+            if (!snap.empty) {
+                btn.disabled = false;
+                btn.innerHTML = '🥋 QUERO FAZER MINHA AULA EXPERIMENTAL!';
+                return alert('Você já tem uma reserva nesta turma neste dia!');
+            }
+
+            await db.collection('experimentais').add({
+                nome, email, telefone, nascimento, cpf, modalidade,
+                turma, data,
+                status: 'pendente',
+                criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Mostra tela de sucesso
+            document.querySelector('.container').style.display = 'none';
+            const tela = document.getElementById('tela-sucesso');
+            tela.style.display = 'flex';
+            document.getElementById('sucesso-info').innerHTML = `
+                <div>👤 <strong>${nome}</strong></div>
+                <div>📅 ${data}</div>
+                <div>⏰ ${turma}</div>
+                <div>🥋 ${modalidade === 'jiujitsu' ? 'Jiu-Jitsu' : modalidade === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu + Muay Thai'}</div>
+            `;
+        } catch(e) {
+            btn.disabled = false;
+            btn.innerHTML = '🥋 QUERO FAZER MINHA AULA EXPERIMENTAL!';
+            alert('Erro ao reservar: ' + e.message);
+        }
+    }
+
+    // Máscaras
+    document.addEventListener('DOMContentLoaded', () => {
+        selecionarModalidade('jiujitsu');
+        inicializar();
+
+        document.getElementById('exp-telefone').addEventListener('input', e => {
+            let v = e.target.value.replace(/\D/g,'');
+            v = v.replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2');
+            e.target.value = v;
+        });
+        document.getElementById('exp-cpf').addEventListener('input', e => {
+            let v = e.target.value.replace(/\D/g,'');
+            v = v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+            e.target.value = v;
+        });
+    });
+</script>
+</body>
+</html>

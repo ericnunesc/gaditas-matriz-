@@ -840,18 +840,34 @@ const academia = {
         } catch(e) {}
 
         const snap = await db.collection("checkins").where("turma", "==", s.value).get();
-        if (snap.empty) {
+        // Busca experimentais para esta turma hoje
+        const snapExp = await db.collection("experimentais")
+            .where("turma", "==", s.value)
+            .where("data", "==", this._getDataHoje())
+            .where("status", "in", ["pendente","aprovado"])
+            .get();
+
+        const chips = [];
+        snap.docs.forEach(doc => {
+            const d = doc.data();
+            const partes = (d.alunoNome || '').split(' ');
+            const nome = partes.length > 1 ? `${partes[0]} ${partes[1][0]}.` : partes[0];
+            if (d.tipo === 'visual') {
+                chips.push(`<span style="background:#1c1400; color:#f59e0b; padding:4px 10px; border-radius:6px; font-size:0.65rem; border:1px solid #f59e0b66; font-weight:800;">🥋 ${nome}</span>`);
+            } else {
+                chips.push(`<span style="background:#0f172a; color:#ccc; padding:4px 10px; border-radius:6px; font-size:0.65rem; border:1px solid var(--border-light); font-weight:600;">${nome}</span>`);
+            }
+        });
+        snapExp.docs.forEach(doc => {
+            const d = doc.data();
+            const partes = (d.nome || '').split(' ');
+            const nome = partes.length > 1 ? `${partes[0]} ${partes[1][0]}.` : partes[0];
+            chips.push(`<span style="background:#0c1a3a; color:#60a5fa; padding:4px 10px; border-radius:6px; font-size:0.65rem; border:1px solid #3b82f666; font-weight:800;">🆕 ${nome}</span>`);
+        });
+
+        if (chips.length === 0) {
             lD.innerHTML = `<small style="color:var(--text-muted);">Nenhum atleta confirmado.</small>`;
         } else {
-            const chips = snap.docs.map(doc => {
-                const d = doc.data();
-                const partes = (d.alunoNome || '').split(' ');
-                const nome = partes.length > 1 ? `${partes[0]} ${partes[1][0]}.` : partes[0];
-                if (d.tipo === 'visual') {
-                    return `<span style="background:#1c1400; color:#f59e0b; padding:4px 10px; border-radius:6px; font-size:0.65rem; border:1px solid #f59e0b66; font-weight:800;">🥋 ${nome}</span>`;
-                }
-                return `<span style="background:#0f172a; color:#ccc; padding:4px 10px; border-radius:6px; font-size:0.65rem; border:1px solid var(--border-light); font-weight:600;">${nome}</span>`;
-            });
             lD.innerHTML = `<div style="display:flex; flex-wrap:wrap; gap:4px;">${chips.join('')}</div>`;
         }
         if (auth.role === 'aluno') this.carregarPlanoAulaTurma(s.value);
@@ -1461,6 +1477,39 @@ const academia = {
                     </label>`;
             });
 
+            // Busca experimentais para esta turma hoje
+            const snapExp = await db.collection('experimentais')
+                .where('turma','==', turma)
+                .where('data','==', this._getDataHoje())
+                .where('status','in',['pendente','aprovado'])
+                .get();
+
+            if (!snapExp.empty) {
+                listaHtml += `
+                    <div style="margin-top:10px; padding:12px; background:#0c1a3a; border:1px solid #3b82f644; border-radius:10px; margin-bottom:12px;">
+                        <div style="font-size:0.65rem; color:#60a5fa; font-weight:800; margin-bottom:10px; letter-spacing:1px;">🆕 EXPERIMENTAIS HOJE (${snapExp.size})</div>`;
+                snapExp.docs.forEach(doc => {
+                    const e = doc.data();
+                    const modalLabel = e.modalidade === 'muaythai' ? '🥊 MT' : e.modalidade === 'ambos' ? '⚔️ Ambos' : '🥋 JJ';
+                    const isAprovado = e.status === 'aprovado';
+                    listaHtml += `
+                        <div style="display:flex; align-items:center; gap:10px; padding:10px; background:#0f172a; border-radius:8px; margin-bottom:6px; border:1px solid ${isAprovado ? '#10b98133' : '#3b82f633'};">
+                            <div style="flex:1;">
+                                <div style="font-size:0.85rem; font-weight:700; color:#60a5fa;">${e.nome}</div>
+                                <div style="font-size:0.6rem; color:#64748b; margin-top:2px;">${modalLabel} · ${e.telefone || '—'}</div>
+                            </div>
+                            ${isAprovado
+                                ? `<span style="font-size:0.65rem; color:#10b981; font-weight:800;">✅ APROVADO</span>`
+                                : `<button onclick="academia.aprovarExperimental('${doc.id}','${e.nome.replace(/'/g,"\\'")}','${e.email}')"
+                                        style="background:#1e3a8a; border:none; color:#60a5fa; padding:6px 10px; border-radius:6px; font-size:0.65rem; font-weight:800; cursor:pointer; white-space:nowrap;">
+                                        ✅ Aprovar ida
+                                   </button>`
+                            }
+                        </div>`;
+                });
+                listaHtml += `</div>`;
+            }
+
             listaHtml += `</div>
                 <button onclick="academia.confirmarChamada('${turma.replace(/'/g,"\\'")}', document.querySelectorAll('.chamada-check:checked'))"
                     style="width:100%; padding:14px; background:#10b981; border:none; color:white; border-radius:10px; font-weight:800; font-size:0.9rem; cursor:pointer;">
@@ -1471,6 +1520,14 @@ const academia = {
         } catch(e) {
             document.getElementById('chamada-lista-alunos').innerHTML = `<p style="color:#f43f5e; text-align:center;">Erro: ${e.message}</p>`;
         }
+    },
+
+    async aprovarExperimental(docId, nome, email) {
+        try {
+            await db.collection('experimentais').doc(docId).update({ status: 'aprovado' });
+            // Atualiza visual sem fechar o modal
+            this.abrirChamada();
+        } catch(e) { alert('Erro: ' + e.message); }
     },
 
     async confirmarChamada(turma, checkboxes) {
@@ -4557,6 +4614,104 @@ Ele voltará a ser aluno normal.`)) return;
             let cat = (i <= 6) ? "Pré-Mirim" : (i <= 9) ? "Mirim" : "Infanto"; m = graduacao.regrasAulas["Kids"][cat];
         }
         return { meta: m, pronto: (a.aulas || 0) >= m, percent: Math.min(((a.aulas || 0) / m) * 100, 100) };
+    },
+
+    // ── PAINEL EXPERIMENTAIS (admin) ──────────────────────
+    async renderPainelExperimentais() {
+        if (auth.role !== 'admin') return;
+        let container = document.getElementById('painel-experimentais-admin');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'painel-experimentais-admin';
+            container.style.marginBottom = '16px';
+            const relTab = document.getElementById('tab-relatorios');
+            if (relTab) relTab.appendChild(container);
+        }
+        container.innerHTML = `<div style="text-align:center;padding:12px;color:#64748b;font-size:0.75rem;"><i class="fas fa-spinner fa-spin"></i></div>`;
+
+        try {
+            const snap = await db.collection('experimentais').orderBy('criadoEm','desc').limit(50).get();
+            if (snap.empty) { container.innerHTML = ''; return; }
+
+            const hoje = this._getDataHoje();
+            const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const pendentesHoje = docs.filter(d => d.data === hoje && d.status === 'pendente').length;
+
+            let html = `
+                <div style="background:#0c1a3a; border:1px solid #3b82f644; border-radius:16px; padding:16px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                        <div style="font-size:0.8rem; font-weight:800; color:#60a5fa;">
+                            🆕 AULAS EXPERIMENTAIS
+                            ${pendentesHoje > 0 ? `<span style="background:#3b82f6; color:white; font-size:0.55rem; padding:2px 7px; border-radius:999px; margin-left:6px;">${pendentesHoje} hoje</span>` : ''}
+                        </div>
+                        <a href="experimental.html" target="_blank"
+                            style="font-size:0.65rem; color:#60a5fa; background:#1e3a8a55; border:1px solid #3b82f644; padding:5px 10px; border-radius:8px; text-decoration:none; font-weight:700;">
+                            🔗 Link da página
+                        </a>
+                    </div>`;
+
+            docs.forEach(e => {
+                const isHoje = e.data === hoje;
+                const modalLabel = e.modalidade === 'muaythai' ? '🥊 MT' : e.modalidade === 'ambos' ? '⚔️ Ambos' : '🥋 JJ';
+                const statusColor = e.status === 'aprovado' ? '#10b981' : e.status === 'matriculado' ? '#a78bfa' : '#f59e0b';
+                const statusLabel = e.status === 'aprovado' ? '✅ Aprovado' : e.status === 'matriculado' ? '🎓 Matriculado' : '⏳ Pendente';
+                html += `
+                    <div style="background:#0f172a; border:1px solid ${isHoje ? '#3b82f633' : '#1e293b'}; border-radius:10px; padding:12px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:150px;">
+                                <div style="font-size:0.82rem; font-weight:800; color:${isHoje ? '#60a5fa' : '#e2e8f0'};">${e.nome}</div>
+                                <div style="font-size:0.62rem; color:#64748b; margin-top:3px;">${e.turma} · ${e.data}</div>
+                                <div style="font-size:0.62rem; color:#64748b;">${modalLabel} · ${e.telefone || '—'}</div>
+                            </div>
+                            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0;">
+                                <span style="font-size:0.6rem; color:${statusColor}; font-weight:800;">${statusLabel}</span>
+                                <button onclick="academia.gerarLinkMatricula('${e.id}')"
+                                    style="background:#1e1040; border:1px solid #7c3aed44; color:#a78bfa; padding:5px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer; white-space:nowrap;">
+                                    🔗 Gerar link matrícula
+                                </button>
+                                <button onclick="academia.excluirExperimental('${e.id}')"
+                                    style="background:none; border:none; color:#475569; padding:4px; font-size:0.6rem; cursor:pointer;">
+                                    🗑️ excluir
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+
+            html += `</div>`;
+            container.innerHTML = html;
+        } catch(e) {
+            container.innerHTML = `<small style="color:#f43f5e;">Erro ao carregar experimentais: ${e.message}</small>`;
+        }
+    },
+
+    async gerarLinkMatricula(expId) {
+        try {
+            const doc = await db.collection('experimentais').doc(expId).get();
+            if (!doc.exists) return;
+            const e = doc.data();
+            const params = new URLSearchParams({
+                nome:       e.nome       || '',
+                email:      e.email      || '',
+                telefone:   e.telefone   || '',
+                nascimento: e.nascimento || '',
+                cpf:        e.cpf        || '',
+                modalidade: e.modalidade || 'jiujitsu'
+            });
+            const link = `${window.location.origin}/cadastro.html?${params.toString()}`;
+            await navigator.clipboard.writeText(link);
+
+            // Marca como matriculado
+            await db.collection('experimentais').doc(expId).update({ status: 'matriculado' });
+            alert('✅ Link copiado!\n\nEnvie para o aluno pelo WhatsApp. Os dados dele já estarão pré-preenchidos, só precisará escolher o plano.');
+            this.renderPainelExperimentais();
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async excluirExperimental(id) {
+        if (!confirm('Excluir este registro experimental?')) return;
+        await db.collection('experimentais').doc(id).delete();
+        this.renderPainelExperimentais();
     }
 };
 
@@ -4600,7 +4755,7 @@ const ui = {
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
         if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); } }
-        if(id === 'tab-relatorios') { if(auth.role === 'admin') academia.renderDashboardAdmin(); academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
+        if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); academia.renderPainelExperimentais(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }
     },

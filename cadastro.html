@@ -318,7 +318,27 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             carregarPlanos();
-            selecionarModalidadeCad('jiujitsu'); // padrão
+
+            // Pré-preenchimento via URL params (vindo de aula experimental)
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('nome'))       document.getElementById('reg-nome').value       = params.get('nome');
+            if (params.get('email'))      document.getElementById('reg-email').value      = params.get('email');
+            if (params.get('nascimento')) document.getElementById('reg-nascimento').value = params.get('nascimento');
+            if (params.get('cpf'))        document.getElementById('reg-cpf').value        = params.get('cpf');
+            if (params.get('modalidade')) selecionarModalidadeCad(params.get('modalidade'));
+            else                          selecionarModalidadeCad('jiujitsu');
+            if (params.get('telefone')) {
+                let t = params.get('telefone').replace(/\D/g,'');
+                t = t.replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2');
+                document.getElementById('reg-telefone').value = t;
+            }
+            if (params.get('nome')) {
+                // Banner de boas-vindas pré-preenchido
+                const banner = document.createElement('div');
+                banner.style.cssText = 'background:linear-gradient(135deg,#052e16,#064e3b);border:1px solid #10b98166;border-radius:12px;padding:12px;margin-bottom:16px;text-align:center;';
+                banner.innerHTML = `<div style="font-size:0.65rem;color:#10b981;font-weight:800;letter-spacing:1px;">✅ DADOS PRÉ-PREENCHIDOS</div><div style="font-size:0.75rem;color:#a7f3d0;margin-top:4px;">Só escolha o plano e finalize! 🎉</div>`;
+                document.querySelector('.login-form').insertBefore(banner, document.querySelector('.login-form').firstChild);
+            }
 
             // Máscaras
             document.getElementById('reg-cpf').addEventListener('input', (e) => {

@@ -6493,15 +6493,20 @@ const graduacaoHistorico = {
             const modalLabel = isMT ? 'Muay Thai' : 'Jiu-Jitsu';
             const isUltimo = i === hist.length - 1;
 
-            const btnEditData = isAdmin
-                ? `<button onclick="graduacaoHistorico.editarData('${alunoId}', ${i})"
-                        style="background:none;border:1px solid #334155;color:#64748b;border-radius:6px;padding:3px 8px;font-size:0.6rem;cursor:pointer;margin-left:8px;">
-                        ✏️ editar data
-                   </button>`
-                : '';
+            const botoesAdmin = isAdmin ? `
+                <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #334155;">
+                    <button onclick="graduacaoHistorico.editarData('${alunoId}', ${i})"
+                        style="flex:1;background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:8px;padding:6px;font-size:0.65rem;font-weight:700;cursor:pointer;">
+                        ✏️ Editar data
+                    </button>
+                    <button onclick="graduacaoHistorico.excluir('${alunoId}', ${i})"
+                        style="background:#2a0808;border:1px solid #7f1d1d;color:#f87171;border-radius:8px;padding:6px 10px;font-size:0.65rem;font-weight:700;cursor:pointer;">
+                        🗑️
+                    </button>
+                </div>` : '';
 
             return `
-                <div style="display:flex;gap:14px;margin-bottom:${isUltimo ? '0' : '16px'};">
+                <div id="item-grad-${alunoId}-${i}" style="display:flex;gap:14px;margin-bottom:${isUltimo ? '0' : '16px'};">
                     <!-- Linha vertical + ponto -->
                     <div style="display:flex;flex-direction:column;align-items:center;min-width:28px;">
                         <div style="width:28px;height:28px;border-radius:50%;background:${cor};display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:${textoFaixa};font-weight:800;flex-shrink:0;">${i+1}</div>
@@ -6516,13 +6521,26 @@ const graduacaoHistorico = {
                             ${isUltimo ? `<span style="background:#7c3aed22;color:#a78bfa;font-size:0.6rem;font-weight:800;padding:3px 8px;border-radius:999px;border:1px solid #7c3aed44;">ATUAL</span>` : ''}
                         </div>
                         <div style="font-size:0.7rem;color:#64748b;">${modalIcon} ${modalLabel}</div>
-                        <div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;display:flex;align-items:center;">
+                        <div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;">
                             📅 <span id="data-grad-${alunoId}-${i}" style="margin-left:4px;">${g.data || '—'}</span>
-                            ${btnEditData}
                         </div>
+                        ${botoesAdmin}
                     </div>
                 </div>`;
         }).join('');
+    },
+
+    async excluir(alunoId, index) {
+        if (!confirm('Excluir esta graduação do histórico?')) return;
+        try {
+            const doc = await db.collection('alunos').doc(alunoId).get();
+            const hist = doc.data().historicoGraduacao || [];
+            hist.splice(index, 1);
+            await db.collection('alunos').doc(alunoId).update({ historicoGraduacao: hist });
+            // Recarrega a timeline sem fechar o modal
+            document.getElementById('hist-grad-timeline').innerHTML =
+                this._renderTimeline(hist, alunoId, true);
+        } catch(e) { alert('Erro ao excluir: ' + e.message); }
     },
 
     async editarData(alunoId, index) {

@@ -2190,23 +2190,31 @@ Ele voltará a ser aluno normal.`)) return;
                 if (dadosAtuais.aspiranteGraduacao && (faixaMudou || grauMudou)) {
                     dados.aspiranteGraduacao = false;
                 }
-                if (faixaMudou || grauMudou || faixaMTMudou) {
+                const hoje = new Date();
+                const dataFormatada = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
+                const historicoGrad = dadosAtuais.historicoGraduacao || [];
+
+                if (faixaMudou || grauMudou) {
+                    // JJ mudou
                     dados.graduacaoPendente = {
-                        faixa:   dados.faixa,
-                        grau:    dados.grau || 0,
-                        faixaMT: dados.faixaMT || null,
-                        modalidade: dados.modalidade || dadosAtuais.modalidade || 'jiujitsu'
+                        faixa: dados.faixa, grau: dados.grau || 0,
+                        faixaMT: null, modalidadeAlterada: 'jiujitsu'
                     };
-                    // Registrar no histórico de graduações
-                    const hoje = new Date();
-                    const dataFormatada = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
-                    const historicoGrad = dadosAtuais.historicoGraduacao || [];
                     historicoGrad.push({
-                        faixa:      dados.faixa,
-                        grau:       dados.grau || 0,
-                        faixaMT:    dados.faixaMT || null,
-                        modalidade: dados.modalidade || dadosAtuais.modalidade || 'jiujitsu',
-                        data:       dataFormatada
+                        faixa: dados.faixa, grau: dados.grau || 0,
+                        faixaMT: null, modalidade: 'jiujitsu', data: dataFormatada
+                    });
+                    dados.historicoGraduacao = historicoGrad;
+                }
+                if (faixaMTMudou) {
+                    // MT mudou (pode sobrescrever graduacaoPendente se os dois mudaram juntos)
+                    dados.graduacaoPendente = {
+                        faixa: dados.faixa, grau: dados.grau || 0,
+                        faixaMT: dados.faixaMT, modalidadeAlterada: 'muaythai'
+                    };
+                    historicoGrad.push({
+                        faixa: dados.faixa, grau: dados.grau || 0,
+                        faixaMT: dados.faixaMT, modalidade: 'muaythai', data: dataFormatada
                     });
                     dados.historicoGraduacao = historicoGrad;
                 }
@@ -5223,7 +5231,7 @@ const aniversario = {
             'Vermelho e Branco': '#ef4444', 'Coral': '#fb7185'
         };
 
-        const isMT = g.modalidade === 'muaythai' || (g.modalidade === 'ambos' && g.faixaMT);
+        const isMT = (g.modalidadeAlterada || g.modalidade) === 'muaythai';
         const faixaExibir = isMT ? (g.faixaMT || g.faixa) : g.faixa;
         const cor = coresFaixa[faixaExibir] || '#8b5cf6';
         const isEscura = ['Preto', 'Marrom', 'Roxo', 'Azul'].includes(faixaExibir);
@@ -6475,7 +6483,7 @@ const graduacaoHistorico = {
     _renderTimeline(hist, alunoId, isAdmin) {
         if (!hist || hist.length === 0) return '';
         return hist.map((g, i) => {
-            const isMT = g.modalidade === 'muaythai' || (g.modalidade === 'ambos' && g.faixaMT);
+            const isMT = g.modalidade === 'muaythai';
             const faixaExibir = isMT ? (g.faixaMT || g.faixa) : g.faixa;
             const grauStr = (!isMT && g.grau > 0) ? ` • ${g.grau}° Grau` : '';
             const cor = this._coresFaixa[faixaExibir] || '#8b5cf6';
@@ -6575,7 +6583,7 @@ const graduacaoHistorico = {
             win.document.write('<p style="color:#94a3b8;text-align:center;">Nenhuma graduação registrada.</p>');
         } else {
             hist.forEach((g, i) => {
-                const isMT = g.modalidade === 'muaythai' || (g.modalidade === 'ambos' && g.faixaMT);
+                const isMT = g.modalidade === 'muaythai';
                 const faixaExibir = isMT ? (g.faixaMT || g.faixa) : g.faixa;
                 const grauStr = (!isMT && g.grau > 0) ? ` • ${g.grau}° Grau` : '';
                 const cor = this._coresFaixa[faixaExibir] || '#8b5cf6';

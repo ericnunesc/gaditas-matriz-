@@ -4623,9 +4623,16 @@ Ele voltará a ser aluno normal.`)) return;
         if (!container) {
             container = document.createElement('div');
             container.id = 'painel-experimentais-admin';
-            container.style.marginBottom = '16px';
-            const checkinTab = document.getElementById('tab-checkin');
-            if (checkinTab) checkinTab.appendChild(container);
+            container.style.cssText = 'margin-top:15px;';
+            // Inserir entre "Check-ins Pendentes" e "Chamada por Lista"
+            const chamadaCard = document.getElementById('card-chamada-prof');
+            if (chamadaCard) {
+                chamadaCard.parentNode.insertBefore(container, chamadaCard);
+            } else {
+                const profArea = document.getElementById('area-professor-checkin');
+                if (profArea) profArea.after(container);
+                else document.getElementById('tab-checkin')?.appendChild(container);
+            }
         }
         container.innerHTML = `<div style="text-align:center;padding:12px;color:#64748b;font-size:0.75rem;"><i class="fas fa-spinner fa-spin"></i></div>`;
 

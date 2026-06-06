@@ -1,4 +1,4 @@
-const firebaseConfig = {
+﻿const firebaseConfig = {
   apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
   authDomain: "gaditasmatriz.firebaseapp.com",
   projectId: "gaditasmatriz",
@@ -2507,7 +2507,7 @@ Ele voltará a ser aluno normal.`)) return;
                             ${btnExcluir}
                         </div>
                     </div>
-                    <p style="color:#cbd5e1; font-size:0.8rem; line-height:1.6; margin:0; font-style:italic;">`${linkificar(d.texto)}`</p>
+                    <p style="color:#cbd5e1; font-size:0.8rem; line-height:1.6; margin:0; font-style:italic;">${linkificar(d.texto)}</p>
                 </div>`;
             }).join('');
         } catch(e) {
@@ -2566,7 +2566,7 @@ Ele voltará a ser aluno normal.`)) return;
                             <span style="color:#34d399; font-weight:800; font-size:0.72rem;">PUBLICADO</span>
                             <small style="color:#475569; font-size:0.6rem; margin-left:auto;">${d.dataFormatada || ''}</small>
                         </div>
-                        <p style="color:#6ee7b7; font-size:0.75rem; margin:0; font-style:italic;">`${linkificar(d.texto)}`</p>
+                        <p style="color:#6ee7b7; font-size:0.75rem; margin:0; font-style:italic;">${linkificar(d.texto)}</p>
                     </div>`;
                 } else {
                     statusHTML += `<div style="background:#1c1400; border:1px solid #f59e0b44; border-radius:10px; padding:10px 12px; margin-bottom:8px;">
@@ -2575,7 +2575,7 @@ Ele voltará a ser aluno normal.`)) return;
                             <span style="color:#f59e0b; font-weight:800; font-size:0.72rem;">AGUARDANDO APROVAÇÃO</span>
                             <small style="color:#475569; font-size:0.6rem; margin-left:auto;">${d.dataFormatada || ''}</small>
                         </div>
-                        <p style="color:#fde68a; font-size:0.75rem; margin:0; font-style:italic;">`${linkificar(d.texto)}`</p>
+                        <p style="color:#fde68a; font-size:0.75rem; margin:0; font-style:italic;">${linkificar(d.texto)}</p>
                     </div>`;
                 }
             });
@@ -2677,7 +2677,7 @@ Ele voltará a ser aluno normal.`)) return;
                                 <button onclick="academia.rejeitarDepoimento('${doc.id}')" style="background:#2a0808; border:1px solid #f43f5e55; color:#f43f5e; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.7rem; font-weight:800;">✗</button>
                             </div>
                         </div>
-                        <p style="color:#94a3b8; font-size:0.78rem; line-height:1.5; margin:0 0 6px; font-style:italic;">`${linkificar(d.texto)}`</p>
+                        <p style="color:#94a3b8; font-size:0.78rem; line-height:1.5; margin:0 0 6px; font-style:italic;">${linkificar(d.texto)}</p>
                         <button onclick="academia.destaqueDepoimento('${doc.id}',${!d.destaque})" style="background:none; border:none; color:${d.destaque?'#f59e0b':'#475569'}; cursor:pointer; font-size:0.65rem; font-weight:700; padding:0;"><i class="fas fa-star"></i> ${d.destaque?'REMOVER DESTAQUE':'DESTAQUE'}</button>
                     </div>`;
                 }).join('');
@@ -2703,7 +2703,7 @@ Ele voltará a ser aluno normal.`)) return;
                                 <button onclick="academia.excluirDepoimentoAprovado('${doc.id}')" title="Excluir do mural" style="background:#2a0808; border:1px solid #f43f5e55; color:#f43f5e; padding:5px 10px; border-radius:6px; cursor:pointer; font-size:0.7rem; font-weight:800;"><i class="fas fa-trash"></i> EXCLUIR</button>
                             </div>
                         </div>
-                        <p style="color:#6ee7b7; font-size:0.75rem; line-height:1.5; margin:0; font-style:italic;">`${linkificar(d.texto)}`</p>
+                        <p style="color:#6ee7b7; font-size:0.75rem; line-height:1.5; margin:0; font-style:italic;">${linkificar(d.texto)}</p>
                     </div>`;
                 }).join('');
             }

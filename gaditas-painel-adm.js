@@ -31,8 +31,8 @@ const GaditasPainelAdm = {
             <div id="painel-config-planos" style="margin-top:4px;"></div>
 
             <!-- ══ COBRANÇA AVULSA ══ -->
-            <div class="card" style="background:#1e293b; border:1px solid #f59e0b44; padding:15px; border-radius:12px; margin-top:4px;">
-                <div style="font-size:0.7rem; font-weight:800; color:#f59e0b; margin-bottom:14px; letter-spacing:0.5px;">
+            <div id="fin-card-avulsa" class="card" style="background:#1e293b; border:1px solid #f59e0b44; padding:15px; border-radius:12px; margin-top:4px;">
+                <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#f59e0b; margin-bottom:14px; letter-spacing:0.5px;">
                     <i class="fas fa-bolt"></i> GERAR COBRANÇA AVULSA
                 </div>
 
@@ -84,8 +84,8 @@ const GaditasPainelAdm = {
             </div>
 
             <!-- ══ MUDAR PLANO ══ -->
-            <div class="card" style="background:#1e293b; border:1px solid #8b5cf644; padding:15px; border-radius:12px; margin-top:4px;">
-                <div style="font-size:0.7rem; font-weight:800; color:#a78bfa; margin-bottom:14px; letter-spacing:0.5px;">
+            <div id="fin-card-mudar-plano" class="card" style="background:#1e293b; border:1px solid #8b5cf644; padding:15px; border-radius:12px; margin-top:4px;">
+                <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#a78bfa; margin-bottom:14px; letter-spacing:0.5px;">
                     <i class="fas fa-exchange-alt"></i> MUDAR PLANO DO ALUNO
                 </div>
                 <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">ALUNO:</small>
@@ -122,8 +122,8 @@ const GaditasPainelAdm = {
             </div>
 
             <!-- ══ VINCULAR DEPENDENTE (PLANO FAMÍLIA) ══ -->
-            <div class="card" style="background:#1e293b; border:1px solid #f43f5e44; padding:15px; border-radius:12px; margin-top:4px;">
-                <div style="font-size:0.7rem; font-weight:800; color:#f43f5e; margin-bottom:4px; letter-spacing:0.5px;">
+            <div id="fin-card-vincular" class="card" style="background:#1e293b; border:1px solid #f43f5e44; padding:15px; border-radius:12px; margin-top:4px;">
+                <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#f43f5e; margin-bottom:4px; letter-spacing:0.5px;">
                     <i class="fas fa-users"></i> VINCULAR DEPENDENTE — PLANO FAMÍLIA
                 </div>
                 <small style="color:#64748b; font-size:0.58rem; display:block; margin-bottom:12px; line-height:1.4;">
@@ -156,8 +156,8 @@ const GaditasPainelAdm = {
             </div>
 
             <!-- ══ CRIAR PLANO / ASSINATURA ══ -->
-            <div class="card" style="background:#1e293b; border:1px solid #10b98144; padding:15px; border-radius:12px; margin-top:4px;">
-                <div style="font-size:0.7rem; font-weight:800; color:#10b981; margin-bottom:14px; letter-spacing:0.5px;">
+            <div id="fin-card-criar-plano" class="card" style="background:#1e293b; border:1px solid #10b98144; padding:15px; border-radius:12px; margin-top:4px;">
+                <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#10b981; margin-bottom:14px; letter-spacing:0.5px;">
                     <i class="fas fa-file-contract"></i> CRIAR PLANO / ASSINATURA RECORRENTE
                 </div>
 
@@ -235,6 +235,59 @@ const GaditasPainelAdm = {
             academia.carregarNovoCadastrosAlerta();
             academia.renderPainelPlanos();
         }
+
+        // Aplica acordeões nas seções recolhíveis
+        setTimeout(() => this._aplicarAcordeoesFinanceiro(), 200);
+    },
+
+    _aplicarAcordeoesFinanceiro() {
+        const secoes = [
+            { id: 'fin-card-mudar-plano',  cor: '#8b5cf6' },
+            { id: 'fin-card-vincular',     cor: '#f43f5e' },
+            { id: 'fin-card-criar-plano',  cor: '#10b981' },
+            { id: 'fin-card-avulsa',       cor: '#f59e0b' },
+        ];
+        secoes.forEach(({ id, cor }) => {
+            const card = document.getElementById(id);
+            if (!card) return;
+            const tituloEl = card.querySelector('.fin-titulo');
+            if (!tituloEl) return;
+
+            // Wrap children after título in a body div
+            const bodyDiv = document.createElement('div');
+            bodyDiv.style.display = 'none'; // começa fechado
+            // Move todos os filhos após o tituloEl para bodyDiv
+            while (card.lastChild !== tituloEl) {
+                bodyDiv.insertBefore(card.lastChild, bodyDiv.firstChild);
+            }
+            card.appendChild(bodyDiv);
+
+            // Transforma o card em header clicável
+            card.style.padding = '0';
+            card.style.cursor = 'pointer';
+
+            const header = document.createElement('div');
+            header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:13px 15px; cursor:pointer;';
+
+            const chevron = document.createElement('i');
+            chevron.className = 'fas fa-chevron-down';
+            chevron.style.cssText = `color:${cor}; font-size:0.8rem; transition:transform 0.25s; flex-shrink:0;`;
+
+            tituloEl.style.marginBottom = '0';
+
+            header.appendChild(tituloEl);
+            header.appendChild(chevron);
+            card.insertBefore(header, card.firstChild);
+
+            // bodyDiv precisa de padding interno
+            bodyDiv.style.padding = '0 15px 15px';
+
+            header.onclick = () => {
+                const aberto = bodyDiv.style.display !== 'none';
+                bodyDiv.style.display = aberto ? 'none' : 'block';
+                chevron.style.transform = aberto ? 'rotate(0deg)' : 'rotate(180deg)';
+            };
+        });
     },
 
     // ── BUSCA DE ALUNO PARA COBRANÇA ───────────────────────

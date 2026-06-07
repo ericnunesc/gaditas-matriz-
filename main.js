@@ -437,13 +437,27 @@ const academia = {
         const container = document.getElementById('painel-novos-cadastros');
         if (!container) return;
 
-        db.collection('novos_cadastros').orderBy('data', 'desc').limit(20).onSnapshot(snap => {
+        db.collection('novos_cadastros').orderBy('data', 'desc').limit(50).onSnapshot(snap => {
             if (snap.empty) {
                 container.innerHTML = `<p style="color:#64748b; font-size:0.75rem; text-align:center; padding:10px;">Nenhum novo cadastro ainda.</p>`;
                 return;
             }
 
-            const naoLidos = snap.docs.filter(d => !d.data().lido).length;
+            // Filtra: mostra não lidos + lidos dos últimos 7 dias
+            const limite7dias = Date.now() - 7 * 24 * 60 * 60 * 1000;
+            const docsVisiveis = snap.docs.filter(doc => {
+                const d = doc.data();
+                if (!d.lido) return true; // sempre mostra não lidos
+                const dataMs = typeof d.data === 'number' ? d.data : (d.data?.toMillis?.() || 0);
+                return dataMs > limite7dias; // lidos: só últimos 7 dias
+            });
+
+            if (docsVisiveis.length === 0) {
+                container.innerHTML = `<p style="color:#64748b; font-size:0.75rem; text-align:center; padding:10px;">Nenhum cadastro recente.</p>`;
+                return;
+            }
+
+            const naoLidos = docsVisiveis.filter(d => !d.data().lido).length;
             const badge = naoLidos > 0 ? `<span style="background:#f43f5e; color:white; font-size:0.6rem; padding:2px 8px; border-radius:10px; font-weight:800; margin-left:8px;">${naoLidos} NOVO${naoLidos > 1 ? 'S' : ''}</span>` : '';
             const cores = { mensal: '#3b82f6', trimestral: '#8b5cf6', semestral: '#10b981', anual: '#f59e0b' };
 
@@ -452,7 +466,7 @@ const academia = {
                     <span style="font-size:0.7rem; font-weight:800; color:#10b981;"><i class="fas fa-user-plus"></i> NOVOS CADASTROS ${badge}</span>
                     ${naoLidos > 0 ? `<button onclick="academia.marcarTodosCadastrosLidos()" style="background:none; border:none; color:#64748b; font-size:0.65rem; cursor:pointer; font-weight:700;">Marcar todos como lidos</button>` : ''}
                 </div>
-                ${snap.docs.map(doc => {
+                ${docsVisiveis.map(doc => {
                     const d = doc.data();
                     const cor = cores[d.plano] || '#3b82f6';
                     const isNovo = !d.lido;
@@ -684,7 +698,7 @@ const academia = {
 
     // ── RELATÓRIO POR PLANO & VALORES ────────────────────────
     async renderRelatPlanos() {
-        const container = document.getElementById('resultado-relatorios');
+        const container = document.getElementById('resultado-relat-planos') || document.getElementById('resultado-relatorios');
         if (!container) return;
         container.innerHTML = '<div style="text-align:center;padding:20px;color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
 

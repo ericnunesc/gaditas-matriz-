@@ -4147,7 +4147,63 @@ Ele voltará a ser aluno normal.`)) return;
                     🔄 SOLICITAR NOVA ASSINATURA DE TODOS
                 </button>
                 <div style="font-size:0.58rem;color:#475569;margin-top:6px;line-height:1.4;">Use após atualizar o contrato. Todos os alunos verão aviso para reassinar.</div>
+                <div style="height:1px;background:#334155;margin:16px 0;"></div>
+                <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">🔔 DIAGNÓSTICO DE PUSH</div>
+                <input type="text" id="cfg-diag-email" placeholder="E-mail do aluno para testar..." style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:8px;box-sizing:border-box;"/>
+                <button onclick="academia._diagnosticarPush()" style="width:100%;padding:11px;background:#8b5cf6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.78rem;margin-bottom:8px;">🔍 DIAGNÓSTICO PUSH</button>
+                <div id="cfg-diag-resultado" style="font-size:0.72rem;line-height:1.6;"></div>
             </div>`;
+    },
+
+    async _diagnosticarPush() {
+        const email = document.getElementById('cfg-diag-email')?.value.trim().toLowerCase();
+        const res   = document.getElementById('cfg-diag-resultado');
+        if (!res) return;
+        if (!email) { res.innerHTML = '<span style="color:#f59e0b;">⚠️ Digite o e-mail do aluno.</span>'; return; }
+
+        const ok  = s => `<span style="color:#10b981;">✅ ${s}</span><br>`;
+        const err = s => `<span style="color:#f43f5e;">❌ ${s}</span><br>`;
+        const inf = s => `<span style="color:#94a3b8;">ℹ️ ${s}</span><br>`;
+        let html = '<b style="color:white;">Verificando...</b><br>';
+        res.innerHTML = html;
+
+        // 1. FCM token no Firestore
+        try {
+            const snap = await db.collection('alunos').where('email','==',email).limit(1).get();
+            if (snap.empty) { res.innerHTML += err('Aluno não encontrado no Firestore com este e-mail.'); return; }
+            const a = snap.docs[0].data();
+            if (a.fcmToken) {
+                html += ok(`Token FCM salvo: ${a.fcmToken.substring(0,20)}...`);
+            } else {
+                html += err('Aluno NÃO tem fcmToken salvo. O aluno precisa logar no app e aceitar notificações.');
+                html += inf('Dica: Permissão de notificação deve ser "Concedida" nas configurações do browser/celular.');
+                res.innerHTML = html;
+                return;
+            }
+            res.innerHTML = html;
+
+            // 2. Testa chamada à API /api/push-comunicado
+            html += inf('Testando API push-comunicado...');
+            res.innerHTML = html;
+            const r = await fetch('/api/push-comunicado', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tokens: [a.fcmToken], title: '🧪 Teste Gaditas', body: 'Notificação de teste — se chegou, está funcionando!' })
+            });
+            const dados = await r.json();
+            if (r.ok && dados.sucesso > 0) {
+                html += ok(`API OK — push enviado! sucesso:${dados.sucesso} falha:${dados.falha}`);
+            } else if (r.ok && dados.falha > 0) {
+                html += err(`API chamada mas FCM rejeitou o token (sucesso:${dados.sucesso} falha:${dados.falha}). Token pode estar expirado — peça ao aluno logar novamente.`);
+            } else {
+                html += err(`API retornou erro: ${JSON.stringify(dados)}`);
+                html += inf('Verifique as variáveis de ambiente no Vercel: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY.');
+            }
+        } catch(e) {
+            html += err('Erro: ' + e.message);
+            html += inf('Verifique se as env vars estão configuradas no Vercel.');
+        }
+        res.innerHTML = html;
     },
 
     async salvarConfigAdmin() {

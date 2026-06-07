@@ -183,33 +183,63 @@ const GaditasPainelAdm = {
         if (resultado) resultado.innerHTML = '';
 
         try {
-            const { nome, email, asaasId: asaasIdSalvo } = this._alunoCobranca;
+            const { nome, email, asaasId: asaasIdSalvo, id: alunoFirebaseId } = this._alunoCobranca;
+
+            // Busca CPF do aluno no Firestore (necessário para cobrança no Asaas)
+            const alunoDoc = await db.collection('alunos').doc(alunoFirebaseId).get();
+            const cpfAluno = (alunoDoc.data()?.cpf || '').replace(/\D/g, '');
 
             // 1. Garante que o cliente existe no Asaas
             let asaasId = asaasIdSalvo;
+            let clienteAsaas = null;
+
             if (!asaasId) {
                 // Tenta buscar pelo e-mail
                 const resBusca = await fetch('/api/asaas?endpoint=customers&email=' + encodeURIComponent(email));
                 const dadosBusca = await resBusca.json();
                 if (dadosBusca.data && dadosBusca.data.length > 0) {
                     asaasId = dadosBusca.data[0].id;
+                    clienteAsaas = dadosBusca.data[0];
                 } else {
-                    // Cria o cliente no Asaas
+                    // Cria o cliente no Asaas já com CPF
+                    const bodyCliente = { name: nome, email };
+                    if (cpfAluno.length === 11) bodyCliente.cpfCnpj = cpfAluno;
                     const resCriar = await fetch('/api/asaas?endpoint=customers', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: nome, email })
+                        body: JSON.stringify(bodyCliente)
                     });
                     const dadosCriado = await resCriar.json();
                     if (dadosCriado.id) {
                         asaasId = dadosCriado.id;
-                        // Salva asaasId no Firestore do aluno para próximas cobranças
-                        await db.collection('alunos').doc(this._alunoCobranca.id).update({ asaasId });
+                        clienteAsaas = dadosCriado;
+                        await db.collection('alunos').doc(alunoFirebaseId).update({ asaasId });
                     }
                 }
             }
 
             if (!asaasId) throw new Error('Não foi possível localizar ou criar o cliente no Asaas.');
+
+            // 2. Se o cliente não tem CPF no Asaas, atualiza agora
+            if (cpfAluno.length === 11) {
+                if (!clienteAsaas) {
+                    // Busca dados do cliente para checar se tem CPF
+                    const resGet = await fetch('/api/asaas?endpoint=customers/' + asaasId);
+                    clienteAsaas = await resGet.json();
+                }
+                const cpfNoAsaas = (clienteAsaas?.cpfCnpj || '').replace(/\D/g, '');
+                if (!cpfNoAsaas) {
+                    // Atualiza CPF no cliente Asaas
+                    await fetch('/api/asaas?endpoint=customers/' + asaasId, {
+                        method: 'POST', // Asaas usa POST para update de customer
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: nome, email, cpfCnpj: cpfAluno })
+                    });
+                }
+            } else if (!clienteAsaas?.cpfCnpj) {
+                // Sem CPF no Firestore e sem CPF no Asaas — avisa mas não bloqueia
+                if (resultado) resultado.innerHTML = '<div style="background:#1c1000; border:1px solid #f59e0b; border-radius:8px; padding:10px; font-size:0.75rem; color:#f59e0b; margin-bottom:8px;">⚠️ Aluno sem CPF cadastrado. Preencha o CPF na ficha do aluno (aba Gestão) para evitar erros no Asaas.</div>';
+            }
 
             // 2. Cria o pagamento avulso
             const resPag = await fetch('/api/asaas?endpoint=payments', {

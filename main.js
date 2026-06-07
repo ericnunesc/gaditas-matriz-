@@ -254,6 +254,19 @@ const auth = {
                 log('SW pronto');
             } catch(e) { log('SW falhou: ' + e.message, true); return; }
 
+            // Garante que o Firebase Auth tem um usuário autenticado
+            let fbUser = firebase.auth().currentUser;
+            if (!fbUser) {
+                log('Sem sessão Auth — fazendo signInAnonymously...');
+                try {
+                    const cred = await firebase.auth().signInAnonymously();
+                    fbUser = cred.user;
+                } catch(e) { log('signInAnonymously falhou: ' + e.message, true); return; }
+            }
+            // Força refresh do ID token para garantir propagação no SDK
+            try { await fbUser.getIdToken(true); log('ID token refreshed'); }
+            catch(e) { log('getIdToken falhou: ' + e.message, true); }
+
             const messaging = firebase.messaging();
             log('Buscando token com VAPID...');
             const token = await messaging.getToken({ vapidKey: this._VAPID_KEY, serviceWorkerRegistration: swReg });

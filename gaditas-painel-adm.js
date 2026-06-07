@@ -1605,27 +1605,35 @@ const GaditasPainelAdm = {
             if (tel.length < 10) { alert('Número inválido.'); return; }
         }
 
-        // Busca cobranças abertas com links
+        // Busca SOMENTE cobranças vencidas (dueDate < hoje)
         let linhasFaturas = '';
         let totalDevido = 0;
         try {
-            const res = await fetch(`/api/asaas?endpoint=payments&customer=${asaasId}&status=PENDING&limit=10`);
+            const res = await fetch(`/api/asaas?endpoint=payments&customer=${asaasId}&status=PENDING&limit=20`);
             const data = await res.json();
-            (data.data || []).forEach(p => {
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
+
+            const vencidas = (data.data || []).filter(p => {
+                const venc = new Date(p.dueDate + 'T00:00:00'); venc.setHours(0,0,0,0);
+                return venc < hoje; // só as VENCIDAS (passado)
+            }).sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)); // mais antiga primeiro
+
+            vencidas.forEach(p => {
                 const valor = p.value.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
                 const venc  = p.dueDate.split('-').reverse().join('/');
                 const link  = p.invoiceUrl || p.bankSlipUrl || '';
+                const diasAtr = Math.floor((hoje - new Date(p.dueDate+'T00:00:00')) / 86400000);
                 totalDevido += p.value;
-                linhasFaturas += `\n📋 ${p.description || 'Mensalidade'}\n💰 ${valor} · Vence ${venc}${link ? '\n🔗 ' + link : ''}\n`;
+                linhasFaturas += `\n📋 ${p.description || 'Mensalidade'} *(venceu há ${diasAtr} dias)*\n💰 ${valor} · Venceu em ${venc}${link ? '\n🔗 ' + link : ''}\n`;
             });
         } catch(e) {
             alert('Erro ao buscar cobranças: ' + e.message); return;
         }
 
-        if (!linhasFaturas) { alert('Nenhuma cobrança em aberto encontrada para este cliente.'); return; }
+        if (!linhasFaturas) { alert('Nenhuma cobrança VENCIDA encontrada. As cobranças futuras não são enviadas.'); return; }
 
         const totalFmt = totalDevido.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-        const msg = `Olá *${nome}*! 👋\n\nAqui é a *Gaditas Academy*.\n\nIdentificamos que você possui cobranças em aberto totalizando *${totalFmt}*.\n\nSegue o(s) link(s) para regularização:\n${linhasFaturas}\nQualquer dúvida, entre em contato conosco. OSS! 🥋`;
+        const msg = `Olá *${nome}*! 👋\n\nAqui é a *Gaditas Academy*.\n\nIdentificamos que você possui mensalidade(s) *VENCIDA(S)* totalizando *${totalFmt}*.\n\nPor favor, regularize para continuar treinando:\n${linhasFaturas}\n⚠️ Após 3 dias de atraso o acesso ao check-in é bloqueado.\n\nQualquer dúvida, fale conosco. OSS! 🥋`;
 
         window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
     },

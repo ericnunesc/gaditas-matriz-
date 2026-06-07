@@ -787,10 +787,13 @@
             <div id="tab-relatorios" class="tab-content hidden" style="padding:15px;">
                 <div class="card" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px;">
                     <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-chart-line"></i> Relatórios de Performance e Promoção</div>
-                    <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
                         <button onclick="academia.generarRelatorioGraduacao()" style="flex:1; padding:12px; background:#f59e0b; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">🥋 QUEM GRADUA?</button>
-                        <button onclick="academia.exportarDadosBackup()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">CÓPIA DE BACKUP</button>
+                        <button onclick="academia.exportarDadosBackup()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">BACKUP</button>
                     </div>
+                    <button onclick="academia.renderRelatPlanos()" style="width:100%; padding:12px; background:#1e3a8a; border:1px solid #3b82f655; color:#60a5fa; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; margin-bottom:15px; letter-spacing:0.3px;">
+                        <i class="fas fa-wallet" style="margin-right:7px;"></i>💰 PLANOS & VALORES DO CONTRATO
+                    </button>
                     <div id="analytics-frequencia-container" style="margin-bottom:25px;"></div>
                     <div id="resultado-relatorios"></div>
                 </div>

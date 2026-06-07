@@ -682,6 +682,120 @@ const academia = {
     toggleBiblioteca() { document.getElementById('secao-historico-tecnica').classList.toggle('hidden'); },
     toggleHistoricoMural() { document.getElementById('secao-historico-mural').classList.toggle('hidden'); },
 
+    // ── RELATÓRIO POR PLANO & VALORES ────────────────────────
+    async renderRelatPlanos() {
+        const container = document.getElementById('resultado-relatorios');
+        if (!container) return;
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+
+        const snap = await db.collection('alunos').orderBy('nome').get();
+
+        // Agrupa por plano
+        const grupos = {};
+        const ordemPlanos = ['mensal','trimestral','semestral','anual','livre','familia'];
+        const labelPlano = { mensal:'Mensal', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual', livre:'Livre', familia:'Família' };
+        const corPlano = { mensal:'#3b82f6', trimestral:'#8b5cf6', semestral:'#10b981', anual:'#f59e0b', livre:'#a78bfa', familia:'#f43f5e' };
+
+        snap.docs.forEach(doc => {
+            const d = doc.data();
+            const plano = (d.plano || 'mensal').toLowerCase();
+            if (!grupos[plano]) grupos[plano] = [];
+            grupos[plano].push({ id: doc.id, nome: d.nome, email: d.email, planoValor: d.planoValor || 0, plano });
+        });
+
+        let total = 0;
+        let totalValor = 0;
+        let semValor = 0;
+
+        let html = `
+        <div style="background:#1e293b; border:1px solid #2d3f55; border-radius:20px; overflow:hidden; margin-bottom:14px;">
+            <div style="height:3px; background:linear-gradient(90deg,#3b82f6,#8b5cf6);"></div>
+            <div style="padding:16px;">
+                <div style="font-size:0.6rem; color:#64748b; font-weight:800; letter-spacing:0.8px; margin-bottom:14px;">💰 ALUNOS POR PLANO — clique no valor para editar</div>`;
+
+        ordemPlanos.forEach(plano => {
+            const alunos = grupos[plano] || [];
+            if (!alunos.length) return;
+            const cor = corPlano[plano] || '#3b82f6';
+            const label = labelPlano[plano] || plano;
+            const totalGrupo = alunos.reduce((s, a) => s + (a.planoValor || 0), 0);
+            total += alunos.length;
+            totalValor += totalGrupo;
+
+            html += `
+            <div style="margin-bottom:16px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #2d3f55;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="width:3px; height:16px; background:${cor}; border-radius:2px; flex-shrink:0;"></div>
+                        <span style="font-size:0.65rem; font-weight:800; color:${cor}; letter-spacing:0.8px;">PLANO ${label.toUpperCase()}</span>
+                        <span style="background:${cor}22; color:${cor}; font-size:0.5rem; font-weight:800; padding:2px 8px; border-radius:20px;">${alunos.length} aluno${alunos.length > 1 ? 's' : ''}</span>
+                    </div>
+                    <span style="font-size:0.68rem; font-weight:800; color:${cor};">Total/mês: R$ ${totalGrupo.toFixed(2).replace('.', ',')}</span>
+                </div>`;
+
+            alunos.forEach(a => {
+                const temValor = a.planoValor > 0;
+                if (!temValor) semValor++;
+                html += `
+                <div id="row-plano-${a.id}" style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #1a2540; gap:10px;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:0.78rem; font-weight:700; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}</div>
+                        <div style="font-size:0.58rem; color:#475569;">${a.email}</div>
+                    </div>
+                    <div id="display-valor-${a.id}" style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                        ${temValor
+                            ? `<span style="font-size:0.82rem; font-weight:800; color:#10b981;">R$ ${a.planoValor.toFixed(2).replace('.', ',')}</span>`
+                            : `<span style="font-size:0.7rem; font-weight:800; color:#f43f5e;">⚠️ Sem valor</span>`
+                        }
+                        <button onclick="academia._editarValorPlano('${a.id}', '${a.nome.replace(/'/g,"\\'").replace(/"/g,"&quot;")}', ${a.planoValor})"
+                            style="background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:5px 9px; border-radius:8px; font-size:0.6rem; font-weight:700; cursor:pointer; white-space:nowrap;">
+                            ✏️ Editar
+                        </button>
+                    </div>
+                </div>`;
+            });
+
+            html += `</div>`;
+        });
+
+        html += `
+                <div style="background:#0f172a; border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                    <div>
+                        <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:2px;">${total} ALUNOS ATIVOS</div>
+                        ${semValor > 0 ? `<div style="font-size:0.55rem; color:#f43f5e; font-weight:700;">⚠️ ${semValor} sem valor definido</div>` : '<div style="font-size:0.55rem; color:#10b981; font-weight:700;">✅ Todos com valor definido</div>'}
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:0.55rem; color:#64748b; font-weight:700; margin-bottom:2px;">RECEITA MENSAL ESTIMADA</div>
+                        <div style="font-size:1rem; font-weight:800; color:#10b981;">R$ ${totalValor.toFixed(2).replace('.', ',')}</div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        container.innerHTML = html;
+    },
+
+    // Edição inline do valor do plano direto no relatório
+    async _editarValorPlano(alunoId, nomeAluno, valorAtual) {
+        const novoValorStr = prompt(`Novo valor mensal para ${nomeAluno}:\n(atual: R$ ${valorAtual > 0 ? valorAtual.toFixed(2) : '0,00'})`, valorAtual > 0 ? valorAtual.toFixed(2) : '');
+        if (novoValorStr === null) return; // cancelou
+        const novoValor = parseFloat(novoValorStr.replace(',', '.'));
+        if (isNaN(novoValor) || novoValor < 0) { alert('Valor inválido.'); return; }
+        try {
+            await db.collection('alunos').doc(alunoId).update({ planoValor: novoValor });
+            // Atualiza o display inline sem recarregar tudo
+            const display = document.getElementById(`display-valor-${alunoId}`);
+            if (display) {
+                display.innerHTML = `
+                    <span style="font-size:0.82rem; font-weight:800; color:#10b981;">R$ ${novoValor.toFixed(2).replace('.', ',')}</span>
+                    <button onclick="academia._editarValorPlano('${alunoId}', '${nomeAluno.replace(/'/g,"\\'")}', ${novoValor})"
+                        style="background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:5px 9px; border-radius:8px; font-size:0.6rem; font-weight:700; cursor:pointer; white-space:nowrap;">
+                        ✏️ Editar
+                    </button>`;
+            }
+        } catch(e) { alert('Erro ao salvar: ' + e.message); }
+    },
+
     async generarRelatorioGraduacao() {
         const snap = await db.collection("alunos").orderBy("nome").get();
         const container = document.getElementById('resultado-relatorios');

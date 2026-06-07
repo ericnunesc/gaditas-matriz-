@@ -1478,28 +1478,24 @@ const GaditasPainelAdm = {
                     id: fatura.id,
                     valor: fatura.value,
                     vencimento: fatura.dueDate.split('-').reverse().join('/'),
-                    diasAtraso
+                    diasAtraso,
+                    link: fatura.invoiceUrl || fatura.bankSlipUrl || '',
+                    desc: fatura.description || 'Mensalidade'
                 });
             });
 
-            // Busca nome/email dos clientes que vieram sem nome no payload dos pagamentos
-            const semNome = Object.keys(porCliente).filter(id => !porCliente[id].nome);
-            if (semNome.length > 0) {
-                await Promise.all(semNome.map(async (id) => {
-                    try {
-                        const rc = await fetch(`/api/asaas?endpoint=customers/${encodeURIComponent(id)}`);
-                        const dc = await rc.json();
-                        if (dc.name) {
-                            porCliente[id].nome  = dc.name;
-                            porCliente[id].email = dc.email || '';
-                        } else {
-                            porCliente[id].nome = 'Nome não encontrado';
-                        }
-                    } catch (_) {
-                        porCliente[id].nome = 'Nome não encontrado';
-                    }
-                }));
-            }
+            // Busca nome/email/telefone dos clientes no Asaas
+            await Promise.all(Object.keys(porCliente).map(async (id) => {
+                try {
+                    const rc = await fetch(`/api/asaas?endpoint=customers/${encodeURIComponent(id)}`);
+                    const dc = await rc.json();
+                    if (dc.name) porCliente[id].nome  = dc.name;
+                    if (dc.email) porCliente[id].email = dc.email;
+                    porCliente[id].telefone = (dc.mobilePhone || dc.phone || '').replace(/\D/g,'');
+                } catch (_) {
+                    if (!porCliente[id].nome) porCliente[id].nome = 'Nome não encontrado';
+                }
+            }));
 
             // Calcula totais
             const clientes = Object.values(porCliente);
@@ -1550,20 +1546,27 @@ const GaditasPainelAdm = {
                             <button onclick="GaditasPainelAdm.cancelarFatura('${f.id}')" title="Cancelar fatura no Asaas" style="background:#1e293b; border:1px solid #f43f5e; color:#f43f5e; border-radius:6px; padding:3px 7px; font-size:0.65rem; cursor:pointer; line-height:1;">🗑️</button>
                         </div>`).join('');
                     
+                    // Monta JSON seguro para passar via onclick
+                    const clienteJson = JSON.stringify({ nome: cliente.nome, email: cliente.email, asaasId: cliente.asaasId, telefone: cliente.telefone || '', faturas: cliente.faturas }).replace(/'/g,'&apos;');
+
                     html += `
                         <div style="background:#1a0a00; border:1px solid ${corBorda}; border-radius:12px; padding:14px; margin-bottom:12px;">
                             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-                                <div style="flex:1;">
+                                <div style="flex:1; min-width:0;">
                                     <span style="font-size:0.65rem; font-weight:800; color:${corTag}; display:block;">${tagTexto}</span>
-                                    <span style="font-size:0.9rem; font-weight:800; color:#fff;">${cliente.nome.toUpperCase()}</span>
+                                    <span style="font-size:0.9rem; font-weight:800; color:#fff; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${cliente.nome.toUpperCase()}</span>
                                     <span style="font-size:0.65rem; color:#64748b; display:block;">${cliente.email}</span>
                                 </div>
-                                <div style="text-align:right;">
+                                <div style="text-align:right; flex-shrink:0; margin-left:10px;">
                                     <span style="font-size:0.55rem; color:#94a3b8; display:block;">TOTAL DEVIDO</span>
                                     <span style="font-size:1rem; font-weight:900; color:${corTag};">${totalDevido.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
                                 </div>
                             </div>
                             ${faturasHtml}
+                            <button onclick="GaditasPainelAdm._enviarInadWpp('${cliente.asaasId}','${cliente.nome.replace(/'/g,"\\'")}','${(cliente.telefone||'').replace(/'/g,"\\'")}')"
+                                style="width:100%; margin-top:10px; padding:10px; background:#25d366; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.78rem; letter-spacing:0.3px;">
+                                <i class="fab fa-whatsapp"></i> ENVIAR COBRANÇAS VIA WHATSAPP
+                            </button>
                         </div>`;
                 });
             
@@ -1580,6 +1583,51 @@ const GaditasPainelAdm = {
                     <button onclick="GaditasPainelAdm.buscarInadimplentes()" style="width:100%; padding:10px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">TENTAR NOVAMENTE</button>`;
             }
         }
+    },
+
+    // ── ENVIAR INADIMPLÊNCIA VIA WHATSAPP ───────────────────────
+    async _enviarInadWpp(asaasId, nome, telefoneAsaas) {
+        // Telefone: usa o do Asaas, ou pede manualmente
+        let tel = (telefoneAsaas || '').replace(/\D/g,'');
+
+        if (!tel || tel.length < 10) {
+            // Tenta buscar no Firestore do app
+            try {
+                const snap = await db.collection('alunos').where('asaasId','==',asaasId).limit(1).get();
+                if (!snap.empty) tel = (snap.docs[0].data().telefone || '').replace(/\D/g,'');
+            } catch(e) {}
+        }
+
+        if (!tel || tel.length < 10) {
+            const digitado = prompt(`📱 WhatsApp de ${nome}\n\nInforme o número (com DDD, só números):`);
+            if (!digitado) return;
+            tel = digitado.replace(/\D/g,'');
+            if (tel.length < 10) { alert('Número inválido.'); return; }
+        }
+
+        // Busca cobranças abertas com links
+        let linhasFaturas = '';
+        let totalDevido = 0;
+        try {
+            const res = await fetch(`/api/asaas?endpoint=payments&customer=${asaasId}&status=PENDING&limit=10`);
+            const data = await res.json();
+            (data.data || []).forEach(p => {
+                const valor = p.value.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+                const venc  = p.dueDate.split('-').reverse().join('/');
+                const link  = p.invoiceUrl || p.bankSlipUrl || '';
+                totalDevido += p.value;
+                linhasFaturas += `\n📋 ${p.description || 'Mensalidade'}\n💰 ${valor} · Vence ${venc}${link ? '\n🔗 ' + link : ''}\n`;
+            });
+        } catch(e) {
+            alert('Erro ao buscar cobranças: ' + e.message); return;
+        }
+
+        if (!linhasFaturas) { alert('Nenhuma cobrança em aberto encontrada para este cliente.'); return; }
+
+        const totalFmt = totalDevido.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        const msg = `Olá *${nome}*! 👋\n\nAqui é a *Gaditas Academy*.\n\nIdentificamos que você possui cobranças em aberto totalizando *${totalFmt}*.\n\nSegue o(s) link(s) para regularização:\n${linhasFaturas}\nQualquer dúvida, entre em contato conosco. OSS! 🥋`;
+
+        window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
     },
 
     // ── CANCELAR FATURA INDIVIDUAL NO ASAAS ─────────────────────

@@ -4998,6 +4998,8 @@ const ui = {
                 const profSenha = document.getElementById('prof-senha-section');
                 if (profSenha) profSenha.classList.remove('hidden');
             }
+            // Aplica acordeões após carregar os dados
+            setTimeout(() => this._aplicarAcordeoesGestao(), 400);
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
         if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
@@ -5135,6 +5137,51 @@ const ui = {
         const wrapperPerfil = document.getElementById('wrapper-perfil-proprio');
         if (wrapperPerfil && isProf) wrapperPerfil.classList.remove('hidden');
     },
+    // ── ACORDEÕES DA ABA GESTÃO ──────────────────────────────
+    _aplicarAcordeoesGestao() {
+        const secoes = [
+            { id: 'card-aniversariantes-admin', cor: '#f59e0b' },
+            { id: 'card-alertas-saude',         cor: '#f43f5e' },
+            { id: 'card-depoimentos-admin',      cor: '#f59e0b' },
+            { id: 'card-enquetes-admin',         cor: '#8b5cf6' },
+        ];
+
+        secoes.forEach(({ id, cor }) => {
+            const card = document.getElementById(id);
+            if (!card || card._acordeaoAplicado) return;
+
+            // Encontra o primeiro div filho (cabeçalho existente)
+            const header = card.querySelector('div');
+            if (!header) return;
+
+            // Wrap todo o conteúdo após o header num div colapsável
+            const bodyDiv = document.createElement('div');
+            bodyDiv.style.display = 'none';
+            bodyDiv.style.marginTop = '10px';
+
+            while (card.children.length > 1) {
+                bodyDiv.appendChild(card.children[1]);
+            }
+            card.appendChild(bodyDiv);
+
+            // Chevron
+            const chevron = document.createElement('i');
+            chevron.className = 'fas fa-chevron-down';
+            chevron.style.cssText = `color:${cor}; font-size:0.8rem; transition:transform 0.25s; flex-shrink:0; margin-left:8px;`;
+            header.style.cursor = 'pointer';
+            header.style.userSelect = 'none';
+            header.appendChild(chevron);
+
+            header.addEventListener('click', () => {
+                const aberto = bodyDiv.style.display !== 'none';
+                bodyDiv.style.display = aberto ? 'none' : 'block';
+                chevron.style.transform = aberto ? 'rotate(0deg)' : 'rotate(180deg)';
+            });
+
+            card._acordeaoAplicado = true;
+        });
+    },
+
     renderTurmasCheckboxes() {
         const c = document.getElementById('grid-turmas-prof'); if(!c) return;
         const t = [...new Set(Object.values(academia.getGrade()).flat())].filter(i => !i.includes("Sem treinos")).sort();

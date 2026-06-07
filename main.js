@@ -5283,14 +5283,10 @@ const ui = {
     },
     // ── ACORDEÕES DA ABA GESTÃO ──────────────────────────────
     _fecharFilhosCard(card) {
-        Array.from(card.children).forEach((el, i) => {
-            if (i > 0) el.style.setProperty('display', 'none', 'important');
-        });
+        card.classList.add('gestao-acc-fechado');
     },
     _abrirFilhosCard(card) {
-        Array.from(card.children).forEach((el, i) => {
-            if (i > 0) el.style.removeProperty('display');
-        });
+        card.classList.remove('gestao-acc-fechado');
     },
 
     _aplicarAcordeoesGestao() {

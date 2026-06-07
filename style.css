@@ -668,3 +668,14 @@ label {
 .quick-action-btn.qa-green i { color: #10b981; }
 .quick-action-btn.qa-amber i { color: #f59e0b; }
 .quick-action-btn.qa-red   i { color: #f43f5e; }
+
+/* ── Acordeões da aba Gestão ── */
+.gestao-acc-fechado > * + * {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    pointer-events: none !important;
+}

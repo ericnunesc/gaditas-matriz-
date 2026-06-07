@@ -339,6 +339,10 @@ label {
     display: none !important;
 }
 
+/* ── Acordeões da aba Gestão ── */
+.gestao-fechado > *:nth-child(n+2) { display: none !important; }
+.gestao-acc-header { cursor:pointer; user-select:none; }
+
 /* ══════════════════════════════════════════════════════════════
    CARDS DE EVENTO — estilo ingresso
    ══════════════════════════════════════════════════════════════ */

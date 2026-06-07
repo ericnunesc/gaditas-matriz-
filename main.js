@@ -5127,7 +5127,7 @@ const ui = {
         const wrapperPerfil = document.getElementById('wrapper-perfil-proprio');
         if (wrapperPerfil && isProf) wrapperPerfil.classList.remove('hidden');
     },
-    // ── ACORDEÕES DA ABA GESTÃO ──────────────────────────────
+    // ── ACORDEÕES DA ABA GESTÃO (CSS class-based) ────────────
     _aplicarAcordeoesGestao() {
         const secoes = [
             { id: 'card-aniversariantes-admin', cor: '#f59e0b' },
@@ -5140,41 +5140,34 @@ const ui = {
             const card = document.getElementById(id);
             if (!card) return;
 
-            // Se já aplicado, só garante que está fechado
+            // Fecha sempre ao (re)abrir a aba
+            card.classList.add('gestao-fechado');
+
+            // Só instala o listener uma vez
             if (card._acordeaoAplicado) {
-                const bodyDiv = card.querySelector('.gestao-acc-body');
-                if (bodyDiv) bodyDiv.style.display = 'none';
+                // Só reseta o chevron
                 const chv = card.querySelector('.gestao-acc-chv');
                 if (chv) chv.style.transform = 'rotate(0deg)';
                 return;
             }
 
-            // Encontra o primeiro div filho (cabeçalho existente)
-            const header = card.querySelector('div');
+            // Pega o header (primeiro filho direto)
+            const header = card.children[0];
             if (!header) return;
-
-            // Wrap todo o conteúdo após o header num div colapsável
-            const bodyDiv = document.createElement('div');
-            bodyDiv.className = 'gestao-acc-body';
-            bodyDiv.style.cssText = 'display:none; margin-top:10px;';
-
-            while (card.children.length > 1) {
-                bodyDiv.appendChild(card.children[1]);
-            }
-            card.appendChild(bodyDiv);
 
             // Chevron
             const chevron = document.createElement('i');
             chevron.className = 'fas fa-chevron-down gestao-acc-chv';
-            chevron.style.cssText = `color:${cor}; font-size:0.8rem; transition:transform 0.25s; flex-shrink:0; margin-left:8px;`;
-            header.style.cursor = 'pointer';
-            header.style.userSelect = 'none';
+            chevron.style.cssText = `color:${cor}; font-size:0.8rem; transition:transform 0.2s; flex-shrink:0; margin-left:auto; padding-left:10px;`;
+            header.classList.add('gestao-acc-header');
             header.appendChild(chevron);
 
-            header.addEventListener('click', () => {
-                const aberto = bodyDiv.style.display !== 'none';
-                bodyDiv.style.display = aberto ? 'none' : 'block';
-                chevron.style.transform = aberto ? 'rotate(0deg)' : 'rotate(180deg)';
+            // Toggle ao clicar no header
+            header.addEventListener('click', (e) => {
+                // Não fecha se clicar no botão de refresh (↻)
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+                const fechado = card.classList.toggle('gestao-fechado');
+                chevron.style.transform = fechado ? 'rotate(0deg)' : 'rotate(180deg)';
             });
 
             card._acordeaoAplicado = true;

@@ -15,6 +15,16 @@
     <link rel="stylesheet" href="style.css?v=5">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Acordeões gestão — embutido no HTML para garantir prioridade máxima */
+        #card-aniversariantes-admin.gestao-acc-fechado > div:not(:first-child),
+        #card-alertas-saude.gestao-acc-fechado > div:not(:first-child),
+        #card-depoimentos-admin.gestao-acc-fechado > div:not(:first-child),
+        #card-enquetes-admin.gestao-acc-fechado > div:not(:first-child) {
+            display: none !important;
+            visibility: hidden !important;
+        }
+    </style>
 </head>
 <body>
     <!-- NOTIFICAÇÃO: ALUNO SE RECUPEROU (para professor/admin) -->

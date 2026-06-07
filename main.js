@@ -414,21 +414,27 @@ const academia = {
         if (!container) return;
         const planos = await this.carregarConfiguracaoPlanos();
         container.innerHTML = `
-            <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:15px; margin-bottom:15px;">
-                <div style="font-size:0.7rem; font-weight:800; color:#f59e0b; margin-bottom:12px; letter-spacing:0.5px;">
-                    <i class="fas fa-cog"></i> CONFIGURAR VALORES DOS PLANOS
+            <div style="background:#0f172a; border:1px solid #f59e0b44; border-radius:12px; overflow:hidden; margin-bottom:4px;">
+                <div onclick="const b=this.nextElementSibling;const open=b.style.display!=='none';b.style.display=open?'none':'block';this.querySelector('.cfg-chv').style.transform=open?'rotate(0)':'rotate(180deg)'"
+                    style="padding:13px 15px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+                    <span style="font-size:0.7rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px;">
+                        <i class="fas fa-cog"></i> CONFIGURAR VALORES DOS PLANOS
+                    </span>
+                    <i class="fas fa-chevron-down cfg-chv" style="color:#f59e0b; font-size:0.8rem; transition:transform 0.25s;"></i>
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    ${['mensal','trimestral','semestral','anual'].map(key => `
-                        <div>
-                            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${planos[key].label.toUpperCase()} (R$/mês)</small>
-                            <input type="number" id="plano-val-${key}" value="${planos[key].valor}" step="0.01"
-                                style="width:100%; padding:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.85rem; font-weight:700;"/>
-                        </div>`).join('')}
+                <div style="display:none; padding:0 15px 15px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        ${['mensal','trimestral','semestral','anual'].map(key => `
+                            <div>
+                                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${planos[key].label.toUpperCase()} (R$/mês)</small>
+                                <input type="number" id="plano-val-${key}" value="${planos[key].valor}" step="0.01"
+                                    style="width:100%; padding:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.85rem; font-weight:700;"/>
+                            </div>`).join('')}
+                    </div>
+                    <button onclick="academia.salvarConfiguracaoPlanos()" style="width:100%; margin-top:12px; padding:12px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;">
+                        <i class="fas fa-save"></i> SALVAR VALORES
+                    </button>
                 </div>
-                <button onclick="academia.salvarConfiguracaoPlanos()" style="width:100%; margin-top:12px; padding:12px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;">
-                    <i class="fas fa-save"></i> SALVAR VALORES
-                </button>
             </div>`;
     },
 
@@ -721,11 +727,8 @@ const academia = {
         let totalValor = 0;
         let semValor = 0;
 
-        let html = `
-        <div style="background:#1e293b; border:1px solid #2d3f55; border-radius:20px; overflow:hidden; margin-bottom:14px;">
-            <div style="height:3px; background:linear-gradient(90deg,#3b82f6,#8b5cf6);"></div>
-            <div style="padding:16px;">
-                <div style="font-size:0.6rem; color:#64748b; font-weight:800; letter-spacing:0.8px; margin-bottom:14px;">💰 ALUNOS POR PLANO — clique no valor para editar</div>`;
+        // Monta o conteúdo interno do acordeão
+        let innerHtml = '';
 
         ordemPlanos.forEach(plano => {
             const alunos = grupos[plano] || [];
@@ -736,7 +739,7 @@ const academia = {
             total += alunos.length;
             totalValor += totalGrupo;
 
-            html += `
+            innerHtml += `
             <div style="margin-bottom:16px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #2d3f55;">
                     <div style="display:flex; align-items:center; gap:8px;">
@@ -750,7 +753,7 @@ const academia = {
             alunos.forEach(a => {
                 const temValor = a.planoValor > 0;
                 if (!temValor) semValor++;
-                html += `
+                innerHtml += `
                 <div id="row-plano-${a.id}" style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #1a2540; gap:10px;">
                     <div style="flex:1; min-width:0;">
                         <div style="font-size:0.78rem; font-weight:700; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}</div>
@@ -769,24 +772,36 @@ const academia = {
                 </div>`;
             });
 
-            html += `</div>`;
+            innerHtml += `</div>`;
         });
 
-        html += `
-                <div style="background:#0f172a; border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-                    <div>
-                        <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:2px;">${total} ALUNOS ATIVOS</div>
-                        ${semValor > 0 ? `<div style="font-size:0.55rem; color:#f43f5e; font-weight:700;">⚠️ ${semValor} sem valor definido</div>` : '<div style="font-size:0.55rem; color:#10b981; font-weight:700;">✅ Todos com valor definido</div>'}
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:0.55rem; color:#64748b; font-weight:700; margin-bottom:2px;">RECEITA MENSAL ESTIMADA</div>
-                        <div style="font-size:1rem; font-weight:800; color:#10b981;">R$ ${totalValor.toFixed(2).replace('.', ',')}</div>
-                    </div>
+        innerHtml += `
+            <div style="background:#0f172a; border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                <div>
+                    <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:2px;">${total} ALUNOS ATIVOS</div>
+                    ${semValor > 0 ? `<div style="font-size:0.55rem; color:#f43f5e; font-weight:700;">⚠️ ${semValor} sem valor definido</div>` : '<div style="font-size:0.55rem; color:#10b981; font-weight:700;">✅ Todos com valor definido</div>'}
                 </div>
+                <div style="text-align:right;">
+                    <div style="font-size:0.55rem; color:#64748b; font-weight:700; margin-bottom:2px;">RECEITA MENSAL ESTIMADA</div>
+                    <div style="font-size:1rem; font-weight:800; color:#10b981;">R$ ${totalValor.toFixed(2).replace('.', ',')}</div>
+                </div>
+            </div>`;
+
+        // Envolve em acordeão que começa aberto
+        container.innerHTML = `
+        <div style="background:#1e293b; border:1px solid #2d3f55; border-radius:20px; overflow:hidden; margin-bottom:14px;">
+            <div style="height:3px; background:linear-gradient(90deg,#3b82f6,#8b5cf6);"></div>
+            <div onclick="const b=this.nextElementSibling;const open=b.style.display!=='none';b.style.display=open?'none':'block';this.querySelector('.rp-chv').style.transform=open?'rotate(0)':'rotate(180deg)'"
+                style="padding:13px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; border-bottom:1px solid #2d3f55;">
+                <span style="font-size:0.65rem; font-weight:800; color:#60a5fa; letter-spacing:0.8px;">
+                    💰 ALUNOS POR PLANO — ${total} alunos · clique no valor para editar
+                </span>
+                <i class="fas fa-chevron-down rp-chv" style="color:#3b82f6; font-size:0.8rem; transition:transform 0.25s; transform:rotate(180deg);"></i>
+            </div>
+            <div style="display:block; padding:16px;">
+                ${innerHtml}
             </div>
         </div>`;
-
-        container.innerHTML = html;
     },
 
     // Edição inline do valor do plano direto no relatório

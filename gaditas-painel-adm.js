@@ -147,6 +147,19 @@ const GaditasPainelAdm = {
                 <div id="wpp-resultado" style="margin-top:10px;"></div>
             </div>
 
+            <!-- ══ PUSH INADIMPLÊNCIA ══ -->
+            <div class="card" style="background:#1e293b; border:1px solid #f43f5e44; padding:15px; border-radius:12px; margin-top:4px;">
+                <div style="font-size:0.7rem; font-weight:800; color:#f43f5e; margin-bottom:10px; letter-spacing:0.5px;">
+                    <i class="fas fa-bell"></i> NOTIFICAR INADIMPLENTES VIA PUSH
+                </div>
+                <p style="font-size:0.7rem; color:#94a3b8; margin:0 0 12px 0;">Envia notificação push para todos os alunos com fatura vencida há 1+ dia (requer token FCM salvo).</p>
+                <button onclick="GaditasPainelAdm.enviarPushInadimplentes()" id="btn-push-inadimp"
+                    style="width:100%; padding:12px; background:#f43f5e; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.82rem;">
+                    🔔 ENVIAR PUSH PARA INADIMPLENTES AGORA
+                </button>
+                <div id="push-inadimp-resultado" style="margin-top:10px;"></div>
+            </div>
+
             <!-- ══ MUDAR PLANO ══ -->
             <div id="fin-card-mudar-plano" class="card" style="background:#1e293b; border:1px solid #8b5cf644; padding:15px; border-radius:12px; margin-top:4px;">
                 <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#a78bfa; margin-bottom:14px; letter-spacing:0.5px;">
@@ -1675,6 +1688,65 @@ const GaditasPainelAdm = {
             await this.buscarInadimplentes();
         } catch (e) {
             alert('❌ Erro ao cancelar fatura: ' + e.message);
+        }
+    },
+
+    async enviarPushInadimplentes() {
+        const btn = document.getElementById('btn-push-inadimp');
+        const res = document.getElementById('push-inadimp-resultado');
+        if (btn) btn.disabled = true;
+        if (res) res.innerHTML = '<small style="color:#94a3b8;">⏳ Buscando alunos com fatura vencida...</small>';
+
+        try {
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
+            const snap = await db.collection('alunos').get();
+            const tokens = [];
+            const nomes = [];
+
+            for (const doc of snap.docs) {
+                const a = doc.data();
+                if (!a.fcmToken || !a.email) continue;
+                // Verifica se tem fatura vencida no Asaas
+                try {
+                    const asaasUrl = window._asaasBaseUrl || '/api/asaas';
+                    const resp = await fetch(`${asaasUrl}?endpoint=customers&email=${encodeURIComponent(a.email)}`);
+                    const dados = await resp.json();
+                    if (!dados.data || dados.data.length === 0) continue;
+                    const customerId = dados.data[0].id;
+                    const faturas = await fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=OVERDUE&limit=5`);
+                    const fatDados = await faturas.json();
+                    if (!fatDados.data || fatDados.data.length === 0) continue;
+                    // Verifica se tem pelo menos 1 dia de atraso
+                    const temAtraso = fatDados.data.some(f => {
+                        const venc = new Date(f.dueDate + 'T00:00:00'); venc.setHours(0,0,0,0);
+                        return Math.floor((hoje - venc) / 86400000) >= 1;
+                    });
+                    if (temAtraso) { tokens.push(a.fcmToken); nomes.push(a.nome || a.email); }
+                } catch(e) { /* pula este aluno */ }
+            }
+
+            if (tokens.length === 0) {
+                if (res) res.innerHTML = '<small style="color:#10b981;">✅ Nenhum inadimplente com token FCM encontrado.</small>';
+                return;
+            }
+
+            if (res) res.innerHTML = `<small style="color:#94a3b8;">📤 Enviando para ${tokens.length} aluno(s)...</small>`;
+
+            const r = await fetch('/api/push-comunicado', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tokens,
+                    title: '⚠️ Fatura em atraso — Gaditas Academy',
+                    body: 'Você tem uma mensalidade vencida. Acesse o app para regularizar e continuar treinando. OSS!'
+                })
+            });
+            const rDados = await r.json();
+            if (res) res.innerHTML = `<small style="color:#10b981;">✅ Push enviado para ${rDados.sucesso || tokens.length} aluno(s).<br><span style="color:#64748b;">Alunos: ${nomes.join(', ')}</span></small>`;
+        } catch(e) {
+            if (res) res.innerHTML = `<small style="color:#f43f5e;">❌ Erro: ${e.message}</small>`;
+        } finally {
+            if (btn) btn.disabled = false;
         }
     }
 };

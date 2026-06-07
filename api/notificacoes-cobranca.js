@@ -2,14 +2,11 @@
 // Cron Job do Vercel — roda todo dia às 8h
 // Verifica faturas vencidas e envia push notification no 1º e 4º dia de atraso
 
-import { initializeApp, cert, getApps } = require('firebase-admin/app');
-import { getFirestore } = require('firebase-admin/firestore');
-import { getMessaging } = require('firebase-admin/messaging');
+import admin from 'firebase-admin';
 
-// Inicializa o Firebase Admin apenas uma vez
-if (!getApps().length) {
-    initializeApp({
-        credential: cert({
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert({
             projectId: process.env.FIREBASE_PROJECT_ID,
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
             privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
@@ -17,7 +14,7 @@ if (!getApps().length) {
     });
 }
 
-const db = getFirestore();
+const db = admin.firestore();
 
 export default async function handler(req, res) {
     // Segurança: só aceita chamada do próprio Vercel Cron
@@ -88,7 +85,7 @@ export default async function handler(req, res) {
                     }
 
                     if (mensagem) {
-                        await getMessaging().send({
+                        await admin.messaging().send({
                             token: token,
                             notification: {
                                 title: mensagem.title,

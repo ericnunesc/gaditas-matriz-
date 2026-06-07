@@ -231,25 +231,34 @@ const auth = {
 
     async _registrarFcmToken() {
         try {
-            if (!('Notification' in window)) return;
-            if (!firebase.messaging) return;
-
-            // Pede permissão se ainda não foi concedida
+            if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+            if (typeof firebase === 'undefined' || typeof firebase.messaging !== 'function') return;
             if (Notification.permission === 'denied') return;
+
+            // Pede permissão se ainda não concedida
             if (Notification.permission !== 'granted') {
                 const perm = await Notification.requestPermission();
                 if (perm !== 'granted') return;
             }
 
+            // Garante que o service worker está registrado e pronto
+            let swReg;
+            try {
+                swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                await navigator.serviceWorker.ready;
+            } catch(e) {
+                console.warn('SW não disponível:', e.message); return;
+            }
+
             const messaging = firebase.messaging();
-            const sw = await navigator.serviceWorker.ready;
-            const token = await messaging.getToken({ vapidKey: this._VAPID_KEY, serviceWorkerRegistration: sw });
-            if (!token) return;
+            const token = await messaging.getToken({ vapidKey: this._VAPID_KEY, serviceWorkerRegistration: swReg });
+            if (!token) { console.warn('FCM: token vazio'); return; }
 
             // Salva na coleção correta (aluno ou professor)
             const colecao = this.role === 'professor' ? 'professores' : 'alunos';
             if (this.currentUser?.id) {
                 await db.collection(colecao).doc(this.currentUser.id).update({ fcmToken: token });
+                console.log('FCM token salvo ✅');
             }
         } catch(e) {
             console.warn('FCM token registro falhou:', e.message);

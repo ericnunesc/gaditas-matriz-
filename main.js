@@ -275,7 +275,7 @@ const auth = {
 
             const messaging = firebase.messaging();
             log('Buscando token FCM...');
-            const token = await messaging.getToken({ vapidKey: this._VAPID_KEY });
+            const token = await messaging.getToken({ vapidKey: this._VAPID_KEY, serviceWorkerRegistration: swReg });
             if (!token) { log('Token vazio retornado pelo FCM', true); return; }
             log('Token obtido: ' + token.substring(0, 20) + '...');
 

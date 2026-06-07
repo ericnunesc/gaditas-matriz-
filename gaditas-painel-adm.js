@@ -699,9 +699,15 @@ const GaditasPainelAdm = {
 
         div.innerHTML = '<small style="color:#64748b;font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> Buscando cobranças abertas...</small>';
         try {
-            const res = await fetch(`/api/asaas?endpoint=payments&customer=${c.asaasId}&status=PENDING&limit=10`);
-            const data = await res.json();
-            const cobr = data.data || [];
+            const [resPend, resOver] = await Promise.all([
+                fetch(`/api/asaas?endpoint=payments&customer=${c.asaasId}&status=PENDING&limit=10`),
+                fetch(`/api/asaas?endpoint=payments&customer=${c.asaasId}&status=OVERDUE&limit=10`)
+            ]);
+            const [dp, dov] = await Promise.all([resPend.json(), resOver.json()]);
+            const vistas = new Set();
+            const cobr = [...(dp.data||[]), ...(dov.data||[])].filter(p => {
+                if (vistas.has(p.id)) return false; vistas.add(p.id); return true;
+            }).sort((a,b) => new Date(a.dueDate)-new Date(b.dueDate));
             if (!cobr.length) { div.innerHTML = '<small style="color:#64748b;font-size:0.7rem;font-style:italic;">Nenhuma cobrança em aberto no Asaas.</small>'; return; }
 
             div.innerHTML = `
@@ -1605,18 +1611,30 @@ const GaditasPainelAdm = {
             if (tel.length < 10) { alert('Número inválido.'); return; }
         }
 
-        // Busca SOMENTE cobranças vencidas (dueDate < hoje)
+        // Busca cobranças VENCIDAS: status PENDING (recente) + OVERDUE (muito atrasado)
         let linhasFaturas = '';
         let totalDevido = 0;
         try {
-            const res = await fetch(`/api/asaas?endpoint=payments&customer=${asaasId}&status=PENDING&limit=20`);
-            const data = await res.json();
             const hoje = new Date(); hoje.setHours(0,0,0,0);
 
-            const vencidas = (data.data || []).filter(p => {
-                const venc = new Date(p.dueDate + 'T00:00:00'); venc.setHours(0,0,0,0);
-                return venc < hoje; // só as VENCIDAS (passado)
-            }).sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)); // mais antiga primeiro
+            // Busca PENDING e OVERDUE em paralelo
+            const [resPend, resOver] = await Promise.all([
+                fetch(`/api/asaas?endpoint=payments&customer=${asaasId}&status=PENDING&limit=20`),
+                fetch(`/api/asaas?endpoint=payments&customer=${asaasId}&status=OVERDUE&limit=20`)
+            ]);
+            const [dataPend, dataOver] = await Promise.all([resPend.json(), resOver.json()]);
+
+            // Junta e deduplica por id
+            const todasPend = [...(dataPend.data || []), ...(dataOver.data || [])];
+            const vistas = new Set();
+            const vencidas = todasPend
+                .filter(p => {
+                    if (vistas.has(p.id)) return false;
+                    vistas.add(p.id);
+                    const venc = new Date(p.dueDate + 'T00:00:00'); venc.setHours(0,0,0,0);
+                    return venc < hoje; // só as que já passaram do vencimento
+                })
+                .sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)); // mais antiga primeiro
 
             vencidas.forEach(p => {
                 const valor = p.value.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});

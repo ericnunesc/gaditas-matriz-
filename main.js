@@ -710,96 +710,122 @@ const academia = {
 
         const snap = await db.collection('alunos').orderBy('nome').get();
 
-        // Agrupa por plano
-        const grupos = {};
         const ordemPlanos = ['mensal','trimestral','semestral','anual','livre','familia'];
-        const labelPlano = { mensal:'Mensal', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual', livre:'Livre', familia:'Família' };
-        const corPlano = { mensal:'#3b82f6', trimestral:'#8b5cf6', semestral:'#10b981', anual:'#f59e0b', livre:'#a78bfa', familia:'#f43f5e' };
+        const labelPlano  = { mensal:'Mensal', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual', livre:'Livre', familia:'Família' };
+        const iconPlano   = { mensal:'📅', trimestral:'📅', semestral:'📅', anual:'📅', livre:'🔓', familia:'👨‍👩‍👧' };
+        const corPlano    = { mensal:'#3b82f6', trimestral:'#8b5cf6', semestral:'#10b981', anual:'#f59e0b', livre:'#a78bfa', familia:'#f43f5e' };
 
+        const grupos = {};
         snap.docs.forEach(doc => {
             const d = doc.data();
             const plano = (d.plano || 'mensal').toLowerCase();
             if (!grupos[plano]) grupos[plano] = [];
-            grupos[plano].push({ id: doc.id, nome: d.nome, email: d.email, planoValor: d.planoValor || 0, plano });
+            grupos[plano].push({ id: doc.id, nome: d.nome, email: d.email, planoValor: d.planoValor || 0 });
         });
 
-        let total = 0;
-        let totalValor = 0;
-        let semValor = 0;
+        // ── Calcula totais ──
+        let totalAlunos = 0, totalReceita = 0, semValor = 0;
+        ordemPlanos.forEach(p => {
+            const alunos = grupos[p] || [];
+            totalAlunos  += alunos.length;
+            totalReceita += alunos.reduce((s, a) => s + (a.planoValor || 0), 0);
+            semValor     += alunos.filter(a => !(a.planoValor > 0)).length;
+        });
 
-        // Monta o conteúdo interno do acordeão
-        let innerHtml = '';
-
-        ordemPlanos.forEach(plano => {
-            const alunos = grupos[plano] || [];
+        // ── Cards de resumo por plano ──
+        let cardsHtml = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">';
+        ordemPlanos.forEach(p => {
+            const alunos = grupos[p] || [];
             if (!alunos.length) return;
-            const cor = corPlano[plano] || '#3b82f6';
-            const label = labelPlano[plano] || plano;
-            const totalGrupo = alunos.reduce((s, a) => s + (a.planoValor || 0), 0);
-            total += alunos.length;
-            totalValor += totalGrupo;
-
-            innerHtml += `
-            <div style="margin-bottom:16px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #2d3f55;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <div style="width:3px; height:16px; background:${cor}; border-radius:2px; flex-shrink:0;"></div>
-                        <span style="font-size:0.65rem; font-weight:800; color:${cor}; letter-spacing:0.8px;">PLANO ${label.toUpperCase()}</span>
-                        <span style="background:${cor}22; color:${cor}; font-size:0.5rem; font-weight:800; padding:2px 8px; border-radius:20px;">${alunos.length} aluno${alunos.length > 1 ? 's' : ''}</span>
-                    </div>
-                    <span style="font-size:0.68rem; font-weight:800; color:${cor};">Total/mês: R$ ${totalGrupo.toFixed(2).replace('.', ',')}</span>
-                </div>`;
-
-            alunos.forEach(a => {
-                const temValor = a.planoValor > 0;
-                if (!temValor) semValor++;
-                innerHtml += `
-                <div id="row-plano-${a.id}" style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #1a2540; gap:10px;">
-                    <div style="flex:1; min-width:0;">
-                        <div style="font-size:0.78rem; font-weight:700; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}</div>
-                        <div style="font-size:0.58rem; color:#475569;">${a.email}</div>
-                    </div>
-                    <div id="display-valor-${a.id}" style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-                        ${temValor
-                            ? `<span style="font-size:0.82rem; font-weight:800; color:#10b981;">R$ ${a.planoValor.toFixed(2).replace('.', ',')}</span>`
-                            : `<span style="font-size:0.7rem; font-weight:800; color:#f43f5e;">⚠️ Sem valor</span>`
-                        }
-                        <button onclick="academia._editarValorPlano('${a.id}', '${a.nome.replace(/'/g,"\\'").replace(/"/g,"&quot;")}', ${a.planoValor})"
-                            style="background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:5px 9px; border-radius:8px; font-size:0.6rem; font-weight:700; cursor:pointer; white-space:nowrap;">
-                            ✏️ Editar
-                        </button>
-                    </div>
-                </div>`;
-            });
-
-            innerHtml += `</div>`;
+            const cor    = corPlano[p];
+            const label  = labelPlano[p];
+            const icon   = iconPlano[p];
+            const total  = alunos.length;
+            const receita = alunos.reduce((s, a) => s + (a.planoValor || 0), 0);
+            cardsHtml += `
+            <div style="background:#0f172a; border:1px solid ${cor}44; border-left:3px solid ${cor}; border-radius:14px; padding:12px 14px;">
+                <div style="font-size:0.65rem; font-weight:800; color:${cor}; letter-spacing:0.5px; margin-bottom:6px;">${icon} ${label.toUpperCase()}</div>
+                <div style="font-size:1.4rem; font-weight:800; color:white; line-height:1;">${total}</div>
+                <div style="font-size:0.55rem; color:#64748b; font-weight:700; margin-bottom:6px; margin-top:2px;">ALUNO${total !== 1 ? 'S' : ''}</div>
+                <div style="font-size:0.82rem; font-weight:800; color:${cor};">R$ ${receita.toFixed(2).replace('.', ',')}</div>
+                <div style="font-size:0.52rem; color:#475569; font-weight:700;">/mês</div>
+            </div>`;
         });
+        cardsHtml += '</div>';
 
-        innerHtml += `
-            <div style="background:#0f172a; border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-                <div>
-                    <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:2px;">${total} ALUNOS ATIVOS</div>
-                    ${semValor > 0 ? `<div style="font-size:0.55rem; color:#f43f5e; font-weight:700;">⚠️ ${semValor} sem valor definido</div>` : '<div style="font-size:0.55rem; color:#10b981; font-weight:700;">✅ Todos com valor definido</div>'}
+        // ── Card total geral ──
+        cardsHtml += `
+        <div style="background:linear-gradient(135deg,#064e3b,#065f46); border:1px solid #10b981; border-radius:16px; padding:14px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-size:0.58rem; color:#6ee7b7; font-weight:800; letter-spacing:0.8px; margin-bottom:4px;">TOTAL GERAL</div>
+                <div style="font-size:1.6rem; font-weight:800; color:white; line-height:1;">${totalAlunos} <span style="font-size:0.75rem; color:#6ee7b7;">alunos</span></div>
+                ${semValor > 0 ? `<div style="font-size:0.58rem; color:#f43f5e; font-weight:700; margin-top:4px;">⚠️ ${semValor} sem valor definido</div>` : `<div style="font-size:0.58rem; color:#6ee7b7; font-weight:700; margin-top:4px;">✅ Todos com valor definido</div>`}
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:0.58rem; color:#6ee7b7; font-weight:700; margin-bottom:4px;">RECEITA MENSAL ESTIMADA</div>
+                <div style="font-size:1.5rem; font-weight:800; color:#10b981; letter-spacing:-0.5px;">R$ ${totalReceita.toFixed(2).replace('.', ',')}</div>
+            </div>
+        </div>`;
+
+        // ── Lista detalhada por plano (acordeão por grupo) ──
+        let listaHtml = `<div style="font-size:0.6rem; color:#64748b; font-weight:800; letter-spacing:1px; margin-bottom:10px;">DETALHES POR ALUNO — clique no plano para expandir</div>`;
+
+        ordemPlanos.forEach((p, idx) => {
+            const alunos = grupos[p] || [];
+            if (!alunos.length) return;
+            const cor     = corPlano[p];
+            const label   = labelPlano[p];
+            const receita = alunos.reduce((s, a) => s + (a.planoValor || 0), 0);
+            const bodyId  = `relat-plano-body-${p}`;
+
+            listaHtml += `
+            <div style="background:#1e293b; border:1px solid ${cor}33; border-radius:14px; overflow:hidden; margin-bottom:8px;">
+                <div onclick="const b=document.getElementById('${bodyId}');const open=b.style.display!=='none';b.style.display=open?'none':'block';this.querySelector('i').style.transform=open?'rotate(0)':'rotate(180deg)'"
+                    style="padding:12px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:3px; height:18px; background:${cor}; border-radius:2px;"></div>
+                        <div>
+                            <div style="font-size:0.72rem; font-weight:800; color:${cor};">${label.toUpperCase()}</div>
+                            <div style="font-size:0.58rem; color:#64748b; margin-top:1px;">${alunos.length} aluno${alunos.length !== 1 ? 's' : ''} · R$ ${receita.toFixed(2).replace('.', ',')} /mês</div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-down" style="color:${cor}; font-size:0.8rem; transition:transform 0.25s; ${idx === 0 ? 'transform:rotate(180deg)' : ''}"></i>
                 </div>
-                <div style="text-align:right;">
-                    <div style="font-size:0.55rem; color:#64748b; font-weight:700; margin-bottom:2px;">RECEITA MENSAL ESTIMADA</div>
-                    <div style="font-size:1rem; font-weight:800; color:#10b981;">R$ ${totalValor.toFixed(2).replace('.', ',')}</div>
+                <div id="${bodyId}" style="display:${idx === 0 ? 'block' : 'none'}; border-top:1px solid ${cor}22;">
+                    ${alunos.map(a => {
+                        const temValor = a.planoValor > 0;
+                        if (!temValor) semValor++;
+                        return `
+                        <div id="row-plano-${a.id}" style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #1a2540; gap:10px;">
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:0.78rem; font-weight:700; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}</div>
+                            </div>
+                            <div id="display-valor-${a.id}" style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                                ${temValor
+                                    ? `<span style="font-size:0.82rem; font-weight:800; color:#10b981;">R$ ${a.planoValor.toFixed(2).replace('.', ',')}</span>`
+                                    : `<span style="font-size:0.72rem; font-weight:800; color:#f43f5e;">⚠️ Sem valor</span>`
+                                }
+                                <button onclick="academia._editarValorPlano('${a.id}','${a.nome.replace(/'/g,"\\'").replace(/"/g,'&quot;')}',${a.planoValor})"
+                                    style="background:#0f172a; border:1px solid #334155; color:#94a3b8; padding:4px 9px; border-radius:8px; font-size:0.58rem; font-weight:700; cursor:pointer;">✏️</button>
+                            </div>
+                        </div>`;
+                    }).join('')}
                 </div>
             </div>`;
+        });
 
-        // Envolve em acordeão que começa aberto
         container.innerHTML = `
-        <div style="background:#1e293b; border:1px solid #2d3f55; border-radius:20px; overflow:hidden; margin-bottom:14px;">
+        <div style="background:#1e293b; border:1px solid #2d3f55; border-radius:20px; overflow:hidden; margin-bottom:14px; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
             <div style="height:3px; background:linear-gradient(90deg,#3b82f6,#8b5cf6);"></div>
-            <div onclick="const b=this.nextElementSibling;const open=b.style.display!=='none';b.style.display=open?'none':'block';this.querySelector('.rp-chv').style.transform=open?'rotate(0)':'rotate(180deg)'"
-                style="padding:13px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; border-bottom:1px solid #2d3f55;">
-                <span style="font-size:0.65rem; font-weight:800; color:#60a5fa; letter-spacing:0.8px;">
-                    💰 ALUNOS POR PLANO — ${total} alunos · clique no valor para editar
-                </span>
-                <i class="fas fa-chevron-down rp-chv" style="color:#3b82f6; font-size:0.8rem; transition:transform 0.25s; transform:rotate(180deg);"></i>
-            </div>
-            <div style="display:block; padding:16px;">
-                ${innerHtml}
+            <div style="padding:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <span style="font-size:0.65rem; font-weight:800; color:#f8fafc; letter-spacing:0.5px;">📊 RELATÓRIO POR PLANO</span>
+                    <button onclick="academia.renderRelatPlanos()" style="background:#0f172a; border:1px solid #334155; color:#64748b; padding:5px 10px; border-radius:8px; font-size:0.6rem; font-weight:700; cursor:pointer;">
+                        <i class="fas fa-sync-alt"></i> Atualizar
+                    </button>
+                </div>
+                ${cardsHtml}
+                ${listaHtml}
             </div>
         </div>`;
     },

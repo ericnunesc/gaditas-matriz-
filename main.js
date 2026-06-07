@@ -4968,6 +4968,10 @@ const ui = {
             if (document.getElementById('filtro-avancado-faixas')) document.getElementById('filtro-avancado-faixas').value = "all";
             academia.textoBuscaNome = ""; academia.categoriaFiltroAtual = "all"; academia.filtrarCategoriaAlunos("all");
             academia.renderProfessores(); this.renderTurmasCheckboxes();
+
+            // ── Acordeões PRIMEIRO (antes de carregar dados) ──
+            this._aplicarAcordeoesGestao();
+
             // Carrega relatos de saúde para prof/admin
             if (auth.role === 'admin' || auth.role === 'professor') {
                 const cardS = document.getElementById('card-alertas-saude');
@@ -4986,8 +4990,6 @@ const ui = {
                 const profSenha = document.getElementById('prof-senha-section');
                 if (profSenha) profSenha.classList.remove('hidden');
             }
-            // Aplica acordeões após carregar os dados
-            setTimeout(() => this._aplicarAcordeoesGestao(), 400);
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
         if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
@@ -5136,7 +5138,16 @@ const ui = {
 
         secoes.forEach(({ id, cor }) => {
             const card = document.getElementById(id);
-            if (!card || card._acordeaoAplicado) return;
+            if (!card) return;
+
+            // Se já aplicado, só garante que está fechado
+            if (card._acordeaoAplicado) {
+                const bodyDiv = card.querySelector('.gestao-acc-body');
+                if (bodyDiv) bodyDiv.style.display = 'none';
+                const chv = card.querySelector('.gestao-acc-chv');
+                if (chv) chv.style.transform = 'rotate(0deg)';
+                return;
+            }
 
             // Encontra o primeiro div filho (cabeçalho existente)
             const header = card.querySelector('div');
@@ -5144,8 +5155,8 @@ const ui = {
 
             // Wrap todo o conteúdo após o header num div colapsável
             const bodyDiv = document.createElement('div');
-            bodyDiv.style.display = 'none';
-            bodyDiv.style.marginTop = '10px';
+            bodyDiv.className = 'gestao-acc-body';
+            bodyDiv.style.cssText = 'display:none; margin-top:10px;';
 
             while (card.children.length > 1) {
                 bodyDiv.appendChild(card.children[1]);
@@ -5154,7 +5165,7 @@ const ui = {
 
             // Chevron
             const chevron = document.createElement('i');
-            chevron.className = 'fas fa-chevron-down';
+            chevron.className = 'fas fa-chevron-down gestao-acc-chv';
             chevron.style.cssText = `color:${cor}; font-size:0.8rem; transition:transform 0.25s; flex-shrink:0; margin-left:8px;`;
             header.style.cursor = 'pointer';
             header.style.userSelect = 'none';

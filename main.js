@@ -5127,7 +5127,18 @@ const ui = {
         const wrapperPerfil = document.getElementById('wrapper-perfil-proprio');
         if (wrapperPerfil && isProf) wrapperPerfil.classList.remove('hidden');
     },
-    // ── ACORDEÕES DA ABA GESTÃO (CSS class-based) ────────────
+    // ── ACORDEÕES DA ABA GESTÃO ──────────────────────────────
+    _fecharFilhosCard(card) {
+        Array.from(card.children).forEach((el, i) => {
+            if (i > 0) el.style.setProperty('display', 'none', 'important');
+        });
+    },
+    _abrirFilhosCard(card) {
+        Array.from(card.children).forEach((el, i) => {
+            if (i > 0) el.style.removeProperty('display');
+        });
+    },
+
     _aplicarAcordeoesGestao() {
         const secoes = [
             { id: 'card-aniversariantes-admin', cor: '#f59e0b' },
@@ -5141,35 +5152,45 @@ const ui = {
             if (!card) return;
 
             // Fecha sempre ao (re)abrir a aba
-            card.classList.add('gestao-fechado');
+            this._fecharFilhosCard(card);
 
-            // Só instala o listener uma vez
             if (card._acordeaoAplicado) {
-                // Só reseta o chevron
                 const chv = card.querySelector('.gestao-acc-chv');
                 if (chv) chv.style.transform = 'rotate(0deg)';
+                card._gestaoAberto = false;
                 return;
             }
 
-            // Pega o header (primeiro filho direto)
             const header = card.children[0];
             if (!header) return;
+
+            // Garante que o header é flex
+            header.style.display = 'flex';
+            header.style.justifyContent = 'space-between';
+            header.style.alignItems = 'center';
+            header.style.cursor = 'pointer';
 
             // Chevron
             const chevron = document.createElement('i');
             chevron.className = 'fas fa-chevron-down gestao-acc-chv';
-            chevron.style.cssText = `color:${cor}; font-size:0.8rem; transition:transform 0.2s; flex-shrink:0; margin-left:auto; padding-left:10px;`;
-            header.classList.add('gestao-acc-header');
+            chevron.style.cssText = `color:${cor}; font-size:0.8rem; transition:transform 0.2s; flex-shrink:0; margin-left:8px;`;
             header.appendChild(chevron);
 
-            // Toggle ao clicar no header
             header.addEventListener('click', (e) => {
-                // Não fecha se clicar no botão de refresh (↻)
                 if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
-                const fechado = card.classList.toggle('gestao-fechado');
-                chevron.style.transform = fechado ? 'rotate(0deg)' : 'rotate(180deg)';
+                const aberto = card._gestaoAberto;
+                if (aberto) {
+                    this._fecharFilhosCard(card);
+                    chevron.style.transform = 'rotate(0deg)';
+                    card._gestaoAberto = false;
+                } else {
+                    this._abrirFilhosCard(card);
+                    chevron.style.transform = 'rotate(180deg)';
+                    card._gestaoAberto = true;
+                }
             });
 
+            card._gestaoAberto = false;
             card._acordeaoAplicado = true;
         });
     },

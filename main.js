@@ -4120,24 +4120,12 @@ Ele voltará a ser aluno normal.`)) return;
 
     // ── WHATSAPP BUSINESS ─────────────────────────────────────
     abrirWhatsappBusiness(tel) {
-        let num = tel.replace(/\D/g, '');
+        let num = (tel || '').replace(/\D/g, '');
+        if (!num) { alert('Este aluno não tem telefone cadastrado.'); return; }
+        // Remove 55 duplicado se vier
         if (num.startsWith('55') && num.length >= 12) num = num.slice(2);
-
-        const ua = navigator.userAgent;
-        const isAndroid = /android/i.test(ua);
-        const isIOS     = /iphone|ipad|ipod/i.test(ua);
-
-        if (isAndroid) {
-            // Android: intent URL força abertura no WhatsApp Business (com.whatsapp.w4b)
-            // Se não estiver instalado, redireciona para a Play Store
-            const fallback = encodeURIComponent('https://play.google.com/store/apps/details?id=com.whatsapp.w4b');
-            window.location.href = `intent://send?phone=55${num}#Intent;scheme=whatsapp;package=com.whatsapp.w4b;S.browser_fallback_url=${fallback};end`;
-        } else if (isIOS) {
-            window.location.href = `whatsapp-business://send?phone=55${num}`;
-        } else {
-            // Desktop
-            window.location.href = `whatsapp://send?phone=55${num}`;
-        }
+        // URL universal — abre app no celular, WhatsApp Web no desktop
+        window.open(`https://wa.me/55${num}`, '_blank');
     },
 
     // ── FILTRO INATIVOS ───────────────────────────────────────

@@ -338,3 +338,329 @@ label {
 #screen-login .login-form p:last-child {
     display: none !important;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   CARDS DE EVENTO — estilo ingresso
+   ══════════════════════════════════════════════════════════════ */
+
+.card-evento {
+    background: #1e293b;
+    border: 1px solid #2d3f55;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Linha accent azul-roxo no topo — identidade visual de "ingresso" */
+.card-evento::before {
+    content: '';
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+}
+
+.evento-header {
+    padding: 16px 16px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.evento-titulo {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #f8fafc;
+    letter-spacing: -0.2px;
+    line-height: 1.35;
+    flex: 1;
+}
+
+.evento-vagas-badge {
+    background: #0f172a;
+    color: #64748b;
+    font-size: 0.52rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid #334155;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.5px;
+}
+
+.evento-data {
+    padding: 0 16px 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #60a5fa;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.evento-desc {
+    padding: 10px 16px 14px;
+    font-size: 0.76rem;
+    color: #94a3b8;
+    line-height: 1.65;
+    border-top: 1px dashed #2d3f55;
+    margin: 0 16px;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Botões de ação dentro do card-evento */
+.card-evento .btn-save {
+    margin: 12px 16px 14px;
+    width: calc(100% - 32px);
+    border-radius: 12px !important;
+}
+
+/* Botão de pagamento InfinitePay/PIX */
+.btn-infinitepay {
+    display: block;
+    width: calc(100% - 32px);
+    margin: 0 16px 14px;
+    padding: 12px;
+    background: linear-gradient(135deg, #065f46, #047857);
+    border: 1px solid #10b981;
+    color: #34d399;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    cursor: pointer;
+    text-align: center;
+    letter-spacing: 0.3px;
+}
+
+.btn-infinitepay:hover { opacity: 0.9; }
+
+/* ══════════════════════════════════════════════════════════════
+   INTER BANK REDESIGN — layout limpo, cards empilhados
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Header ──────────────────────────────────────────────────── */
+.app-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 14px 20px !important;
+    background: #1a2540 !important;
+    border-bottom: 1px solid #1e3a6e !important;
+    border-top: 3px solid #3b82f6 !important;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.header-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Avatar círculo azul no header */
+.header-avatar-circle {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    color: white;
+    flex-shrink: 0;
+    border: 2px solid rgba(59, 130, 246, 0.35);
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+}
+
+.welcome-text {
+    font-size: 0.58rem !important;
+    color: #475569 !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.8px !important;
+    display: block !important;
+}
+
+#display-user {
+    margin: 0 !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: #f8fafc !important;
+}
+
+#btn-config-admin {
+    background: none !important;
+    border: none !important;
+    color: #475569 !important;
+    cursor: pointer !important;
+    font-size: 0.8rem !important;
+    padding: 2px 4px !important;
+}
+
+.header-logo {
+    height: 36px !important;
+    width: auto !important;
+    opacity: 0.9;
+}
+
+/* ── Bottom Nav ──────────────────────────────────────────────── */
+.bottom-nav {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: rgba(10, 16, 35, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(51, 65, 85, 0.8) !important;
+    display: flex !important;
+    justify-content: space-around !important;
+    padding: 6px 4px 14px !important;
+    z-index: 999 !important;
+}
+
+.nav-item {
+    background: transparent !important;
+    border: none !important;
+    color: #475569 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 4px !important;
+    font-size: 0.55rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.4px !important;
+    cursor: pointer !important;
+    flex: 1 !important;
+    padding: 4px 2px !important;
+    position: relative !important;
+    transition: color 0.2s !important;
+    text-transform: uppercase;
+}
+
+.nav-item i {
+    font-size: 1.1rem !important;
+    margin-bottom: 0 !important;
+    transition: transform 0.15s;
+}
+
+.nav-item.active {
+    color: #3b82f6 !important;
+}
+
+/* Linha azul acima do ícone ativo */
+.nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 22px;
+    height: 2.5px;
+    background: #3b82f6;
+    border-radius: 0 0 4px 4px;
+}
+
+.nav-item.active i {
+    transform: translateY(-1px);
+}
+
+.logout-item {
+    color: rgba(244, 63, 94, 0.5) !important;
+}
+
+/* ── Aba Treino — cards Inter Bank ────────────────────────────── */
+#tab-checkin {
+    padding: 14px 14px 0 !important;
+}
+
+/* Todas as cards da aba treino ganham border-radius maior + sombra */
+#tab-checkin .card,
+#mural-avisos,
+#mural-conquistas,
+#card-tecnica-semana,
+#card-leoes-kids,
+#area-aluno-checkin,
+#area-professor-checkin,
+#card-presenca-admin {
+    border-radius: 20px !important;
+    margin-bottom: 12px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Status card do aluno */
+#meu-status-card > div {
+    border-radius: 20px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Botões accordion (Depoimentos, Meus Dados, Relato, Ficha) */
+#btn-depoimentos-trigger,
+#btn-meus-dados-aluno-trigger,
+#btn-relato-saude-trigger,
+#btn-ficha-saude-trigger,
+#btn-meu-depoimento-trigger,
+#btn-ficha-saude-trigger ~ div,
+#wrapper-perfil-proprio > button {
+    border-radius: 16px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Seção label estilo Inter Bank */
+.section-label {
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: #475569;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin: 16px 0 8px;
+    padding-left: 4px;
+    display: block;
+}
+
+/* Quick actions grid — 4 botões de ação rápida */
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.quick-action-btn {
+    background: #1e293b;
+    border: 1px solid #2d3f55;
+    border-radius: 18px;
+    padding: 14px 6px 11px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    color: #cbd5e1;
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    transition: background 0.15s, transform 0.1s;
+    outline: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.quick-action-btn i {
+    font-size: 1.25rem;
+}
+
+.quick-action-btn:active {
+    background: #263650;
+    transform: scale(0.96);
+}
+
+.quick-action-btn.qa-blue  i { color: #3b82f6; }
+.quick-action-btn.qa-green i { color: #10b981; }
+.quick-action-btn.qa-amber i { color: #f59e0b; }
+.quick-action-btn.qa-red   i { color: #f43f5e; }

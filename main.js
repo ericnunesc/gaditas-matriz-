@@ -4231,13 +4231,33 @@ Ele voltará a ser aluno normal.`)) return;
                     'style="background:#3b82f6; border:none; color:white; padding:10px 14px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; white-space:nowrap;">+ Add</button>' +
                     '</div></div>';
             } else {
-                html += `<div style="${isHoje ? 'border:1px solid #3b82f6; border-radius:12px; padding:10px;' : ''} margin-bottom:16px;">
-                    <div style="font-size:0.65rem; font-weight:800; color:${isHoje ? '#3b82f6' : '#94a3b8'}; margin-bottom:8px; letter-spacing:0.5px;">
-                        ${isHoje ? '📍 ' : ''}${diasNomes[d].toUpperCase()}${isHoje ? ' — HOJE' : ''}
+                // ── Cabeçalho do dia ──
+                html += `<div style="margin-bottom:14px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; ${isHoje ? 'margin-top:4px;' : 'margin-top:16px;'}">
+                        <div style="width:3px; height:18px; background:${isHoje ? '#3b82f6' : '#334155'}; border-radius:2px; flex-shrink:0;"></div>
+                        <span style="font-size:0.65rem; font-weight:800; color:${isHoje ? '#60a5fa' : '#64748b'}; letter-spacing:1px;">${diasNomes[d].toUpperCase()}</span>
+                        ${isHoje ? '<span style="background:#1e3a8a; color:#60a5fa; font-size:0.5rem; font-weight:800; padding:2px 9px; border-radius:20px; letter-spacing:0.5px; border:1px solid #3b82f666;">HOJE</span>' : ''}
                     </div>`;
                 slots.forEach(slot => {
-                    html += `<div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:12px 14px; margin-bottom:6px;">
-                        <span style="color:#e2e8f0; font-size:0.85rem; font-weight:500;">${slot}</span>
+                    if (slot === 'Sem treinos hoje') {
+                        html += `<div style="background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:11px 14px; margin-bottom:6px; color:#475569; font-size:0.75rem; font-style:italic; text-align:center;">Sem treinos</div>`;
+                        return;
+                    }
+                    const partes = slot.split(' - ');
+                    const hora = partes[0] || slot;
+                    const turma = partes.slice(1).join(' - ') || '';
+                    const isMT = turma.toLowerCase().includes('muay') || turma.toLowerCase().includes('thai') || turma.toLowerCase().includes('kickbox');
+                    const isKids = turma.toLowerCase().includes('kids');
+                    const accentColor = isMT ? '#f43f5e' : isKids ? '#f59e0b' : '#10b981';
+                    const tagLabel = isMT ? 'MUAY THAI' : isKids ? 'KIDS' : 'JIU-JITSU';
+                    html += `<div style="background:#1e293b; border:1px solid #334155; border-radius:14px; padding:12px 14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; border-left:3px solid ${accentColor}; ${isHoje ? 'box-shadow:0 2px 10px rgba(0,0,0,0.3);' : ''}">
+                        <div style="text-align:center; min-width:46px; flex-shrink:0; background:#0f172a; border-radius:8px; padding:6px 4px;">
+                            <div style="font-size:0.95rem; font-weight:800; color:white; line-height:1; letter-spacing:-0.5px;">${hora}</div>
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:0.82rem; font-weight:700; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${turma || slot}</div>
+                            <span style="font-size:0.52rem; color:${accentColor}; font-weight:800; letter-spacing:0.6px;">${tagLabel}</span>
+                        </div>
                     </div>`;
                 });
                 html += `</div>`;
@@ -5902,17 +5922,21 @@ const loja = {
         grid.innerHTML = prods.map(p => {
             const totalEstoque = (p.variacoes || []).reduce((s, v) => s + (v.estoque || 0), 0);
             const esgotado = (p.variacoes || []).length > 0 && totalEstoque === 0;
+            const borderColor = p.destaque ? '#f59e0b44' : '#2d3f55';
             return `
-                <div onclick="loja.abrirProduto('${p.id}')" style="background:#1e293b; border:1px solid ${p.destaque ? '#f59e0b55' : '#334155'}; border-radius:12px; overflow:hidden; cursor:pointer; position:relative; ${esgotado ? 'opacity:0.65;' : ''}">
-                    ${p.destaque ? '<div style="position:absolute; top:6px; left:6px; z-index:2; background:#f59e0b; color:#000; border-radius:6px; padding:2px 7px; font-size:0.48rem; font-weight:800; letter-spacing:0.5px;">⭐ DESTAQUE</div>' : ''}
-                    ${esgotado ? '<div style="position:absolute; top:6px; right:6px; z-index:2; background:#ef4444; color:white; border-radius:6px; padding:2px 7px; font-size:0.48rem; font-weight:800;">ESGOTADO</div>' : ''}
+                <div onclick="loja.abrirProduto('${p.id}')" style="background:#1e293b; border:1px solid ${borderColor}; border-radius:18px; overflow:hidden; cursor:pointer; position:relative; box-shadow:0 4px 16px rgba(0,0,0,0.35); transition:transform 0.15s; ${esgotado ? 'opacity:0.6;' : ''}">
+                    ${p.destaque ? '<div style="position:absolute; top:8px; left:8px; z-index:2; background:#f59e0b; color:#000; border-radius:8px; padding:3px 8px; font-size:0.48rem; font-weight:800; letter-spacing:0.5px;">⭐ DESTAQUE</div>' : ''}
+                    ${esgotado ? '<div style="position:absolute; top:8px; right:8px; z-index:2; background:#ef4444; color:white; border-radius:8px; padding:3px 8px; font-size:0.48rem; font-weight:800;">ESGOTADO</div>' : ''}
                     <div style="aspect-ratio:1; background:#0f172a; overflow:hidden; display:flex; align-items:center; justify-content:center;">
                         ${p.foto ? `<img src="${p.foto}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=font-size:3rem>🛒</span>'">` : '<span style="font-size:3rem;">🛒</span>'}
                     </div>
-                    <div style="padding:10px;">
-                        <div style="font-size:0.55rem; color:#64748b; font-weight:700; margin-bottom:3px;">${(p.categoria || 'produto').toUpperCase()}</div>
-                        <div style="font-size:0.78rem; font-weight:800; color:white; margin-bottom:6px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${p.nome}</div>
-                        <div style="font-size:0.88rem; font-weight:800; color:#10b981;">R$ ${(p.preco || 0).toFixed(2).replace('.', ',')}</div>
+                    <div style="padding:11px 12px 13px;">
+                        <div style="display:inline-block; font-size:0.48rem; color:#64748b; font-weight:800; letter-spacing:0.8px; background:#0f172a; border-radius:6px; padding:2px 7px; margin-bottom:6px; text-transform:uppercase;">${p.categoria || 'produto'}</div>
+                        <div style="font-size:0.78rem; font-weight:800; color:#f1f5f9; margin-bottom:8px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${p.nome}</div>
+                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <div style="font-size:0.9rem; font-weight:800; color:#10b981;">R$ ${(p.preco || 0).toFixed(2).replace('.', ',')}</div>
+                            <div style="background:#0f172a; border-radius:8px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; color:#3b82f6; font-size:0.75rem;">›</div>
+                        </div>
                     </div>
                 </div>`;
         }).join('');

@@ -365,15 +365,21 @@ const GaditasFiltros = {
         const mainContent = document.getElementById('screen-dashboard');
         tab = document.createElement('div'); tab.id = 'tab-financeiro'; tab.className = 'tab-content hidden'; tab.style = 'padding: 15px; padding-bottom: 120px;';
         tab.innerHTML = `
-            <div class="card" style="text-align: center; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(59, 130, 246, 0.2);">
-                <div style="font-size: 2.2rem; color: #3b82f6; margin-bottom: 8px;"><i class="fas fa-wallet"></i></div>
-                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #f8fafc;">MEU FINANCEIRO</h3>
-                <p style="font-size: 0.75rem; color: #94a3b8; margin: 4px 0 0 0;">Gaditas Academy & Lotta</p>
+            <div style="padding: 4px 0 18px;">
+                <div style="font-size: 0.55rem; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 3px;">Gaditas Matriz</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.3px;">
+                    <i class="fas fa-wallet" style="color: #3b82f6; margin-right: 8px; font-size: 0.9rem;"></i>MEU FINANCEIRO
+                </div>
             </div>
-            <div class="card">
-                <div class="card-title"><i class="fas fa-receipt" style="color:#3b82f6;"></i> Situação Atual</div>
-                <div id="financeiro-loading" style="color: #64748b; text-align: center; font-size: 0.85rem; padding: 15px;"><i class="fas fa-spinner fa-spin"></i> Consultando cobranças no Asaas...</div>
-                <div id="financeiro-conteudo" class="hidden" style="max-height: 500px; overflow-y: auto;"></div>
+            <div style="background:#1e293b; border:1px solid #2d3f55; border-radius:20px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.4); margin-bottom:14px;">
+                <div style="height:3px; background:linear-gradient(90deg,#3b82f6,#8b5cf6);"></div>
+                <div style="padding:16px;">
+                    <div style="font-size:0.58rem; color:#64748b; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; margin-bottom:12px;">SITUAÇÃO FINANCEIRA</div>
+                    <div id="financeiro-loading" style="color:#64748b; text-align:center; font-size:0.82rem; padding:20px 0;">
+                        <i class="fas fa-spinner fa-spin" style="display:block; font-size:1.4rem; color:#3b82f6; margin-bottom:8px;"></i>Consultando cobranças...
+                    </div>
+                    <div id="financeiro-conteudo" class="hidden"></div>
+                </div>
             </div>
         `;
         mainContent.appendChild(tab); return tab;
@@ -441,14 +447,23 @@ const GaditasFiltros = {
 
             if (!dadosCobrancas.data || dadosCobrancas.data.length === 0) {
                 this.statusBloqueado = false;
-                conteudo.innerHTML = `<div style="text-align: center; padding: 15px; background: #064e3b; border: 1px solid #10b981; border-radius: 12px;"><h4 style="margin:0; color:#fff; font-size:0.95rem;">MENSALIDADE EM DIA!</h4></div>`;
+                conteudo.innerHTML = `
+                    <div style="text-align:center; padding:24px 16px; background:linear-gradient(135deg,#064e3b,#065f46); border:1px solid #10b981; border-radius:16px; margin-bottom:12px;">
+                        <div style="font-size:2.2rem; margin-bottom:10px;">✅</div>
+                        <div style="font-size:0.55rem; color:#34d399; font-weight:800; letter-spacing:1.2px; margin-bottom:6px;">SITUAÇÃO FINANCEIRA</div>
+                        <div style="font-size:1.1rem; font-weight:800; color:white;">MENSALIDADE EM DIA!</div>
+                        <div style="font-size:0.72rem; color:#6ee7b7; margin-top:6px; font-weight:500;">Continue assim, campeão! 💪</div>
+                    </div>
+                    <button onclick="GaditasFiltros.carregarHistoricoPagamentos()" style="width:100%; padding:13px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:14px; font-size:0.75rem; font-weight:700; cursor:pointer; letter-spacing:0.3px;">
+                        <i class="fas fa-history" style="margin-right:6px;"></i>VER HISTÓRICO DE PAGAMENTOS
+                    </button>`;
                 return;
             }
 
             dadosCobrancas.data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
 
             this.cobrancasAbertas = dadosCobrancas.data;
-            let htmlFaturas = `<p style="font-size: 0.8rem; color: #94a3b8; font-weight: 600; margin-bottom: 12px;">Foram encontradas ${this.cobrancasAbertas.length} faturas:</p>`;
+            let htmlFaturas = `<div style="font-size:0.55rem; color:#f59e0b; font-weight:800; letter-spacing:0.8px; margin-bottom:14px; display:flex; align-items:center; gap:6px;"><i class="fas fa-exclamation-triangle"></i>${this.cobrancasAbertas.length} FATURA(S) PENDENTE(S)</div>`;
             
             const dataHoje = new Date(); dataHoje.setHours(0,0,0,0);
             let algumBloqueioAtivo = false;
@@ -476,22 +491,31 @@ const GaditasFiltros = {
                 }
 
                 htmlFaturas += `
-                    <div style="background: ${corFundo}; border: 1px solid ${corBorda}; padding: 15px; border-radius: 14px; margin-bottom: 16px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <div><span style="font-size: 0.65rem; font-weight: 800; color: ${corTextoTag};">${textoTag}</span><h4 style="margin: 2px 0 0 0; font-size: 1.2rem; color: #fff;">${valorFormatado}</h4></div>
-                            <div style="font-size: 0.70rem; font-weight: 600; color: #94a3b8; text-align: right;">Vencimento:<br><span style="color:#fff; font-weight:700;">${dataVencimento}</span></div>
+                    <div style="background:${corFundo}; border:1px solid ${corBorda}; border-radius:20px; overflow:hidden; margin-bottom:14px; box-shadow:0 4px 16px rgba(0,0,0,0.4);">
+                        <div style="padding:12px 16px 10px; border-bottom:1px solid ${corBorda}44; display:flex; align-items:center; justify-content:space-between;">
+                            <span style="font-size:0.52rem; font-weight:800; color:${corTextoTag}; letter-spacing:0.8px;">${textoTag}</span>
+                            <span style="font-size:0.55rem; font-weight:700; color:#94a3b8;">VENCE ${dataVencimento}</span>
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button onclick="GaditasFiltros.gerarPixReal('${cobranca.id}')" style="flex: 1; background: #10b981; border: none; padding: 10px; color: white; font-weight: 700; border-radius: 8px; font-size: 0.7rem; cursor: pointer;">PIX</button>
-                            <button onclick="GaditasFiltros.abrirFormularioCartaoReal('${cobranca.id}')" style="flex: 1; background: #3b82f6; border: none; padding: 10px; color: white; font-weight: 700; border-radius: 8px; font-size: 0.7rem; cursor: pointer;">CARTÃO</button>
+                        <div style="padding:16px 16px 14px; display:flex; justify-content:space-between; align-items:flex-end;">
+                            <div>
+                                <div style="font-size:0.55rem; color:#64748b; font-weight:700; margin-bottom:4px; letter-spacing:0.5px;">VALOR DA FATURA</div>
+                                <div style="font-size:1.9rem; font-weight:800; color:white; letter-spacing:-1px; line-height:1;">${valorFormatado}</div>
+                            </div>
+                            <div style="background:rgba(0,0,0,0.2); border-radius:10px; padding:6px 10px; text-align:center;">
+                                <i class="fas fa-file-invoice-dollar" style="color:${corTextoTag}; font-size:1.2rem;"></i>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; padding:0 14px 14px;">
+                            <button onclick="GaditasFiltros.gerarPixReal('${cobranca.id}')" style="flex:1; background:#10b981; border:none; padding:12px; color:white; font-weight:800; border-radius:12px; font-size:0.72rem; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-qrcode" style="margin-right:5px;"></i>PIX</button>
+                            <button onclick="GaditasFiltros.abrirFormularioCartaoReal('${cobranca.id}')" style="flex:1; background:#3b82f6; border:none; padding:12px; color:white; font-weight:800; border-radius:12px; font-size:0.72rem; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-credit-card" style="margin-right:5px;"></i>CARTÃO</button>
                         </div>
                     </div>`;
             });
             
             this.statusBloqueado = algumBloqueioAtivo;
             htmlFaturas += `
-                <button onclick="GaditasFiltros.carregarHistoricoPagamentos()" style="width:100%; margin-top:8px; padding:11px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.75rem; font-weight:700; cursor:pointer;">
-                    📋 VER HISTÓRICO DE PAGAMENTOS REALIZADOS
+                <button onclick="GaditasFiltros.carregarHistoricoPagamentos()" style="width:100%; padding:13px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:14px; font-size:0.75rem; font-weight:700; cursor:pointer; letter-spacing:0.3px;">
+                    <i class="fas fa-history" style="margin-right:6px;"></i>VER HISTÓRICO DE PAGAMENTOS
                 </button>`;
             conteudo.innerHTML = htmlFaturas;
         } catch (error) { console.error(error); }
@@ -532,14 +556,17 @@ const GaditasFiltros = {
                 const data = dataBruta ? dataBruta.split('-').reverse().join('/') : '—';
                 const desc = p.description || 'Mensalidade';
                 html += `
-                    <div style="background:#064e3b22; border:1px solid #10b98144; padding:12px 14px; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-                        <div style="flex:1; min-width:0;">
-                            <span style="font-size:0.65rem; color:#34d399; font-weight:800; display:block;">✅ PAGO</span>
-                            <span style="font-size:0.75rem; color:#e2e8f0; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${desc}</span>
+                    <div style="background:#0f172a; border:1px solid #1e3a2e; border-radius:14px; padding:13px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                        <div style="width:34px; height:34px; background:#064e3b; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <i class="fas fa-check" style="color:#10b981; font-size:0.8rem;"></i>
                         </div>
-                        <div style="text-align:right; flex-shrink:0; margin-left:12px;">
-                            <span style="font-size:0.9rem; font-weight:800; color:#10b981; display:block;">${valor}</span>
-                            <span style="font-size:0.65rem; color:#64748b;">${data}</span>
+                        <div style="flex:1; min-width:0;">
+                            <span style="font-size:0.72rem; color:#e2e8f0; font-weight:700; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${desc}</span>
+                            <span style="font-size:0.58rem; color:#475569; font-weight:600;">${data}</span>
+                        </div>
+                        <div style="text-align:right; flex-shrink:0;">
+                            <span style="font-size:0.88rem; font-weight:800; color:#10b981; display:block;">${valor}</span>
+                            <span style="font-size:0.5rem; color:#34d399; font-weight:800; letter-spacing:0.5px;">PAGO</span>
                         </div>
                     </div>`;
             });

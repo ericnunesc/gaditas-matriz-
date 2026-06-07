@@ -83,6 +83,78 @@ const GaditasPainelAdm = {
                 <div id="cobranca-resultado" style="margin-top:12px;"></div>
             </div>
 
+            <!-- ══ MUDAR PLANO ══ -->
+            <div class="card" style="background:#1e293b; border:1px solid #8b5cf644; padding:15px; border-radius:12px; margin-top:4px;">
+                <div style="font-size:0.7rem; font-weight:800; color:#a78bfa; margin-bottom:14px; letter-spacing:0.5px;">
+                    <i class="fas fa-exchange-alt"></i> MUDAR PLANO DO ALUNO
+                </div>
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">ALUNO:</small>
+                <input type="text" id="mudar-plano-busca" placeholder="🔍 Digite o nome do aluno..."
+                    oninput="GaditasPainelAdm.buscarAlunoMudarPlano()"
+                    style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;"/>
+                <div id="mudar-plano-lista" style="margin-bottom:6px;"></div>
+                <div id="mudar-plano-aluno-selecionado" class="hidden" style="background:#0f172a; border:1px solid #8b5cf6; border-radius:8px; padding:10px 12px; margin-bottom:12px;"></div>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">NOVO PLANO:</small>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px;">
+                    <button id="mp-btn-mensal"     onclick="GaditasPainelAdm._selecionarMudarPlano('mensal')"     style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 MENSAL</button>
+                    <button id="mp-btn-trimestral" onclick="GaditasPainelAdm._selecionarMudarPlano('trimestral')" style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 TRIMESTRAL</button>
+                    <button id="mp-btn-semestral"  onclick="GaditasPainelAdm._selecionarMudarPlano('semestral')"  style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 SEMESTRAL</button>
+                    <button id="mp-btn-anual"      onclick="GaditasPainelAdm._selecionarMudarPlano('anual')"      style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 ANUAL</button>
+                    <button id="mp-btn-livre"      onclick="GaditasPainelAdm._selecionarMudarPlano('livre')"      style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">🔓 LIVRE</button>
+                    <button id="mp-btn-familia"    onclick="GaditasPainelAdm._selecionarMudarPlano('familia')"    style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">👨‍👩‍👧 FAMÍLIA</button>
+                </div>
+                <div style="display:flex; gap:10px; margin-bottom:14px;">
+                    <div style="flex:1;">
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">NOVO VALOR (R$/mês):</small>
+                        <input type="number" id="mudar-plano-valor" placeholder="0,00" step="0.01"
+                            style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #8b5cf6; color:white; border-radius:8px; outline:none; font-size:0.9rem; font-weight:700; box-sizing:border-box;"/>
+                    </div>
+                </div>
+                <button onclick="GaditasPainelAdm.confirmarMudancaPlano()"
+                    style="width:100%; padding:12px; background:#8b5cf6; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.82rem;">
+                    <i class="fas fa-exchange-alt"></i> SALVAR NOVO PLANO
+                </button>
+                <small style="color:#475569; font-size:0.58rem; display:block; margin-top:6px; line-height:1.4;">
+                    Atualiza apenas o plano no sistema. Para cancelar a assinatura antiga no Asaas, acesse o painel Asaas diretamente.
+                </small>
+                <div id="mudar-plano-resultado" style="margin-top:10px;"></div>
+            </div>
+
+            <!-- ══ VINCULAR DEPENDENTE (PLANO FAMÍLIA) ══ -->
+            <div class="card" style="background:#1e293b; border:1px solid #f43f5e44; padding:15px; border-radius:12px; margin-top:4px;">
+                <div style="font-size:0.7rem; font-weight:800; color:#f43f5e; margin-bottom:4px; letter-spacing:0.5px;">
+                    <i class="fas fa-users"></i> VINCULAR DEPENDENTE — PLANO FAMÍLIA
+                </div>
+                <small style="color:#64748b; font-size:0.58rem; display:block; margin-bottom:12px; line-height:1.4;">
+                    O dependente não verá o financeiro. O titular é o responsável pelo pagamento.
+                </small>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">TITULAR (quem paga):</small>
+                <input type="text" id="dep-busca-titular" placeholder="🔍 Nome do titular do plano..."
+                    oninput="GaditasPainelAdm.buscarTitularFamilia()"
+                    style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;"/>
+                <div id="dep-lista-titular" style="margin-bottom:6px;"></div>
+                <div id="dep-titular-selecionado" class="hidden" style="background:#0f172a; border:1px solid #10b981; border-radius:8px; padding:10px 12px; margin-bottom:12px;"></div>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">DEPENDENTE (quem treina junto):</small>
+                <input type="text" id="dep-busca-dependente" placeholder="🔍 Nome do dependente..."
+                    oninput="GaditasPainelAdm.buscarDependente()"
+                    style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;"/>
+                <div id="dep-lista-dependente" style="margin-bottom:6px;"></div>
+                <div id="dep-dependente-selecionado" class="hidden" style="background:#0f172a; border:1px solid #f43f5e; border-radius:8px; padding:10px 12px; margin-bottom:12px;"></div>
+
+                <button onclick="GaditasPainelAdm.vincularDependente()"
+                    style="width:100%; padding:12px; background:#f43f5e; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.82rem; margin-bottom:8px;">
+                    <i class="fas fa-link"></i> VINCULAR DEPENDENTE AO TITULAR
+                </button>
+                <button onclick="GaditasPainelAdm.desvincularDependente()"
+                    style="width:100%; padding:11px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.78rem;">
+                    <i class="fas fa-unlink"></i> DESVINCULAR (tornar independente)
+                </button>
+                <div id="dep-resultado" style="margin-top:10px;"></div>
+            </div>
+
             <!-- ══ CRIAR PLANO / ASSINATURA ══ -->
             <div class="card" style="background:#1e293b; border:1px solid #10b98144; padding:15px; border-radius:12px; margin-top:4px;">
                 <div style="font-size:0.7rem; font-weight:800; color:#10b981; margin-bottom:14px; letter-spacing:0.5px;">
@@ -417,6 +489,224 @@ const GaditasPainelAdm = {
         }
     },
     
+    // ══════════════════════════════════════════════════════════
+    // MUDAR PLANO
+    // ══════════════════════════════════════════════════════════
+
+    _alunoMudarPlano: null,
+    _novoPlanoKey: 'mensal',
+
+    _selecionarMudarPlano(tipo) {
+        this._novoPlanoKey = tipo;
+        const todos = ['mensal','trimestral','semestral','anual','livre','familia'];
+        todos.forEach(t => {
+            const btn = document.getElementById('mp-btn-' + t);
+            if (!btn) return;
+            btn.style.background = t === tipo ? '#8b5cf6' : '#0f172a';
+            btn.style.border = t === tipo ? 'none' : '1px solid #334155';
+            btn.style.color = t === tipo ? 'white' : '#94a3b8';
+        });
+        try {
+            academia.carregarConfiguracaoPlanos().then(planos => {
+                const p = planos[tipo];
+                if (p && p.valor > 0) {
+                    const inp = document.getElementById('mudar-plano-valor');
+                    if (inp) inp.value = p.valor.toFixed(2);
+                }
+            });
+        } catch(e) {}
+    },
+
+    async buscarAlunoMudarPlano() {
+        const termo = document.getElementById('mudar-plano-busca')?.value.trim().toLowerCase();
+        const lista = document.getElementById('mudar-plano-lista');
+        if (!lista || !termo || termo.length < 2) { if(lista) lista.innerHTML = ''; return; }
+        const snap = await db.collection('alunos').orderBy('nome').get();
+        const res = snap.docs.filter(d => d.data().nome.toLowerCase().includes(termo)).slice(0, 6);
+        lista.innerHTML = res.map(doc => {
+            const a = doc.data();
+            const planoLabel = a.plano ? `<span style="color:#a78bfa;font-size:0.58rem;">(${a.plano}${a.planoValor > 0 ? ' — R$ ' + a.planoValor.toFixed(2) : ''})</span>` : '<span style="color:#f59e0b;font-size:0.58rem;">(sem plano)</span>';
+            return `<div onclick="GaditasPainelAdm.selecionarAlunoMudarPlano('${doc.id}','${a.nome.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${a.plano||''}',${a.planoValor||0})"
+                style="background:#0f172a;border:1px solid #334155;padding:10px 12px;border-radius:8px;margin-bottom:5px;cursor:pointer;font-size:0.8rem;color:#e2e8f0;font-weight:600;"
+                onmouseover="this.style.borderColor='#8b5cf6'" onmouseout="this.style.borderColor='#334155'">
+                👤 ${a.nome.toUpperCase()} ${planoLabel}
+            </div>`;
+        }).join('');
+    },
+
+    selecionarAlunoMudarPlano(id, nome, planoAtual, valorAtual) {
+        this._alunoMudarPlano = { id, nome };
+        document.getElementById('mudar-plano-lista').innerHTML = '';
+        document.getElementById('mudar-plano-busca').value = '';
+        const div = document.getElementById('mudar-plano-aluno-selecionado');
+        div.classList.remove('hidden');
+        div.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:0.85rem;font-weight:800;color:white;">${nome.toUpperCase()}</div>
+                    <div style="font-size:0.62rem;color:#a78bfa;margin-top:2px;">Plano atual: ${planoAtual || '—'} ${valorAtual > 0 ? '(R$ ' + valorAtual.toFixed(2) + '/mês)' : ''}</div>
+                </div>
+                <button onclick="GaditasPainelAdm._limparMudarPlano()" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.9rem;font-weight:700;padding:4px 8px;">✕</button>
+            </div>`;
+        if (planoAtual) this._selecionarMudarPlano(planoAtual);
+        if (valorAtual > 0) { const inp = document.getElementById('mudar-plano-valor'); if(inp) inp.value = valorAtual.toFixed(2); }
+    },
+
+    _limparMudarPlano() {
+        this._alunoMudarPlano = null;
+        document.getElementById('mudar-plano-aluno-selecionado').classList.add('hidden');
+        document.getElementById('mudar-plano-aluno-selecionado').innerHTML = '';
+        document.getElementById('mudar-plano-busca').value = '';
+        document.getElementById('mudar-plano-lista').innerHTML = '';
+        document.getElementById('mudar-plano-resultado').innerHTML = '';
+        document.getElementById('mudar-plano-valor').value = '';
+    },
+
+    async confirmarMudancaPlano() {
+        if (!this._alunoMudarPlano) return alert('Selecione um aluno.');
+        const novoValor = parseFloat(document.getElementById('mudar-plano-valor')?.value);
+        const planoKey = this._novoPlanoKey;
+        const labelMap = { mensal:'Plano Mensal', trimestral:'Plano Trimestral', semestral:'Plano Semestral', anual:'Plano Anual', livre:'Plano Livre', familia:'Plano Família' };
+        const resultado = document.getElementById('mudar-plano-resultado');
+
+        if (isNaN(novoValor) || novoValor <= 0) return alert('Informe o valor do novo plano.');
+        if (!confirm(`Mudar plano de ${this._alunoMudarPlano.nome} para ${labelMap[planoKey]} — R$ ${novoValor.toFixed(2)}/mês?\n\nAtenção: isso atualiza apenas o sistema. Cancele a assinatura antiga no Asaas manualmente se necessário.`)) return;
+
+        try {
+            await db.collection('alunos').doc(this._alunoMudarPlano.id).update({
+                plano: planoKey,
+                planoLabel: labelMap[planoKey],
+                planoValor: novoValor,
+            });
+            resultado.innerHTML = `<div style="background:#064e3b;border:1px solid #10b981;border-radius:8px;padding:10px;font-size:0.78rem;color:#34d399;font-weight:700;margin-top:4px;">✅ Plano de ${this._alunoMudarPlano.nome} atualizado para ${labelMap[planoKey]} — R$ ${novoValor.toFixed(2)}/mês</div>`;
+            this._limparMudarPlano();
+        } catch(e) { resultado.innerHTML = `<div style="background:#1c0a00;border:1px solid #f43f5e;border-radius:8px;padding:10px;font-size:0.78rem;color:#f43f5e;font-weight:700;">❌ ${e.message}</div>`; }
+    },
+
+    // ══════════════════════════════════════════════════════════
+    // VINCULAR DEPENDENTE — PLANO FAMÍLIA
+    // ══════════════════════════════════════════════════════════
+
+    _titular: null,
+    _dependente: null,
+
+    async buscarTitularFamilia() {
+        const termo = document.getElementById('dep-busca-titular')?.value.trim().toLowerCase();
+        const lista = document.getElementById('dep-lista-titular');
+        if (!lista || !termo || termo.length < 2) { if(lista) lista.innerHTML = ''; return; }
+        const snap = await db.collection('alunos').orderBy('nome').get();
+        const res = snap.docs.filter(d => d.data().nome.toLowerCase().includes(termo)).slice(0, 6);
+        lista.innerHTML = res.map(doc => {
+            const a = doc.data();
+            return `<div onclick="GaditasPainelAdm.selecionarTitular('${doc.id}','${a.nome.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"
+                style="background:#0f172a;border:1px solid #334155;padding:10px 12px;border-radius:8px;margin-bottom:5px;cursor:pointer;font-size:0.8rem;color:#e2e8f0;font-weight:600;"
+                onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='#334155'">
+                👤 ${a.nome.toUpperCase()} <span style="color:#64748b;font-size:0.58rem;">(${a.plano || 'sem plano'})</span>
+            </div>`;
+        }).join('');
+    },
+
+    selecionarTitular(id, nome) {
+        this._titular = { id, nome };
+        document.getElementById('dep-lista-titular').innerHTML = '';
+        document.getElementById('dep-busca-titular').value = '';
+        const div = document.getElementById('dep-titular-selecionado');
+        div.classList.remove('hidden');
+        div.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:0.7rem;font-weight:800;color:#10b981;">💳 TITULAR (quem paga)</div>
+                    <div style="font-size:0.85rem;font-weight:800;color:white;margin-top:2px;">${nome.toUpperCase()}</div>
+                </div>
+                <button onclick="GaditasPainelAdm._limparTitular()" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.9rem;padding:4px 8px;">✕</button>
+            </div>`;
+    },
+
+    _limparTitular() {
+        this._titular = null;
+        document.getElementById('dep-titular-selecionado').classList.add('hidden');
+        document.getElementById('dep-titular-selecionado').innerHTML = '';
+        document.getElementById('dep-busca-titular').value = '';
+        document.getElementById('dep-lista-titular').innerHTML = '';
+    },
+
+    async buscarDependente() {
+        const termo = document.getElementById('dep-busca-dependente')?.value.trim().toLowerCase();
+        const lista = document.getElementById('dep-lista-dependente');
+        if (!lista || !termo || termo.length < 2) { if(lista) lista.innerHTML = ''; return; }
+        const snap = await db.collection('alunos').orderBy('nome').get();
+        const res = snap.docs.filter(d => d.data().nome.toLowerCase().includes(termo)).slice(0, 6);
+        lista.innerHTML = res.map(doc => {
+            const a = doc.data();
+            const vinculo = a.responsavelId ? `<span style="color:#f59e0b;font-size:0.58rem;">(já vinculado)</span>` : '';
+            return `<div onclick="GaditasPainelAdm.selecionarDependente('${doc.id}','${a.nome.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${a.responsavelId||''}')"
+                style="background:#0f172a;border:1px solid #334155;padding:10px 12px;border-radius:8px;margin-bottom:5px;cursor:pointer;font-size:0.8rem;color:#e2e8f0;font-weight:600;"
+                onmouseover="this.style.borderColor='#f43f5e'" onmouseout="this.style.borderColor='#334155'">
+                👤 ${a.nome.toUpperCase()} ${vinculo}
+            </div>`;
+        }).join('');
+    },
+
+    selecionarDependente(id, nome, responsavelIdAtual) {
+        this._dependente = { id, nome };
+        document.getElementById('dep-lista-dependente').innerHTML = '';
+        document.getElementById('dep-busca-dependente').value = '';
+        const div = document.getElementById('dep-dependente-selecionado');
+        div.classList.remove('hidden');
+        div.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:0.7rem;font-weight:800;color:#f43f5e;">👤 DEPENDENTE</div>
+                    <div style="font-size:0.85rem;font-weight:800;color:white;margin-top:2px;">${nome.toUpperCase()}</div>
+                    ${responsavelIdAtual ? '<div style="font-size:0.58rem;color:#f59e0b;margin-top:2px;">⚠️ Já possui vínculo — será substituído</div>' : ''}
+                </div>
+                <button onclick="GaditasPainelAdm._limparDependente()" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.9rem;padding:4px 8px;">✕</button>
+            </div>`;
+    },
+
+    _limparDependente() {
+        this._dependente = null;
+        document.getElementById('dep-dependente-selecionado').classList.add('hidden');
+        document.getElementById('dep-dependente-selecionado').innerHTML = '';
+        document.getElementById('dep-busca-dependente').value = '';
+        document.getElementById('dep-lista-dependente').innerHTML = '';
+    },
+
+    async vincularDependente() {
+        const resultado = document.getElementById('dep-resultado');
+        if (!this._titular) return alert('Selecione o titular.');
+        if (!this._dependente) return alert('Selecione o dependente.');
+        if (this._titular.id === this._dependente.id) return alert('Titular e dependente não podem ser o mesmo aluno.');
+
+        if (!confirm(`Vincular ${this._dependente.nome} como dependente de ${this._titular.nome}?\n\n• O dependente NÃO verá a aba Financeiro\n• O pagamento fica com o titular`)) return;
+
+        try {
+            await db.collection('alunos').doc(this._dependente.id).update({
+                responsavelId:    this._titular.id,
+                responsavelNome:  this._titular.nome,
+                plano:            'familia',
+                planoLabel:       'Plano Família',
+            });
+            resultado.innerHTML = `<div style="background:#064e3b;border:1px solid #10b981;border-radius:8px;padding:10px;font-size:0.78rem;color:#34d399;font-weight:700;">✅ ${this._dependente.nome} vinculado a ${this._titular.nome}!</div>`;
+            this._limparTitular();
+            this._limparDependente();
+        } catch(e) { resultado.innerHTML = `<div style="background:#1c0a00;border:1px solid #f43f5e;border-radius:8px;padding:10px;font-size:0.78rem;color:#f43f5e;font-weight:700;">❌ ${e.message}</div>`; }
+    },
+
+    async desvincularDependente() {
+        const resultado = document.getElementById('dep-resultado');
+        if (!this._dependente) return alert('Selecione o dependente a desvincular.');
+        if (!confirm(`Desvincular ${this._dependente.nome}?\n\nEle voltará a ser um aluno independente e verá o Financeiro normalmente.`)) return;
+        try {
+            await db.collection('alunos').doc(this._dependente.id).update({
+                responsavelId:   firebase.firestore.FieldValue.delete(),
+                responsavelNome: firebase.firestore.FieldValue.delete(),
+            });
+            resultado.innerHTML = `<div style="background:#064e3b;border:1px solid #10b981;border-radius:8px;padding:10px;font-size:0.78rem;color:#34d399;font-weight:700;">✅ ${this._dependente.nome} desvinculado com sucesso!</div>`;
+            this._limparDependente();
+        } catch(e) { resultado.innerHTML = `<div style="background:#1c0a00;border:1px solid #f43f5e;border-radius:8px;padding:10px;font-size:0.78rem;color:#f43f5e;font-weight:700;">❌ ${e.message}</div>`; }
+    },
+
     // ══════════════════════════════════════════════════════════
     // CRIAR PLANO / ASSINATURA RECORRENTE
     // ══════════════════════════════════════════════════════════

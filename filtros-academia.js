@@ -40,12 +40,18 @@ const GaditasFiltros = {
                         if (btnFin) { btnFin.classList.add('active'); btnFin.style.color = "#3b82f6"; }
                         GaditasPainelAdm.carregar();
                     } else {
-                        // Aluno vê suas faturas
+                        // Aluno vê suas faturas (ou card de dependente)
                         let tabFin = document.getElementById('tab-financeiro');
                         if (!tabFin) tabFin = GaditasFiltros.criarTelaFinanceiraMovel();
                         tabFin.classList.remove('hidden');
                         if (btnFin) { btnFin.classList.add('active'); btnFin.style.color = "#3b82f6"; }
-                        GaditasFiltros.carregarDadosFinanceirosReal();
+
+                        // Dependente de plano família — não tem financeiro próprio
+                        if (auth.currentUser?.responsavelId) {
+                            GaditasFiltros.renderTelaFinanceiroDependente();
+                        } else {
+                            GaditasFiltros.carregarDadosFinanceirosReal();
+                        }
                     }
                 } else {
                     const tabFin = document.getElementById('tab-financeiro');
@@ -358,6 +364,34 @@ const GaditasFiltros = {
             alert("Dados salvos com sucesso no teu perfil! OSS.");
             document.getElementById('home-perfil-container').classList.add('hidden');
         } catch(e) { alert("Erro ao gravar alterações."); }
+    },
+
+    async renderTelaFinanceiroDependente() {
+        const conteudo = document.getElementById('financeiro-conteudo');
+        if (!conteudo) return;
+        if (document.getElementById('financeiro-loading')) document.getElementById('financeiro-loading').classList.add('hidden');
+
+        let nomeResponsavel = 'Titular do plano';
+        try {
+            const doc = await db.collection('alunos').doc(auth.currentUser.responsavelId).get();
+            if (doc.exists) nomeResponsavel = doc.data().nome || nomeResponsavel;
+        } catch(e) {}
+
+        conteudo.classList.remove('hidden');
+        conteudo.innerHTML = `
+            <div style="text-align:center; padding:24px 16px; background:linear-gradient(135deg,#0c1a3a,#1e293b); border:1px solid #3b82f655; border-radius:16px;">
+                <div style="font-size:2rem; margin-bottom:10px;">👨‍👩‍👧‍👦</div>
+                <div style="font-size:0.55rem; color:#60a5fa; font-weight:800; letter-spacing:1.2px; margin-bottom:6px;">PLANO FAMÍLIA</div>
+                <div style="font-size:0.95rem; font-weight:800; color:white; margin-bottom:8px;">Pagamento Gerenciado pelo Titular</div>
+                <div style="background:#0f172a; border-radius:10px; padding:10px 14px; margin:10px 0; text-align:left;">
+                    <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:3px;">TITULAR DO PLANO:</div>
+                    <div style="font-size:0.85rem; font-weight:800; color:#60a5fa;">${nomeResponsavel.toUpperCase()}</div>
+                </div>
+                <div style="font-size:0.68rem; color:#475569; line-height:1.6;">
+                    Você faz parte de um plano família.<br>
+                    O pagamento é de responsabilidade do titular.
+                </div>
+            </div>`;
     },
 
     criarTelaFinanceiraMovel() {

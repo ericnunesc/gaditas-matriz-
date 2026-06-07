@@ -623,24 +623,48 @@ const GaditasPainelAdm = {
         const dependentesAtuais = snap.docs.map(d => ({ id: d.id, nome: d.data().nome }));
 
         const listaDeps = dependentesAtuais.length
-            ? `<div style="margin-top:10px; padding-top:10px; border-top:1px solid #334155;">
-                <div style="font-size:0.58rem; color:#64748b; font-weight:800; margin-bottom:6px; letter-spacing:0.5px;">DEPENDENTES VINCULADOS (${dependentesAtuais.length}):</div>
-                ${dependentesAtuais.map(dep => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; border-radius:8px; padding:8px 10px; margin-bottom:5px;">
-                        <span style="font-size:0.78rem; font-weight:700; color:#e2e8f0;">👤 ${dep.nome.toUpperCase()}</span>
-                        <button onclick="GaditasPainelAdm._removerVinculoLista('${dep.id}','${dep.nome.replace(/'/g,"\\'")}')"
-                            style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;font-weight:700;padding:2px 6px;">✕ Remover</button>
-                    </div>`).join('')}
-               </div>`
-            : `<div style="margin-top:8px; font-size:0.65rem; color:#475569; font-style:italic;">Nenhum dependente vinculado ainda.</div>`;
+            ? dependentesAtuais.map((dep, i) => `
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;
+                    background:#0f172a; border:1px solid #334155; border-left:3px solid #f43f5e;
+                    border-radius:12px; padding:10px 12px; margin-top:8px;">
+                    <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
+                        <div style="background:#f43f5e22; border-radius:50%; width:30px; height:30px; flex-shrink:0;
+                            display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800; color:#f43f5e;">
+                            ${i + 1}
+                        </div>
+                        <div style="min-width:0;">
+                            <div style="font-size:0.8rem; font-weight:800; color:#f1f5f9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                ${dep.nome.toUpperCase()}
+                            </div>
+                            <div style="font-size:0.55rem; color:#64748b; font-weight:700; margin-top:1px;">DEPENDENTE</div>
+                        </div>
+                    </div>
+                    <button onclick="GaditasPainelAdm._removerVinculoLista('${dep.id}','${dep.nome.replace(/'/g,"\\'")}')"
+                        style="background:#2a0808; border:1px solid #f43f5e44; color:#f43f5e; cursor:pointer;
+                        font-size:0.6rem; font-weight:800; padding:5px 10px; border-radius:8px; white-space:nowrap; flex-shrink:0;">
+                        ✕ REMOVER
+                    </button>
+                </div>`).join('')
+            : `<div style="background:#0f172a; border:1px dashed #334155; border-radius:12px; padding:14px;
+                margin-top:8px; text-align:center; color:#475569; font-size:0.7rem; font-style:italic;">
+                Nenhum dependente vinculado ainda.<br>
+                <span style="font-size:0.62rem; color:#334155;">Busque abaixo para adicionar.</span>
+               </div>`;
 
         div.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                 <div>
-                    <div style="font-size:0.7rem;font-weight:800;color:#10b981;">💳 TITULAR (quem paga)</div>
-                    <div style="font-size:0.85rem;font-weight:800;color:white;margin-top:2px;">${nome.toUpperCase()}</div>
+                    <div style="font-size:0.6rem; font-weight:800; color:#10b981; letter-spacing:0.8px; margin-bottom:2px;">💳 TITULAR — QUEM PAGA</div>
+                    <div style="font-size:0.95rem; font-weight:800; color:white;">${nome.toUpperCase()}</div>
                 </div>
-                <button onclick="GaditasPainelAdm._limparTitular()" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.9rem;padding:4px 8px;">✕</button>
+                <button onclick="GaditasPainelAdm._limparTitular()" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.9rem;padding:4px 8px; flex-shrink:0;">✕</button>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-top:8px; margin-bottom:2px;">
+                <div style="flex:1; height:1px; background:#334155;"></div>
+                <span style="font-size:0.55rem; font-weight:800; color:${dependentesAtuais.length ? '#f43f5e' : '#475569'}; letter-spacing:0.8px; white-space:nowrap;">
+                    👨‍👩‍👧 ${dependentesAtuais.length} DEPENDENTE${dependentesAtuais.length !== 1 ? 'S' : ''} VINCULADO${dependentesAtuais.length !== 1 ? 'S' : ''}
+                </span>
+                <div style="flex:1; height:1px; background:#334155;"></div>
             </div>
             ${listaDeps}`;
     },

@@ -606,12 +606,34 @@ const GaditasPainelAdm = {
         }).join('');
     },
 
-    selecionarTitular(id, nome) {
+    async selecionarTitular(id, nome) {
         this._titular = { id, nome };
         document.getElementById('dep-lista-titular').innerHTML = '';
         document.getElementById('dep-busca-titular').value = '';
+        await this._renderTitularCard();
+    },
+
+    async _renderTitularCard() {
+        const { id, nome } = this._titular;
         const div = document.getElementById('dep-titular-selecionado');
         div.classList.remove('hidden');
+
+        // Busca dependentes já vinculados
+        const snap = await db.collection('alunos').where('responsavelId', '==', id).get();
+        const dependentesAtuais = snap.docs.map(d => ({ id: d.id, nome: d.data().nome }));
+
+        const listaDeps = dependentesAtuais.length
+            ? `<div style="margin-top:10px; padding-top:10px; border-top:1px solid #334155;">
+                <div style="font-size:0.58rem; color:#64748b; font-weight:800; margin-bottom:6px; letter-spacing:0.5px;">DEPENDENTES VINCULADOS (${dependentesAtuais.length}):</div>
+                ${dependentesAtuais.map(dep => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; border-radius:8px; padding:8px 10px; margin-bottom:5px;">
+                        <span style="font-size:0.78rem; font-weight:700; color:#e2e8f0;">👤 ${dep.nome.toUpperCase()}</span>
+                        <button onclick="GaditasPainelAdm._removerVinculoLista('${dep.id}','${dep.nome.replace(/'/g,"\\'")}')"
+                            style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;font-weight:700;padding:2px 6px;">✕ Remover</button>
+                    </div>`).join('')}
+               </div>`
+            : `<div style="margin-top:8px; font-size:0.65rem; color:#475569; font-style:italic;">Nenhum dependente vinculado ainda.</div>`;
+
         div.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <div>
@@ -619,7 +641,22 @@ const GaditasPainelAdm = {
                     <div style="font-size:0.85rem;font-weight:800;color:white;margin-top:2px;">${nome.toUpperCase()}</div>
                 </div>
                 <button onclick="GaditasPainelAdm._limparTitular()" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.9rem;padding:4px 8px;">✕</button>
-            </div>`;
+            </div>
+            ${listaDeps}`;
+    },
+
+    async _removerVinculoLista(depId, depNome) {
+        if (!confirm(`Remover vínculo de ${depNome}?`)) return;
+        try {
+            await db.collection('alunos').doc(depId).update({
+                responsavelId:   firebase.firestore.FieldValue.delete(),
+                responsavelNome: firebase.firestore.FieldValue.delete(),
+            });
+            // Atualiza o card do titular sem precisar reselecionar
+            await this._renderTitularCard();
+            document.getElementById('dep-resultado').innerHTML =
+                `<div style="background:#064e3b;border:1px solid #10b981;border-radius:8px;padding:8px 10px;font-size:0.75rem;color:#34d399;font-weight:700;">✅ ${depNome} desvinculado.</div>`;
+        } catch(e) { alert('Erro: ' + e.message); }
     },
 
     _limparTitular() {
@@ -687,15 +724,17 @@ const GaditasPainelAdm = {
                 plano:            'familia',
                 planoLabel:       'Plano Família',
             });
-            resultado.innerHTML = `<div style="background:#064e3b;border:1px solid #10b981;border-radius:8px;padding:10px;font-size:0.78rem;color:#34d399;font-weight:700;">✅ ${this._dependente.nome} vinculado a ${this._titular.nome}!</div>`;
-            this._limparTitular();
+            resultado.innerHTML = `<div style="background:#064e3b;border:1px solid #10b981;border-radius:8px;padding:10px;font-size:0.78rem;color:#34d399;font-weight:700;">✅ ${this._dependente.nome} vinculado! Adicione mais dependentes abaixo.</div>`;
+            // Limpa só o dependente — titular fica selecionado para adicionar mais
             this._limparDependente();
+            // Atualiza a lista de dependentes do titular
+            await this._renderTitularCard();
         } catch(e) { resultado.innerHTML = `<div style="background:#1c0a00;border:1px solid #f43f5e;border-radius:8px;padding:10px;font-size:0.78rem;color:#f43f5e;font-weight:700;">❌ ${e.message}</div>`; }
     },
 
     async desvincularDependente() {
         const resultado = document.getElementById('dep-resultado');
-        if (!this._dependente) return alert('Selecione o dependente a desvincular.');
+        if (!this._dependente) return alert('Selecione o dependente a desvincular na lista acima.');
         if (!confirm(`Desvincular ${this._dependente.nome}?\n\nEle voltará a ser um aluno independente e verá o Financeiro normalmente.`)) return;
         try {
             await db.collection('alunos').doc(this._dependente.id).update({
@@ -704,6 +743,7 @@ const GaditasPainelAdm = {
             });
             resultado.innerHTML = `<div style="background:#064e3b;border:1px solid #10b981;border-radius:8px;padding:10px;font-size:0.78rem;color:#34d399;font-weight:700;">✅ ${this._dependente.nome} desvinculado com sucesso!</div>`;
             this._limparDependente();
+            if (this._titular) await this._renderTitularCard();
         } catch(e) { resultado.innerHTML = `<div style="background:#1c0a00;border:1px solid #f43f5e;border-radius:8px;padding:10px;font-size:0.78rem;color:#f43f5e;font-weight:700;">❌ ${e.message}</div>`; }
     },
 

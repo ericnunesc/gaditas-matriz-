@@ -1080,6 +1080,26 @@ const academia = {
         }
     },
 
+    // ── CONTRATO: reenviar para um aluno específico ──────────
+    async reenviarContrato(alunoId, nomeAluno) {
+        if (!confirm(`Reenviar contrato para ${nomeAluno}?\n\nA assinatura atual será removida e o aluno precisará assinar novamente ao abrir o app.`)) return;
+        try {
+            await db.collection('alunos').doc(alunoId).update({ contrato: firebase.firestore.FieldValue.delete() });
+            alert(`✅ Contrato de ${nomeAluno} resetado! Ele verá o pendente ao abrir o app.`);
+            this.renderAlunos();
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    // ── CONTRATO: solicitar nova assinatura de TODOS ─────────
+    async solicitarNovaAssinaturaGeral() {
+        if (!confirm('Solicitar nova assinatura de TODOS os alunos?\n\nTodos que já assinaram precisarão reassinar. Recomendado apenas após atualizar o texto do contrato.')) return;
+        try {
+            const novaVersao = Date.now();
+            await db.collection('configuracoes').doc('contrato').set({ versao: novaVersao }, { merge: true });
+            alert('✅ Nova versão do contrato criada!\n\nTodos os alunos verão a notificação de reassinar ao abrir o app.');
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
     async renderAlunos() {
         const l = document.getElementById('list-alunos'); if(!l) return;
         const snap = await db.collection("alunos").orderBy("nome").get();
@@ -1194,6 +1214,7 @@ const academia = {
                             ? `<button onclick="academia.ativarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Reativar matrícula" style="background:#1e3a8a; border:none; color:#60a5fa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-lock-open"></i></button>`
                             : `<button onclick="academia.trancarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Trancar matrícula" style="background:#1c1000; border:1px solid #92400e; color:#f59e0b; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-lock"></i></button>`)
                         : ''}
+                        ${isAdmin ? `<button onclick="academia.reenviarContrato('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Reenviar Contrato" style="background:#1c1000; border:1px solid #92400e; color:#f59e0b; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-file-contract"></i></button>` : ''}
                         ${isAdmin ? `<button onclick="academia.excluirAluno('${doc.id}')" style="background:#2a0808; border:none; color:#ef4444; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-trash"></i></button>` : ''}
                     </div>
                 </div>
@@ -3849,6 +3870,12 @@ Ele voltará a ser aluno normal.`)) return;
                 </div>
                 <div style="height:10px;"></div>
                 <button onclick="academia.salvarConfigAdmin()" style="width:100%;padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">💾 SALVAR CONFIGURAÇÕES</button>
+                <div style="height:1px;background:#334155;margin:16px 0;"></div>
+                <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">📋 GESTÃO DE CONTRATOS</div>
+                <button onclick="academia.solicitarNovaAssinaturaGeral()" style="width:100%;padding:12px;background:#1c1000;border:1px solid #92400e;color:#f59e0b;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;">
+                    🔄 SOLICITAR NOVA ASSINATURA DE TODOS
+                </button>
+                <div style="font-size:0.58rem;color:#475569;margin-top:6px;line-height:1.4;">Use após atualizar o contrato. Todos os alunos verão aviso para reassinar.</div>
             </div>`;
     },
 
@@ -4940,13 +4967,39 @@ const ui = {
         const t = [...new Set(Object.values(academia.getGrade()).flat())].filter(i => !i.includes("Sem treinos")).sort();
         c.innerHTML = t.map(i => `<label style="display:block; font-size:0.65rem; color:#94a3b8; margin-bottom:5px; font-weight:600;"><input type="checkbox" class="check-turma" value="${i}"> ${i}</label>`).join('');
     },
-    renderCardContrato() {
+    async renderCardContrato() {
         const card = document.getElementById('card-contrato-aluno');
         if (!card) return;
         if (auth.role !== 'aluno' && auth.role !== 'professor') { card.classList.add('hidden'); return; }
-        const assinado = !!(auth.currentUser?.contrato?.assinaturaImg);
         card.classList.remove('hidden');
-        if (assinado) {
+
+        // Plano livre/família sem valor definido → aguardar admin
+        const plano = (auth.currentUser?.plano || '').toLowerCase();
+        const planoSemValor = (plano === 'livre' || plano === 'familia') && !(auth.currentUser?.planoValor > 0);
+        if (planoSemValor) {
+            card.innerHTML = `
+<div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:12px;">
+  <div style="font-size:1.3rem; flex-shrink:0;">⏳</div>
+  <div style="flex:1;">
+    <div style="font-size:0.72rem; font-weight:800; color:#64748b;">CONTRATO EM PREPARAÇÃO</div>
+    <div style="font-size:0.6rem; color:#475569; margin-top:2px; line-height:1.4;">Aguardando o admin definir o valor do seu plano. O contrato será liberado em breve.</div>
+  </div>
+</div>`;
+            return;
+        }
+
+        // Verifica versão atual do contrato no Firestore
+        let versaoAtual = 0;
+        try {
+            const cfgDoc = await db.collection('configuracoes').doc('contrato').get();
+            if (cfgDoc.exists) versaoAtual = cfgDoc.data().versao || 0;
+        } catch(e) {}
+
+        const assinaturaImg = auth.currentUser?.contrato?.assinaturaImg;
+        const versaoAssinada = auth.currentUser?.contrato?.versaoContrato || 0;
+        const assinadoValido = !!(assinaturaImg) && (versaoAssinada >= versaoAtual);
+
+        if (assinadoValido) {
             const data = auth.currentUser.contrato.assinadoEm?.toDate
                 ? auth.currentUser.contrato.assinadoEm.toDate().toLocaleDateString('pt-BR')
                 : (auth.currentUser.contrato.assinadoEm || '');
@@ -4956,9 +5009,18 @@ const ui = {
     <div style="font-size:0.7rem; font-weight:800; color:#10b981;">✅ CONTRATO ASSINADO</div>
     <div style="font-size:0.6rem; color:#6ee7b7; margin-top:2px;">Assinado em ${data} — ${auth.currentUser.contrato.planoLabel || ''} ${auth.currentUser.contrato.valorPlano || ''}</div>
   </div>
-  <button onclick="contrato.abrir()" style="background:#0f172a; border:1px solid #10b981; color:#10b981; padding:8px 12px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0;">
-    VER 📋
-  </button>
+  <button onclick="contrato.abrir()" style="background:#0f172a; border:1px solid #10b981; color:#10b981; padding:8px 12px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0;">VER 📋</button>
+</div>`;
+        } else if (assinaturaImg && versaoAssinada < versaoAtual) {
+            // Assinado mas contrato foi atualizado — precisa reassinar
+            card.innerHTML = `
+<div style="background:#0c1a3a; border:2px solid #3b82f6; border-radius:12px; padding:14px; display:flex; align-items:center; gap:12px;">
+  <div style="font-size:1.5rem; flex-shrink:0;">🔄</div>
+  <div style="flex:1; min-width:0;">
+    <div style="font-size:0.75rem; font-weight:800; color:#60a5fa; margin-bottom:3px;">CONTRATO ATUALIZADO</div>
+    <div style="font-size:0.62rem; color:#3b82f6; line-height:1.4;">O contrato foi atualizado. É necessário reler e assinar novamente.</div>
+  </div>
+  <button onclick="contrato.abrir()" style="background:#3b82f6; border:none; color:white; padding:10px 14px; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer; flex-shrink:0; white-space:nowrap;">REASSINAR</button>
 </div>`;
         } else {
             card.innerHTML = `
@@ -4968,9 +5030,7 @@ const ui = {
     <div style="font-size:0.75rem; font-weight:800; color:#f59e0b; margin-bottom:3px;">CONTRATO PENDENTE</div>
     <div style="font-size:0.62rem; color:#92400e; line-height:1.4;">Você ainda não assinou seu contrato digital. Clique para ler e assinar.</div>
   </div>
-  <button onclick="contrato.abrir()" style="background:#f59e0b; border:none; color:#000; padding:10px 14px; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer; flex-shrink:0; white-space:nowrap;">
-    ASSINAR
-  </button>
+  <button onclick="contrato.abrir()" style="background:#f59e0b; border:none; color:#000; padding:10px 14px; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer; flex-shrink:0; white-space:nowrap;">ASSINAR</button>
 </div>`;
         }
     },

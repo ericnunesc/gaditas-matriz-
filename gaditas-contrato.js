@@ -20,11 +20,15 @@ const contrato = {
 
         try {
             const alunoId = alunoIdParam || auth.currentUser?.id;
-            const alunoDoc = await db.collection('alunos').doc(alunoId).get();
+            const [alunoDoc, planos, configContrato] = await Promise.all([
+                db.collection('alunos').doc(alunoId).get(),
+                academia.carregarConfiguracaoPlanos(),
+                db.collection('configuracoes').doc('contrato').get()
+            ]);
             const aluno = { id: alunoId, ...alunoDoc.data() };
-            const planos = await academia.carregarConfiguracaoPlanos();
-
-            this._renderizar(aluno, planos);
+            const versaoAtual = configContrato.exists ? (configContrato.data().versao || 0) : 0;
+            this._versaoAtual = versaoAtual;
+            this._renderizar(aluno, planos, versaoAtual);
         } catch (e) {
             document.getElementById('contrato-body').innerHTML =
                 `<div style="color:#f43f5e;padding:20px;">Erro ao carregar: ${e.message}</div>`;
@@ -39,13 +43,17 @@ const contrato = {
     },
 
     // ── Renderizar contrato + footer ─────────────────────────
-    _renderizar(aluno, planos) {
-        const jaAssinou = !!(aluno.contrato?.assinaturaImg);
+    _renderizar(aluno, planos, versaoAtual = 0) {
+        const versaoAssinada = aluno.contrato?.versaoContrato || 0;
+        const assinaturaValida = !!(aluno.contrato?.assinaturaImg) && (versaoAssinada >= versaoAtual);
+        const jaAssinou = assinaturaValida;
         const soVisualizando = !!(this._viewingAlunoId) || jaAssinou;
 
         const planoKey   = (aluno.plano || 'mensal').toLowerCase();
         const planoInfo  = planos[planoKey] || planos.mensal;
-        const valorStr   = `R$ ${parseFloat(planoInfo.valor).toFixed(2).replace('.', ',')}`;
+        // Usa o valor salvo no aluno (planoValor) se disponível e > 0, senão usa config global
+        const valorNumerico = (aluno.planoValor > 0) ? aluno.planoValor : (planoInfo.valor || 120);
+        const valorStr   = `R$ ${parseFloat(valorNumerico).toFixed(2).replace('.', ',')}`;
         const duracoes   = { mensal: '1 mês', trimestral: '3 meses', semestral: '6 meses', anual: '12 meses' };
         const duracaoStr = duracoes[planoKey] || '1 mês';
         const hoje       = new Date().toLocaleDateString('pt-BR');
@@ -325,27 +333,32 @@ const contrato = {
             const planos   = await academia.carregarConfiguracaoPlanos();
             const planoKey = (aluno.plano || 'mensal').toLowerCase();
             const planoInfo = planos[planoKey] || planos.mensal;
+            const valorNumerico = (aluno.planoValor > 0) ? aluno.planoValor : (planoInfo.valor || 120);
+            const valorStr = `R$ ${parseFloat(valorNumerico).toFixed(2).replace('.', ',')}/mês`;
+            const versaoContrato = this._versaoAtual || 0;
 
             const imgBase64 = this._canvas.toDataURL('image/png');
 
             await db.collection('alunos').doc(alunoId).update({
                 contrato: {
-                    assinaturaImg: imgBase64,
-                    assinadoEm:    firebase.firestore.FieldValue.serverTimestamp(),
-                    plano:         planoKey,
-                    planoLabel:    planoInfo.label,
-                    valorPlano:    `R$ ${parseFloat(planoInfo.valor).toFixed(2).replace('.', ',')}/mês`,
+                    assinaturaImg:   imgBase64,
+                    assinadoEm:      firebase.firestore.FieldValue.serverTimestamp(),
+                    plano:           planoKey,
+                    planoLabel:      planoInfo.label || planoKey,
+                    valorPlano:      valorStr,
+                    versaoContrato:  versaoContrato,
                 }
             });
 
             // Atualiza currentUser em memória
             if (auth.currentUser) {
                 auth.currentUser.contrato = {
-                    assinaturaImg: imgBase64,
-                    assinadoEm:    new Date(),
-                    plano:         planoKey,
-                    planoLabel:    planoInfo.label,
-                    valorPlano:    `R$ ${parseFloat(planoInfo.valor).toFixed(2).replace('.', ',')}/mês`,
+                    assinaturaImg:   imgBase64,
+                    assinadoEm:      new Date(),
+                    plano:           planoKey,
+                    planoLabel:      planoInfo.label || planoKey,
+                    valorPlano:      valorStr,
+                    versaoContrato:  versaoContrato,
                 };
             }
 

@@ -2362,14 +2362,34 @@ Ele voltará a ser aluno normal.`)) return;
             if (pendentes.data && pendentes.data.length > 0) {
                 pendentes.data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
                 html += `<small style="color:#f43f5e; font-weight:800; font-size:0.6rem; display:block; margin-bottom:8px;">FATURAS EM ABERTO</small>`;
-                pendentes.data.forEach(f => {
+                pendentes.data.forEach((f, idx) => {
                     const venc = new Date(f.dueDate + 'T00:00:00'); venc.setHours(0,0,0,0);
                     const dias = Math.floor((dataHoje - venc) / 86400000);
                     const vencStr = f.dueDate.split('-').reverse().join('/');
                     const valor = f.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    const cor = dias > 0 ? '#f43f5e' : dias === 0 ? '#f59e0b' : '#10b981';
-                    const tag = dias > 0 ? `${dias}d atraso` : dias === 0 ? 'Vence hoje' : 'A vencer';
-                    html += `<div style="background:#0f172a; border:1px solid ${cor}44; border-left:3px solid ${cor}; border-radius:8px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><div><div style="font-size:0.85rem; font-weight:800; color:white;">${valor}</div><div style="font-size:0.65rem; color:#64748b;">Venc: ${vencStr}</div></div><span style="font-size:0.6rem; font-weight:800; color:${cor}; background:${cor}22; padding:3px 8px; border-radius:6px;">${tag}</span></div>`;
+                    const vencida = dias > 0;
+                    const hoje = dias === 0;
+                    const cor = vencida ? '#f43f5e' : hoje ? '#f59e0b' : '#10b981';
+                    const tag = vencida ? `⚠️ ${dias}d DE ATRASO` : hoje ? 'Vence hoje' : 'A vencer';
+                    const isPrimeira = idx === 0;
+                    if (isPrimeira) {
+                        // Fatura mais urgente — destaque total
+                        const bgDestaque = vencida ? '#3b000e' : hoje ? '#2d1800' : '#052e16';
+                        const label = vencida ? '⚠️ PAGUE ESTA PRIMEIRO — EM ATRASO' : hoje ? '⚠️ PAGUE ESTA PRIMEIRO — VENCE HOJE' : '👆 PAGUE ESTA PRIMEIRO';
+                        html += `
+                        <div style="background:${bgDestaque}; border:2px solid ${cor}; border-radius:12px; padding:14px; margin-bottom:10px;">
+                            <div style="font-size:0.55rem; font-weight:900; color:${cor}; letter-spacing:1px; margin-bottom:8px; text-align:center;">${label}</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <div style="font-size:1.15rem; font-weight:900; color:${vencida ? '#f43f5e' : 'white'};">${valor}</div>
+                                    <div style="font-size:0.65rem; color:#94a3b8;">Venc: ${vencStr}</div>
+                                </div>
+                                <span style="font-size:0.65rem; font-weight:900; color:${cor}; background:${cor}33; padding:5px 10px; border-radius:8px; text-align:center;">${tag}</span>
+                            </div>
+                        </div>`;
+                    } else {
+                        html += `<div style="background:#0f172a; border:1px solid ${cor}44; border-left:3px solid ${cor}; border-radius:8px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; opacity:0.75;"><div><div style="font-size:0.85rem; font-weight:800; color:white;">${valor}</div><div style="font-size:0.65rem; color:#64748b;">Venc: ${vencStr}</div></div><span style="font-size:0.6rem; font-weight:800; color:${cor}; background:${cor}22; padding:3px 8px; border-radius:6px;">${tag}</span></div>`;
+                    }
                 });
             } else {
                 html += `<div style="background:#064e3b; border:1px solid #10b981; border-radius:8px; padding:12px; text-align:center; margin-bottom:12px;"><span style="color:#10b981; font-weight:800;">✅ MENSALIDADE EM DIA!</span></div>`;

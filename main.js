@@ -227,8 +227,7 @@ const auth = {
             }, 600);
         }
     },
-    // ── VAPID KEY: Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
-    _VAPID_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDkBWseIHrPOPFWEQZmIHkZkOJMRJVJVJVJVJVJV',
+    _VAPID_KEY: 'BGIOHx28eOp4-uzKBtZoVHAQ2cYdC_aZfgRBZTXKWgBN9P5ZyBfctn744lw3Ves-zOvpcqDBrZVMrD87Xl3sf_0',
 
     async _registrarFcmToken() {
         try {

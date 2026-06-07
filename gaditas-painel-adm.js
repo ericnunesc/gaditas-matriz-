@@ -128,7 +128,7 @@ const GaditasPainelAdm = {
                 const a = doc.data();
                 const asaasId = a.asaasId || '';
                 return '<div onclick="GaditasPainelAdm.selecionarAlunoCobranca(\'' + doc.id + '\', \'' +
-                    a.nome.replace(/'/g, "\\'") + '\', \'' + (a.email || '') + '\', \'' + asaasId + '\')" ' +
+                    a.nome.replace(/'/g, "\\'").replace(/"/g,'&quot;') + '\', \'' + (a.email || '') + '\', \'' + asaasId + '\')" ' +
                     'style="background:#0f172a; border:1px solid #334155; padding:10px 12px; border-radius:8px; ' +
                     'margin-bottom:5px; cursor:pointer; font-size:0.8rem; color:#e2e8f0; font-weight:600;" ' +
                     'onmouseover="this.style.borderColor=\'#f59e0b\'" onmouseout="this.style.borderColor=\'#334155\'">' +
@@ -141,19 +141,64 @@ const GaditasPainelAdm = {
         }
     },
 
-    selecionarAlunoCobranca(id, nome, email, asaasId) {
-        this._alunoCobranca = { id, nome, email, asaasId };
+    async selecionarAlunoCobranca(id, nome, email, asaasId) {
         document.getElementById('cobranca-lista-alunos').innerHTML = '';
         document.getElementById('cobranca-busca-aluno').value = '';
+
+        // Busca CPF do aluno no Firestore
+        let cpf = '';
+        try {
+            const doc = await db.collection('alunos').doc(id).get();
+            cpf = (doc.data()?.cpf || '').replace(/\D/g, '');
+        } catch(e) {}
+
+        this._alunoCobranca = { id, nome, email, asaasId, cpf };
+
         const div = document.getElementById('cobranca-aluno-selecionado');
         div.classList.remove('hidden');
+
+        // Se não tem CPF, mostra campo para preencher na hora
+        const campoCpf = cpf ? '' :
+            '<div style="margin-top:10px; padding-top:10px; border-top:1px solid #334155;">' +
+                '<small style="color:#f43f5e; font-size:0.6rem; font-weight:800; display:block; margin-bottom:5px;">⚠️ SEM CPF — preencha para cobrar no Asaas:</small>' +
+                '<div style="display:flex; gap:6px;">' +
+                    '<input type="text" id="cobranca-cpf-inline" maxlength="11" placeholder="Apenas números (11 dígitos)" ' +
+                        'style="flex:1; padding:9px; background:#0f172a; border:1px solid #f43f5e; color:white; border-radius:8px; outline:none; font-size:0.8rem; font-weight:700;" ' +
+                        'oninput="this.value=this.value.replace(/\\D/g,\'\')"/>' +
+                    '<button onclick="GaditasPainelAdm._salvarCpfInline()" ' +
+                        'style="background:#f43f5e; border:none; color:white; padding:9px 12px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.7rem; white-space:nowrap;">SALVAR CPF</button>' +
+                '</div>' +
+            '</div>';
+
         div.innerHTML =
-            '<div>' +
-                '<div style="font-size:0.85rem; font-weight:800; color:white;">✅ ' + nome.toUpperCase() + '</div>' +
-                '<div style="font-size:0.6rem; color:#64748b; margin-top:2px;">' + email + '</div>' +
-            '</div>' +
-            '<button onclick="GaditasPainelAdm.limparAlunoCobranca()" ' +
-            'style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.9rem; font-weight:700; padding:4px 8px;">✕</button>';
+            '<div style="width:100%;">' +
+                '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                    '<div>' +
+                        '<div style="font-size:0.85rem; font-weight:800; color:white;">✅ ' + nome.toUpperCase() + '</div>' +
+                        '<div style="font-size:0.6rem; color:#64748b; margin-top:2px;">' + email + '</div>' +
+                        (cpf ? '<div style="font-size:0.6rem; color:#10b981; margin-top:2px;">CPF: ' + cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') + '</div>' : '') +
+                    '</div>' +
+                    '<button onclick="GaditasPainelAdm.limparAlunoCobranca()" ' +
+                        'style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.9rem; font-weight:700; padding:4px 8px; flex-shrink:0;">✕</button>' +
+                '</div>' +
+                campoCpf +
+            '</div>';
+    },
+
+    async _salvarCpfInline() {
+        const cpfInput = document.getElementById('cobranca-cpf-inline');
+        const cpf = (cpfInput?.value || '').replace(/\D/g, '');
+        if (cpf.length !== 11) { alert('CPF inválido — informe 11 dígitos.'); return; }
+        if (!this._alunoCobranca) return;
+        try {
+            await db.collection('alunos').doc(this._alunoCobranca.id).update({ cpf });
+            this._alunoCobranca.cpf = cpf;
+            // Atualiza display
+            if (cpfInput) cpfInput.closest('div[style*="border-top"]').innerHTML =
+                '<div style="font-size:0.65rem; color:#10b981; font-weight:800; margin-top:6px;">✅ CPF salvo: ' +
+                cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') + '</div>';
+            alert('✅ CPF salvo! Pode gerar a cobrança agora.');
+        } catch(e) { alert('Erro ao salvar CPF: ' + e.message); }
     },
 
     limparAlunoCobranca() {
@@ -183,11 +228,20 @@ const GaditasPainelAdm = {
         if (resultado) resultado.innerHTML = '';
 
         try {
-            const { nome, email, asaasId: asaasIdSalvo, id: alunoFirebaseId } = this._alunoCobranca;
+            const { nome, email, asaasId: asaasIdSalvo, id: alunoFirebaseId, cpf: cpfMemoria } = this._alunoCobranca;
 
-            // Busca CPF do aluno no Firestore (necessário para cobrança no Asaas)
-            const alunoDoc = await db.collection('alunos').doc(alunoFirebaseId).get();
-            const cpfAluno = (alunoDoc.data()?.cpf || '').replace(/\D/g, '');
+            // Usa CPF já carregado na memória; se não, busca no Firestore
+            let cpfAluno = (cpfMemoria || '').replace(/\D/g, '');
+            if (!cpfAluno) {
+                const alunoDoc = await db.collection('alunos').doc(alunoFirebaseId).get();
+                cpfAluno = (alunoDoc.data()?.cpf || '').replace(/\D/g, '');
+            }
+
+            if (!cpfAluno || cpfAluno.length !== 11) {
+                if (resultado) resultado.innerHTML = '<div style="background:#1c0a00; border:1px solid #f43f5e; border-radius:8px; padding:12px; font-size:0.78rem; color:#f43f5e; font-weight:700;">❌ CPF do aluno não encontrado.<br><small style="font-weight:400; color:#94a3b8;">Preencha o CPF no campo acima e clique em SALVAR CPF antes de gerar a cobrança.</small></div>';
+                if (btn) { btn.disabled = false; btn.innerText = '⚡ GERAR COBRANÇA'; }
+                return;
+            }
 
             // 1. Garante que o cliente existe no Asaas
             let asaasId = asaasIdSalvo;

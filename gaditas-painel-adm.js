@@ -83,6 +83,65 @@ const GaditasPainelAdm = {
                 <div id="cobranca-resultado" style="margin-top:12px;"></div>
             </div>
 
+            <!-- ══ CRIAR PLANO / ASSINATURA ══ -->
+            <div class="card" style="background:#1e293b; border:1px solid #10b98144; padding:15px; border-radius:12px; margin-top:4px;">
+                <div style="font-size:0.7rem; font-weight:800; color:#10b981; margin-bottom:14px; letter-spacing:0.5px;">
+                    <i class="fas fa-file-contract"></i> CRIAR PLANO / ASSINATURA RECORRENTE
+                </div>
+
+                <!-- Busca de aluno -->
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">ALUNO:</small>
+                <input type="text" id="plano-busca-aluno" placeholder="🔍 Digite o nome do aluno..."
+                    oninput="GaditasPainelAdm.buscarAlunoPlano()"
+                    style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;"/>
+                <div id="plano-lista-alunos" style="margin-bottom:6px;"></div>
+                <div id="plano-aluno-selecionado" class="hidden"
+                    style="background:#0f172a; border:1px solid #10b981; border-radius:8px; padding:10px 12px; margin-bottom:12px;">
+                </div>
+
+                <!-- Tipo de plano -->
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">TIPO DE PLANO:</small>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:12px;">
+                    <button id="plano-btn-mensal"      onclick="GaditasPainelAdm._selecionarTipoPlano('mensal')"      style="padding:9px 4px; background:#10b981; border:none; color:white; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 MENSAL</button>
+                    <button id="plano-btn-trimestral"  onclick="GaditasPainelAdm._selecionarTipoPlano('trimestral')"  style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 TRIMESTRAL</button>
+                    <button id="plano-btn-semestral"   onclick="GaditasPainelAdm._selecionarTipoPlano('semestral')"   style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 SEMESTRAL</button>
+                    <button id="plano-btn-anual"       onclick="GaditasPainelAdm._selecionarTipoPlano('anual')"       style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 ANUAL</button>
+                    <button id="plano-btn-livre"       onclick="GaditasPainelAdm._selecionarTipoPlano('livre')"       style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">🔓 LIVRE</button>
+                    <button id="plano-btn-familia"     onclick="GaditasPainelAdm._selecionarTipoPlano('familia')"     style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">👨‍👩‍👧 FAMÍLIA</button>
+                </div>
+
+                <!-- Valor + 1º Vencimento -->
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <div style="flex:1;">
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">VALOR MENSAL (R$):</small>
+                        <input type="number" id="plano-valor" placeholder="0,00" step="0.01" min="0.01"
+                            style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #10b981; color:white; border-radius:8px; outline:none; font-size:0.9rem; font-weight:700; box-sizing:border-box;"/>
+                    </div>
+                    <div style="flex:1;">
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">1º VENCIMENTO:</small>
+                        <input type="date" id="plano-vencimento" value="${dataVencStr}"
+                            style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
+                    </div>
+                </div>
+
+                <!-- Forma de pagamento -->
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">FORMA DE PAGAMENTO:</small>
+                <select id="plano-tipo"
+                    style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:14px; box-sizing:border-box;">
+                    <option value="PIX">⚡ Pix</option>
+                    <option value="BOLETO">📄 Boleto</option>
+                    <option value="CREDIT_CARD">💳 Cartão de Crédito</option>
+                    <option value="UNDEFINED">🔀 Pix, Boleto ou Cartão (aluno escolhe)</option>
+                </select>
+
+                <button onclick="GaditasPainelAdm.criarPlanoAsaas()"
+                    style="width:100%; padding:13px; background:#10b981; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.85rem; letter-spacing:0.3px;">
+                    <i class="fas fa-file-contract"></i> CRIAR PLANO E GERAR 1ª COBRANÇA
+                </button>
+
+                <div id="plano-resultado" style="margin-top:12px;"></div>
+            </div>
+
             <!-- ══ INADIMPLÊNCIA ══ -->
             <div class="card" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-top:4px;">
                 <div style="font-size:0.7rem; font-weight:800; color:#f43f5e; margin-bottom:12px; letter-spacing:0.5px;">
@@ -358,6 +417,245 @@ const GaditasPainelAdm = {
         }
     },
     
+    // ══════════════════════════════════════════════════════════
+    // CRIAR PLANO / ASSINATURA RECORRENTE
+    // ══════════════════════════════════════════════════════════
+
+    _tipoPlanoAtual: 'mensal',
+
+    _selecionarTipoPlano(tipo) {
+        this._tipoPlanoAtual = tipo;
+        const todos = ['mensal','trimestral','semestral','anual','livre','familia'];
+        todos.forEach(t => {
+            const btn = document.getElementById('plano-btn-' + t);
+            if (!btn) return;
+            if (t === tipo) {
+                btn.style.background = '#10b981';
+                btn.style.border = 'none';
+                btn.style.color = 'white';
+            } else {
+                btn.style.background = '#0f172a';
+                btn.style.border = '1px solid #334155';
+                btn.style.color = '#94a3b8';
+            }
+        });
+        // Preenche valor sugerido do plano se configurado
+        try {
+            academia.carregarConfiguracaoPlanos().then(planos => {
+                const p = planos[tipo];
+                if (p && p.valor > 0) {
+                    const input = document.getElementById('plano-valor');
+                    if (input && !input.value) input.value = p.valor.toFixed(2);
+                }
+            });
+        } catch(e) {}
+    },
+
+    async buscarAlunoPlano() {
+        const termo = document.getElementById('plano-busca-aluno')?.value.trim().toLowerCase();
+        const lista = document.getElementById('plano-lista-alunos');
+        if (!lista) return;
+        if (!termo || termo.length < 2) { lista.innerHTML = ''; return; }
+        try {
+            const snap = await db.collection('alunos').orderBy('nome').get();
+            const resultados = snap.docs.filter(d => d.data().nome.toLowerCase().includes(termo)).slice(0, 6);
+            if (!resultados.length) { lista.innerHTML = '<small style="color:#64748b;font-size:0.75rem;padding:6px;display:block;">Nenhum aluno encontrado.</small>'; return; }
+            lista.innerHTML = resultados.map(doc => {
+                const a = doc.data();
+                const planoAtual = a.plano ? ` <span style="color:#10b981;font-size:0.58rem;">(${a.plano})</span>` : ' <span style="color:#f59e0b;font-size:0.58rem;">(sem plano)</span>';
+                return `<div onclick="GaditasPainelAdm.selecionarAlunoPlano('${doc.id}','${a.nome.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${a.email||''}','${a.asaasId||''}','${(a.cpf||'').replace(/\D/g,'')}')"
+                    style="background:#0f172a;border:1px solid #334155;padding:10px 12px;border-radius:8px;margin-bottom:5px;cursor:pointer;font-size:0.8rem;color:#e2e8f0;font-weight:600;"
+                    onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='#334155'">
+                    👤 ${a.nome.toUpperCase()}${planoAtual}
+                    <small style="color:#64748b;display:block;font-size:0.6rem;margin-top:2px;">${a.email||''}</small>
+                </div>`;
+            }).join('');
+        } catch(e) { lista.innerHTML = '<small style="color:#f43f5e;font-size:0.7rem;">Erro ao buscar.</small>'; }
+    },
+
+    async selecionarAlunoPlano(id, nome, email, asaasId, cpf) {
+        document.getElementById('plano-lista-alunos').innerHTML = '';
+        document.getElementById('plano-busca-aluno').value = '';
+
+        // Busca dados completos do aluno
+        let cpfFinal = cpf || '';
+        let planoAtual = '';
+        try {
+            const doc = await db.collection('alunos').doc(id).get();
+            const d = doc.data() || {};
+            cpfFinal = (d.cpf || '').replace(/\D/g, '');
+            planoAtual = d.plano || '';
+            if (d.planoValor > 0) {
+                const inp = document.getElementById('plano-valor');
+                if (inp) inp.value = d.planoValor.toFixed(2);
+            }
+            if (planoAtual) this._selecionarTipoPlano(planoAtual);
+        } catch(e) {}
+
+        this._alunoPlano = { id, nome, email, asaasId, cpf: cpfFinal };
+
+        const div = document.getElementById('plano-aluno-selecionado');
+        div.classList.remove('hidden');
+
+        const semCpf = !cpfFinal || cpfFinal.length !== 11;
+        div.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                    <div style="font-size:0.85rem;font-weight:800;color:white;">✅ ${nome.toUpperCase()}</div>
+                    <div style="font-size:0.6rem;color:#64748b;margin-top:2px;">${email}</div>
+                    ${cpfFinal ? `<div style="font-size:0.6rem;color:#10b981;margin-top:2px;">CPF: ${cpfFinal.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4')}</div>` : ''}
+                    ${planoAtual ? `<div style="font-size:0.6rem;color:#f59e0b;margin-top:2px;">Plano atual: ${planoAtual}</div>` : '<div style="font-size:0.6rem;color:#f43f5e;margin-top:2px;">⚠️ Sem plano cadastrado</div>'}
+                </div>
+                <button onclick="GaditasPainelAdm._limparAlunoPlano()" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.9rem;font-weight:700;padding:4px 8px;">✕</button>
+            </div>
+            ${semCpf ? `
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid #334155;">
+                <small style="color:#f43f5e;font-size:0.6rem;font-weight:800;display:block;margin-bottom:5px;">⚠️ SEM CPF — necessário para criar plano no Asaas:</small>
+                <div style="display:flex;gap:6px;">
+                    <input type="text" id="plano-cpf-inline" maxlength="11" placeholder="11 dígitos sem pontos"
+                        style="flex:1;padding:9px;background:#1e293b;border:1px solid #f43f5e;color:white;border-radius:8px;outline:none;font-size:0.8rem;font-weight:700;"
+                        oninput="this.value=this.value.replace(/\\D/g,'')"/>
+                    <button onclick="GaditasPainelAdm._salvarCpfPlano()"
+                        style="background:#f43f5e;border:none;color:white;padding:9px 12px;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.7rem;white-space:nowrap;">SALVAR CPF</button>
+                </div>
+            </div>` : ''}`;
+    },
+
+    async _salvarCpfPlano() {
+        const cpf = (document.getElementById('plano-cpf-inline')?.value || '').replace(/\D/g, '');
+        if (cpf.length !== 11) { alert('CPF inválido.'); return; }
+        if (!this._alunoPlano) return;
+        await db.collection('alunos').doc(this._alunoPlano.id).update({ cpf });
+        this._alunoPlano.cpf = cpf;
+        const div = document.getElementById('plano-aluno-selecionado').querySelector('div[style*="border-top"]');
+        if (div) div.innerHTML = `<div style="font-size:0.65rem;color:#10b981;font-weight:800;margin-top:6px;">✅ CPF salvo: ${cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4')}</div>`;
+        alert('✅ CPF salvo!');
+    },
+
+    _limparAlunoPlano() {
+        this._alunoPlano = null;
+        this._tipoPlanoAtual = 'mensal';
+        document.getElementById('plano-aluno-selecionado').classList.add('hidden');
+        document.getElementById('plano-aluno-selecionado').innerHTML = '';
+        document.getElementById('plano-busca-aluno').value = '';
+        document.getElementById('plano-lista-alunos').innerHTML = '';
+        document.getElementById('plano-valor').value = '';
+        document.getElementById('plano-resultado').innerHTML = '';
+    },
+
+    async criarPlanoAsaas() {
+        const resultado = document.getElementById('plano-resultado');
+        if (!this._alunoPlano) return alert('Selecione um aluno primeiro.');
+
+        const valor      = parseFloat(document.getElementById('plano-valor')?.value);
+        const vencimento = document.getElementById('plano-vencimento')?.value;
+        const tipo       = document.getElementById('plano-tipo')?.value;
+        const planoKey   = this._tipoPlanoAtual || 'mensal';
+
+        if (isNaN(valor) || valor <= 0) return alert('Informe o valor do plano.');
+        if (!vencimento) return alert('Informe a data do 1º vencimento.');
+
+        const cpfAluno = (this._alunoPlano.cpf || '').replace(/\D/g, '');
+        if (!cpfAluno || cpfAluno.length !== 11) {
+            if (resultado) resultado.innerHTML = '<div style="background:#1c0a00;border:1px solid #f43f5e;border-radius:8px;padding:10px;font-size:0.75rem;color:#f43f5e;font-weight:700;">❌ Preencha e salve o CPF do aluno primeiro.</div>';
+            return;
+        }
+
+        const cicloMap = { mensal:'MONTHLY', trimestral:'QUARTERLY', semestral:'SEMIANNUALLY', anual:'YEARLY', livre:'MONTHLY', familia:'MONTHLY' };
+        const labelMap = { mensal:'Plano Mensal', trimestral:'Plano Trimestral', semestral:'Plano Semestral', anual:'Plano Anual', livre:'Plano Livre', familia:'Plano Família' };
+        const ciclo = cicloMap[planoKey] || 'MONTHLY';
+        const label = labelMap[planoKey] || 'Plano Mensal';
+
+        const btn = document.querySelector('[onclick="GaditasPainelAdm.criarPlanoAsaas()"]');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Criando...'; }
+        if (resultado) resultado.innerHTML = '';
+
+        try {
+            const { nome, email, id: alunoId, asaasId: asaasIdSalvo } = this._alunoPlano;
+
+            // 1. Garante cliente no Asaas
+            let asaasId = asaasIdSalvo;
+            if (!asaasId) {
+                const resBusca = await fetch('/api/asaas?endpoint=customers&email=' + encodeURIComponent(email));
+                const dadosBusca = await resBusca.json();
+                if (dadosBusca.data?.length > 0) {
+                    asaasId = dadosBusca.data[0].id;
+                    const cpfNoAsaas = (dadosBusca.data[0].cpfCnpj || '').replace(/\D/g,'');
+                    if (!cpfNoAsaas) {
+                        await fetch('/api/asaas?endpoint=customers/' + asaasId, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: nome, email, cpfCnpj: cpfAluno })
+                        });
+                    }
+                } else {
+                    const resCriar = await fetch('/api/asaas?endpoint=customers', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: nome, email, cpfCnpj: cpfAluno })
+                    });
+                    const criado = await resCriar.json();
+                    if (!criado.id) throw new Error(criado.errors?.[0]?.description || 'Erro ao criar cliente.');
+                    asaasId = criado.id;
+                }
+                await db.collection('alunos').doc(alunoId).update({ asaasId });
+            }
+
+            // 2. Cria assinatura recorrente no Asaas
+            const resAssin = await fetch('/api/asaas?endpoint=subscriptions', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer:    asaasId,
+                    billingType: tipo,
+                    value:       valor,
+                    nextDueDate: vencimento,
+                    cycle:       ciclo,
+                    description: label + ' — Gaditas Academy'
+                })
+            });
+            const assin = await resAssin.json();
+            if (!assin.id) throw new Error(assin.errors?.[0]?.description || 'Erro ao criar assinatura.');
+
+            // 3. Salva no Firestore do aluno
+            await db.collection('alunos').doc(alunoId).update({
+                plano:           planoKey,
+                planoLabel:      label,
+                planoValor:      valor,
+                asaasId:         asaasId,
+                subscriptionId:  assin.id,
+            });
+
+            const valorFmt = valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const vencFmt  = vencimento.split('-').reverse().join('/');
+
+            resultado.innerHTML = `
+                <div style="background:#064e3b;border:1px solid #10b981;border-radius:12px;padding:14px;margin-top:4px;">
+                    <div style="font-size:0.7rem;font-weight:800;color:#10b981;margin-bottom:10px;">✅ PLANO CRIADO COM SUCESSO!</div>
+                    <div style="font-size:0.85rem;font-weight:800;color:white;margin-bottom:4px;">${nome.toUpperCase()}</div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:4px;">
+                        <span style="color:#94a3b8;">Plano:</span><strong style="color:#10b981;">${label}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:4px;">
+                        <span style="color:#94a3b8;">Valor mensal:</span><strong style="color:#10b981;">${valorFmt}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:4px;">
+                        <span style="color:#94a3b8;">1º vencimento:</span><span style="color:#e2e8f0;">${vencFmt}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:12px;">
+                        <span style="color:#94a3b8;">Recorrência:</span><span style="color:#e2e8f0;">${ciclo}</span>
+                    </div>
+                    <div style="font-size:0.6rem;color:#6ee7b7;padding-top:8px;border-top:1px solid #10b98133;">
+                        Assinatura Asaas: ${assin.id}<br>
+                        O aluno já pode pagar via link gerado automaticamente pelo Asaas.
+                    </div>
+                </div>`;
+
+            this._limparAlunoPlano();
+        } catch(e) {
+            if (resultado) resultado.innerHTML = `<div style="background:#1c0a00;border:1px solid #f43f5e;border-radius:8px;padding:12px;font-size:0.8rem;color:#f43f5e;font-weight:700;">❌ ${e.message}</div>`;
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-contract"></i> CRIAR PLANO E GERAR 1ª COBRANÇA'; }
+        }
+    },
+
     // ── RESUMO FINANCEIRO DO MÊS ─────────────────────────────
     async carregarResumoMensal() {
         const container = document.getElementById('painel-resumo-mensal');

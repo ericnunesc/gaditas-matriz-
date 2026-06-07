@@ -211,6 +211,11 @@ const auth = {
             }
         }
 
+        // ── REGISTRO FCM TOKEN (push notifications) ──────────
+        if (this.role !== 'admin') {
+            setTimeout(() => auth._registrarFcmToken(), 2000);
+        }
+
         // Carrega foto no header
         if (this.currentUser.id && this.currentUser.id !== 'admin') {
             setTimeout(() => {
@@ -222,6 +227,48 @@ const auth = {
             }, 600);
         }
     },
+    // ── VAPID KEY: Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
+    _VAPID_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDkBWseIHrPOPFWEQZmIHkZkOJMRJVJVJVJVJVJV',
+
+    async _registrarFcmToken() {
+        try {
+            if (!('Notification' in window)) return;
+            if (!firebase.messaging) return;
+
+            // Pede permissão se ainda não foi concedida
+            if (Notification.permission === 'denied') return;
+            if (Notification.permission !== 'granted') {
+                const perm = await Notification.requestPermission();
+                if (perm !== 'granted') return;
+            }
+
+            const messaging = firebase.messaging();
+            const sw = await navigator.serviceWorker.ready;
+            const token = await messaging.getToken({ vapidKey: this._VAPID_KEY, serviceWorkerRegistration: sw });
+            if (!token) return;
+
+            // Salva na coleção correta (aluno ou professor)
+            const colecao = this.role === 'professor' ? 'professores' : 'alunos';
+            if (this.currentUser?.id) {
+                await db.collection(colecao).doc(this.currentUser.id).update({ fcmToken: token });
+            }
+        } catch(e) {
+            console.warn('FCM token registro falhou:', e.message);
+        }
+    },
+
+    // Envia push via API para um token específico
+    async _enviarPush(token, title, body) {
+        if (!token) return;
+        try {
+            fetch('/api/push-comunicado', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tokens: [token], title, body })
+            }).catch(() => {});
+        } catch(e) { /* silencioso */ }
+    },
+
     _renderFaixaHeader() {
         try {
             const el = document.getElementById('display-faixa-header');
@@ -3204,6 +3251,14 @@ Ele voltará a ser aluno normal.`)) return;
                 dataFormatada: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
                 lido: false, respondido: false, resposta: null, arquivado: false
             });
+            // Notifica o professor via push
+            try {
+                const profDoc = await db.collection('professores').doc(this._professorRelatoId).get();
+                const profToken = profDoc.exists ? profDoc.data().fcmToken : null;
+                const tipoLabel = this._tipoRelatoAtual === 'machucado' ? '🤕 MACHUCADO' : '🤒 DOENTE';
+                const nomeAluno = aluno.nome || aluno.name || 'Aluno';
+                auth._enviarPush(profToken, `${tipoLabel} — ${nomeAluno}`, texto.substring(0, 120));
+            } catch(ePush) { /* silencioso */ }
             document.getElementById('textarea-relato').value = '';
             document.getElementById('card-relato-saude').classList.add('hidden');
             alert(`✅ Relato enviado para ${this._professorRelatoNome}! OSS!`);
@@ -3534,10 +3589,25 @@ Ele voltará a ser aluno normal.`)) return;
         const texto = input?.value.trim();
         if (!texto) return alert("Escreva uma resposta antes de enviar.");
         try {
+            // Busca o relato para pegar o alunoId antes de atualizar
+            const relatoDoc = await db.collection("relatos_saude").doc(id).get();
+            const relato = relatoDoc.exists ? relatoDoc.data() : null;
+
             await db.collection("relatos_saude").doc(id).update({
                 respondido: true, resposta: texto,
                 respostaDataFormatada: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
             });
+
+            // Notifica o aluno via push
+            if (relato?.alunoId) {
+                try {
+                    const alunoDoc = await db.collection('alunos').doc(relato.alunoId).get();
+                    const alunoToken = alunoDoc.exists ? alunoDoc.data().fcmToken : null;
+                    const profNome = auth.currentUser?.nome || 'Professor';
+                    auth._enviarPush(alunoToken, `💬 ${profNome} respondeu seu relato`, texto.substring(0, 120));
+                } catch(ePush) { /* silencioso */ }
+            }
+
             this.carregarRelatosSaude();
         } catch(e) { alert("Erro ao responder."); }
     },

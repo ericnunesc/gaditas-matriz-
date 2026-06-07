@@ -230,38 +230,45 @@ const auth = {
     _VAPID_KEY: 'BGIOHx28eOp4-uzKBtZoVHAQ2cYdC_aZfgRBZTXKWgBN9P5ZyBfctn744lw3Ves-zOvpcqDBrZVMrD87Xl3sf_0',
 
     async _registrarFcmToken() {
+        const log = (msg, err) => {
+            console[err ? 'error' : 'log']('[FCM] ' + msg);
+        };
         try {
-            if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-            if (typeof firebase === 'undefined' || typeof firebase.messaging !== 'function') return;
-            if (Notification.permission === 'denied') return;
+            if (!('Notification' in window)) { log('Notification API não disponível'); return; }
+            if (!('serviceWorker' in navigator)) { log('ServiceWorker não disponível'); return; }
+            if (typeof firebase === 'undefined') { log('Firebase não definido'); return; }
+            if (typeof firebase.messaging !== 'function') { log('firebase.messaging não é função — SDK messaging não carregado'); return; }
+            if (Notification.permission === 'denied') { log('Permissão negada pelo usuário'); return; }
 
-            // Pede permissão se ainda não concedida
             if (Notification.permission !== 'granted') {
                 const perm = await Notification.requestPermission();
-                if (perm !== 'granted') return;
+                if (perm !== 'granted') { log('Usuário recusou permissão'); return; }
             }
+            log('Permissão OK: ' + Notification.permission);
 
-            // Garante que o service worker está registrado e pronto
+            // Registra SW
             let swReg;
             try {
                 swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                await navigator.serviceWorker.ready;
-            } catch(e) {
-                console.warn('SW não disponível:', e.message); return;
-            }
+                swReg = await navigator.serviceWorker.ready;
+                log('SW pronto');
+            } catch(e) { log('SW falhou: ' + e.message, true); return; }
 
             const messaging = firebase.messaging();
+            log('Buscando token com VAPID...');
             const token = await messaging.getToken({ vapidKey: this._VAPID_KEY, serviceWorkerRegistration: swReg });
-            if (!token) { console.warn('FCM: token vazio'); return; }
+            if (!token) { log('Token vazio retornado pelo FCM', true); return; }
+            log('Token obtido: ' + token.substring(0, 20) + '...');
 
-            // Salva na coleção correta (aluno ou professor)
             const colecao = this.role === 'professor' ? 'professores' : 'alunos';
             if (this.currentUser?.id) {
                 await db.collection(colecao).doc(this.currentUser.id).update({ fcmToken: token });
-                console.log('FCM token salvo ✅');
+                log('Token salvo no Firestore ✅ (coleção: ' + colecao + ', id: ' + this.currentUser.id + ')');
+            } else {
+                log('currentUser.id não disponível', true);
             }
         } catch(e) {
-            console.warn('FCM token registro falhou:', e.message);
+            console.error('[FCM] Erro:', e.message, e);
         }
     },
 

@@ -83,6 +83,70 @@ const GaditasPainelAdm = {
                 <div id="cobranca-resultado" style="margin-top:12px;"></div>
             </div>
 
+            <!-- ══ ENVIAR COBRANÇA VIA WHATSAPP ══ -->
+            <div id="fin-card-whats" class="card" style="background:#1e293b; border:1px solid #25d36644; padding:15px; border-radius:12px; margin-top:4px;">
+                <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#25d366; margin-bottom:14px; letter-spacing:0.5px;">
+                    <i class="fab fa-whatsapp"></i> ENVIAR COBRANÇA VIA WHATSAPP
+                </div>
+
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">CLIENTE (nome, e-mail ou telefone):</small>
+                <input type="text" id="wpp-busca-cliente" placeholder="🔍 Buscar no app ou Asaas..."
+                    oninput="GaditasPainelAdm.buscarClienteWpp()"
+                    style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;"/>
+                <div id="wpp-lista-clientes" style="margin-bottom:6px;"></div>
+
+                <!-- Cliente selecionado + phone + cobranças -->
+                <div id="wpp-cliente-painel" class="hidden">
+                    <div id="wpp-cliente-info" style="background:#0f172a; border:1px solid #25d36644; border-radius:8px; padding:10px 12px; margin-bottom:10px;"></div>
+
+                    <!-- Telefone -->
+                    <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">WHATSAPP (com DDD, só números):</small>
+                    <div style="display:flex; gap:6px; margin-bottom:12px;">
+                        <input type="text" id="wpp-telefone" placeholder="Ex: 79999998888" maxlength="13"
+                            oninput="this.value=this.value.replace(/\\D/g,'')"
+                            style="flex:1; padding:10px 12px; background:#0f172a; border:1px solid #25d366; color:white; border-radius:8px; outline:none; font-size:0.85rem; font-weight:700; box-sizing:border-box;"/>
+                        <button onclick="GaditasPainelAdm._salvarTelefoneWpp()"
+                            style="background:#25d366; border:none; color:#000; padding:10px 14px; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer; white-space:nowrap;">
+                            💾 Salvar
+                        </button>
+                    </div>
+
+                    <!-- Cobranças abertas do cliente -->
+                    <div id="wpp-cobrancas-abertas"></div>
+
+                    <!-- Ou gerar nova -->
+                    <div style="margin-top:12px; border-top:1px solid #334155; padding-top:12px;">
+                        <small style="color:#64748b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">⚡ OU GERAR NOVA E ENVIAR:</small>
+                        <input type="text" id="wpp-nova-desc" placeholder="Descrição (ex: Mensalidade Julho)"
+                            style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:8px; box-sizing:border-box;"/>
+                        <div style="display:flex; gap:8px; margin-bottom:10px;">
+                            <div style="flex:1;">
+                                <small style="color:#94a3b8; font-size:0.58rem; font-weight:800; display:block; margin-bottom:4px;">VALOR (R$):</small>
+                                <input type="number" id="wpp-nova-valor" placeholder="0,00" step="0.01"
+                                    style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.9rem; font-weight:700; box-sizing:border-box;"/>
+                            </div>
+                            <div style="flex:1;">
+                                <small style="color:#94a3b8; font-size:0.58rem; font-weight:800; display:block; margin-bottom:4px;">VENCIMENTO:</small>
+                                <input type="date" id="wpp-nova-venc" value="${dataVencStr}"
+                                    style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
+                            </div>
+                        </div>
+                        <select id="wpp-nova-tipo" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:10px; box-sizing:border-box;">
+                            <option value="PIX">⚡ Pix</option>
+                            <option value="BOLETO">📄 Boleto</option>
+                            <option value="CREDIT_CARD">💳 Cartão</option>
+                            <option value="UNDEFINED">🔀 Pix, Boleto ou Cartão</option>
+                        </select>
+                        <button onclick="GaditasPainelAdm.gerarEEnviarWpp()"
+                            style="width:100%; padding:12px; background:#25d366; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.82rem; letter-spacing:0.3px;">
+                            <i class="fab fa-whatsapp"></i> GERAR COBRANÇA E ENVIAR VIA WHATSAPP
+                        </button>
+                    </div>
+                </div>
+
+                <div id="wpp-resultado" style="margin-top:10px;"></div>
+            </div>
+
             <!-- ══ MUDAR PLANO ══ -->
             <div id="fin-card-mudar-plano" class="card" style="background:#1e293b; border:1px solid #8b5cf644; padding:15px; border-radius:12px; margin-top:4px;">
                 <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#a78bfa; margin-bottom:14px; letter-spacing:0.5px;">
@@ -242,6 +306,7 @@ const GaditasPainelAdm = {
 
     _aplicarAcordeoesFinanceiro() {
         const secoes = [
+            { id: 'fin-card-whats',        cor: '#25d366' },
             { id: 'fin-card-mudar-plano',  cor: '#8b5cf6' },
             { id: 'fin-card-vincular',     cor: '#f43f5e' },
             { id: 'fin-card-criar-plano',  cor: '#10b981' },
@@ -542,6 +607,218 @@ const GaditasPainelAdm = {
         }
     },
     
+    // ══════════════════════════════════════════════════════════
+    // ENVIAR COBRANÇA VIA WHATSAPP
+    // ══════════════════════════════════════════════════════════
+
+    _clienteWpp: null, // { id?, nome, telefone, asaasId, origem: 'app'|'asaas' }
+
+    async buscarClienteWpp() {
+        const termo = document.getElementById('wpp-busca-cliente')?.value.trim();
+        const lista = document.getElementById('wpp-lista-clientes');
+        if (!lista || !termo || termo.length < 2) { if(lista) lista.innerHTML = ''; return; }
+
+        lista.innerHTML = '<small style="color:#64748b;font-size:0.7rem;padding:4px;display:block;"><i class="fas fa-spinner fa-spin"></i> Buscando...</small>';
+
+        const resultados = [];
+
+        // 1. Busca no Firestore (alunos do app)
+        try {
+            const snap = await db.collection('alunos').orderBy('nome').get();
+            snap.docs.filter(d => {
+                const a = d.data();
+                return a.nome?.toLowerCase().includes(termo.toLowerCase())
+                    || a.telefone?.includes(termo.replace(/\D/g,''))
+                    || a.email?.toLowerCase().includes(termo.toLowerCase());
+            }).slice(0, 5).forEach(doc => {
+                const a = doc.data();
+                resultados.push({ id: doc.id, nome: a.nome, telefone: (a.telefone||'').replace(/\D/g,''), asaasId: a.asaasId||'', email: a.email, origem: 'app' });
+            });
+        } catch(e) {}
+
+        // 2. Busca no Asaas por nome (se menos de 3 resultados)
+        if (resultados.length < 3 && isNaN(termo)) {
+            try {
+                const res = await fetch('/api/asaas?endpoint=customers&name=' + encodeURIComponent(termo) + '&limit=5');
+                const data = await res.json();
+                (data.data || []).forEach(c => {
+                    if (!resultados.find(r => r.asaasId === c.id)) {
+                        resultados.push({ nome: c.name, telefone: (c.mobilePhone||c.phone||'').replace(/\D/g,''), asaasId: c.id, email: c.email||'', origem: 'asaas' });
+                    }
+                });
+            } catch(e) {}
+        }
+
+        if (!resultados.length) {
+            lista.innerHTML = '<small style="color:#64748b;font-size:0.75rem;padding:6px;display:block;">Nenhum cliente encontrado. Cadastre no Asaas primeiro.</small>';
+            return;
+        }
+
+        lista.innerHTML = resultados.map((c, i) => `
+            <div onclick="GaditasPainelAdm.selecionarClienteWpp(${i})" data-wpp-idx="${i}"
+                style="background:#0f172a; border:1px solid #334155; padding:10px 12px; border-radius:8px; margin-bottom:5px; cursor:pointer; font-size:0.8rem; color:#e2e8f0; font-weight:600;"
+                onmouseover="this.style.borderColor='#25d366'" onmouseout="this.style.borderColor='#334155'">
+                <i class="fab fa-whatsapp" style="color:#25d366; margin-right:6px;"></i> ${c.nome.toUpperCase()}
+                <span style="color:#${c.origem==='app'?'3b82f6':'64748b'}; font-size:0.55rem; margin-left:6px;">${c.origem==='app'?'APP':'ASAAS'}</span>
+                ${c.telefone ? `<small style="color:#475569; display:block; font-size:0.6rem; margin-top:2px;">📱 (${c.telefone.slice(0,2)}) ${c.telefone.slice(2,7)}-${c.telefone.slice(7)}</small>` : '<small style="color:#f43f5e; display:block; font-size:0.58rem; margin-top:2px;">⚠️ Sem telefone</small>'}
+            </div>`).join('');
+
+        // Salva temporariamente para acesso por índice
+        this._wppResultados = resultados;
+    },
+
+    async selecionarClienteWpp(idx) {
+        const c = this._wppResultados?.[idx];
+        if (!c) return;
+        this._clienteWpp = c;
+
+        document.getElementById('wpp-lista-clientes').innerHTML = '';
+        document.getElementById('wpp-busca-cliente').value = '';
+        document.getElementById('wpp-cliente-painel').classList.remove('hidden');
+
+        // Preenche info e telefone
+        document.getElementById('wpp-cliente-info').innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:0.7rem; font-weight:800; color:#25d366; margin-bottom:2px;"><i class="fab fa-whatsapp"></i> CLIENTE SELECIONADO</div>
+                    <div style="font-size:0.88rem; font-weight:800; color:white;">${c.nome.toUpperCase()}</div>
+                    <div style="font-size:0.6rem; color:#475569; margin-top:1px;">${c.email || ''} · ${c.origem === 'app' ? '📱 App Gaditas' : '☁️ Asaas'}</div>
+                </div>
+                <button onclick="GaditasPainelAdm._limparClienteWpp()" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.9rem;padding:4px;">✕</button>
+            </div>`;
+        document.getElementById('wpp-telefone').value = c.telefone || '';
+
+        // Busca cobranças abertas
+        await this._carregarCobrancasWpp(c);
+    },
+
+    async _carregarCobrancasWpp(c) {
+        const div = document.getElementById('wpp-cobrancas-abertas');
+        if (!div) return;
+        if (!c.asaasId) { div.innerHTML = ''; return; }
+
+        div.innerHTML = '<small style="color:#64748b;font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> Buscando cobranças abertas...</small>';
+        try {
+            const res = await fetch(`/api/asaas?endpoint=payments&customer=${c.asaasId}&status=PENDING&limit=10`);
+            const data = await res.json();
+            const cobr = data.data || [];
+            if (!cobr.length) { div.innerHTML = '<small style="color:#64748b;font-size:0.7rem;font-style:italic;">Nenhuma cobrança em aberto no Asaas.</small>'; return; }
+
+            div.innerHTML = `
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">COBRANÇAS ABERTAS NO ASAAS (${cobr.length}):</small>
+                ${cobr.map(p => {
+                    const valor = p.value.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+                    const venc  = p.dueDate.split('-').reverse().join('/');
+                    const link  = p.invoiceUrl || p.bankSlipUrl || '';
+                    return `
+                    <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:10px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:0.75rem; font-weight:800; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.description || 'Cobrança'}</div>
+                            <div style="font-size:0.62rem; color:#64748b; margin-top:2px;">${valor} · vence ${venc}</div>
+                        </div>
+                        ${link ? `<button onclick="GaditasPainelAdm._enviarLinkWpp('${link}','${p.description||'Cobrança'}','${valor}','${venc}')"
+                            style="background:#25d366; border:none; color:#000; padding:8px 12px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0;">
+                            <i class="fab fa-whatsapp"></i> ENVIAR
+                        </button>` : '<small style="color:#475569;font-size:0.6rem;">Sem link</small>'}
+                    </div>`;
+                }).join('')}`;
+        } catch(e) { div.innerHTML = '<small style="color:#f43f5e;font-size:0.7rem;">Erro ao buscar cobranças.</small>'; }
+    },
+
+    _enviarLinkWpp(link, desc, valor, venc) {
+        const tel = (document.getElementById('wpp-telefone')?.value || '').replace(/\D/g,'');
+        const nome = this._clienteWpp?.nome || '';
+        if (!tel || tel.length < 10) { alert('Informe o número de WhatsApp do cliente.'); return; }
+        const msg = `Olá *${nome}*! 👋\n\nAqui é a *Gaditas Academy*. Segue o link para o pagamento:\n\n📋 *${desc}*\n💰 Valor: *${valor}*\n📅 Vencimento: *${venc}*\n\n🔗 Link para pagamento:\n${link}\n\nQualquer dúvida, estamos à disposição! 🥋`;
+        window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+    },
+
+    async _salvarTelefoneWpp() {
+        const tel = (document.getElementById('wpp-telefone')?.value || '').replace(/\D/g,'');
+        if (tel.length < 10) { alert('Telefone inválido.'); return; }
+        if (this._clienteWpp?.id) {
+            await db.collection('alunos').doc(this._clienteWpp.id).update({ telefone: tel });
+        }
+        if (this._clienteWpp) this._clienteWpp.telefone = tel;
+        alert('✅ Telefone salvo!');
+    },
+
+    async gerarEEnviarWpp() {
+        const resultado = document.getElementById('wpp-resultado');
+        if (!this._clienteWpp) return alert('Selecione o cliente primeiro.');
+        const tel = (document.getElementById('wpp-telefone')?.value || '').replace(/\D/g,'');
+        if (!tel || tel.length < 10) return alert('Informe o WhatsApp do cliente antes de enviar.');
+
+        const desc  = document.getElementById('wpp-nova-desc')?.value.trim();
+        const valor = parseFloat(document.getElementById('wpp-nova-valor')?.value);
+        const venc  = document.getElementById('wpp-nova-venc')?.value;
+        const tipo  = document.getElementById('wpp-nova-tipo')?.value;
+
+        if (!desc) return alert('Informe a descrição da cobrança.');
+        if (isNaN(valor) || valor <= 0) return alert('Informe um valor válido.');
+        if (!venc) return alert('Informe a data de vencimento.');
+
+        try {
+            // Garante asaasId
+            let asaasId = this._clienteWpp.asaasId;
+            if (!asaasId) {
+                const resBusca = await fetch('/api/asaas?endpoint=customers&email=' + encodeURIComponent(this._clienteWpp.email||''));
+                const dadosBusca = await resBusca.json();
+                asaasId = dadosBusca.data?.[0]?.id;
+                if (!asaasId) {
+                    // Cria cliente
+                    const cpfDoc = this._clienteWpp.id ? (await db.collection('alunos').doc(this._clienteWpp.id).get()).data()?.cpf : '';
+                    const body = { name: this._clienteWpp.nome, email: this._clienteWpp.email || '' };
+                    if (cpfDoc) body.cpfCnpj = cpfDoc.replace(/\D/g,'');
+                    const resCriar = await fetch('/api/asaas?endpoint=customers', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+                    const criado = await resCriar.json();
+                    if (!criado.id) throw new Error(criado.errors?.[0]?.description || 'Erro ao criar cliente no Asaas.');
+                    asaasId = criado.id;
+                    if (this._clienteWpp.id) await db.collection('alunos').doc(this._clienteWpp.id).update({ asaasId });
+                }
+                this._clienteWpp.asaasId = asaasId;
+            }
+
+            // Cria cobrança
+            const resPag = await fetch('/api/asaas?endpoint=payments', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ customer: asaasId, billingType: tipo, value: valor, dueDate: venc, description: desc + ' — ' + this._clienteWpp.nome })
+            });
+            const pag = await resPag.json();
+            if (!pag.id) throw new Error(pag.errors?.[0]?.description || 'Erro ao gerar cobrança.');
+
+            const link = pag.invoiceUrl || pag.bankSlipUrl || '';
+            if (!link) throw new Error('Cobrança gerada mas sem link de pagamento disponível.');
+
+            const valorFmt = valor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+            const vencFmt  = venc.split('-').reverse().join('/');
+
+            resultado.innerHTML = `<div style="background:#064e3b; border:1px solid #10b981; border-radius:10px; padding:10px; font-size:0.75rem; color:#34d399; font-weight:700; margin-top:4px;">✅ Cobrança gerada! Abrindo WhatsApp...</div>`;
+
+            // Abre WhatsApp
+            this._enviarLinkWpp(link, desc, valorFmt, vencFmt);
+
+            // Limpa campos da nova cobrança
+            document.getElementById('wpp-nova-desc').value = '';
+            document.getElementById('wpp-nova-valor').value = '';
+
+        } catch(e) {
+            resultado.innerHTML = `<div style="background:#1c0a00; border:1px solid #f43f5e; border-radius:8px; padding:10px; font-size:0.78rem; color:#f43f5e; font-weight:700;">❌ ${e.message}</div>`;
+        }
+    },
+
+    _limparClienteWpp() {
+        this._clienteWpp = null;
+        this._wppResultados = [];
+        document.getElementById('wpp-busca-cliente').value = '';
+        document.getElementById('wpp-lista-clientes').innerHTML = '';
+        document.getElementById('wpp-cliente-painel').classList.add('hidden');
+        document.getElementById('wpp-cobrancas-abertas').innerHTML = '';
+        document.getElementById('wpp-resultado').innerHTML = '';
+        document.getElementById('wpp-nova-desc').value = '';
+        document.getElementById('wpp-nova-valor').value = '';
+    },
+
     // ══════════════════════════════════════════════════════════
     // MUDAR PLANO
     // ══════════════════════════════════════════════════════════

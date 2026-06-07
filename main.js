@@ -1890,6 +1890,7 @@ const academia = {
         const _set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
         _set('cpf-aluno', a.cpf);
         _set('telefone-aluno', a.telefone);
+        _set('planoValor-aluno', a.planoValor > 0 ? a.planoValor : '');
         _set('cep-aluno', a.cep);
         _set('rua-aluno', a.rua);
         _set('numero-aluno', a.numero);
@@ -2250,6 +2251,9 @@ Ele voltará a ser aluno normal.`)) return;
             cidade: document.getElementById('cidade-aluno') ? document.getElementById('cidade-aluno').value.trim() : "",
             estado: document.getElementById('estado-aluno') ? document.getElementById('estado-aluno').value.trim().toUpperCase() : ""
         };
+        // Valor do contrato — se preenchido, atualiza planoValor
+        const novoValor = parseFloat(document.getElementById('planoValor-aluno')?.value);
+        if (novoValor > 0) dados.planoValor = novoValor;
         // Graduação Muay Thai (sem graus — cada faixa é um nível único)
         if (modalidadeSalva === 'muaythai' || modalidadeSalva === 'ambos') {
             dados.faixaMT = document.getElementById('select-faixa-mt')?.value || 'Branco';

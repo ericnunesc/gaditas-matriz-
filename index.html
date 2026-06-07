@@ -727,6 +727,14 @@
                             </div>
                         </div>
                     </div>
+                    <!-- VALOR DO CONTRATO -->
+                    <div style="background:#0f172a; border:1px solid #f59e0b44; border-radius:10px; padding:12px; margin-top:14px;">
+                        <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">💰 VALOR NO CONTRATO (R$/mês)</small>
+                        <small style="color:#64748b; font-size:0.58rem; display:block; margin-bottom:8px; line-height:1.4;">Defina o valor real do plano. Aparece no contrato digital do aluno. Obrigatório para planos Livre e Família.</small>
+                        <input type="number" id="planoValor-aluno" placeholder="Ex: 120.00" step="0.01" min="0"
+                            style="width:100%; padding:10px; background:#1e293b; border:1px solid #f59e0b55; color:white; border-radius:8px; outline:none; font-size:0.9rem; font-weight:700;"/>
+                    </div>
+
                     <div style="display: flex; gap: 8px; margin-top: 15px;">
                         <button id="btn-salvar-atleta" onclick="academia.salvarAluno()" style="flex:2; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">SALVAR DADOS ATLETA</button>
                         <button onclick="academia.limparAl()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">LIMPAR</button>

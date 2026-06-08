@@ -273,28 +273,7 @@ const auth = {
             if (!fbUser) { log('Sem usuário Firebase Auth', true); return; }
             log('Auth OK: ' + fbUser.uid);
 
-            // Limpa IndexedDB do Firebase Installations para forçar auth token fresco
-            try {
-                await new Promise((res, rej) => {
-                    const r = indexedDB.deleteDatabase('firebase-installations-database');
-                    r.onsuccess = res; r.onerror = rej;
-                });
-                log('IndexedDB installations limpo');
-            } catch(e) { log('IndexedDB: ' + e.message, true); }
-
-            // Remove push subscription stale do browser (pode estar com VAPID antigo)
-            try {
-                const existingSub = await swReg.pushManager.getSubscription();
-                if (existingSub) {
-                    await existingSub.unsubscribe();
-                    log('Push subscription antiga removida');
-                } else {
-                    log('Sem push subscription anterior');
-                }
-            } catch(e) { log('Erro ao remover subscription: ' + e.message, true); }
-
             const messaging = firebase.messaging();
-            try { await messaging.deleteToken(); } catch(e) {}
             log('Buscando token FCM...');
             const token = await messaging.getToken({ vapidKey: this._VAPID_KEY, serviceWorkerRegistration: swReg });
             if (!token) { log('Token vazio retornado pelo FCM', true); return; }

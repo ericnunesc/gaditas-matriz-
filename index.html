@@ -931,7 +931,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-    <script src="main.js?v=20260608d"></script>
+    <script src="main.js?v=20260608e"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const inp = document.getElementById('input-evento-imagem');
@@ -941,7 +941,7 @@
                 reader.onload = e => {
                     const img = document.getElementById('img-preview-evento');
                     const prev = document.getElementById('preview-evento-imagem');
-                    if(img) { img.src = e.target.result; img.dataset.url = ''; }
+                    if(img) { img.src = e.target.result; img.dataset.savedUrl = ''; }
                     if(prev) prev.style.display = 'block';
                 };
                 reader.readAsDataURL(file);

@@ -1199,16 +1199,40 @@ const academia = {
         const btn = document.getElementById('btn-salvar-evento');
         if(btn) { btn.disabled = true; btn.innerText = 'Salvando...'; }
 
-        let imagemUrl = document.getElementById('img-preview-evento').dataset.url || '';
+        let imagemUrl = document.getElementById('img-preview-evento').dataset.savedUrl || '';
         const fileInput = document.getElementById('input-evento-imagem');
         if (fileInput && fileInput.files[0]) {
             try {
                 const file = fileInput.files[0];
+                // Tenta Storage primeiro
                 const nome = 'eventos/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
                 const ref = getStorage().ref(nome);
                 const snap = await ref.put(file);
                 imagemUrl = await snap.ref.getDownloadURL();
-            } catch(e) { console.error('Erro upload imagem evento:', e); imagemUrl = ''; }
+            } catch(e) {
+                // Fallback: comprime e salva base64
+                try {
+                    imagemUrl = await new Promise((res, rej) => {
+                        const reader = new FileReader();
+                        reader.onload = ev => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const maxW = 800;
+                                const scale = Math.min(1, maxW / img.width);
+                                canvas.width = img.width * scale;
+                                canvas.height = img.height * scale;
+                                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                                res(canvas.toDataURL('image/jpeg', 0.7));
+                            };
+                            img.onerror = rej;
+                            img.src = ev.target.result;
+                        };
+                        reader.onerror = rej;
+                        reader.readAsDataURL(file);
+                    });
+                } catch(e2) { console.error('Erro imagem evento:', e2); imagemUrl = ''; }
+            }
         }
 
         const dados = { titulo: t, dataEvento: d, vagasMax: v, linkPay: p, descricao: de, imagemUrl };
@@ -1228,7 +1252,7 @@ const academia = {
         const preview = document.getElementById('preview-evento-imagem');
         const img = document.getElementById('img-preview-evento');
         if(input) input.value = '';
-        if(img) { img.src = ''; img.dataset.url = ''; }
+        if(img) { img.src = ''; img.dataset.savedUrl = ''; }
         if(preview) preview.style.display = 'none';
     },
 
@@ -1245,7 +1269,7 @@ const academia = {
         const img = document.getElementById('img-preview-evento');
         const preview = document.getElementById('preview-evento-imagem');
         if (ev.imagemUrl && img && preview) {
-            img.src = ev.imagemUrl; img.dataset.url = ev.imagemUrl;
+            img.src = ev.imagemUrl; img.dataset.savedUrl = ev.imagemUrl;
             preview.style.display = 'block';
         } else { this.limparImagemEvento(); }
         const btn = document.getElementById('btn-salvar-evento');

@@ -8,14 +8,6 @@
 };
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-
-// Firebase App Check — necessário para autenticar fcmregistrations
-const appCheck = firebase.appCheck();
-appCheck.activate(
-    new firebase.appCheck.ReCaptchaV3Provider('6LeZ5xItAAAAO4-R9H2c4FNu9aWgfuOk888oc2W'),
-    true
-);
-
 const db = firebase.firestore();
 // Storage inicializado de forma lazy para não quebrar se o script carregar fora de ordem
 let _storage = null;
@@ -219,10 +211,7 @@ const auth = {
             }
         }
 
-        // ── REGISTRO FCM TOKEN (push notifications) ──────────
-        if (this.role !== 'admin') {
-            setTimeout(() => auth._registrarFcmToken(), 2000);
-        }
+        // FCM token desativado temporariamente
 
         // Carrega foto no header
         if (this.currentUser.id && this.currentUser.id !== 'admin') {

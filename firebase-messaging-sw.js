@@ -1,6 +1,6 @@
 // firebase-messaging-sw.js — também serve como SW do PWA
 
-const CACHE = 'gaditas-v4';
+const CACHE = 'gaditas-v5';
 const PRECACHE = [
     './',
     './index.html',
@@ -52,8 +52,8 @@ self.addEventListener('fetch', e => {
 });
 
 // ── Firebase Messaging ──────────────────────────────────────
-importScripts('https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.14.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
     apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",

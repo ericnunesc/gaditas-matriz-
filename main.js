@@ -282,6 +282,14 @@ const auth = {
                 log('IndexedDB installations limpo');
             } catch(e) { log('IndexedDB: ' + e.message, true); }
 
+            // Diagnóstico: verifica se o FIS consegue gerar auth token
+            try {
+                const fisToken = await firebase.installations().getToken(true);
+                log('FIS token: ' + (fisToken ? fisToken.substring(0, 30) + '...' : 'NULL/VAZIO'));
+            } catch(e) {
+                log('FIS token ERRO: ' + e.message, true);
+            }
+
             const messaging = firebase.messaging();
             try { await messaging.deleteToken(); } catch(e) {}
             log('Buscando token FCM...');

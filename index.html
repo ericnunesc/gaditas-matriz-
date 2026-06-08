@@ -485,6 +485,14 @@
                     <input type="number" id="input-evento-vagas" placeholder="Limite Máximo de Vagas" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <input type="text" id="input-evento-pagamento" placeholder="Link de Pagamento InfinitePay (Opcional)" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <textarea id="input-evento-desc" placeholder="Descrição do evento..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; margin-bottom:10px;"></textarea>
+                    <div style="margin-bottom:10px;">
+                        <label style="color:#94a3b8; font-size:0.72rem; font-weight:700; display:block; margin-bottom:6px;"><i class="fas fa-image"></i> CARTAZ DO EVENTO (opcional)</label>
+                        <input type="file" id="input-evento-imagem" accept="image/*" style="width:100%; padding:8px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.75rem; cursor:pointer;"/>
+                        <div id="preview-evento-imagem" style="margin-top:8px; display:none;">
+                            <img id="img-preview-evento" src="" style="width:100%; border-radius:8px; max-height:180px; object-fit:cover;"/>
+                            <button onclick="academia.limparImagemEvento()" style="margin-top:4px; background:none; border:none; color:#f43f5e; font-size:0.7rem; cursor:pointer;"><i class="fas fa-trash"></i> Remover imagem</button>
+                        </div>
+                    </div>
                     <div style="display:flex; gap:8px;">
                         <button id="btn-salvar-evento" onclick="academia.salvarEventoAdmin()" style="flex:2; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">PUBLICAR EVENTO</button>
                         <button onclick="academia.limparFormEvento()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">LIMPAR</button>
@@ -923,7 +931,23 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-    <script src="main.js?v=20260608b"></script>
+    <script src="main.js?v=20260608c"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const inp = document.getElementById('input-evento-imagem');
+            if(inp) inp.addEventListener('change', function() {
+                const file = this.files[0]; if(!file) return;
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = document.getElementById('img-preview-evento');
+                    const prev = document.getElementById('preview-evento-imagem');
+                    if(img) { img.src = e.target.result; img.dataset.url = ''; }
+                    if(prev) prev.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+    </script>
     <script src="filtros-academia.js?v=20260602v"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>

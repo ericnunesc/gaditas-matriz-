@@ -1195,16 +1195,41 @@ const academia = {
         const p = document.getElementById('input-evento-pagamento').value.trim();
         const de = document.getElementById('input-evento-desc').value.trim();
         if(!t || !d || !v) return alert("Preencha título, data e total de vagas.");
-        const dados = { titulo: t, dataEvento: d, vagasMax: v, linkPay: p, descricao: de };
+
+        const btn = document.getElementById('btn-salvar-evento');
+        if(btn) { btn.disabled = true; btn.innerText = 'Salvando...'; }
+
+        let imagemUrl = document.getElementById('img-preview-evento').dataset.url || '';
+        const fileInput = document.getElementById('input-evento-imagem');
+        if (fileInput && fileInput.files[0]) {
+            try {
+                const storage = firebase.storage();
+                const file = fileInput.files[0];
+                const ref = storage.ref(`eventos/${Date.now()}_${file.name}`);
+                await ref.put(file);
+                imagemUrl = await ref.getDownloadURL();
+            } catch(e) { console.error('Erro upload imagem:', e); }
+        }
+
+        const dados = { titulo: t, dataEvento: d, vagasMax: v, linkPay: p, descricao: de, imagemUrl };
         if(id) {
             await db.collection("eventos_oficiais").doc(id).update(dados);
-            alert("✅ Evento updated!");
+            alert("✅ Evento atualizado!");
         } else {
             await db.collection("eventos_oficiais").add({ ...dados, inscritos: [], dataCriacao: new Date().getTime() });
             alert("✅ Evento criado!");
         }
         this.limparFormEvento();
         this.carregarEventosAbas();
+    },
+
+    limparImagemEvento() {
+        const input = document.getElementById('input-evento-imagem');
+        const preview = document.getElementById('preview-evento-imagem');
+        const img = document.getElementById('img-preview-evento');
+        if(input) input.value = '';
+        if(img) { img.src = ''; img.dataset.url = ''; }
+        if(preview) preview.style.display = 'none';
     },
 
     async editarEventoAdmin(id) {
@@ -1216,6 +1241,13 @@ const academia = {
         document.getElementById('input-evento-vagas').value = ev.vagasMax;
         document.getElementById('input-evento-pagamento').value = ev.linkPay || "";
         document.getElementById('input-evento-desc').value = ev.descricao || "";
+        // Mostra imagem existente
+        const img = document.getElementById('img-preview-evento');
+        const preview = document.getElementById('preview-evento-imagem');
+        if (ev.imagemUrl && img && preview) {
+            img.src = ev.imagemUrl; img.dataset.url = ev.imagemUrl;
+            preview.style.display = 'block';
+        } else { this.limparImagemEvento(); }
         const btn = document.getElementById('btn-salvar-evento');
         if(btn) btn.innerText = "ATUALIZAR EVENTO";
         // Destaca o formulário de edição
@@ -1234,8 +1266,9 @@ const academia = {
         document.getElementById('input-evento-vagas').value = "";
         document.getElementById('input-evento-pagamento').value = "";
         document.getElementById('input-evento-desc').value = "";
+        this.limparImagemEvento();
         const btn = document.getElementById('btn-salvar-evento');
-        if(btn) btn.innerText = "PUBLICAR EVENTO";
+        if(btn) { btn.innerText = "PUBLICAR EVENTO"; btn.disabled = false; }
     },
 
     async carregarEventosAbas() {
@@ -1252,7 +1285,8 @@ const academia = {
                 const jaInscrito = auth.currentUser ? listaInscritos.some(i => i.id === auth.currentUser.id) : false;
                 let botaoAcao = jaInscrito ? `<button onclick="academia.cancelarInscricaoEvento('${evId}')" class="btn-save" style="background: linear-gradient(135deg, #059669, #047857); color: white; border: 1px solid #10b981;">Inscrito com Sucesso! ✅ (Sair)</button>` : (totalInscritos >= ev.vagasMax ? `<button class="btn-save btn-dark" style='cursor:not-allowed; background:#334155;' disabled>Vagas Esgotadas ❌</button>` : `<button onclick="academia.inscreverEmEvento('${evId}')" class="btn-save btn-tecnica">Garantir Minha Vaga</button>`);
                 let botaoPagamentoAluno = (jaInscrito && ev.linkPay) ? `<button onclick="window.open('${ev.linkPay}', '_blank')" class="btn-infinitepay"><i class="fas fa-credit-card"></i> PAGAR INSCRIÇÃO AGORA 💳</button>` : '';
-                htmlAluno += `<div class="card-evento"><div class="evento-header"><h4 class="evento-titulo">${ev.titulo.toUpperCase()}</h4><span class="evento-vagas-badge">${totalInscritos} / ${ev.vagasMax} VAGAS</span></div><div class="evento-data"><i class="fas fa-clock"></i> ${ev.dataEvento}</div><div class="evento-desc">${ev.descricao || "Sem descrição."}</div>${botaoAcao}${botaoPagamentoAluno}</div>`;
+                const cartaz = ev.imagemUrl ? `<img src="${ev.imagemUrl}" style="width:100%; border-radius:10px; margin-bottom:10px; max-height:220px; object-fit:cover;" loading="lazy"/>` : '';
+                htmlAluno += `<div class="card-evento">${cartaz}<div class="evento-header"><h4 class="evento-titulo">${ev.titulo.toUpperCase()}</h4><span class="evento-vagas-badge">${totalInscritos} / ${ev.vagasMax} VAGAS</span></div><div class="evento-data"><i class="fas fa-clock"></i> ${ev.dataEvento}</div><div class="evento-desc">${ev.descricao || "Sem descrição."}</div>${botaoAcao}${botaoPagamentoAluno}</div>`;
                 const nomesInscritos = listaInscritos.map((n, idx) => `<div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #ccc; padding: 6px 0; border-bottom: 1px solid #1e293b;"><span>${idx+1}. ${n.nome.toUpperCase()}</span><button onclick="academia.removerAlunoDeEventoAdmin('${evId}', '${n.id}', '${n.nome.replace(/'/g, "\\'")}')" style="background: none; border: none; color: #f43f5e; cursor: pointer; padding: 2px 6px;"><i class="fas fa-user-minus"></i></button></div>`).join('') || "<small style='color:var(--text-muted);'>Ninguém inscrito ainda.</small>";
                 htmlAdmin += `<div style="background:#0f172a; border:1px solid var(--border-light); padding:12px; border-radius:10px; margin-bottom:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid var(--border-light); padding-bottom:5px;">

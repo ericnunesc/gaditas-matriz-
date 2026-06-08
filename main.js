@@ -8,6 +8,14 @@
 };
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+// Firebase App Check — necessário para autenticar fcmregistrations
+const appCheck = firebase.appCheck();
+appCheck.activate(
+    new firebase.appCheck.ReCaptchaV3Provider('6LeZ5xItAAAAO4-R9H2c4FNu9aWgfuOk888oc2W'),
+    true
+);
+
 const db = firebase.firestore();
 // Storage inicializado de forma lazy para não quebrar se o script carregar fora de ordem
 let _storage = null;

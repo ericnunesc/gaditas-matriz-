@@ -273,13 +273,9 @@ const auth = {
             if (!fbUser) { log('Sem usuário Firebase Auth', true); return; }
             log('Auth OK: ' + fbUser.uid);
 
-            // Força nova installation para garantir auth token válido
-            try {
-                await firebase.installations().delete();
-                log('Installation resetada');
-            } catch(e) { /* ignora — pode não ter installation prévia */ }
-
             const messaging = firebase.messaging();
+            // Apaga token anterior para forçar re-registro limpo
+            try { await messaging.deleteToken(); } catch(e) { /* sem token anterior */ }
             log('Buscando token FCM...');
             const token = await messaging.getToken({ vapidKey: this._VAPID_KEY, serviceWorkerRegistration: swReg });
             if (!token) { log('Token vazio retornado pelo FCM', true); return; }

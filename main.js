@@ -1203,12 +1203,12 @@ const academia = {
         const fileInput = document.getElementById('input-evento-imagem');
         if (fileInput && fileInput.files[0]) {
             try {
-                const storage = firebase.storage();
                 const file = fileInput.files[0];
-                const ref = storage.ref(`eventos/${Date.now()}_${file.name}`);
-                await ref.put(file);
-                imagemUrl = await ref.getDownloadURL();
-            } catch(e) { console.error('Erro upload imagem:', e); }
+                const nome = 'eventos/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const ref = getStorage().ref(nome);
+                const snap = await ref.put(file);
+                imagemUrl = await snap.ref.getDownloadURL();
+            } catch(e) { console.error('Erro upload imagem evento:', e); imagemUrl = ''; }
         }
 
         const dados = { titulo: t, dataEvento: d, vagasMax: v, linkPay: p, descricao: de, imagemUrl };

@@ -5267,6 +5267,8 @@ const ui = {
     },
     configurarVisao() {
         const isAdmin = auth.role === 'admin'; const isProf = auth.role === 'professor';
+        document.body.classList.toggle('role-admin', isAdmin);
+        document.body.classList.toggle('role-prof', isProf);
         document.getElementById('menu-alunos').style.display = (isAdmin || isProf) ? "flex" : "none";
         document.getElementById('menu-relatorios').style.display = isAdmin ? "flex" : "none";
         document.getElementById('area-professor-checkin').classList.toggle('hidden', !isAdmin && !isProf);

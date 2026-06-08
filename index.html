@@ -16,6 +16,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* Tabs ocultos por padrão — JS mostra só para admin/prof */
+        #menu-alunos, #menu-relatorios { display: none !important; }
+        body.role-admin #menu-alunos, body.role-prof #menu-alunos,
+        body.role-admin #menu-relatorios { display: flex !important; }
         /* Acordeões gestão — embutido no HTML para garantir prioridade máxima */
         #card-aniversariantes-admin.gestao-acc-fechado > div:not(:first-child),
         #card-alertas-saude.gestao-acc-fechado > div:not(:first-child),
@@ -919,7 +923,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-    <script src="main.js?v=20260608a"></script>
+    <script src="main.js?v=20260608b"></script>
     <script src="filtros-academia.js?v=20260602v"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>

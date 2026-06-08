@@ -5402,19 +5402,21 @@ const ui = {
             const header = card.children[0];
             if (!header) return;
 
-            // Garante que o header é flex
+            // Cursor de clique em todo o card
+            card.style.cursor = 'pointer';
+
+            // Chevron no header
             header.style.display = 'flex';
             header.style.justifyContent = 'space-between';
             header.style.alignItems = 'center';
-            header.style.cursor = 'pointer';
 
-            // Chevron
             const chevron = document.createElement('i');
             chevron.className = 'fas fa-chevron-down gestao-acc-chv';
             chevron.style.cssText = `color:${cor}; font-size:0.8rem; transition:transform 0.2s; flex-shrink:0; margin-left:8px;`;
             header.appendChild(chevron);
 
-            header.addEventListener('click', (e) => {
+            // Listener no CARD inteiro para não depender do clique exato no header
+            card.addEventListener('click', (e) => {
                 if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
                 const aberto = card._gestaoAberto;
                 if (aberto) {

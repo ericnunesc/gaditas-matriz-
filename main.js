@@ -1199,41 +1199,7 @@ const academia = {
         const btn = document.getElementById('btn-salvar-evento');
         if(btn) { btn.disabled = true; btn.innerText = 'Salvando...'; }
 
-        let imagemUrl = document.getElementById('img-preview-evento').dataset.savedUrl || '';
-        const fileInput = document.getElementById('input-evento-imagem');
-        if (fileInput && fileInput.files[0]) {
-            try {
-                const file = fileInput.files[0];
-                // Tenta Storage primeiro
-                const nome = 'eventos/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-                const ref = getStorage().ref(nome);
-                const snap = await ref.put(file);
-                imagemUrl = await snap.ref.getDownloadURL();
-            } catch(e) {
-                // Fallback: comprime e salva base64
-                try {
-                    imagemUrl = await new Promise((res, rej) => {
-                        const reader = new FileReader();
-                        reader.onload = ev => {
-                            const img = new Image();
-                            img.onload = () => {
-                                const canvas = document.createElement('canvas');
-                                const maxW = 800;
-                                const scale = Math.min(1, maxW / img.width);
-                                canvas.width = img.width * scale;
-                                canvas.height = img.height * scale;
-                                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                                res(canvas.toDataURL('image/jpeg', 0.7));
-                            };
-                            img.onerror = rej;
-                            img.src = ev.target.result;
-                        };
-                        reader.onerror = rej;
-                        reader.readAsDataURL(file);
-                    });
-                } catch(e2) { console.error('Erro imagem evento:', e2); imagemUrl = ''; }
-            }
-        }
+        const imagemUrl = (document.getElementById('input-evento-imagemUrl') || {}).value || '';
 
         const dados = { titulo: t, dataEvento: d, vagasMax: v, linkPay: p, descricao: de, imagemUrl };
         if(id) {
@@ -1247,13 +1213,50 @@ const academia = {
         this.carregarEventosAbas();
     },
 
-    limparImagemEvento() {
-        const input = document.getElementById('input-evento-imagem');
+    async _uploadCartazEvento(file) {
+        if (!file) return;
+        const status  = document.getElementById('status-evento-imagem');
         const preview = document.getElementById('preview-evento-imagem');
-        const img = document.getElementById('img-preview-evento');
+        const imgEl   = document.getElementById('img-preview-evento');
+        const hidden  = document.getElementById('input-evento-imagemUrl');
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Processando...</span>';
+        // Comprime
+        let base64;
+        try {
+            base64 = await loja._comprimirImagem(file, 900, 0.82);
+        } catch(e) {
+            if (status) status.innerHTML = '<span style="color:#f43f5e;">❌ Erro ao ler imagem.</span>';
+            return;
+        }
+        // Preview imediato
+        if (imgEl) imgEl.src = base64;
+        if (preview) preview.style.display = 'block';
+        // Tenta Storage
+        try {
+            if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando...</span>';
+            const nome = 'eventos/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const snap = await getStorage().ref(nome).put(file);
+            const url  = await snap.ref.getDownloadURL();
+            if (hidden) hidden.value = url;
+            if (status) status.innerHTML = '<span style="color:#10b981;">✅ Cartaz salvo!</span>';
+            return;
+        } catch(e) { /* fallback base64 */ }
+        // Fallback base64
+        if (hidden) hidden.value = base64;
+        if (status) status.innerHTML = '<span style="color:#10b981;">✅ Cartaz pronto!</span>';
+    },
+
+    limparImagemEvento() {
+        const input  = document.getElementById('input-evento-imagem');
+        const hidden = document.getElementById('input-evento-imagemUrl');
+        const preview = document.getElementById('preview-evento-imagem');
+        const img    = document.getElementById('img-preview-evento');
+        const status = document.getElementById('status-evento-imagem');
         if(input) input.value = '';
-        if(img) { img.src = ''; img.dataset.savedUrl = ''; }
+        if(hidden) hidden.value = '';
+        if(img) img.src = '';
         if(preview) preview.style.display = 'none';
+        if(status) status.innerHTML = '';
     },
 
     async editarEventoAdmin(id) {
@@ -1268,9 +1271,11 @@ const academia = {
         // Mostra imagem existente
         const img = document.getElementById('img-preview-evento');
         const preview = document.getElementById('preview-evento-imagem');
-        if (ev.imagemUrl && img && preview) {
-            img.src = ev.imagemUrl; img.dataset.savedUrl = ev.imagemUrl;
-            preview.style.display = 'block';
+        const hidden = document.getElementById('input-evento-imagemUrl');
+        if (ev.imagemUrl) {
+            if (hidden) hidden.value = ev.imagemUrl;
+            if (img) img.src = ev.imagemUrl;
+            if (preview) preview.style.display = 'block';
         } else { this.limparImagemEvento(); }
         const btn = document.getElementById('btn-salvar-evento');
         if(btn) btn.innerText = "ATUALIZAR EVENTO";

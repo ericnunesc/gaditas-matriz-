@@ -233,16 +233,6 @@ const auth = {
         const log = (msg, err) => {
             console[err ? 'error' : 'log']('[FCM] ' + msg);
         };
-        // Intercepta fetch para logar headers da requisição fcmregistrations
-        const _origFetch = window.fetch;
-        window.fetch = function(url, opts) {
-            if (typeof url === 'string' && url.includes('fcmregistrations')) {
-                const h = {};
-                try { (opts?.headers instanceof Headers ? opts.headers : new Headers(opts?.headers || {})).forEach((v,k) => h[k]=v.substring(0,20)); } catch(e) {}
-                console.log('[FCM DEBUG] headers enviados:', JSON.stringify(h));
-            }
-            return _origFetch.apply(this, arguments);
-        };
         try {
             if (!('Notification' in window)) { log('Notification API não disponível'); return; }
             if (!('serviceWorker' in navigator)) { log('ServiceWorker não disponível'); return; }

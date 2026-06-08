@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -16,7 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* AcordeÃµes gestÃ£o â€” embutido no HTML para garantir prioridade mÃ¡xima */
+        /* Acordeões gestão — embutido no HTML para garantir prioridade máxima */
         #card-aniversariantes-admin.gestao-acc-fechado > div:not(:first-child),
         #card-alertas-saude.gestao-acc-fechado > div:not(:first-child),
         #card-depoimentos-admin.gestao-acc-fechado > div:not(:first-child),
@@ -27,27 +27,27 @@
     </style>
 </head>
 <body>
-    <!-- NOTIFICAÃ‡ÃƒO: ALUNO SE RECUPEROU (para professor/admin) -->
+    <!-- NOTIFICAÇÃO: ALUNO SE RECUPEROU (para professor/admin) -->
     <div id="toast-recuperacao-prof" class="hidden" style="position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:99999; width:calc(100% - 32px); max-width:420px;">
         <div style="background:#0a1f14; border:1px solid #10b981; border-radius:14px; padding:16px 18px; box-shadow:0 8px 24px rgba(0,0,0,0.5); display:flex; align-items:flex-start; gap:12px;">
-            <div style="background:#064e3b; border-radius:50%; width:38px; height:38px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">ðŸ’ª</div>
+            <div style="background:#064e3b; border-radius:50%; width:38px; height:38px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">💪</div>
             <div style="flex:1;">
-                <div style="font-size:0.75rem; font-weight:800; color:#34d399; margin-bottom:4px;">ALUNO ESTÃ RECUPERADO!</div>
+                <div style="font-size:0.75rem; font-weight:800; color:#34d399; margin-bottom:4px;">ALUNO ESTÁ RECUPERADO!</div>
                 <div id="toast-recuperacao-nome" style="font-size:0.8rem; color:#e2e8f0; line-height:1.5;"></div>
             </div>
-            <button onclick="document.getElementById('toast-recuperacao-prof').classList.add('hidden')" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:1rem; flex-shrink:0; padding:0;">âœ•</button>
+            <button onclick="document.getElementById('toast-recuperacao-prof').classList.add('hidden')" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:1rem; flex-shrink:0; padding:0;">✕</button>
         </div>
     </div>
 
-    <!-- NOTIFICAÃ‡ÃƒO: PROFESSOR RESPONDEU RELATO -->
+    <!-- NOTIFICAÇÃO: PROFESSOR RESPONDEU RELATO -->
     <div id="toast-resposta-relato" class="hidden" style="position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:99999; width:calc(100% - 32px); max-width:420px;">
         <div style="background:#0c2344; border:1px solid #3b82f6; border-radius:14px; padding:16px 18px; box-shadow:0 8px 24px rgba(0,0,0,0.5); display:flex; align-items:flex-start; gap:12px;">
-            <div style="background:#1d4ed8; border-radius:50%; width:38px; height:38px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">ðŸ’¬</div>
+            <div style="background:#1d4ed8; border-radius:50%; width:38px; height:38px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">💬</div>
             <div style="flex:1;">
                 <div style="font-size:0.75rem; font-weight:800; color:#60a5fa; margin-bottom:4px;">PROFESSOR RESPONDEU SEU RELATO!</div>
                 <div id="toast-resposta-texto" style="font-size:0.8rem; color:#e2e8f0; line-height:1.5;"></div>
             </div>
-            <button onclick="academia.fecharToastResposta()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:1rem; flex-shrink:0; padding:0;">âœ•</button>
+            <button onclick="academia.fecharToastResposta()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:1rem; flex-shrink:0; padding:0;">✕</button>
         </div>
     </div>
 
@@ -62,7 +62,7 @@
             </div>
             <div id="popup-texto-aviso" style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.6; text-align: center; margin-bottom: 20px; font-weight: 500; white-space: pre-wrap; max-height: 200px; overflow-y: auto;"></div>
             <div style="display:flex; gap:8px;">
-                <button onclick="academia.marcarAvisoComoLido()" class="btn-save" style="background: #3b82f6; font-weight: 700; margin: 0; flex:2; padding: 12px; border: none; border-radius: 10px; color: white; cursor: pointer;">ENTENDIDO, CIENTE! ðŸ‘</button>
+                <button onclick="academia.marcarAvisoComoLido()" class="btn-save" style="background: #3b82f6; font-weight: 700; margin: 0; flex:2; padding: 12px; border: none; border-radius: 10px; color: white; cursor: pointer;">ENTENDIDO, CIENTE! 👍</button>
                 <button onclick="academia.marcarAvisoComoLido(); academia.abrirHistoricoAvisosAluno()" style="background: #334155; font-weight: 700; margin: 0; flex:1; padding: 12px; border: none; border-radius: 10px; color: white; cursor: pointer; font-size:0.75rem;"><i class="fas fa-history"></i> VER TODOS</button>
             </div>
         </div>
@@ -74,12 +74,12 @@
                 <div class="login-header">
                     <img src="gaditasstore.png" alt="Logo Gaditas" class="login-logo"/>
                     <h2>Gaditas Academy</h2>
-                    <p>Controle de FrequÃªncia e Performance</p>
+                    <p>Controle de Frequência e Performance</p>
                 </div>
                 <div class="login-form">
                     <div class="input-group">
                         <i class="fas fa-user"></i>
-                        <input type="text" id="user" placeholder="UsuÃ¡rio ou E-mail"/>
+                        <input type="text" id="user" placeholder="Usuário ou E-mail"/>
                     </div>
                     <div class="input-group">
                         <i class="fas fa-lock"></i>
@@ -87,7 +87,7 @@
                     </div>
                     <button id="btnEntrar" class="btn-login">ENTRAR NO SISTEMA</button>
                     <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: #94a3b8;">
-                        Ainda nÃ£o tem cadastro? <a href="cadastro.html" style="color: #3b82f6; text-decoration: none; font-weight: 700;">Cadastre-se aqui</a>
+                        Ainda não tem cadastro? <a href="cadastro.html" style="color: #3b82f6; text-decoration: none; font-weight: 700;">Cadastre-se aqui</a>
                     </p>
                 </div>
             </div>
@@ -103,7 +103,7 @@
                         <span class="welcome-text">OSS, BEM-VINDO!</span>
                         <div style="display:flex; align-items:center; gap:8px;">
                             <h3 id="display-user">-</h3>
-                            <button id="btn-config-admin" onclick="academia.abrirConfigAdmin()" title="ConfiguraÃ§Ãµes do Admin" style="display:none;"><i class="fas fa-cog"></i></button>
+                            <button id="btn-config-admin" onclick="academia.abrirConfigAdmin()" title="Configurações do Admin" style="display:none;"><i class="fas fa-cog"></i></button>
                         </div>
                         <div id="display-faixa-header" style="display:none; flex-direction:column; gap:2px; margin-top:4px; max-width:170px;"></div>
                     </div>
@@ -112,7 +112,7 @@
             </header>
 
             <div id="tab-checkin" class="tab-content" style="padding: 15px;">
-                <!-- Stories bar â€” preenchida via renderStoriesBar() -->
+                <!-- Stories bar — preenchida via renderStoriesBar() -->
                 <div id="stories-bar" style="margin-bottom:12px;"></div>
 
                 <!-- Quick actions Inter Bank -->
@@ -124,10 +124,10 @@
                         <i class="fas fa-camera"></i><span>QR CODE</span>
                     </button>
                     <button class="quick-action-btn qa-amber" onclick="document.getElementById('card-tecnica-semana').scrollIntoView({behavior:'smooth'})">
-                        <i class="fas fa-video"></i><span>TÃ‰CNICA</span>
+                        <i class="fas fa-video"></i><span>TÉCNICA</span>
                     </button>
                     <button class="quick-action-btn qa-red" onclick="ui.showTab('tab-horarios')">
-                        <i class="fas fa-clock"></i><span>HORÃRIOS</span>
+                        <i class="fas fa-clock"></i><span>HORÁRIOS</span>
                     </button>
                 </div>
 
@@ -135,42 +135,42 @@
                     <div id="texto-aviso"></div>
                 </div>
 
-                <!-- HistÃ³rico de avisos para aluno -->
+                <!-- Histórico de avisos para aluno -->
                 <div id="historico-avisos-aluno" class="hidden" style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:15px; margin-bottom:15px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <span style="font-size:0.75rem; font-weight:800; color:#3b82f6;"><i class="fas fa-history"></i> HISTÃ“RICO DE COMUNICADOS</span>
-                        <button onclick="document.getElementById('historico-avisos-aluno').classList.add('hidden')" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.8rem;">âœ•</button>
+                        <span style="font-size:0.75rem; font-weight:800; color:#3b82f6;"><i class="fas fa-history"></i> HISTÓRICO DE COMUNICADOS</span>
+                        <button onclick="document.getElementById('historico-avisos-aluno').classList.add('hidden')" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.8rem;">✕</button>
                     </div>
                     <div id="lista-historico-avisos-aluno" style="max-height:300px; overflow-y:auto;"></div>
                 </div>
 
                 <div id="mural-conquistas" class="card hidden" style="background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-                    <div class="card-title" style="color: #f59e0b; font-weight: 800; font-size: 0.85rem; margin-bottom: 10px;"><i class="fas fa-bullseye"></i> Conquistas & NotificaÃ§Ãµes do Dia</div>
+                    <div class="card-title" style="color: #f59e0b; font-weight: 800; font-size: 0.85rem; margin-bottom: 10px;"><i class="fas fa-bullseye"></i> Conquistas & Notificações do Dia</div>
                     <div id="lista-conquistas" class="list-container"></div>
                 </div>
 
-                <!-- Card contrato â€” preenchido via ui.renderCardContrato() -->
+                <!-- Card contrato — preenchido via ui.renderCardContrato() -->
                 <div id="card-contrato-aluno" class="hidden" style="margin-bottom:12px;"></div>
 
                 <div id="meu-status-card"></div>
 
                 <div id="card-leoes-kids" class="curriculo-atleta hidden" style="background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155; margin-top: 15px;">
-                    <h4 style="color:#f59e0b; margin:0 0 12px 0; font-size:0.75rem; font-weight:800; text-transform:uppercase;"><i class="fas fa-medal"></i> Medalhas de MÃ©rito Conquistadas</h4>
+                    <h4 style="color:#f59e0b; margin:0 0 12px 0; font-size:0.75rem; font-weight:800; text-transform:uppercase;"><i class="fas fa-medal"></i> Medalhas de Mérito Conquistadas</h4>
                     <div style="display: flex; justify-content: space-around; align-items: center; background: #0f172a; padding: 12px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 12px;">
                         <div style="text-align: center;">
-                            <div id="circle-leao-atencao" class="leao-icon-circle leao-desativado" style="width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.1rem; margin-bottom: 4px; position: relative;">ðŸ¦<span id="count-view-atencao" style="position: absolute; top: -5px; right: -5px; background: #3b82f6; color: white; font-size: 0.55rem; padding: 2px 5px; border-radius: 10px; font-weight: 800;">0</span></div>
-                            <span style="color:#94a3b8; font-size:0.55rem; font-weight:700; display:block;">ATENÃ‡ÃƒO</span>
+                            <div id="circle-leao-atencao" class="leao-icon-circle leao-desativado" style="width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.1rem; margin-bottom: 4px; position: relative;">🦁<span id="count-view-atencao" style="position: absolute; top: -5px; right: -5px; background: #3b82f6; color: white; font-size: 0.55rem; padding: 2px 5px; border-radius: 10px; font-weight: 800;">0</span></div>
+                            <span style="color:#94a3b8; font-size:0.55rem; font-weight:700; display:block;">ATENÇÃO</span>
                         </div>
                         <div style="text-align: center;">
-                            <div id="circle-leao-comportamento" class="leao-icon-circle leao-desativado" style="width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.1rem; margin-bottom: 4px; position: relative;">ðŸ¦<span id="count-view-comportamento" style="position: absolute; top: -5px; right: -5px; background: #3b82f6; color: white; font-size: 0.55rem; padding: 2px 5px; border-radius: 10px; font-weight: 800;">0</span></div>
+                            <div id="circle-leao-comportamento" class="leao-icon-circle leao-desativado" style="width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.1rem; margin-bottom: 4px; position: relative;">🦁<span id="count-view-comportamento" style="position: absolute; top: -5px; right: -5px; background: #3b82f6; color: white; font-size: 0.55rem; padding: 2px 5px; border-radius: 10px; font-weight: 800;">0</span></div>
                             <span style="color:#94a3b8; font-size:0.55rem; font-weight:700; display:block;">COMPORTAM.</span>
                         </div>
                         <div style="text-align: center;">
-                            <div id="circle-leao-companheirismo" class="leao-icon-circle leao-desativado" style="width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.1rem; margin-bottom: 4px; position: relative;">ðŸ¦<span id="count-view-companheirismo" style="position: absolute; top: -5px; right: -5px; background: #3b82f6; color: white; font-size: 0.55rem; padding: 2px 5px; border-radius: 10px; font-weight: 800;">0</span></div>
+                            <div id="circle-leao-companheirismo" class="leao-icon-circle leao-desativado" style="width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.1rem; margin-bottom: 4px; position: relative;">🦁<span id="count-view-companheirismo" style="position: absolute; top: -5px; right: -5px; background: #3b82f6; color: white; font-size: 0.55rem; padding: 2px 5px; border-radius: 10px; font-weight: 800;">0</span></div>
                             <span style="color:#94a3b8; font-size:0.55rem; font-weight:700; display:block;">COMPANHEIR.</span>
                         </div>
                         <div style="text-align: center;">
-                            <div id="circle-leao-disciplina" class="leao-icon-circle leao-desativado" style="width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.1rem; margin-bottom: 4px; position: relative;">ðŸ¦<span id="count-view-disciplina" style="position: absolute; top: -5px; right: -5px; background: #3b82f6; color: white; font-size: 0.55rem; padding: 2px 5px; border-radius: 10px; font-weight: 800;">0</span></div>
+                            <div id="circle-leao-disciplina" class="leao-icon-circle leao-desativado" style="width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.1rem; margin-bottom: 4px; position: relative;">🦁<span id="count-view-disciplina" style="position: absolute; top: -5px; right: -5px; background: #3b82f6; color: white; font-size: 0.55rem; padding: 2px 5px; border-radius: 10px; font-weight: 800;">0</span></div>
                             <span style="color:#94a3b8; font-size:0.55rem; font-weight:700; display:block;">DISCIPLINA</span>
                         </div>
                     </div>
@@ -178,30 +178,30 @@
                 </div>
 
                 <div id="card-tecnica-semana" class="curriculo-atleta hidden" style="background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155; margin-top: 15px; position: relative;">
-                    <span style="position: absolute; top: 12px; right: 12px; background: #1e3a8a; color: #60a5fa; font-size: 0.55rem; padding: 3px 8px; border-radius: 4px; font-weight: 800;">ESTUDE A TÃ‰CNICA</span>
-                    <h4 style="color:white; margin:0 0 4px 0; font-size:0.85rem; font-weight:800;"><i class="fas fa-video" style="color:#f43f5e; margin-right: 4px;"></i> PosiÃ§Ã£o da Semana</h4>
+                    <span style="position: absolute; top: 12px; right: 12px; background: #1e3a8a; color: #60a5fa; font-size: 0.55rem; padding: 3px 8px; border-radius: 4px; font-weight: 800;">ESTUDE A TÉCNICA</span>
+                    <h4 style="color:white; margin:0 0 4px 0; font-size:0.85rem; font-weight:800;"><i class="fas fa-video" style="color:#f43f5e; margin-right: 4px;"></i> Posição da Semana</h4>
                     <p id="display-tecnica-titulo" style="color:#94a3b8; font-size:0.75rem; margin:0 0 12px 0; font-weight:500; max-width:80%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></p>
                     <div style="display:flex; gap:8px;">
-                        <button id="btn-ver-tecnica" style="margin:0; flex:1; font-size:0.7rem; padding:10px; background:#3b82f6; border:none; color:white; border-radius:6px; font-weight:700; cursor:pointer;"><i class="fas fa-play"></i> ASSISTIR VÃDEO COMPLETO</button>
-                        <button onclick="academia.toggleBiblioteca()" style="margin:0; font-size:0.7rem; padding:10px 14px; background:#334155; border:none; color:white; border-radius:6px; cursor:pointer;"><i class="fas fa-history"></i> HISTÃ“RICO</button>
+                        <button id="btn-ver-tecnica" style="margin:0; flex:1; font-size:0.7rem; padding:10px; background:#3b82f6; border:none; color:white; border-radius:6px; font-weight:700; cursor:pointer;"><i class="fas fa-play"></i> ASSISTIR VÍDEO COMPLETO</button>
+                        <button onclick="academia.toggleBiblioteca()" style="margin:0; font-size:0.7rem; padding:10px 14px; background:#334155; border:none; color:white; border-radius:6px; cursor:pointer;"><i class="fas fa-history"></i> HISTÓRICO</button>
                     </div>
                     <div id="secao-historico-tecnica" class="hidden" style="margin-top:15px; padding-top:12px; border-top:1px solid #334155; max-height:200px; overflow-y:auto;">
-                        <small style="color:#3b82f6; font-weight:800; display:block; margin-bottom:8px; font-size:0.55rem;">ARQUIVO DE VÃDEOS DE TREINAMENTO:</small>
+                        <small style="color:#3b82f6; font-weight:800; display:block; margin-bottom:8px; font-size:0.55rem;">ARQUIVO DE VÍDEOS DE TREINAMENTO:</small>
                         <div id="lista-historico-tecnicas"></div>
                     </div>
                 </div>
 
                 <div id="area-aluno-checkin" class="card hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-top:15px;">
-                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-qrcode"></i> Confirmar PresenÃ§a no Treino</div>
+                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-qrcode"></i> Confirmar Presença no Treino</div>
                     <select id="select-turma-aluno" onchange="academia.atualizarPresencaAntecipada()" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"></select>
                     <div id="preview-plano-aula"></div>
                     <div style="background:#0f172a; padding:12px; border-radius:10px; margin:12px 0; border:1px solid #334155;">
-                        <small style="font-size:0.55rem; color:#64748b; display:block; font-weight:800; margin-bottom:6px;">QUEM JÃ CONFIRMOU NESSA TURMA:</small>
+                        <small style="font-size:0.55rem; color:#64748b; display:block; font-weight:800; margin-bottom:6px;">QUEM JÁ CONFIRMOU NESSA TURMA:</small>
                         <div id="quem-treina-hoje"></div>
                     </div>
-                    <!-- BotÃ£o scanner QR in-app -->
+                    <!-- Botão scanner QR in-app -->
                     <button onclick="academia.abrirScannerQR()" style="width:100%; padding:12px; background:#1e3a8a; color:#93c5fd; border:1px solid #3b82f6; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px;">
-                        <span style="font-size:1.1rem;">ðŸ“·</span> ESCANEAR QR CODE DA TURMA
+                        <span style="font-size:1.1rem;">📷</span> ESCANEAR QR CODE DA TURMA
                     </button>
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
                         <div style="flex:1; height:1px; background:#334155;"></div>
@@ -212,16 +212,16 @@
                     <div id="meus-checkins-pendentes" style="margin-top:10px;"></div>
                 </div>
 
-                <!-- â•â• MODAL SCANNER QR CODE â•â• -->
+                <!-- ══ MODAL SCANNER QR CODE ══ -->
                 <div id="modal-scanner-qr" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.97); z-index:10000; flex-direction:column; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
                     <div style="width:100%; max-width:400px; background:#1e293b; border-radius:16px; overflow:hidden; border:1px solid #334155;">
                         <!-- Header -->
                         <div style="background:#1e3a8a; padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
                             <div>
                                 <div style="font-size:0.65rem; color:#93c5fd; font-weight:700; letter-spacing:0.5px;">CHECK-IN</div>
-                                <div style="font-size:0.9rem; font-weight:800; color:white; margin-top:2px;">ðŸ“· Escanear QR Code</div>
+                                <div style="font-size:0.9rem; font-weight:800; color:white; margin-top:2px;">📷 Escanear QR Code</div>
                             </div>
-                            <button onclick="academia.fecharScannerQR()" style="background:#1e40af; border:1px solid #3b82f6; color:#93c5fd; width:36px; height:36px; border-radius:8px; font-size:1.1rem; cursor:pointer; font-weight:700; display:flex; align-items:center; justify-content:center;">âœ•</button>
+                            <button onclick="academia.fecharScannerQR()" style="background:#1e40af; border:1px solid #3b82f6; color:#93c5fd; width:36px; height:36px; border-radius:8px; font-size:1.1rem; cursor:pointer; font-weight:700; display:flex; align-items:center; justify-content:center;">✕</button>
                         </div>
                         <!-- Viewfinder -->
                         <div style="padding:16px 16px 8px; position:relative;">
@@ -236,19 +236,19 @@
                         </div>
                         <!-- Status -->
                         <div id="qr-scanner-status" style="padding:8px 16px 16px; text-align:center;">
-                            <small style="color:#64748b; font-size:0.65rem;">Aponte a cÃ¢mera para o QR Code da turma</small>
+                            <small style="color:#64748b; font-size:0.65rem;">Aponte a câmera para o QR Code da turma</small>
                         </div>
                     </div>
                 </div>
 
                 <div id="plano-aula-professor" class="hidden" style="margin-top:15px;"></div>
 
-                <!-- â•â• PRESENÃ‡A VISUAL DO ADMIN NAS TURMAS â•â• -->
+                <!-- ══ PRESENÇA VISUAL DO ADMIN NAS TURMAS ══ -->
                 <div id="card-presenca-admin" style="display:none; background:#1e293b; border:1px solid #f59e0b44; border-radius:12px; padding:15px; margin-top:15px;">
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-                        <span style="font-size:0.85rem; font-weight:800; color:#f59e0b;">ðŸ¥‹ MINHA PRESENÃ‡A NA AULA HOJE</span>
+                        <span style="font-size:0.85rem; font-weight:800; color:#f59e0b;">🥋 MINHA PRESENÇA NA AULA HOJE</span>
                     </div>
-                    <small style="color:#94a3b8; font-size:0.65rem; display:block; margin-bottom:10px;">Marque as turmas que vocÃª estarÃ¡ presente. Os alunos verÃ£o seu nome destacado no "quem treina hoje". <strong style="color:#f59e0b;">NÃ£o conta como frequÃªncia.</strong></small>
+                    <small style="color:#94a3b8; font-size:0.65rem; display:block; margin-bottom:10px;">Marque as turmas que você estará presente. Os alunos verão seu nome destacado no "quem treina hoje". <strong style="color:#f59e0b;">Não conta como frequência.</strong></small>
                     <div id="lista-turmas-presenca-admin" style="display:flex; flex-direction:column; gap:8px;"></div>
                 </div>
 
@@ -258,10 +258,10 @@
                 </div>
 
                 <div class="card" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-top:15px;">
-                    <div class="card-title" id="titulo-ranking-jj" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-trophy"></i> ðŸ¥‹ Top 5 Jiu-Jitsu</div>
+                    <div class="card-title" id="titulo-ranking-jj" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-trophy"></i> 🥋 Top 5 Jiu-Jitsu</div>
                     <div class="tabs-ranking-container">
                         <div class="ranking-column">
-                            <h4 style="font-size:0.65rem; color:#94a3b8; margin-bottom:8px;">KIDS 1 (AtÃ© 8 anos)</h4>
+                            <h4 style="font-size:0.65rem; color:#94a3b8; margin-bottom:8px;">KIDS 1 (Até 8 anos)</h4>
                             <div id="lista-ranking-kids1"></div>
                         </div>
                         <div class="ranking-column">
@@ -277,11 +277,11 @@
 
                 <!-- Ranking Muay Thai -->
                 <div class="card" style="background:#1e293b; border:1px solid #f43f5e44; padding:15px; border-radius:12px; margin-top:12px;">
-                    <div class="card-title" id="titulo-ranking-mt" style="color:#f43f5e; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-trophy"></i> ðŸ¥Š Top 5 Muay Thai</div>
+                    <div class="card-title" id="titulo-ranking-mt" style="color:#f43f5e; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-trophy"></i> 🥊 Top 5 Muay Thai</div>
                     <div id="lista-ranking-mt-geral"></div>
                 </div>
 
-                <!-- â•â• MURAL DE DEPOIMENTOS (pÃºblico) â•â• -->
+                <!-- ══ MURAL DE DEPOIMENTOS (público) ══ -->
                 <button id="btn-depoimentos-trigger" onclick="academia.toggleDepoimentos()" style="background:#1e293b; border:1px solid #f59e0b44; margin:12px 0 0 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
                     <span><i class="fas fa-star" style="color:#f59e0b; margin-right:8px; font-size:1.1rem;"></i> DEPOIMENTOS &amp; FEEDBACK
                         <span id="badge-depoimentos-count" class="hidden" style="background:#f59e0b; color:#000; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800;">0</span>
@@ -305,75 +305,75 @@
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
                     <div id="card-alterar-senha" class="hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-bottom:8px;">
-                        <input type="password" id="nova-senha" placeholder="Nova senha (mÃ­nimo 6 caracteres)" style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:8px;"/>
+                        <input type="password" id="nova-senha" placeholder="Nova senha (mínimo 6 caracteres)" style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:8px;"/>
                         <input type="password" id="confirmar-senha" placeholder="Confirmar nova senha" style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:12px;"/>
                         <button onclick="executarAlterarSenha()" style="width:100%; padding:13px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.85rem;"><i class="fas fa-save"></i> SALVAR NOVA SENHA</button>
                     </div>
 
-                    <!-- â”€â”€ RELATO DE SAÃšDE (aluno) â”€â”€ -->
+                    <!-- ── RELATO DE SAÚDE (aluno) ── -->
                     <button id="btn-relato-saude-trigger" onclick="academia.toggleRelatoSaude()" class="btn-save" style="background:#1e293b; border:1px solid #f43f5e44; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
                         <span><i class="fas fa-heartbeat" style="color:#f43f5e; margin-right:8px; font-size:1.1rem;"></i> ESTOU MACHUCADO / DOENTE
-                            <span id="badge-resposta-relato" class="hidden" style="background:#3b82f6; color:white; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800; animation: pulse 1.5s infinite;">ðŸ’¬ RESPOSTA</span>
+                            <span id="badge-resposta-relato" class="hidden" style="background:#3b82f6; color:white; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800; animation: pulse 1.5s infinite;">💬 RESPOSTA</span>
                         </span>
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
                     <div id="card-relato-saude" class="hidden" style="background:#1e293b; border:1px solid #f43f5e44; padding:15px; border-radius:12px; margin-bottom:35px;">
 
-                        <!-- FORMULÃRIO (sÃ³ quando nÃ£o hÃ¡ relato ativo) -->
+                        <!-- FORMULÁRIO (só quando não há relato ativo) -->
                         <div id="section-form-relato">
-                            <!-- SeleÃ§Ã£o de professor -->
-                            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">ðŸ‘¨â€ðŸ« PARA QUAL PROFESSOR?</small>
+                            <!-- Seleção de professor -->
+                            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">👨‍🏫 PARA QUAL PROFESSOR?</small>
                             <div id="div-selector-prof-relato" style="margin-bottom:12px;">
                                 <small style="color:#475569; font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> Carregando professores...</small>
                             </div>
-                            <small style="color:#f43f5e; font-size:0.6rem; font-weight:800; display:block; margin-bottom:10px; letter-spacing:0.5px;">O QUE ESTÃ ACONTECENDO?</small>
+                            <small style="color:#f43f5e; font-size:0.6rem; font-weight:800; display:block; margin-bottom:10px; letter-spacing:0.5px;">O QUE ESTÁ ACONTECENDO?</small>
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
                                 <button id="btn-tipo-machucado" onclick="academia.selecionarTipoRelato('machucado')" style="padding:12px 6px; border-radius:10px; border:2px solid #f97316; background:#431407; color:#fb923c; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
-                                    <span style="font-size:1.4rem;">ðŸ¤•</span><span>MACHUCADO</span>
+                                    <span style="font-size:1.4rem;">🤕</span><span>MACHUCADO</span>
                                 </button>
                                 <button id="btn-tipo-doente" onclick="academia.selecionarTipoRelato('doente')" style="padding:12px 6px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#64748b; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
-                                    <span style="font-size:1.4rem;">ðŸ¤’</span><span>DOENTE</span>
+                                    <span style="font-size:1.4rem;">🤒</span><span>DOENTE</span>
                                 </button>
                             </div>
                             <textarea id="textarea-relato" placeholder="Descreva o que aconteceu ou como se sente..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; margin-bottom:10px; resize:none; box-sizing:border-box;"></textarea>
                             <button onclick="academia.enviarRelato()" style="width:100%; padding:12px; background:#f43f5e; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;"><i class="fas fa-paper-plane"></i> ENVIAR RELATO AO PROFESSOR</button>
                         </div>
 
-                        <!-- STATUS (quando hÃ¡ relato ativo) -->
+                        <!-- STATUS (quando há relato ativo) -->
                         <div id="section-status-relato" class="hidden">
                             <div id="status-relato-content"></div>
-                            <!-- Resposta do professor (persiste mesmo apÃ³s fechar) -->
+                            <!-- Resposta do professor (persiste mesmo após fechar) -->
                             <div id="resposta-professor-relato" class="hidden" style="margin-top:12px; padding:12px; background:#0c2344; border-radius:8px; border-left:3px solid #3b82f6;">
                                 <small style="color:#3b82f6; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;"><i class="fas fa-comment-dots"></i> RESPOSTA DO PROFESSOR:</small>
                                 <div id="texto-resposta-professor" style="color:#93c5fd; font-size:0.8rem; line-height:1.5;"></div>
                                 <small id="data-resposta-professor" style="color:#475569; font-size:0.6rem;"></small>
                             </div>
-                            <!-- BotÃ£o recuperado -->
+                            <!-- Botão recuperado -->
                             <div id="div-btn-recuperado" class="hidden" style="margin-top:10px;">
                                 <button onclick="academia.marcarRecuperado()" style="width:100%; padding:13px; background:linear-gradient(135deg,#064e3b,#065f46); border:1px solid #10b981; color:#34d399; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.8rem; letter-spacing:0.3px;">
-                                    ðŸ’ª MELHOREI / ESTOU RECUPERADO
+                                    💪 MELHOREI / ESTOU RECUPERADO
                                 </button>
                             </div>
                         </div>
 
                     </div>
 
-                    <!-- â”€â”€ FICHA DE SAÃšDE E EMERGÃŠNCIA (aluno) â”€â”€ -->
+                    <!-- ── FICHA DE SAÚDE E EMERGÊNCIA (aluno) ── -->
                     <button id="btn-ficha-saude-trigger" onclick="academia.toggleFichaSaude()" class="btn-save" style="background:#1e293b; border:1px solid #10b98144; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
-                        <span><i class="fas fa-notes-medical" style="color:#10b981; margin-right:8px; font-size:1.1rem;"></i> SAÃšDE E EMERGÃŠNCIA
-                            <span id="badge-ficha-salva" class="hidden" style="background:#10b981; color:white; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800;">âœ“ PREENCHIDA</span>
+                        <span><i class="fas fa-notes-medical" style="color:#10b981; margin-right:8px; font-size:1.1rem;"></i> SAÚDE E EMERGÊNCIA
+                            <span id="badge-ficha-salva" class="hidden" style="background:#10b981; color:white; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800;">✓ PREENCHIDA</span>
                         </span>
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
                     <div id="card-ficha-saude" class="hidden" style="background:#1e293b; border:1px solid #10b98144; padding:15px; border-radius:12px; margin-bottom:8px;">
-                        <small style="color:#10b981; font-size:0.6rem; font-weight:800; display:block; margin-bottom:14px; letter-spacing:0.5px; text-align:center;">ðŸ©º FICHA DE SAÃšDE E EMERGÃŠNCIA</small>
+                        <small style="color:#10b981; font-size:0.6rem; font-weight:800; display:block; margin-bottom:14px; letter-spacing:0.5px; text-align:center;">🩺 FICHA DE SAÚDE E EMERGÊNCIA</small>
 
-                        <!-- Tipo sanguÃ­neo + Fator Rh -->
+                        <!-- Tipo sanguíneo + Fator Rh -->
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
                             <div>
-                                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">GRUPO SANGUÃNEO</small>
+                                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">GRUPO SANGUÍNEO</small>
                                 <select id="ficha-grupo" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;">
-                                    <option value="">NÃ£o sei</option>
+                                    <option value="">Não sei</option>
                                     <option value="A">A</option>
                                     <option value="B">B</option>
                                     <option value="AB">AB</option>
@@ -383,17 +383,17 @@
                             <div>
                                 <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">FATOR Rh</small>
                                 <select id="ficha-rh" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;">
-                                    <option value="">NÃ£o sei</option>
+                                    <option value="">Não sei</option>
                                     <option value="+">Positivo (+)</option>
-                                    <option value="-">Negativo (âˆ’)</option>
+                                    <option value="-">Negativo (−)</option>
                                 </select>
                             </div>
                         </div>
 
                         <!-- Comorbidades -->
                         <div style="margin-bottom:12px;">
-                            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">COMORBIDADES / CONDIÃ‡Ã•ES MÃ‰DICAS</small>
-                            <textarea id="ficha-comorbidades" placeholder="Ex: hipertensÃ£o, diabetes, asma..." rows="2" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; resize:none; box-sizing:border-box;"></textarea>
+                            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">COMORBIDADES / CONDIÇÕES MÉDICAS</small>
+                            <textarea id="ficha-comorbidades" placeholder="Ex: hipertensão, diabetes, asma..." rows="2" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; resize:none; box-sizing:border-box;"></textarea>
                         </div>
 
                         <!-- Alergias -->
@@ -405,12 +405,12 @@
                         <!-- Gestante -->
                         <div style="margin-bottom:12px; display:flex; align-items:center; gap:10px; padding:10px; background:#0f172a; border-radius:8px; border:1px solid #334155;">
                             <input type="checkbox" id="ficha-gestante" style="width:18px; height:18px; accent-color:#f43f5e; cursor:pointer;">
-                            <label for="ficha-gestante" style="color:#f8fafc; font-size:0.8rem; font-weight:700; cursor:pointer;">Estou grÃ¡vida / gestante</label>
+                            <label for="ficha-gestante" style="color:#f8fafc; font-size:0.8rem; font-weight:700; cursor:pointer;">Estou grávida / gestante</label>
                         </div>
 
-                        <!-- Plano de saÃºde -->
+                        <!-- Plano de saúde -->
                         <div style="margin-bottom:12px;">
-                            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">PLANO DE SAÃšDE</small>
+                            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">PLANO DE SAÚDE</small>
                             <input type="text" id="ficha-plano" placeholder="Nome do plano (ou deixe vazio)" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; box-sizing:border-box;">
                         </div>
 
@@ -420,8 +420,8 @@
                             <input type="text" id="ficha-hospital" placeholder="Ex: UPA Zona Sul, Hospital X..." style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; box-sizing:border-box;">
                         </div>
 
-                        <!-- Contatos de emergÃªncia -->
-                        <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">ðŸ“ž CONTATOS DE EMERGÃŠNCIA</small>
+                        <!-- Contatos de emergência -->
+                        <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">📞 CONTATOS DE EMERGÊNCIA</small>
                         <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:10px; margin-bottom:8px;">
                             <small style="color:#64748b; font-size:0.6rem; font-weight:700; display:block; margin-bottom:6px;">CONTATO 1</small>
                             <input type="text" id="ficha-emerg1-nome" placeholder="Nome do familiar" style="width:100%; padding:9px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;">
@@ -433,38 +433,38 @@
                             <input type="tel" id="ficha-emerg2-tel" placeholder="(00) 00000-0000" style="width:100%; padding:9px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; box-sizing:border-box;">
                         </div>
 
-                        <button onclick="academia.salvarFichaSaude()" style="width:100%; padding:13px; background:linear-gradient(135deg,#064e3b,#065f46); border:1px solid #10b981; color:#34d399; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.8rem; letter-spacing:0.3px;"><i class="fas fa-save"></i> SALVAR FICHA DE SAÃšDE</button>
+                        <button onclick="academia.salvarFichaSaude()" style="width:100%; padding:13px; background:linear-gradient(135deg,#064e3b,#065f46); border:1px solid #10b981; color:#34d399; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.8rem; letter-spacing:0.3px;"><i class="fas fa-save"></i> SALVAR FICHA DE SAÚDE</button>
                     </div>
 
-                    <!-- â”€â”€ DEIXAR DEPOIMENTO (aluno) â”€â”€ -->
+                    <!-- ── DEIXAR DEPOIMENTO (aluno) ── -->
                     <button id="btn-meu-depoimento-trigger" onclick="academia.toggleMeuDepoimento()" class="btn-save" style="background:#1e293b; border:1px solid #f59e0b44; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
                         <span><i class="fas fa-pen-nib" style="color:#f59e0b; margin-right:8px; font-size:1.1rem;"></i> DEIXAR MEU DEPOIMENTO
-                            <span id="badge-meu-dep-enviado" class="hidden" style="background:#f59e0b; color:#000; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800;">âœ“ ENVIADO</span>
+                            <span id="badge-meu-dep-enviado" class="hidden" style="background:#f59e0b; color:#000; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800;">✓ ENVIADO</span>
                         </span>
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
                     <div id="card-meu-depoimento" class="hidden" style="background:#1e293b; border:1px solid #f59e0b44; padding:15px; border-radius:12px; margin-bottom:8px;">
                         <div id="meu-depoimento-status"></div>
                         <div id="meu-depoimento-form">
-                            <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">âœï¸ CONTE SUA EXPERIÃŠNCIA NA GADITAS</small>
-                            <textarea id="textarea-depoimento" placeholder="Como o treino transformou sua vida? O que a academia representa pra vocÃª?..." rows="4" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; resize:none; box-sizing:border-box; margin-bottom:10px;"></textarea>
-                            <small style="color:#475569; font-size:0.6rem; display:block; margin-bottom:10px;">âš ï¸ Seu depoimento serÃ¡ revisado pelo admin antes de ser publicado.</small>
-                            <button onclick="academia.enviarDepoimento()" style="width:100%; padding:12px; background:linear-gradient(135deg,#78350f,#92400e); border:1px solid #f59e0b; color:#fbbf24; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.8rem;"><i class="fas fa-paper-plane"></i> ENVIAR PARA APROVAÃ‡ÃƒO</button>
+                            <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">✍️ CONTE SUA EXPERIÊNCIA NA GADITAS</small>
+                            <textarea id="textarea-depoimento" placeholder="Como o treino transformou sua vida? O que a academia representa pra você?..." rows="4" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; resize:none; box-sizing:border-box; margin-bottom:10px;"></textarea>
+                            <small style="color:#475569; font-size:0.6rem; display:block; margin-bottom:10px;">⚠️ Seu depoimento será revisado pelo admin antes de ser publicado.</small>
+                            <button onclick="academia.enviarDepoimento()" style="width:100%; padding:12px; background:linear-gradient(135deg,#78350f,#92400e); border:1px solid #f59e0b; color:#fbbf24; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.8rem;"><i class="fas fa-paper-plane"></i> ENVIAR PARA APROVAÇÃO</button>
                         </div>
                     </div>
 
-                    <!-- â”€â”€ AVALIAÃ‡ÃƒO FÃSICA â”€â”€ -->
+                    <!-- ── AVALIAÇÃO FÍSICA ── -->
                     <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.fa-chevron-down').style.transform = this.nextElementSibling.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'"
                         style="width:100%; display:flex; justify-content:space-between; align-items:center; background:#1e293b; border:1px solid #10b98133; padding:14px 16px; border-radius:12px; color:white; cursor:pointer; font-size:0.8rem; font-weight:700; margin-bottom:8px;">
-                        <span><i class="fas fa-chart-line" style="color:#10b981; margin-right:8px; font-size:1.1rem;"></i> AVALIAÃ‡ÃƒO FÃSICA</span>
+                        <span><i class="fas fa-chart-line" style="color:#10b981; margin-right:8px; font-size:1.1rem;"></i> AVALIAÇÃO FÍSICA</span>
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem; transition:transform 0.2s;"></i>
                     </button>
                     <div class="hidden" style="background:#1e293b; border:1px solid #10b98133; padding:15px; border-radius:12px; margin-bottom:8px;">
-                        <small style="color:#10b981; font-size:0.6rem; font-weight:800; display:block; margin-bottom:14px; letter-spacing:0.5px; text-align:center;">ðŸ“Š MINHAS AVALIAÃ‡Ã•ES FÃSICAS</small>
-                        <p style="color:#94a3b8; font-size:0.75rem; text-align:center; margin-bottom:14px; line-height:1.6;">Registre seu peso, medidas e composiÃ§Ã£o corporal.<br>Acompanhe sua evoluÃ§Ã£o ao longo do tempo.</p>
+                        <small style="color:#10b981; font-size:0.6rem; font-weight:800; display:block; margin-bottom:14px; letter-spacing:0.5px; text-align:center;">📊 MINHAS AVALIAÇÕES FÍSICAS</small>
+                        <p style="color:#94a3b8; font-size:0.75rem; text-align:center; margin-bottom:14px; line-height:1.6;">Registre seu peso, medidas e composição corporal.<br>Acompanhe sua evolução ao longo do tempo.</p>
                         <button id="btn-abrir-avaliacao-fisica" onclick="avaliacaoFisica.abrirMenu(auth.currentUser.id)"
                             style="width:100%; padding:13px; background:linear-gradient(135deg,#064e3b,#065f46); border:1px solid #10b981; color:#10b981; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.85rem;">
-                            ðŸ“Š ABRIR MINHAS AVALIAÃ‡Ã•ES
+                            📊 ABRIR MINHAS AVALIAÇÕES
                         </button>
                     </div>
 
@@ -476,11 +476,11 @@
                 <div id="admin-eventos-editor" class="card hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-bottom:15px;">
                     <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-calendar-plus"></i> Publicar/Editar Evento Oficial</div>
                     <input type="hidden" id="edit-evento-id"/>
-                    <input type="text" id="input-evento-titulo" placeholder="TÃ­tulo do Evento" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <input type="text" id="input-evento-data" placeholder="Data e HorÃ¡rio" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <input type="number" id="input-evento-vagas" placeholder="Limite MÃ¡ximo de Vagas" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <input type="text" id="input-evento-titulo" placeholder="Título do Evento" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <input type="text" id="input-evento-data" placeholder="Data e Horário" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <input type="number" id="input-evento-vagas" placeholder="Limite Máximo de Vagas" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <input type="text" id="input-evento-pagamento" placeholder="Link de Pagamento InfinitePay (Opcional)" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <textarea id="input-evento-desc" placeholder="DescriÃ§Ã£o do evento..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; margin-bottom:10px;"></textarea>
+                    <textarea id="input-evento-desc" placeholder="Descrição do evento..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; margin-bottom:10px;"></textarea>
                     <div style="display:flex; gap:8px;">
                         <button id="btn-salvar-evento" onclick="academia.salvarEventoAdmin()" style="flex:2; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">PUBLICAR EVENTO</button>
                         <button onclick="academia.limparFormEvento()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">LIMPAR</button>
@@ -488,27 +488,27 @@
                     <div id="lista-eventos-gerenciamento" style="margin-top:15px; border-top:1px solid #334155; padding-top:12px;"></div>
                 </div>
                 <div class="card" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px;">
-                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-calendar-alt"></i> PrÃ³ximos Eventos Agendados</div>
+                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-calendar-alt"></i> Próximos Eventos Agendados</div>
                     <div id="lista-eventos-alunos"></div>
                 </div>
             </div>
 
             <div id="tab-alunos" class="tab-content hidden" style="padding:15px;">
 
-                <!-- â•â• ANIVERSARIANTES (admin) â•â• -->
+                <!-- ══ ANIVERSARIANTES (admin) ══ -->
                 <div id="card-aniversariantes-admin" style="display:none; background:linear-gradient(135deg,#1e1040,#1e293b); border:1px solid #f59e0b55; border-radius:12px; padding:15px; margin-bottom:15px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <span style="font-size:0.8rem; font-weight:800; color:#f59e0b;">ðŸŽ‚ ANIVERSARIANTES</span>
+                        <span style="font-size:0.8rem; font-weight:800; color:#f59e0b;">🎂 ANIVERSARIANTES</span>
                         <button onclick="aniversario.renderAdminAniversariantes()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem;"><i class="fas fa-sync-alt"></i></button>
                     </div>
                     <div id="lista-aniversariantes"><small style="color:#475569; font-size:0.65rem;">Carregando...</small></div>
                 </div>
 
-                <!-- â•â• ALERTAS DE SAÃšDE (professor/admin) â•â• -->
+                <!-- ══ ALERTAS DE SAÚDE (professor/admin) ══ -->
                 <div id="card-alertas-saude" style="background:#1e293b; border:1px solid #f43f5e55; border-radius:12px; padding:15px; margin-bottom:15px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                         <span style="font-size:0.8rem; font-weight:800; color:#f43f5e;">
-                            <i class="fas fa-heartbeat"></i> RELATOS DE SAÃšDE
+                            <i class="fas fa-heartbeat"></i> RELATOS DE SAÚDE
                             <span id="badge-relatos" style="background:#f43f5e; color:white; border-radius:10px; padding:1px 7px; font-size:0.6rem; margin-left:6px; font-weight:800;">0</span>
                         </span>
                         <button onclick="academia.carregarRelatosSaude()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem; font-weight:700;"><i class="fas fa-sync-alt"></i></button>
@@ -516,7 +516,7 @@
                     <div id="lista-relatos-saude"></div>
                 </div>
 
-                <!-- â•â• DEPOIMENTOS PENDENTES (admin) â•â• -->
+                <!-- ══ DEPOIMENTOS PENDENTES (admin) ══ -->
                 <div id="card-depoimentos-admin" style="background:#1e293b; border:1px solid #f59e0b55; border-radius:12px; padding:15px; margin-bottom:15px; display:none;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                         <span style="font-size:0.8rem; font-weight:800; color:#f59e0b;">
@@ -528,10 +528,10 @@
                     <div id="lista-dep-pendentes"></div>
                 </div>
 
-                <!-- â•â• ENQUETES (admin) â•â• -->
+                <!-- ══ ENQUETES (admin) ══ -->
                 <div id="card-enquetes-admin" style="display:none; background:#1e293b; border:1px solid #8b5cf655; border-radius:12px; padding:15px; margin-bottom:15px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <span style="font-size:0.8rem; font-weight:800; color:#a78bfa;">ðŸ“‹ ENQUETES</span>
+                        <span style="font-size:0.8rem; font-weight:800; color:#a78bfa;">📋 ENQUETES</span>
                         <div style="display:flex; gap:6px;">
                             <button onclick="enquetes.abrirModalCriarEnquete()" style="background:#8b5cf6; border:none; color:white; padding:6px 12px; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">+ ENQUETE</button>
                             <button onclick="enquetes.renderAdminEnquetes()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem;"><i class="fas fa-sync-alt"></i></button>
@@ -540,13 +540,13 @@
                     <div id="enquetes-admin-lista"><small style="color:#475569; font-size:0.65rem;">Clique em atualizar para carregar.</small></div>
                 </div>
 
-                <!-- â•â•â• SEÃ‡ÃƒO: PROFESSOR â•â•â• -->
+                <!-- ═══ SEÇÃO: PROFESSOR ═══ -->
                 <div id="gestao-header-professor" onclick="toggleGestaoSection('gestao-prof-body','chevron-prof')" style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6; border-radius: 0 10px 10px 0; padding: 10px 14px; margin: 0 0 8px 0; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; user-select:none;">
                     <div style="display:flex; align-items:center; gap:10px;">
                         <i class="fas fa-chalkboard-teacher" style="color:#8b5cf6; font-size:1rem;"></i>
                         <div>
-                            <span style="color:#8b5cf6; font-size:0.7rem; font-weight:800; letter-spacing:1.2px; display:block;">ÃREA DO PROFESSOR</span>
-                            <span style="color:#a78bfa; font-size:0.55rem; font-weight:600;">Comunicados Â· TÃ©cnica Â· VÃ­deos Â· Senha Â· Cadastro</span>
+                            <span style="color:#8b5cf6; font-size:0.7rem; font-weight:800; letter-spacing:1.2px; display:block;">ÁREA DO PROFESSOR</span>
+                            <span style="color:#a78bfa; font-size:0.55rem; font-weight:600;">Comunicados · Técnica · Vídeos · Senha · Cadastro</span>
                         </div>
                     </div>
                     <i id="chevron-prof" class="fas fa-chevron-down" style="color:#8b5cf6; font-size:0.8rem; transition:transform 0.25s; flex-shrink:0;"></i>
@@ -555,17 +555,17 @@
 
                 <div id="admin-mural-editor" class="card hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-bottom:15px;">
                     <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-edit"></i> Publicar Comunicado Oficial no Mural</div>
-                    <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px;">DESTINATÃRIOS:</small>
+                    <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px;">DESTINATÁRIOS:</small>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px;">
-                        <button id="mural-btn-todos" onclick="academia.selecionarPublicoMural('todos')" style="padding:9px; background:#3b82f6; border:none; color:white; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">ðŸ‘¥ TODOS</button>
-                        <button id="mural-btn-individual" onclick="academia.selecionarPublicoMural('individual')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">ðŸ‘¤ INDIVIDUAL</button>
-                        <button id="mural-btn-adulto" onclick="academia.selecionarPublicoMural('adulto')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">ðŸ¥‹ ADULTO</button>
-                        <button id="mural-btn-kids" onclick="academia.selecionarPublicoMural('kids')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">ðŸ§’ KIDS</button>
-                        <button id="mural-btn-branca" onclick="academia.selecionarPublicoMural('branca')" style="padding:9px; background:#0f172a; border:2px solid #fff; color:#fff; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">â¬œ FAIXA BRANCA</button>
-                        <button id="mural-btn-azul-roxa-marrom" onclick="academia.selecionarPublicoMural('azul-roxa-marrom')" style="padding:9px; background:#0f172a; border:2px solid #1e3a8a; color:#60a5fa; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">ðŸŸ¦ AZUL/ROXA/MARROM</button>
-                        <button id="mural-btn-marrom-preta" onclick="academia.selecionarPublicoMural('marrom-preta')" style="padding:9px; background:#0f172a; border:2px solid #78350f; color:#d97706; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">ðŸŸ« MARROM/PRETA</button>
-                        <button id="mural-btn-preta" onclick="academia.selecionarPublicoMural('preta')" style="padding:9px; background:#0f172a; border:2px solid #475569; color:#94a3b8; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">â¬› FAIXA PRETA</button>
-                        <button id="mural-btn-muaythai" onclick="academia.selecionarPublicoMural('muaythai')" style="padding:9px; background:#0f172a; border:2px solid #f43f5e44; color:#f43f5e; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer; grid-column:1/-1;">ðŸ¥Š MUAY THAI</button>
+                        <button id="mural-btn-todos" onclick="academia.selecionarPublicoMural('todos')" style="padding:9px; background:#3b82f6; border:none; color:white; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">👥 TODOS</button>
+                        <button id="mural-btn-individual" onclick="academia.selecionarPublicoMural('individual')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">👤 INDIVIDUAL</button>
+                        <button id="mural-btn-adulto" onclick="academia.selecionarPublicoMural('adulto')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">🥋 ADULTO</button>
+                        <button id="mural-btn-kids" onclick="academia.selecionarPublicoMural('kids')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">🧒 KIDS</button>
+                        <button id="mural-btn-branca" onclick="academia.selecionarPublicoMural('branca')" style="padding:9px; background:#0f172a; border:2px solid #fff; color:#fff; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">⬜ FAIXA BRANCA</button>
+                        <button id="mural-btn-azul-roxa-marrom" onclick="academia.selecionarPublicoMural('azul-roxa-marrom')" style="padding:9px; background:#0f172a; border:2px solid #1e3a8a; color:#60a5fa; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">🟦 AZUL/ROXA/MARROM</button>
+                        <button id="mural-btn-marrom-preta" onclick="academia.selecionarPublicoMural('marrom-preta')" style="padding:9px; background:#0f172a; border:2px solid #78350f; color:#d97706; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">🟫 MARROM/PRETA</button>
+                        <button id="mural-btn-preta" onclick="academia.selecionarPublicoMural('preta')" style="padding:9px; background:#0f172a; border:2px solid #475569; color:#94a3b8; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">⬛ FAIXA PRETA</button>
+                        <button id="mural-btn-muaythai" onclick="academia.selecionarPublicoMural('muaythai')" style="padding:9px; background:#0f172a; border:2px solid #f43f5e44; color:#f43f5e; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer; grid-column:1/-1;">🥊 MUAY THAI</button>
                     </div>
                     <div id="mural-busca-individual" class="hidden" style="margin-bottom:10px;">
                         <input type="text" id="mural-input-busca-aluno" placeholder="Digite o nome do aluno..." oninput="academia.buscarAlunoMural()" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px;"/>
@@ -574,39 +574,39 @@
                     </div>
                     <textarea id="input-mural" placeholder="Escreva o comunicado..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; margin-bottom:10px;"></textarea>
                     <div style="display:flex; gap:8px;">
-                        <button onclick="academia.salvarAvisoMural()" style="flex:2; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">LANÃ‡AR COMUNICADO</button>
-                        <button onclick="academia.toggleHistoricoMural()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">HISTÃ“RICO</button>
+                        <button onclick="academia.salvarAvisoMural()" style="flex:2; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">LANÇAR COMUNICADO</button>
+                        <button onclick="academia.toggleHistoricoMural()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">HISTÓRICO</button>
                     </div>
                     <div id="secao-historico-mural" class="hidden" style="margin-top:15px; border-top:1px solid #334155; padding-top:12px;">
                         <small style="color:#f43f5e; font-weight:800; display:block; margin-bottom:12px; font-size:0.55rem;">GERENCIAR COMUNICADOS ATIVOS:</small>
                         <div id="lista-exclusao-mural" style="margin-bottom:12px;"></div>
-                        <small style="color:#94a3b8; font-weight:800; display:block; margin-bottom:12px; font-size:0.55rem;">HISTÃ“RICO DE AVISOS ANTERIORES:</small>
+                        <small style="color:#94a3b8; font-weight:800; display:block; margin-bottom:12px; font-size:0.55rem;">HISTÓRICO DE AVISOS ANTERIORES:</small>
                         <div id="lista-historico-avisos"></div>
                     </div>
                 </div>
 
-                <!-- ADMIN: Editor de tÃ©cnica + aprovaÃ§Ã£o de vÃ­deos -->
+                <!-- ADMIN: Editor de técnica + aprovação de vídeos -->
                 <div id="admin-tecnica-editor" class="card hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-bottom:15px;">
-                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-video"></i> Atualizar PosiÃ§Ã£o da Semana</div>
-                    <input type="text" id="input-tecnica-titulo" placeholder="TÃ­tulo da PosiÃ§Ã£o" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <input type="text" id="input-tecnica-link" placeholder="Link Completo do VÃ­deo" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <button onclick="academia.salvarTecnica()" style="width:100%; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">PUBLICAR VÃDEO</button>
+                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-video"></i> Atualizar Posição da Semana</div>
+                    <input type="text" id="input-tecnica-titulo" placeholder="Título da Posição" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <input type="text" id="input-tecnica-link" placeholder="Link Completo do Vídeo" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <button onclick="academia.salvarTecnica()" style="width:100%; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">PUBLICAR VÍDEO</button>
                     <div id="lista-exclusao-tecnicas" style="margin-top:12px; border-top:1px solid #334155; padding-top:10px;"></div>
-                    <!-- VÃ­deos pendentes de aprovaÃ§Ã£o -->
+                    <!-- Vídeos pendentes de aprovação -->
                     <div style="margin-top:14px; border-top:1px solid #334155; padding-top:12px;">
-                        <small style="color:#f59e0b; font-weight:800; font-size:0.6rem; display:block; margin-bottom:8px; letter-spacing:0.5px;"><i class="fas fa-clock"></i> VÃDEOS AGUARDANDO APROVAÃ‡ÃƒO</small>
+                        <small style="color:#f59e0b; font-weight:800; font-size:0.6rem; display:block; margin-bottom:8px; letter-spacing:0.5px;"><i class="fas fa-clock"></i> VÍDEOS AGUARDANDO APROVAÇÃO</small>
                         <div id="lista-videos-pendentes-admin"></div>
                     </div>
                 </div>
 
-                <!-- PROFESSOR: Enviar vÃ­deo para aprovaÃ§Ã£o -->
+                <!-- PROFESSOR: Enviar vídeo para aprovação -->
                 <div id="prof-video-editor" class="card hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-bottom:15px;">
-                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-video"></i> Enviar VÃ­deo para AprovaÃ§Ã£o</div>
-                    <input type="text" id="input-video-prof-titulo" placeholder="TÃ­tulo da PosiÃ§Ã£o/TÃ©cnica" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <input type="text" id="input-video-prof-link" placeholder="Link do VÃ­deo (YouTube, etc)" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <button onclick="academia.enviarVideoProf()" style="width:100%; padding:12px; background:#8b5cf6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;"><i class="fas fa-paper-plane"></i> ENVIAR PARA APROVAÃ‡ÃƒO</button>
+                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-video"></i> Enviar Vídeo para Aprovação</div>
+                    <input type="text" id="input-video-prof-titulo" placeholder="Título da Posição/Técnica" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <input type="text" id="input-video-prof-link" placeholder="Link do Vídeo (YouTube, etc)" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <button onclick="academia.enviarVideoProf()" style="width:100%; padding:12px; background:#8b5cf6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;"><i class="fas fa-paper-plane"></i> ENVIAR PARA APROVAÇÃO</button>
                     <div style="margin-top:12px; border-top:1px solid #334155; padding-top:10px;">
-                        <small style="color:#94a3b8; font-weight:800; font-size:0.6rem; display:block; margin-bottom:8px;">MEUS VÃDEOS ENVIADOS:</small>
+                        <small style="color:#94a3b8; font-weight:800; font-size:0.6rem; display:block; margin-bottom:8px;">MEUS VÍDEOS ENVIADOS:</small>
                         <div id="lista-videos-prof-enviados"></div>
                     </div>
                 </div>
@@ -618,7 +618,7 @@
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
                     <div id="card-alterar-senha-prof" class="hidden" style="padding:0 15px 15px 15px;">
-                        <input type="password" id="nova-senha-prof" placeholder="Nova senha (mÃ­nimo 6 caracteres)" style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:8px;"/>
+                        <input type="password" id="nova-senha-prof" placeholder="Nova senha (mínimo 6 caracteres)" style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:8px;"/>
                         <input type="password" id="confirmar-senha-prof" placeholder="Confirmar nova senha" style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:12px;"/>
                         <button onclick="executarAlterarSenhaProf()" style="width:100%; padding:13px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer;"><i class="fas fa-save"></i> SALVAR NOVA SENHA</button>
                     </div>
@@ -628,7 +628,7 @@
                     <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-user-shield"></i> Cadastrar Novo Professor da Equipe</div>
                     <input type="text" id="nome-prof" placeholder="Nome do Professor" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <input type="email" id="email-prof" placeholder="E-mail (Login)" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <div style="margin: 10px 0 15px 2px;"><small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">VÃNCULO E ACESSO Ã€S TURMAS:</small><div id="grid-turmas-prof" class="checkbox-grid"></div></div>
+                    <div style="margin: 10px 0 15px 2px;"><small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">VÍNCULO E ACESSO ÀS TURMAS:</small><div id="grid-turmas-prof" class="checkbox-grid"></div></div>
                     <button onclick="academia.salvarProfessor()" style="width:100%; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">CADASTRAR PROFESSOR</button>
                     <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
                         <div style="flex:1; height:1px; background:#334155;"></div>
@@ -643,13 +643,13 @@
                 <div id="list-professores" class="list-container hidden"></div>
                 </div><!-- /gestao-prof-body -->
 
-                <!-- â•â•â• SEÃ‡ÃƒO: ALUNO â•â•â• -->
+                <!-- ═══ SEÇÃO: ALUNO ═══ -->
                 <div id="gestao-header-aluno" onclick="toggleGestaoSection('gestao-aluno-body','chevron-aluno')" style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; border-radius: 0 10px 10px 0; padding: 10px 14px; margin: 12px 0 8px 0; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; user-select:none;">
                     <div style="display:flex; align-items:center; gap:10px;">
                         <i class="fas fa-users" style="color:#3b82f6; font-size:1rem;"></i>
                         <div>
-                            <span style="color:#3b82f6; font-size:0.7rem; font-weight:800; letter-spacing:1.2px; display:block;">ÃREA DO ALUNO</span>
-                            <span style="color:#60a5fa; font-size:0.55rem; font-weight:600;">MatrÃ­cula Â· EdiÃ§Ã£o Â· Lista de Atletas</span>
+                            <span style="color:#3b82f6; font-size:0.7rem; font-weight:800; letter-spacing:1.2px; display:block;">ÁREA DO ALUNO</span>
+                            <span style="color:#60a5fa; font-size:0.55rem; font-weight:600;">Matrícula · Edição · Lista de Atletas</span>
                         </div>
                     </div>
                     <i id="chevron-aluno" class="fas fa-chevron-down" style="color:#3b82f6; font-size:0.8rem; transition:transform 0.25s; flex-shrink:0;"></i>
@@ -666,19 +666,19 @@
                     <div style="margin-bottom:10px;">
                         <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">MODALIDADE:</small>
                         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
-                            <button id="btn-modal-jj" onclick="academia.selecionarModalidade('jiujitsu')" style="padding:9px; background:#3b82f6; border:none; color:white; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">ðŸ¥‹ JIU-JITSU</button>
-                            <button id="btn-modal-mt" onclick="academia.selecionarModalidade('muaythai')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">ðŸ¥Š MUAY THAI</button>
-                            <button id="btn-modal-ambos" onclick="academia.selecionarModalidade('ambos')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">âš¡ AMBOS</button>
+                            <button id="btn-modal-jj" onclick="academia.selecionarModalidade('jiujitsu')" style="padding:9px; background:#3b82f6; border:none; color:white; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥋 JIU-JITSU</button>
+                            <button id="btn-modal-mt" onclick="academia.selecionarModalidade('muaythai')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥊 MUAY THAI</button>
+                            <button id="btn-modal-ambos" onclick="academia.selecionarModalidade('ambos')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">⚡ AMBOS</button>
                         </div>
                     </div>
 
-                    <input type="text" id="cpf-aluno" placeholder="CPF do Atleta (Apenas nÃºmeros)" maxlength="11" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <input type="text" id="telefone-aluno" placeholder="Telefone com DDD (Apenas nÃºmeros)" maxlength="11" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <input type="text" id="cpf-aluno" placeholder="CPF do Atleta (Apenas números)" maxlength="11" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <input type="text" id="telefone-aluno" placeholder="Telefone com DDD (Apenas números)" maxlength="11" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     
                     <input type="text" id="cep-aluno" placeholder="CEP do Atleta" maxlength="8" onblur="GaditasFiltros.buscarCEPAdmin(this.value)" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <input type="text" id="rua-aluno" placeholder="Rua / Logradouro" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                        <input type="text" id="numero-aluno" placeholder="NÂº" style="flex: 1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin: 0;"/>
+                        <input type="text" id="numero-aluno" placeholder="Nº" style="flex: 1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin: 0;"/>
                         <input type="text" id="bairro-aluno" placeholder="Bairro" style="flex: 2; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin: 0;"/>
                     </div>
                     
@@ -691,56 +691,56 @@
 
                     <label style="color: #94a3b8; font-size: 0.7rem; margin-left: 2px; font-weight:700;">Data de Nascimento:</label>
                     <input type="date" id="nascimento-aluno" onchange="ui.atualizarFaixas()" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <!-- GRADUAÃ‡ÃƒO JIU-JITSU -->
+                    <!-- GRADUAÇÃO JIU-JITSU -->
                     <div id="section-grad-jj">
-                        <small style="color:#60a5fa; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">GRADUAÃ‡ÃƒO JIU-JITSU:</small>
+                        <small style="color:#60a5fa; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">GRADUAÇÃO JIU-JITSU:</small>
                         <div style="display: flex; gap: 10px; margin-bottom:8px;">
                             <select id="select-faixa" onchange="ui.atualizarGraus()" style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"></select>
                             <select id="select-graus" style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"></select>
                         </div>
                     </div>
-                    <!-- GRADUAÃ‡ÃƒO MUAY THAI â€” SequÃªncia oficial -->
+                    <!-- GRADUAÇÃO MUAY THAI — Sequência oficial -->
                     <div id="section-grad-mt" class="hidden">
-                        <small style="color:#f43f5e; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">GRADUAÃ‡ÃƒO MUAY THAI:</small>
+                        <small style="color:#f43f5e; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">GRADUAÇÃO MUAY THAI:</small>
                         <select id="select-faixa-mt" style="width:100%; padding:10px; background:#0f172a; border:1px solid #f43f5e44; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:8px;">
-                            <option value="Branco">ðŸ¤ Branco â€” Iniciante</option>
-                            <option value="Branco ponta Vermelha">ðŸ¤â¤ï¸ Branco ponta Vermelha</option>
-                            <option value="Vermelha">â¤ï¸ Vermelha</option>
-                            <option value="Vermelha ponta Azul Clara">â¤ï¸ðŸ’™ Vermelha ponta Azul Clara</option>
-                            <option value="Azul Clara">ðŸ’™ Azul Clara</option>
-                            <option value="Azul Clara ponta Azul Escura">ðŸ’™ðŸ”µ Azul Clara ponta Azul Escura â€” Monitor</option>
-                            <option value="Azul Escura">ðŸ”µ Azul Escura â€” Instrutor Auxiliar</option>
-                            <option value="Azul Escura ponta Preta">ðŸ”µðŸ–¤ Azul Escura ponta Preta â€” Instrutor</option>
-                            <option value="Preta">ðŸ–¤ Preta â€” Professor</option>
-                            <option value="Preta ponta Branca">ðŸ–¤ðŸ¤ Preta ponta Branca â€” Mestre</option>
-                            <option value="Preta, Ponta Branca e Vermelha">ðŸ–¤ðŸ¤â¤ï¸ Preta, Ponta Branca e Vermelha â€” GrÃ£o Mestre</option>
+                            <option value="Branco">🤍 Branco — Iniciante</option>
+                            <option value="Branco ponta Vermelha">🤍❤️ Branco ponta Vermelha</option>
+                            <option value="Vermelha">❤️ Vermelha</option>
+                            <option value="Vermelha ponta Azul Clara">❤️💙 Vermelha ponta Azul Clara</option>
+                            <option value="Azul Clara">💙 Azul Clara</option>
+                            <option value="Azul Clara ponta Azul Escura">💙🔵 Azul Clara ponta Azul Escura — Monitor</option>
+                            <option value="Azul Escura">🔵 Azul Escura — Instrutor Auxiliar</option>
+                            <option value="Azul Escura ponta Preta">🔵🖤 Azul Escura ponta Preta — Instrutor</option>
+                            <option value="Preta">🖤 Preta — Professor</option>
+                            <option value="Preta ponta Branca">🖤🤍 Preta ponta Branca — Mestre</option>
+                            <option value="Preta, Ponta Branca e Vermelha">🖤🤍❤️ Preta, Ponta Branca e Vermelha — Grão Mestre</option>
                         </select>
                     </div>
                     <div id="admin-painel-leoes" class="hidden" style="background:#0f172a; padding:15px; border-radius:12px; margin-top:15px; border:1px solid #334155;">
-                        <small style="color:#f59e0b; font-weight:800; display:block; font-size:0.6rem; margin-bottom:10px; text-transform:uppercase;">ðŸ¦ Conceder LeÃµes de Conquest</small>
+                        <small style="color:#f59e0b; font-weight:800; display:block; font-size:0.6rem; margin-bottom:10px; text-transform:uppercase;">🦁 Conceder Leões de Conquest</small>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                             <div style="background:#1e293b; padding:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid #334155;">
-                                <span style="font-size:0.65rem; color:white; font-weight:700;">ðŸŸ¢ AtenÃ§Ã£o</span>
+                                <span style="font-size:0.65rem; color:white; font-weight:700;">🟢 Atenção</span>
                                 <div style="display:flex; align-items:center; gap:6px;"><button onclick="academia.alterarLeaoFicha('leaoAtencao', -1)" style="background:#334155; border:none; color:white; width:22px; height:22px; border-radius:4px; font-weight:bold; cursor:pointer;">-</button><b id="label-qty-leaoAtencao" style="font-size:0.8rem; color:white; min-width:12px; text-align:center;">0</b><button onclick="academia.alterarLeaoFicha('leaoAtencao', 1)" style="background:#3b82f6; border:none; color:white; width:22px; height:22px; border-radius:4px; font-weight:bold; cursor:pointer;">+</button></div>
                             </div>
                             <div style="background:#1e293b; padding:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid #334155;">
-                                <span style="font-size:0.65rem; color:white; font-weight:700;">ðŸ”´ Comportamento</span>
+                                <span style="font-size:0.65rem; color:white; font-weight:700;">🔴 Comportamento</span>
                                 <div style="display:flex; align-items:center; gap:6px;"><button onclick="academia.alterarLeaoFicha('leaoComportamento', -1)" style="background:#334155; border:none; color:white; width:22px; height:22px; border-radius:4px; font-weight:bold; cursor:pointer;">-</button><b id="label-qty-leaoComportamento" style="font-size:0.8rem; color:white; min-width:12px; text-align:center;">0</b><button onclick="academia.alterarLeaoFicha('leaoComportamento', 1)" style="background:#3b82f6; border:none; color:white; width:22px; height:22px; border-radius:4px; font-weight:bold; cursor:pointer;">+</button></div>
                             </div>
                             <div style="background:#1e293b; padding:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid #334155;">
-                                <span style="font-size:0.65rem; color:white; font-weight:700;">ðŸ”µ Companheirismo</span>
+                                <span style="font-size:0.65rem; color:white; font-weight:700;">🔵 Companheirismo</span>
                                 <div style="display:flex; align-items:center; gap:6px;"><button onclick="academia.alterarLeaoFicha('leaoCompanheirismo', -1)" style="background:#334155; border:none; color:white; width:22px; height:22px; border-radius:4px; font-weight:bold; cursor:pointer;">-</button><b id="label-qty-leaoCompanheirismo" style="font-size:0.8rem; color:white; min-width:12px; text-align:center;">0</b><button onclick="academia.alterarLeaoFicha('leaoCompanheirismo', 1)" style="background:#3b82f6; border:none; color:white; width:22px; height:22px; border-radius:4px; font-weight:bold; cursor:pointer;">+</button></div>
                             </div>
                             <div style="background:#1e293b; padding:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid #334155;">
-                                <span style="font-size:0.65rem; color:white; font-weight:700;">ðŸŸ¡ Disciplina</span>
+                                <span style="font-size:0.65rem; color:white; font-weight:700;">🟡 Disciplina</span>
                                 <div style="display:flex; align-items:center; gap:6px;"><button onclick="academia.alterarLeaoFicha('leaoDisciplina', -1)" style="background:#334155; border:none; color:white; width:22px; height:22px; border-radius:4px; font-weight:bold; cursor:pointer;">-</button><b id="label-qty-leaoDisciplina" style="font-size:0.8rem; color:white; min-width:12px; text-align:center;">0</b><button onclick="academia.alterarLeaoFicha('leaoDisciplina', 1)" style="background:#3b82f6; border:none; color:white; width:22px; height:22px; border-radius:4px; font-weight:bold; cursor:pointer;">+</button></div>
                             </div>
                         </div>
                     </div>
                     <!-- VALOR DO CONTRATO -->
                     <div style="background:#0f172a; border:1px solid #f59e0b44; border-radius:10px; padding:12px; margin-top:14px;">
-                        <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">ðŸ’° VALOR NO CONTRATO (R$/mÃªs)</small>
-                        <small style="color:#64748b; font-size:0.58rem; display:block; margin-bottom:8px; line-height:1.4;">Defina o valor real do plano. Aparece no contrato digital do aluno. ObrigatÃ³rio para planos Livre e FamÃ­lia.</small>
+                        <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">💰 VALOR NO CONTRATO (R$/mês)</small>
+                        <small style="color:#64748b; font-size:0.58rem; display:block; margin-bottom:8px; line-height:1.4;">Defina o valor real do plano. Aparece no contrato digital do aluno. Obrigatório para planos Livre e Família.</small>
                         <input type="number" id="planoValor-aluno" placeholder="Ex: 120.00" step="0.01" min="0"
                             style="width:100%; padding:10px; background:#1e293b; border:1px solid #f59e0b55; color:white; border-radius:8px; outline:none; font-size:0.9rem; font-weight:700;"/>
                     </div>
@@ -756,21 +756,21 @@
                 <!-- FILTRO POR MODALIDADE -->
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:8px;">
                     <button id="filtro-modal-all" onclick="academia.filtrarModalidade('all')" style="padding:9px; background:#3b82f6; border:none; color:white; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">TODOS</button>
-                    <button id="filtro-modal-jiujitsu" onclick="academia.filtrarModalidade('jiujitsu')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">ðŸ¥‹ JIU-JITSU</button>
-                    <button id="filtro-modal-muaythai" onclick="academia.filtrarModalidade('muaythai')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">ðŸ¥Š MUAY THAI</button>
+                    <button id="filtro-modal-jiujitsu" onclick="academia.filtrarModalidade('jiujitsu')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥋 JIU-JITSU</button>
+                    <button id="filtro-modal-muaythai" onclick="academia.filtrarModalidade('muaythai')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥊 MUAY THAI</button>
                 </div>
 
                 <!-- FILTRO KIDS / ADULTO -->
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px;">
-                    <button id="filter-btn-all" onclick="academia.filtrarCategoriaAlunos('all')" style="padding:9px; background:#3b82f6; border:none; color:white; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">ðŸ‘¥ TODOS</button>
-                    <button id="filter-btn-kids" onclick="academia.filtrarCategoriaAlunos('kids')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">ðŸ§’ KIDS</button>
-                    <button id="filter-btn-adult" onclick="academia.filtrarCategoriaAlunos('adult')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">ðŸ¥‹ ADULTO</button>
+                    <button id="filter-btn-all" onclick="academia.filtrarCategoriaAlunos('all')" style="padding:9px; background:#3b82f6; border:none; color:white; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">👥 TODOS</button>
+                    <button id="filter-btn-kids" onclick="academia.filtrarCategoriaAlunos('kids')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🧒 KIDS</button>
+                    <button id="filter-btn-adult" onclick="academia.filtrarCategoriaAlunos('adult')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥋 ADULTO</button>
                 </div>
 
                 <input type="text" id="input-busca-aluno" placeholder="Buscar atleta por nome..." oninput="academia.filtrarPorNomeDigitado()" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:10px;"/>
                 
                 <select id="filtro-avancado-faixas" onchange="GaditasFiltros.faixaFiltroAtual = this.value; academia.renderAlunos();" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-top: -4px; margin-bottom: 15px;">
-                    <option value="all">ðŸ¥‹ FILTRAR POR COR DE FAIXA</option>
+                    <option value="all">🥋 FILTRAR POR COR DE FAIXA</option>
                     <option value="Branca">FAIXA BRANCA</option>
                     <option value="Cinza/Branca">FAIXA CINZA/BRANCA</option>
                     <option value="Cinza">FAIXA CINZA</option>
@@ -796,13 +796,13 @@
 
             <div id="tab-relatorios" class="tab-content hidden" style="padding:15px;">
                 <div class="card" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px;">
-                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-chart-line"></i> RelatÃ³rios de Performance e PromoÃ§Ã£o</div>
+                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-chart-line"></i> Relatórios de Performance e Promoção</div>
                     <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <button onclick="academia.generarRelatorioGraduacao()" style="flex:1; padding:12px; background:#f59e0b; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">ðŸ¥‹ QUEM GRADUA?</button>
+                        <button onclick="academia.generarRelatorioGraduacao()" style="flex:1; padding:12px; background:#f59e0b; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">🥋 QUEM GRADUA?</button>
                         <button onclick="academia.exportarDadosBackup()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">BACKUP</button>
                     </div>
                     <button onclick="academia.renderRelatPlanos()" style="width:100%; padding:12px; background:#1e3a8a; border:1px solid #3b82f655; color:#60a5fa; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; margin-bottom:15px; letter-spacing:0.3px;">
-                        <i class="fas fa-wallet" style="margin-right:7px;"></i>ðŸ’° PLANOS & VALORES DO CONTRATO
+                        <i class="fas fa-wallet" style="margin-right:7px;"></i>💰 PLANOS & VALORES DO CONTRATO
                     </button>
                     <div id="resultado-relat-planos"></div>
                     <div id="analytics-frequencia-container" style="margin-bottom:25px;"></div>
@@ -812,9 +812,9 @@
 
             <div id="tab-horarios" class="tab-content hidden" style="padding:15px;"></div>
 
-            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+            <!-- ══════════════════════════════════════════════ -->
             <!-- TAB LOJA                                       -->
-            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+            <!-- ══════════════════════════════════════════════ -->
             <div id="tab-loja" class="tab-content hidden" style="padding:15px 15px 90px;">
 
                 <!-- Header Inter Bank -->
@@ -823,27 +823,27 @@
                         <div style="font-size:0.55rem; color:#475569; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:2px;">Gaditas Matriz</div>
                         <div style="font-size:1.05rem; font-weight:800; color:#f8fafc; letter-spacing:-0.3px;"><i class="fas fa-shopping-bag" style="color:#3b82f6; margin-right:8px; font-size:0.9rem;"></i>LOJA</div>
                     </div>
-                    <!-- BotÃ£o meus pedidos (alunos) -->
+                    <!-- Botão meus pedidos (alunos) -->
                     <button id="btn-ver-meus-pedidos" onclick="loja.verMeusPedidos()" style="display:none; background:#1e3a8a; border:1px solid #3b82f644; color:#93c5fd; padding:9px 14px; border-radius:12px; font-size:0.6rem; font-weight:800; cursor:pointer; position:relative; letter-spacing:0.3px;">
                         <i class="fas fa-box" style="margin-right:5px;"></i>MEUS PEDIDOS
                         <span id="badge-meus-pedidos" style="display:none; position:absolute; top:-5px; right:-5px; background:#f59e0b; color:#000; border-radius:10px; padding:0 5px; font-size:0.5rem; font-weight:800;"></span>
                     </button>
                 </div>
 
-                <!-- Toggle VITRINE / GERENCIAR (sÃ³ admin) -->
+                <!-- Toggle VITRINE / GERENCIAR (só admin) -->
                 <div id="loja-admin-toggle" style="display:none; background:#0f172a; border:1px solid #334155; border-radius:10px; padding:4px; display:none; gap:4px; margin-bottom:14px;">
                     <button id="loja-toggle-vitrine" onclick="loja.mudarModoAdmin('vitrine')"
                         style="flex:1; padding:9px; background:#3b82f6; border:none; color:white; border-radius:7px; font-size:0.68rem; font-weight:800; cursor:pointer;">
-                        ðŸ›’ VITRINE
+                        🛒 VITRINE
                     </button>
                     <button id="loja-toggle-gerenciar" onclick="loja.mudarModoAdmin('gerenciar')"
                         style="flex:1; padding:9px; background:transparent; border:none; color:#64748b; border-radius:7px; font-size:0.68rem; font-weight:800; cursor:pointer; position:relative;">
-                        âš™ï¸ GERENCIAR
+                        ⚙️ GERENCIAR
                         <span id="badge-pedidos-loja" style="display:none; position:absolute; top:-4px; right:4px; background:#f59e0b; color:#000; border-radius:10px; padding:0 5px; font-size:0.5rem; font-weight:800;"></span>
                     </button>
                 </div>
 
-                <!-- â”€â”€ VITRINE â”€â”€ -->
+                <!-- ── VITRINE ── -->
                 <div id="loja-painel-vitrine">
                     <!-- Filtros de categoria -->
                     <div id="loja-filtros" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:14px; scrollbar-width:none; -webkit-overflow-scrolling:touch;"></div>
@@ -851,17 +851,17 @@
                     <div id="loja-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                         <div style="grid-column:1/-1; text-align:center; padding:40px; color:#475569; font-size:0.75rem;">Carregando loja...</div>
                     </div>
-                    <!-- Meus pedidos (collapsÃ­vel â€” alunos) -->
+                    <!-- Meus pedidos (collapsível — alunos) -->
                     <div id="loja-meus-pedidos" style="display:none; margin-top:16px; background:#1e293b; border:1px solid #334155; border-radius:12px; padding:15px;">
-                        <div style="font-size:0.8rem; font-weight:800; color:white; margin-bottom:12px;">ðŸ“¦ MEUS PEDIDOS</div>
+                        <div style="font-size:0.8rem; font-weight:800; color:white; margin-bottom:12px;">📦 MEUS PEDIDOS</div>
                         <div id="loja-lista-meus-pedidos"><small style="color:#475569; font-size:0.65rem;">Carregando...</small></div>
                     </div>
                 </div>
 
-                <!-- â”€â”€ GERENCIAR (admin) â”€â”€ -->
+                <!-- ── GERENCIAR (admin) ── -->
                 <div id="loja-painel-gerenciar" style="display:none;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <span style="font-size:0.75rem; font-weight:800; color:#10b981;">âš™ï¸ GERENCIAR LOJA</span>
+                        <span style="font-size:0.75rem; font-weight:800; color:#10b981;">⚙️ GERENCIAR LOJA</span>
                         <div style="display:flex; gap:6px;">
                             <button onclick="loja.abrirModalProduto(null)" style="background:#10b981; border:none; color:white; padding:7px 14px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">+ PRODUTO</button>
                             <button onclick="loja._refreshAdmin()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.8rem;"><i class="fas fa-sync-alt"></i></button>
@@ -869,8 +869,8 @@
                     </div>
                     <!-- sub-tabs: Produtos / Pedidos -->
                     <div style="display:flex; gap:6px; margin-bottom:12px;">
-                        <button id="loja-tab-btn-prods" onclick="loja.mostrarTabAdmin('prods')" style="flex:1; background:#10b981; border:none; color:white; padding:8px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">ðŸ“¦ PRODUTOS</button>
-                        <button id="loja-tab-btn-pedidos" onclick="loja.mostrarTabAdmin('pedidos')" style="flex:1; background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:8px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">ðŸ›ï¸ PEDIDOS</button>
+                        <button id="loja-tab-btn-prods" onclick="loja.mostrarTabAdmin('prods')" style="flex:1; background:#10b981; border:none; color:white; padding:8px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">📦 PRODUTOS</button>
+                        <button id="loja-tab-btn-pedidos" onclick="loja.mostrarTabAdmin('pedidos')" style="flex:1; background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:8px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🛍️ PEDIDOS</button>
                     </div>
                     <div id="loja-admin-prods"><small style="color:#475569; font-size:0.65rem;">Carregando...</small></div>
                     <div id="loja-admin-pedidos" style="display:none;"></div>
@@ -883,29 +883,29 @@
         <nav class="bottom-nav">
             <button onclick="ui.showTab('tab-checkin')" class="nav-item active"><i class="fas fa-home"></i><span>TREINO</span></button>
             <button onclick="ui.showTab('tab-eventos')" class="nav-item"><i class="fas fa-calendar-alt"></i><span>EVENTOS</span></button>
-            <button onclick="ui.showTab('tab-horarios')" id="menu-horarios" class="nav-item"><i class="fas fa-clock"></i><span>HORÃRIOS</span></button>
+            <button onclick="ui.showTab('tab-horarios')" id="menu-horarios" class="nav-item"><i class="fas fa-clock"></i><span>HORÁRIOS</span></button>
             <button onclick="ui.showTab('tab-loja')" id="menu-loja" class="nav-item" style="position:relative;"><i class="fas fa-shopping-bag"></i><span>LOJA</span></button>
-            <button onclick="ui.showTab('tab-alunos')" id="menu-alunos" class="nav-item"><i class="fas fa-users-cog"></i><span>GESTÃƒO</span></button>
+            <button onclick="ui.showTab('tab-alunos')" id="menu-alunos" class="nav-item"><i class="fas fa-users-cog"></i><span>GESTÃO</span></button>
             <button onclick="ui.showTab('tab-relatorios')" id="menu-relatorios" class="nav-item" style="position:relative;">
                 <i class="fas fa-file-invoice"></i>
-                <span>RELATÃ“RIOS</span>
+                <span>RELATÓRIOS</span>
                 <span id="badge-solic-avaliacao" style="display:none;position:absolute;top:0;right:4px;background:#10b981;color:white;font-size:0.5rem;font-weight:800;padding:2px 5px;border-radius:999px;min-width:16px;text-align:center;"></span>
             </button>
             <button onclick="auth.logout()" class="nav-item logout-item"><i class="fas fa-sign-out-alt"></i><span>SAIR</span></button>
         </nav>
     </div>
 
-    <!-- â•â• MODAL CONTRATO DIGITAL â•â• -->
+    <!-- ══ MODAL CONTRATO DIGITAL ══ -->
     <div id="modal-contrato" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.97); z-index:10500; flex-direction:column;">
         <!-- Header -->
         <div style="background:#0f172a; border-bottom:1px solid #334155; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
             <div>
                 <div style="font-size:0.6rem; color:#94a3b8; font-weight:700; letter-spacing:0.5px; text-transform:uppercase;">Gaditas Academy</div>
-                <div style="font-size:0.9rem; font-weight:800; color:white; margin-top:2px;">ðŸ“‹ Contrato de PrestaÃ§Ã£o de ServiÃ§os</div>
+                <div style="font-size:0.9rem; font-weight:800; color:white; margin-top:2px;">📋 Contrato de Prestação de Serviços</div>
             </div>
-            <button onclick="contrato.fechar()" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; width:36px; height:36px; border-radius:8px; font-size:1.1rem; cursor:pointer; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;">âœ•</button>
+            <button onclick="contrato.fechar()" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; width:36px; height:36px; border-radius:8px; font-size:1.1rem; cursor:pointer; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;">✕</button>
         </div>
-        <!-- Body (scrollÃ¡vel) -->
+        <!-- Body (scrollável) -->
         <div id="contrato-body" style="flex:1; overflow-y:auto; padding:16px; -webkit-overflow-scrolling:touch;"></div>
         <!-- Footer fixo -->
         <div id="contrato-footer" style="padding:12px 16px; background:#0f172a; border-top:1px solid #334155; flex-shrink:0;"></div>
@@ -919,7 +919,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-messaging-compat.js"></script>
-    <script src="main.js?v=20260607j"></script>
+    <script src="main.js?v=20260607k"></script>
     <script src="filtros-academia.js?v=20260602v"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>
@@ -953,94 +953,94 @@
             const novaSenha = document.getElementById(idNova).value;
             const confirmar = document.getElementById(idConfirmar).value;
             if (!novaSenha || novaSenha.length < 6) return alert("A senha deve ter pelo menos 6 caracteres.");
-            if (novaSenha !== confirmar) return alert("As senhas nÃ£o conferem.");
+            if (novaSenha !== confirmar) return alert("As senhas não conferem.");
             try {
                 let user = firebase.auth().currentUser;
                 if (!user) {
                     const email = auth.currentUser?.email;
-                    if (!email) return alert("SessÃ£o expirada. FaÃ§a logout e login novamente.");
+                    if (!email) return alert("Sessão expirada. Faça logout e login novamente.");
                     const senhaAtual = prompt("Informe sua senha ATUAL para confirmar:");
                     if (!senhaAtual) return;
 
-                    // 1Âº tenta Firebase Auth
+                    // 1º tenta Firebase Auth
                     let authFirebase = false;
                     try {
                         const cred = await firebase.auth().signInWithEmailAndPassword(email, senhaAtual);
                         user = cred.user;
                         authFirebase = true;
-                    } catch (e) { /* nÃ£o tem conta no Firebase Auth â€” verifica senha local */ }
+                    } catch (e) { /* não tem conta no Firebase Auth — verifica senha local */ }
 
                     if (!authFirebase) {
-                        // 2Âº verifica contra a senha local do Firestore (ou padrÃ£o "1234")
+                        // 2º verifica contra a senha local do Firestore (ou padrão "1234")
                         const senhaLocal = auth.currentUser?.senha;
                         const senhaOk = senhaAtual === senhaLocal || senhaAtual === "1234";
                         if (!senhaOk) return alert("Senha atual incorreta.");
 
-                        // Salva a nova senha no Firestore e na sessÃ£o
+                        // Salva a nova senha no Firestore e na sessão
                         const colecao = auth.role === 'professor' ? 'professores' : 'alunos';
                         await db.collection(colecao).doc(auth.currentUser.id).update({ senha: novaSenha });
                         auth.currentUser.senha = novaSenha;
-                        alert("âœ… Senha alterada com sucesso! OSS!");
+                        alert("✅ Senha alterada com sucesso! OSS!");
                         document.getElementById(idCard).classList.add('hidden');
                         document.getElementById(idNova).value = '';
                         document.getElementById(idConfirmar).value = '';
                         return;
                     }
                 }
-                // Tem sessÃ£o Firebase Auth â€” atualiza lÃ¡
+                // Tem sessão Firebase Auth — atualiza lá
                 await user.updatePassword(novaSenha);
-                alert("âœ… Senha alterada com sucesso! OSS!");
+                alert("✅ Senha alterada com sucesso! OSS!");
                 document.getElementById(idCard).classList.add('hidden');
                 document.getElementById(idNova).value = '';
                 document.getElementById(idConfirmar).value = '';
             } catch (e) {
-                if (e.code === 'auth/requires-recent-login') alert("Por seguranÃ§a, faÃ§a logout e login novamente.");
+                if (e.code === 'auth/requires-recent-login') alert("Por segurança, faça logout e login novamente.");
                 else alert("Erro: " + e.message);
             }
         }
     </script>
 
-    <!-- â•â• PWA: banner instalar + registro SW â•â• -->
+    <!-- ══ PWA: banner instalar + registro SW ══ -->
     <div id="pwa-banner" style="display:none; position:fixed; bottom:70px; left:12px; right:12px; z-index:20000;
         background:#1e293b; border:1px solid #3b82f6; border-radius:14px; padding:14px 16px;
         box-shadow:0 8px 32px rgba(0,0,0,0.6); align-items:center; gap:12px;">
         <img src="gaditasstore.png" style="width:44px; height:44px; border-radius:10px; flex-shrink:0;">
         <div style="flex:1; min-width:0;">
             <div style="font-size:0.78rem; font-weight:800; color:white;">Instalar Gaditas Academy</div>
-            <div style="font-size:0.65rem; color:#94a3b8; margin-top:2px;">Adicione Ã  tela inicial e use como app nativo</div>
+            <div style="font-size:0.65rem; color:#94a3b8; margin-top:2px;">Adicione à tela inicial e use como app nativo</div>
         </div>
         <button id="pwa-btn-instalar" style="background:#3b82f6; border:none; color:white; padding:9px 14px;
             border-radius:8px; font-size:0.72rem; font-weight:800; cursor:pointer; flex-shrink:0;">
             INSTALAR
         </button>
         <button onclick="document.getElementById('pwa-banner').style.display='none'; localStorage.setItem('pwa-ignorado','1')"
-            style="background:none; border:none; color:#64748b; font-size:1.1rem; cursor:pointer; flex-shrink:0; padding:0;">âœ•</button>
+            style="background:none; border:none; color:#64748b; font-size:1.1rem; cursor:pointer; flex-shrink:0; padding:0;">✕</button>
     </div>
 
-    <!-- iOS: instruÃ§Ã£o manual (Safari nÃ£o suporta beforeinstallprompt) -->
+    <!-- iOS: instrução manual (Safari não suporta beforeinstallprompt) -->
     <div id="pwa-ios-banner" style="display:none; position:fixed; bottom:70px; left:12px; right:12px; z-index:20000;
         background:#1e293b; border:1px solid #f59e0b; border-radius:14px; padding:14px 16px;
         box-shadow:0 8px 32px rgba(0,0,0,0.6);">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-            <div style="font-size:0.78rem; font-weight:800; color:white;">ðŸ“² Instalar no iPhone/iPad</div>
+            <div style="font-size:0.78rem; font-weight:800; color:white;">📲 Instalar no iPhone/iPad</div>
             <button onclick="document.getElementById('pwa-ios-banner').style.display='none'; localStorage.setItem('pwa-ignorado','1')"
-                style="background:none; border:none; color:#64748b; font-size:1.1rem; cursor:pointer; padding:0;">âœ•</button>
+                style="background:none; border:none; color:#64748b; font-size:1.1rem; cursor:pointer; padding:0;">✕</button>
         </div>
         <div style="font-size:0.68rem; color:#94a3b8; line-height:1.6;">
-            1. Toque em <strong style="color:#f59e0b;">Compartilhar</strong> <span style="font-size:0.9rem;">âŽ™</span> na barra do Safari<br>
-            2. Role para baixo e toque em <strong style="color:#f59e0b;">"Adicionar Ã  Tela de InÃ­cio"</strong><br>
-            3. Toque em <strong style="color:#f59e0b;">Adicionar</strong> â€” pronto!
+            1. Toque em <strong style="color:#f59e0b;">Compartilhar</strong> <span style="font-size:0.9rem;">⎙</span> na barra do Safari<br>
+            2. Role para baixo e toque em <strong style="color:#f59e0b;">"Adicionar à Tela de Início"</strong><br>
+            3. Toque em <strong style="color:#f59e0b;">Adicionar</strong> — pronto!
         </div>
     </div>
 
     <script>
-        // â”€â”€ Registro do Service Worker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Registro do Service Worker ──────────────────────
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/firebase-messaging-sw.js')
                 .catch(err => console.warn('SW registro:', err));
         }
 
-        // â”€â”€ Install prompt (Android/Chrome) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Install prompt (Android/Chrome) ─────────────────
         let _pwaPrompt = null;
         window.addEventListener('beforeinstallprompt', e => {
             e.preventDefault();
@@ -1065,7 +1065,7 @@
             localStorage.setItem('pwa-instalado', '1');
         });
 
-        // â”€â”€ iOS Safari â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── iOS Safari ───────────────────────────────────────
         const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
         const isStandalone = window.navigator.standalone === true;
         if (isIos && !isStandalone && !localStorage.getItem('pwa-ignorado')) {
@@ -1076,4 +1076,3 @@
     </script>
 </body>
 </html>
-

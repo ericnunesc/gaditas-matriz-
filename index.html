@@ -13,6 +13,13 @@
     <meta name="apple-mobile-web-app-title" content="Gaditas">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="stylesheet" href="style.css?v=5">
+    <script>
+        // Auto-refresh uma vez por sessão para garantir versão mais recente
+        if (!sessionStorage.getItem('gaditas_refreshed')) {
+            sessionStorage.setItem('gaditas_refreshed', '1');
+            location.reload(true);
+        }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>

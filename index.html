@@ -516,6 +516,17 @@
 
             <div id="tab-alunos" class="tab-content hidden" style="padding:15px;">
 
+                <!-- ══ CONFIGURAR EXAME DE FAIXA (admin) ══ -->
+                <div id="card-config-exame" class="gestao-acc-fechado" style="display:none; background:linear-gradient(135deg,#1a0a00,#1e293b); border:1px solid #f59e0b88; border-radius:12px; padding:15px; margin-bottom:15px;">
+                    <div onclick="if(!event.target.closest('button')) ui.toggleCard('card-config-exame')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; user-select:none;">
+                        <span style="font-size:0.8rem; font-weight:800; color:#f59e0b;">🥋 EXAME DE FAIXA — CONFIGURAR</span>
+                        <button onclick="exame.carregarPainelAdmin()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem;"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div id="painel-config-exame">
+                        <small style="color:#475569; font-size:0.65rem;">Carregando...</small>
+                    </div>
+                </div>
+
                 <!-- ══ ANIVERSARIANTES (admin) ══ -->
                 <div id="card-aniversariantes-admin" class="gestao-acc-fechado" style="display:none; background:linear-gradient(135deg,#1e1040,#1e293b); border:1px solid #f59e0b55; border-radius:12px; padding:15px; margin-bottom:15px;">
                     <div onclick="if(!event.target.closest('button')) ui.toggleCard('card-aniversariantes-admin')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; user-select:none;">
@@ -899,6 +910,16 @@
 
             </div>
 
+        <!-- ══ TAB EXAME DE FAIXA ══ -->
+        <div id="tab-exame" class="tab-content hidden" style="padding:15px 15px 100px;">
+            <div id="exame-aluno-container">
+                <div style="text-align:center; padding:40px 20px; color:#475569;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:2rem; color:#f59e0b;"></i>
+                    <p style="margin-top:12px; font-size:0.8rem;">Carregando informações do exame...</p>
+                </div>
+            </div>
+        </div>
+
         </main>
 
         <nav class="bottom-nav">
@@ -906,6 +927,11 @@
             <button onclick="ui.showTab('tab-eventos')" class="nav-item"><i class="fas fa-calendar-alt"></i><span>EVENTOS</span></button>
             <button onclick="ui.showTab('tab-horarios')" id="menu-horarios" class="nav-item"><i class="fas fa-clock"></i><span>HORÁRIOS</span></button>
             <button onclick="ui.showTab('tab-loja')" id="menu-loja" class="nav-item" style="position:relative;"><i class="fas fa-shopping-bag"></i><span>LOJA</span></button>
+            <button onclick="ui.showTab('tab-exame'); exame.carregarExameAluno()" id="menu-exame" class="nav-item" style="display:none; position:relative;">
+                <i class="fas fa-medal"></i>
+                <span>EXAME</span>
+                <span style="position:absolute; top:2px; right:4px; width:8px; height:8px; background:#f59e0b; border-radius:50%; animation:pulse 1.5s infinite;"></span>
+            </button>
             <button onclick="ui.showTab('tab-alunos')" id="menu-alunos" class="nav-item" style="display:none;"><i class="fas fa-users-cog"></i><span>GESTÃO</span></button>
             <button onclick="ui.showTab('tab-relatorios')" id="menu-relatorios" class="nav-item" style="display:none; position:relative;">
                 <i class="fas fa-file-invoice"></i>

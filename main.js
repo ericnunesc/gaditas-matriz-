@@ -184,6 +184,11 @@ const auth = {
             if (wp) wp.classList.remove('hidden');
         }
 
+        // ── TAB DE EXAME — aparece só se aluno estiver convocado ──
+        if (this.role === 'aluno' && this.currentUser?.id) {
+            exame.verificarConvocacao(this.currentUser.id);
+        }
+
         // ── LISTENERS RELATOS DE SAÚDE ────────────────────
         if (this.role === 'aluno') academia.iniciarListenerRelatoAluno();
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerRelatosProf();
@@ -5593,6 +5598,9 @@ const ui = {
         // Card aniversariantes admin
         const cardAniv = document.getElementById('card-aniversariantes-admin');
         if (cardAniv) cardAniv.style.display = isAdmin ? 'block' : 'none';
+        // Card config exame admin
+        const cardExame = document.getElementById('card-config-exame');
+        if (cardExame) cardExame.style.display = isAdmin ? 'block' : 'none';
         // Toggle VITRINE/GERENCIAR na aba loja — só admin
         const lojaToggle = document.getElementById('loja-admin-toggle');
         if (lojaToggle) lojaToggle.style.display = isAdmin ? 'flex' : 'none';
@@ -5609,6 +5617,7 @@ const ui = {
         if (fechado) {
             card.classList.remove('gestao-acc-fechado');
             // Carrega conteúdo ao abrir
+            if (cardId === 'card-config-exame') exame.carregarPainelAdmin();
             if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined') aniversario.renderAdminAniversariantes();
             if (cardId === 'card-alertas-saude') academia.carregarRelatosSaude();
             if (cardId === 'card-depoimentos-admin') academia.carregarDepoimentosPendentes();
@@ -5620,7 +5629,7 @@ const ui = {
 
     _aplicarAcordeoesGestao() {
         // Fecha todos ao (re)abrir a aba — o onclick inline no HTML cuida do toggle
-        ['card-aniversariantes-admin','card-alertas-saude','card-depoimentos-admin','card-enquetes-admin'].forEach(id => {
+        ['card-config-exame','card-aniversariantes-admin','card-alertas-saude','card-depoimentos-admin','card-enquetes-admin'].forEach(id => {
             const card = document.getElementById(id);
             if (card) card.classList.add('gestao-acc-fechado');
         });
@@ -6280,6 +6289,311 @@ const aniversario = {
             container.innerHTML = html;
         } catch(e) {
             container.innerHTML = `<small style="color:#ef4444;font-size:0.65rem;">Erro: ${e.message}</small>`;
+        }
+    }
+};
+
+// ══════════════════════════════════════════════════════════
+// EXAME DE FAIXA
+// ══════════════════════════════════════════════════════════
+const exame = {
+
+    // ── Verifica se aluno está convocado e mostra/esconde a tab ──
+    async verificarConvocacao(alunoId) {
+        try {
+            const doc = await db.collection('alunos').doc(alunoId).get();
+            if (!doc.exists) return;
+            const convocado = doc.data().aspiranteGraduacao === true;
+            const btn = document.getElementById('menu-exame');
+            if (btn) btn.style.display = convocado ? 'flex' : 'none';
+        } catch(e) { /* silencioso */ }
+    },
+
+    // ── Carrega a tela do aluno convocado ──
+    async carregarExameAluno() {
+        const container = document.getElementById('exame-aluno-container');
+        if (!container) return;
+
+        try {
+            // Dados do aluno
+            const alunoId = auth.currentUser?.id;
+            const alunoDoc = await db.collection('alunos').doc(alunoId).get();
+            const aluno = alunoDoc.data();
+
+            // Configuração do exame
+            const configDoc = await db.collection('configuracoes').doc('exame_ativo').get();
+            const cfg = configDoc.exists ? configDoc.data() : {};
+
+            const faixa = aluno.faixa || 'Branca';
+            const grau = aluno.grau || 0;
+            const aulas = aluno.aulas || 0;
+            const meta = academia.verificarMeta(aluno).meta;
+            const nome = (aluno.nome || '').split(' ')[0];
+
+            // Cores por faixa
+            const coresFaixa = {
+                'Branca': { bg: '#1e293b', border: '#ffffff', text: '#ffffff', gradient: 'linear-gradient(135deg,#1e293b,#334155)' },
+                'Azul':   { bg: '#1e3a8a', border: '#3b82f6', text: '#93c5fd', gradient: 'linear-gradient(135deg,#1e1b4b,#1e3a8a)' },
+                'Roxa':   { bg: '#4c1d95', border: '#8b5cf6', text: '#c4b5fd', gradient: 'linear-gradient(135deg,#2e1065,#4c1d95)' },
+                'Marrom': { bg: '#451a03', border: '#d97706', text: '#fcd34d', gradient: 'linear-gradient(135deg,#1c0a00,#451a03)' },
+                'Preta':  { bg: '#0a0a0a', border: '#f59e0b', text: '#f59e0b', gradient: 'linear-gradient(135deg,#000,#1a1a1a)' }
+            };
+            const cor = coresFaixa[faixa] || coresFaixa['Branca'];
+
+            // Faixa destino (próxima)
+            const faixasAdulto = ['Branca','Azul','Roxa','Marrom','Preta'];
+            const idxAtual = faixasAdulto.indexOf(faixa);
+            const proxFaixa = grau < 4 ? `${faixa} — ${grau + 1}º Grau` : (idxAtual >= 0 && idxAtual < faixasAdulto.length - 1 ? faixasAdulto[idxAtual + 1] : faixa);
+
+            // Countdown
+            let countdownHtml = '';
+            if (cfg.data) {
+                const dataExame = new Date(cfg.data + 'T' + (cfg.horario || '09:00') + ':00');
+                const agora = new Date();
+                const diffMs = dataExame - agora;
+                if (diffMs > 0) {
+                    const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                    const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    countdownHtml = `
+                        <div style="display:flex; gap:10px; justify-content:center; margin:16px 0;">
+                            <div style="background:#0f172a; border:1px solid ${cor.border}33; border-radius:10px; padding:10px 16px; text-align:center; min-width:60px;">
+                                <div style="font-size:1.6rem; font-weight:900; color:${cor.text};">${dias}</div>
+                                <div style="font-size:0.55rem; color:#64748b; font-weight:700;">DIAS</div>
+                            </div>
+                            <div style="background:#0f172a; border:1px solid ${cor.border}33; border-radius:10px; padding:10px 16px; text-align:center; min-width:60px;">
+                                <div style="font-size:1.6rem; font-weight:900; color:${cor.text};">${horas}</div>
+                                <div style="font-size:0.55rem; color:#64748b; font-weight:700;">HORAS</div>
+                            </div>
+                        </div>`;
+                } else {
+                    countdownHtml = `<div style="text-align:center; margin:16px 0; color:#10b981; font-weight:800; font-size:0.85rem;">🟢 EXAME É HOJE!</div>`;
+                }
+            }
+
+            // Verificar se já confirmou presença
+            const confirmadoKey = `exame_confirmado_${alunoId}`;
+            const jaConfirmou = localStorage.getItem(confirmadoKey) === '1';
+
+            container.innerHTML = `
+                <!-- CABEÇALHO DE CONVOCAÇÃO -->
+                <div style="${cor.gradient}; border:2px solid ${cor.border}; border-radius:18px; padding:24px 18px; margin-bottom:16px; text-align:center; box-shadow: 0 0 30px ${cor.border}33;">
+                    <div style="font-size:2.5rem; margin-bottom:4px;">🥋</div>
+                    <div style="font-size:0.6rem; font-weight:800; color:${cor.text}; letter-spacing:2px; opacity:0.7; margin-bottom:4px;">CONVOCAÇÃO OFICIAL</div>
+                    <div style="font-size:1.3rem; font-weight:900; color:white; line-height:1.2; margin-bottom:6px;">EXAME DE FAIXA</div>
+                    <div style="display:inline-block; background:${cor.border}22; border:1px solid ${cor.border}; border-radius:20px; padding:4px 16px; font-size:0.75rem; font-weight:800; color:${cor.text};">
+                        ${faixa.toUpperCase()} → ${proxFaixa.toUpperCase()}
+                    </div>
+                    <div style="margin-top:12px; font-size:0.9rem; color:white; opacity:0.8;">OSS, <strong>${nome}</strong>! Você foi convocado.</div>
+                </div>
+
+                <!-- CONTAGEM REGRESSIVA -->
+                ${countdownHtml}
+
+                <!-- DETALHES DO EXAME -->
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:14px; padding:16px; margin-bottom:14px;">
+                    <div style="font-size:0.65rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:12px;">📋 DETALHES DO EXAME</div>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        ${cfg.data ? `<div style="display:flex; align-items:center; gap:10px;">
+                            <i class="fas fa-calendar" style="color:#3b82f6; width:16px;"></i>
+                            <div>
+                                <div style="font-size:0.65rem; color:#64748b;">DATA</div>
+                                <div style="font-size:0.85rem; font-weight:700; color:white;">${new Date(cfg.data + 'T12:00:00').toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'long', year:'numeric'})}</div>
+                            </div>
+                        </div>` : ''}
+                        ${cfg.horario ? `<div style="display:flex; align-items:center; gap:10px;">
+                            <i class="fas fa-clock" style="color:#10b981; width:16px;"></i>
+                            <div>
+                                <div style="font-size:0.65rem; color:#64748b;">HORÁRIO</div>
+                                <div style="font-size:0.85rem; font-weight:700; color:white;">${cfg.horario}h</div>
+                            </div>
+                        </div>` : ''}
+                        ${cfg.local ? `<div style="display:flex; align-items:center; gap:10px;">
+                            <i class="fas fa-map-marker-alt" style="color:#f43f5e; width:16px;"></i>
+                            <div>
+                                <div style="font-size:0.65rem; color:#64748b;">LOCAL</div>
+                                <div style="font-size:0.85rem; font-weight:700; color:white;">${cfg.local}</div>
+                            </div>
+                        </div>` : ''}
+                        ${cfg.valor ? `<div style="display:flex; align-items:center; gap:10px;">
+                            <i class="fas fa-tag" style="color:#f59e0b; width:16px;"></i>
+                            <div>
+                                <div style="font-size:0.65rem; color:#64748b;">TAXA DE EXAME</div>
+                                <div style="font-size:0.85rem; font-weight:700; color:white;">R$ ${parseFloat(cfg.valor).toFixed(2).replace('.', ',')}</div>
+                            </div>
+                        </div>` : ''}
+                    </div>
+                </div>
+
+                <!-- SUA JORNADA -->
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:14px; padding:16px; margin-bottom:14px;">
+                    <div style="font-size:0.65rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:10px;">⚔️ SUA JORNADA</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:0.8rem; color:#94a3b8;">Aulas completadas</span>
+                        <span style="font-size:0.9rem; font-weight:800; color:#10b981;">${aulas} aulas ✅</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <span style="font-size:0.8rem; color:#94a3b8;">Meta exigida</span>
+                        <span style="font-size:0.9rem; font-weight:800; color:white;">${meta} aulas</span>
+                    </div>
+                    <div style="background:#1e293b; border-radius:8px; overflow:hidden; height:8px;">
+                        <div style="background:linear-gradient(90deg,#10b981,#34d399); height:100%; width:${Math.min((aulas/meta)*100,100)}%; border-radius:8px;"></div>
+                    </div>
+                </div>
+
+                ${cfg.instrucoes ? `
+                <!-- INSTRUÇÕES -->
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:14px; padding:16px; margin-bottom:14px;">
+                    <div style="font-size:0.65rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:8px;">📌 INSTRUÇÕES DO PROFESSOR</div>
+                    <div style="font-size:0.82rem; color:#e2e8f0; line-height:1.6; white-space:pre-line;">${cfg.instrucoes}</div>
+                </div>` : ''}
+
+                <!-- CHECKLIST -->
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:14px; padding:16px; margin-bottom:16px;">
+                    <div style="font-size:0.65rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:10px;">✅ O QUE LEVAR</div>
+                    ${['👕 Kimono limpo e passado','🥋 Faixa atual','💧 Garrafa d\'água','🪪 Documento com foto'].map(item => `
+                        <div style="display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid #1e293b; font-size:0.82rem; color:#e2e8f0;">${item}</div>
+                    `).join('')}
+                </div>
+
+                <!-- BOTÕES DE AÇÃO -->
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    ${cfg.linkPagamento ? `
+                    <button onclick="window.open('${cfg.linkPagamento}', '_blank')"
+                        style="width:100%; padding:16px; background:linear-gradient(135deg,#059669,#10b981); border:none; color:white; border-radius:12px; font-weight:900; font-size:0.9rem; cursor:pointer; letter-spacing:0.5px; box-shadow:0 4px 15px #10b98144;">
+                        <i class="fas fa-credit-card"></i> PAGAR TAXA DE EXAME
+                    </button>` : ''}
+                    <button id="btn-confirmar-exame" onclick="exame.confirmarPresenca('${alunoId}')"
+                        style="width:100%; padding:14px; background:${jaConfirmou ? '#064e3b' : '#1e3a8a'}; border:${jaConfirmou ? '2px solid #10b981' : '2px solid #3b82f6'}; color:${jaConfirmou ? '#10b981' : '#93c5fd'}; border-radius:12px; font-weight:800; font-size:0.85rem; cursor:pointer;">
+                        ${jaConfirmou ? '✅ PRESENÇA CONFIRMADA' : '🙋 CONFIRMAR MINHA PRESENÇA'}
+                    </button>
+                </div>
+
+                <div style="text-align:center; margin-top:20px; font-size:0.7rem; color:#475569; font-style:italic;">
+                    "A faixa é o reconhecimento de quem você se tornou. OSS!" 🦁
+                </div>`;
+
+        } catch(e) {
+            if (container) container.innerHTML = `<p style="color:#f43f5e; text-align:center; padding:20px; font-size:0.8rem;">Erro ao carregar exame: ${e.message}</p>`;
+        }
+    },
+
+    // ── Confirmar presença do aluno ──
+    async confirmarPresenca(alunoId) {
+        try {
+            await db.collection('alunos').doc(alunoId).update({
+                examePresencaConfirmada: true,
+                examePresencaData: new Date().toLocaleDateString('pt-BR')
+            });
+            localStorage.setItem(`exame_confirmado_${alunoId}`, '1');
+            const btn = document.getElementById('btn-confirmar-exame');
+            if (btn) {
+                btn.style.background = '#064e3b';
+                btn.style.border = '2px solid #10b981';
+                btn.style.color = '#10b981';
+                btn.innerHTML = '✅ PRESENÇA CONFIRMADA';
+            }
+        } catch(e) { alert('Erro ao confirmar: ' + e.message); }
+    },
+
+    // ── Painel admin — configurar exame ──
+    async carregarPainelAdmin() {
+        const container = document.getElementById('painel-config-exame');
+        if (!container) return;
+
+        const doc = await db.collection('configuracoes').doc('exame_ativo').get();
+        const cfg = doc.exists ? doc.data() : {};
+
+        container.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <div>
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">📅 DATA</small>
+                        <input type="date" id="exame-data" value="${cfg.data || ''}"
+                            style="width:100%; padding:9px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"/>
+                    </div>
+                    <div>
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">⏰ HORÁRIO</small>
+                        <input type="time" id="exame-horario" value="${cfg.horario || '09:00'}"
+                            style="width:100%; padding:9px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"/>
+                    </div>
+                </div>
+                <div>
+                    <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">📍 LOCAL</small>
+                    <input type="text" id="exame-local" value="${cfg.local || ''}" placeholder="Ex: Gaditas Academy — Matriz"
+                        style="width:100%; padding:9px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"/>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <div>
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">💰 TAXA (R$)</small>
+                        <input type="number" id="exame-valor" value="${cfg.valor || ''}" placeholder="0,00" step="0.01"
+                            style="width:100%; padding:9px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"/>
+                    </div>
+                    <div>
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">💳 LINK PAGAMENTO</small>
+                        <input type="url" id="exame-link" value="${cfg.linkPagamento || ''}" placeholder="https://..."
+                            style="width:100%; padding:9px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"/>
+                    </div>
+                </div>
+                <div>
+                    <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">📌 INSTRUÇÕES PARA OS ALUNOS</small>
+                    <textarea id="exame-instrucoes" rows="3" placeholder="Ex: Chegar 30min antes, kimono limpo..."
+                        style="width:100%; padding:9px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; resize:none;">${cfg.instrucoes || ''}</textarea>
+                </div>
+                <button onclick="exame.salvarConfigExame()"
+                    style="width:100%; padding:12px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;">
+                    <i class="fas fa-save"></i> SALVAR CONFIGURAÇÕES DO EXAME
+                </button>
+            </div>
+
+            <!-- Lista de confirmados -->
+            <div style="margin-top:16px;">
+                <div style="font-size:0.65rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:8px;">👥 CONFIRMAÇÕES DE PRESENÇA</div>
+                <div id="lista-confirmados-exame"><small style="color:#475569; font-size:0.65rem;">Carregando...</small></div>
+            </div>`;
+
+        // Carrega confirmações
+        this.carregarConfirmados();
+    },
+
+    async salvarConfigExame() {
+        const cfg = {
+            data: document.getElementById('exame-data').value,
+            horario: document.getElementById('exame-horario').value,
+            local: document.getElementById('exame-local').value.trim(),
+            valor: parseFloat(document.getElementById('exame-valor').value) || 0,
+            linkPagamento: document.getElementById('exame-link').value.trim(),
+            instrucoes: document.getElementById('exame-instrucoes').value.trim(),
+            atualizadoEm: new Date().toLocaleDateString('pt-BR')
+        };
+        await db.collection('configuracoes').doc('exame_ativo').set(cfg);
+        alert('✅ Configurações do exame salvas! Os alunos convocados já verão as informações.');
+    },
+
+    async carregarConfirmados() {
+        const container = document.getElementById('lista-confirmados-exame');
+        if (!container) return;
+        try {
+            const snap = await db.collection('alunos')
+                .where('aspiranteGraduacao', '==', true).get();
+            if (snap.empty) {
+                container.innerHTML = '<small style="color:#475569; font-size:0.65rem;">Nenhum aluno convocado.</small>';
+                return;
+            }
+            container.innerHTML = snap.docs.map(doc => {
+                const a = doc.data();
+                const confirmou = a.examePresencaConfirmada === true;
+                return `<div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; border:1px solid ${confirmou ? '#10b98144' : '#334155'}; border-radius:8px; padding:9px 12px; margin-bottom:6px;">
+                    <div>
+                        <div style="font-size:0.8rem; font-weight:700; color:white;">${a.nome}</div>
+                        <div style="font-size:0.6rem; color:#64748b;">${a.faixa} • ${a.aulas || 0} aulas</div>
+                    </div>
+                    <span style="font-size:0.6rem; font-weight:800; color:${confirmou ? '#10b981' : '#f59e0b'};">
+                        ${confirmou ? '✅ CONFIRMADO' : '⏳ PENDENTE'}
+                    </span>
+                </div>`;
+            }).join('');
+        } catch(e) {
+            container.innerHTML = `<small style="color:#f43f5e; font-size:0.65rem;">Erro: ${e.message}</small>`;
         }
     }
 };

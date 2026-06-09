@@ -6775,6 +6775,7 @@ const exame = {
             </div>`;
 
         container.innerHTML =
+            `<div id="relatorio-exame" style="margin-bottom:16px;"><small style="color:#475569;font-size:0.65rem;">Carregando relatório...</small></div>` +
             secao('🧒 KIDS', '#f59e0b', 'kids', kids) +
             secao('🥋 16+ ATÉ MARROM', '#3b82f6', 'adulto', adulto) +
             secaoPreta() +
@@ -6787,6 +6788,7 @@ const exame = {
              </div>`;
 
         this.carregarConfirmados();
+        this.carregarRelatorioExame({ kids, adulto, preta });
     },
 
     async salvarConfigExame(categoria) {
@@ -6980,6 +6982,116 @@ const exame = {
                     <i class="fas fa-chevron-right" style="color:#10b981; font-size:0.8rem; flex-shrink:0;"></i>
                 </div>`;
         } catch(e) { banner.innerHTML = ''; }
+    },
+
+    // ── Relatório resumido do exame ──────────────────────────
+    async carregarRelatorioExame({ kids, adulto, preta } = {}) {
+        const el = document.getElementById('relatorio-exame');
+        if (!el) return;
+        try {
+            const snap = await db.collection('alunos').where('aspiranteGraduacao', '==', true).get();
+            if (snap.empty) { el.innerHTML = ''; return; }
+
+            const infantil = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
+            const coresNome = {
+                'Preta':'#ef4444','Marrom':'#d97706','Roxa':'#a78bfa','Azul':'#60a5fa',
+                'Branca':'#e2e8f0','Cinza/Branca':'#b0bec5','Cinza':'#94a3b8','Cinza/Preta':'#607d8b',
+                'Amarela/Branca':'#fff176','Amarela':'#facc15','Amarela/Preta':'#f59e0b',
+                'Laranja/Branca':'#ffb74d','Laranja':'#fb923c','Laranja/Preta':'#f97316',
+                'Verde/Branca':'#a5d6a7','Verde':'#4ade80','Verde/Preta':'#22c55e'
+            };
+
+            let total = 0, confirmados = 0, pendentes = 0;
+            let receber = 0;
+            const porFaixa = {};
+
+            snap.docs.forEach(doc => {
+                const a = doc.data();
+                const cat = this._getCategoria(a);
+                const proxFaixa = this._getProxFaixa(a, cat);
+                const faixaDestino = a.proxFaixaCustom || proxFaixa;
+                total++;
+                if (a.examePresencaConfirmada) confirmados++; else pendentes++;
+
+                // Valor a receber
+                let taxa = 0;
+                if (cat === 'kids')   taxa = parseFloat((kids?.valor   || '0').toString().replace(',','.')) || 0;
+                if (cat === 'adulto') taxa = parseFloat((adulto?.valor || '0').toString().replace(',','.')) || 0;
+                if (cat === 'preta')  taxa = a.faixa === 'Preta'
+                    ? parseFloat((preta?.valor2 || '0').toString().replace(',','.')) || 0
+                    : parseFloat((preta?.valor  || '0').toString().replace(',','.')) || 0;
+                receber += taxa;
+
+                porFaixa[faixaDestino] = (porFaixa[faixaDestino] || 0) + 1;
+            });
+
+            const pct = total > 0 ? Math.round((confirmados / total) * 100) : 0;
+            const barColor = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+
+            // Ordenar faixas: kids por ordem infantil, depois adulto
+            const faixasOrdenadas = [
+                ...infantil.filter(f => porFaixa[f]),
+                ...['Azul','Roxa','Marrom','Preta'].filter(f => porFaixa[f]),
+                ...Object.keys(porFaixa).filter(f => !infantil.includes(f) && !['Azul','Roxa','Marrom','Preta'].includes(f))
+            ];
+
+            const faixasHtml = faixasOrdenadas.map(f => {
+                const cor = coresNome[f] || '#94a3b8';
+                const qtd = porFaixa[f];
+                return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1e293b;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <div style="width:8px;height:8px;border-radius:50%;background:${cor};flex-shrink:0;"></div>
+                        <span style="font-size:0.72rem;color:${cor};font-weight:700;">${f}</span>
+                    </div>
+                    <span style="font-size:0.75rem;font-weight:900;color:white;">${qtd} aluno${qtd>1?'s':''}</span>
+                </div>`;
+            }).join('');
+
+            el.innerHTML = `
+                <div style="background:#0a0f1a;border:1px solid #1e3a5f;border-radius:14px;padding:14px;margin-bottom:4px;">
+                    <div style="font-size:0.6rem;font-weight:800;color:#3b82f6;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">📊 Relatório do Exame</div>
+
+                    <!-- KPIs linha 1 -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+                        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:10px;text-align:center;">
+                            <div style="font-size:1.4rem;font-weight:900;color:white;">${total}</div>
+                            <div style="font-size:0.55rem;color:#64748b;font-weight:700;margin-top:2px;">CONVOCADOS</div>
+                        </div>
+                        <div style="background:#0f172a;border:1px solid #10b98130;border-radius:10px;padding:10px;text-align:center;">
+                            <div style="font-size:1.4rem;font-weight:900;color:#10b981;">${confirmados}</div>
+                            <div style="font-size:0.55rem;color:#64748b;font-weight:700;margin-top:2px;">CONFIRMADOS</div>
+                        </div>
+                        <div style="background:#0f172a;border:1px solid #f59e0b30;border-radius:10px;padding:10px;text-align:center;">
+                            <div style="font-size:1.4rem;font-weight:900;color:#f59e0b;">${pendentes}</div>
+                            <div style="font-size:0.55rem;color:#64748b;font-weight:700;margin-top:2px;">PENDENTES</div>
+                        </div>
+                    </div>
+
+                    <!-- Valor a receber -->
+                    <div style="background:#0f172a;border:1px solid #22c55e30;border-radius:10px;padding:10px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+                        <div>
+                            <div style="font-size:0.55rem;color:#64748b;font-weight:700;">💰 VALOR A RECEBER</div>
+                            <div style="font-size:0.6rem;color:#475569;margin-top:1px;">baseado nas taxas configuradas</div>
+                        </div>
+                        <div style="font-size:1.3rem;font-weight:900;color:#22c55e;">R$ ${receber.toFixed(2).replace('.',',')}</div>
+                    </div>
+
+                    <!-- Barra de confirmação -->
+                    <div style="margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                            <span style="font-size:0.58rem;color:#64748b;font-weight:700;">TAXA DE CONFIRMAÇÃO</span>
+                            <span style="font-size:0.6rem;font-weight:900;color:${barColor};">${pct}%</span>
+                        </div>
+                        <div style="background:#1e293b;border-radius:999px;height:6px;overflow:hidden;">
+                            <div style="width:${pct}%;height:100%;background:${barColor};border-radius:999px;transition:width 0.5s;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Por faixa destino -->
+                    <div style="font-size:0.58rem;color:#64748b;font-weight:700;margin-bottom:6px;letter-spacing:0.5px;">🥋 ALUNOS POR FAIXA DESTINO</div>
+                    ${faixasHtml}
+                </div>`;
+        } catch(e) { if (el) el.innerHTML = ''; }
     },
 
     // ── Migra alunos convocados antes da implementação do popup ──

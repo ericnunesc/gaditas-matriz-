@@ -71,6 +71,7 @@ const auth = {
                 if (d.faixa)      this.adminCreds.faixa     = d.faixa;
                 if (d.grau  != null) this.adminCreds.grau   = d.grau;
                 if (d.modalidade) this.adminCreds.modalidade = d.modalidade;
+                if (d.permitirKidsComAdultos != null) this.adminCreds.permitirKidsComAdultos = d.permitirKidsComAdultos;
             }
         } catch(e) { console.warn('carregarCredenciaisAdmin:', e.message); }
     },
@@ -1442,7 +1443,7 @@ const academia = {
             const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
             const isKids = idade <= 13;
             if (buscaNorm !== "" && !nomeAtleta.includes(buscaNorm)) return;
-            if (this.categoriaFiltroAtual === "adult" && isKids) return;
+            if (this.categoriaFiltroAtual === "adult" && isKids && !a.treinaComAdultos) return;
             if (this.categoriaFiltroAtual === "kids" && !isKids) return;
             if (faixaFiltro !== "all" && a.faixa !== faixaFiltro) return;
             if (this.filtroInativos && eng.label !== 'Inativo') return;
@@ -1541,7 +1542,7 @@ const academia = {
             const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
             const isKids = idade <= 13;
             if (this.textoBuscaNome !== "" && !nomeAtleta.includes(this.textoBuscaNome)) return false;
-            if (this.categoriaFiltroAtual === "adult" && isKids) return false;
+            if (this.categoriaFiltroAtual === "adult" && isKids && !a.treinaComAdultos) return false;
             if (this.categoriaFiltroAtual === "kids" && !isKids) return false;
             if (faixaFiltro !== "all" && a.faixa !== faixaFiltro) return false;
             return true;
@@ -2302,6 +2303,7 @@ const academia = {
             bairro:      (document.getElementById('me-bairro')?.value || '').trim(),
             cidade:      (document.getElementById('me-cidade')?.value || '').trim(),
             estado:      (document.getElementById('me-estado')?.value || '').trim().toUpperCase(),
+            treinaComAdultos: document.getElementById('me-treina-com-adultos')?.checked || false,
         };
         // Leões
         const painelLeoes = document.getElementById('me-painel-leoes');
@@ -2435,6 +2437,20 @@ const academia = {
             </div>
 
             ${leoesPanelHtml}
+
+            ${auth.adminCreds?.permitirKidsComAdultos && idadeAtleta <= 13 ? `
+            <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:14px; margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:0.75rem; font-weight:800; color:#e2e8f0;">👥 Treina com Adultos</div>
+                    <div style="font-size:0.62rem; color:#64748b; margin-top:2px;">Aparece na aba Adultos além de Kids</div>
+                </div>
+                <label style="position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; cursor:pointer;">
+                    <input type="checkbox" id="me-treina-com-adultos" ${a.treinaComAdultos ? 'checked' : ''} ${dis} style="opacity:0; width:0; height:0;">
+                    <span onclick="const cb=document.getElementById('me-treina-com-adultos'); cb.checked=!cb.checked; this.style.background=cb.checked?'#3b82f6':'#334155'; this.querySelector('span').style.left=cb.checked?'23px':'3px';" style="position:absolute; top:0; left:0; right:0; bottom:0; background:${a.treinaComAdultos ? '#3b82f6' : '#334155'}; border-radius:24px; transition:0.3s;">
+                        <span style="position:absolute; height:18px; width:18px; left:${a.treinaComAdultos ? '23px' : '3px'}; bottom:3px; background:white; border-radius:50%; transition:0.3s;"></span>
+                    </span>
+                </label>
+            </div>` : ''}
 
             <div style="display:flex; gap:8px; margin-top:20px;">
                 ${isAdmin ? `<button onclick="academia._meSalvar('${id}')" style="flex:2; padding:13px; background:#3b82f6; border:none; color:white; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.85rem;">💾 SALVAR ALTERAÇÕES</button>` : ''}
@@ -4425,6 +4441,21 @@ Ele voltará a ser aluno normal.`)) return;
                         </select>
                     </div>
                 </div>
+                <!-- KIDS COM ADULTOS -->
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:14px; margin-top:12px; margin-bottom:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-size:0.75rem; font-weight:800; color:#e2e8f0;">👥 Kids podem treinar com Adultos</div>
+                            <div style="font-size:0.62rem; color:#64748b; margin-top:2px;">Permite marcar atletas kids para aparecerem na aba Adultos</div>
+                        </div>
+                        <label style="position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0;">
+                            <input type="checkbox" id="cfg-kids-com-adultos" ${auth.adminCreds?.permitirKidsComAdultos ? 'checked' : ''} style="opacity:0; width:0; height:0;">
+                            <span onclick="this.previousElementSibling.checked=!this.previousElementSibling.checked" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:${auth.adminCreds?.permitirKidsComAdultos ? '#3b82f6' : '#334155'}; border-radius:24px; transition:0.3s;">
+                                <span style="position:absolute; height:18px; width:18px; left:${auth.adminCreds?.permitirKidsComAdultos ? '23px' : '3px'}; bottom:3px; background:white; border-radius:50%; transition:0.3s;"></span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
                 <div style="height:10px;"></div>
                 <button onclick="academia.salvarConfigAdmin()" style="width:100%;padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">💾 SALVAR CONFIGURAÇÕES</button>
                 <div style="height:1px;background:#334155;margin:16px 0;"></div>
@@ -4501,7 +4532,8 @@ Ele voltará a ser aluno normal.`)) return;
         if (pass1 && pass1 !== pass2) return alert('As senhas não coincidem.');
         const faixa = document.getElementById('cfg-admin-faixa')?.value || 'Preta';
         const grau  = parseInt(document.getElementById('cfg-admin-grau')?.value ?? 3);
-        const dados = { nome, user, faixa, grau };
+        const permitirKids = document.getElementById('cfg-kids-com-adultos')?.checked || false;
+        const dados = { nome, user, faixa, grau, permitirKidsComAdultos: permitirKids };
         if (pass1) dados.pass = pass1;
         try {
             await db.collection('configuracoes').doc('admin_config').set(dados, { merge: true });
@@ -4511,6 +4543,7 @@ Ele voltará a ser aluno normal.`)) return;
             auth.adminCreds.faixa = faixa;
             auth.adminCreds.grau  = grau;
             if (pass1) auth.adminCreds.pass = pass1;
+            auth.adminCreds.permitirKidsComAdultos = permitirKids;
             if (auth.currentUser?.id === 'admin') {
                 auth.currentUser.nome  = nome;
                 auth.currentUser.faixa = faixa;

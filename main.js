@@ -6694,10 +6694,19 @@ const exame = {
             `<input type="${type}" id="${id}" value="${val||''}" placeholder="${ph}"
              style="width:100%;padding:9px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.78rem;"/>`;
 
+        // helper accordion genérico
+        const accordion = (id, titulo, cor, conteudo) => `
+            <div style="background:#0a0f1a;border:1px solid ${cor}44;border-radius:12px;margin-bottom:10px;overflow:hidden;">
+                <div onclick="(()=>{const b=document.getElementById('acc-${id}');const c=document.getElementById('chev-${id}');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='block'?'rotate(180deg)':''})()"
+                    style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer;user-select:none;">
+                    <div style="font-size:0.65rem;font-weight:800;color:${cor};letter-spacing:0.5px;">${titulo}</div>
+                    <span id="chev-${id}" style="color:${cor};font-size:0.7rem;transition:transform 0.2s;">▼</span>
+                </div>
+                <div id="acc-${id}" style="display:none;padding:0 14px 14px;">${conteudo}</div>
+            </div>`;
+
         // Todos os 3 formulários idênticos — local do exame e local da graduação separados
-        const secao = (titulo, cor, cat, cfg) => `
-            <div style="background:#0a0f1a; border:1px solid ${cor}44; border-radius:12px; padding:14px; margin-bottom:14px;">
-                <div style="font-size:0.65rem; font-weight:800; color:${cor}; letter-spacing:0.5px; margin-bottom:12px;">${titulo}</div>
+        const secaoInner = (titulo, cor, cat, cfg) => `
 
                 <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:6px; letter-spacing:0.5px;">🗓️ EXAME</div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
@@ -6726,12 +6735,12 @@ const exame = {
                 <button onclick="exame.salvarConfigExame('${cat}')"
                     style="width:100%;padding:10px;background:${cor};border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.75rem;">
                     <i class="fas fa-save"></i> SALVAR ${titulo.replace(/[^A-Z0-9+ ]/g,'').trim()}
-                </button>
-            </div>`;
+                </button>`;
+
+        const secao = (titulo, cor, cat, cfg) => accordion(`cfg-${cat}`, titulo, cor, secaoInner(titulo, cor, cat, cfg));
 
         // Seção especial para Preta — 2 valores e 2 links
-        const secaoPreta = () => `
-            <div style="background:#0a0f1a; border:1px solid #94a3b844; border-radius:12px; padding:14px; margin-bottom:14px;">
+        const secaoPretaInner = () => `
                 <div style="font-size:0.65rem; font-weight:800; color:#94a3b8; letter-spacing:0.5px; margin-bottom:12px;">⬛ FAIXA PRETA</div>
 
                 <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:6px; letter-spacing:0.5px;">🗓️ EXAME</div>
@@ -6775,22 +6784,34 @@ const exame = {
                 <button onclick="exame.salvarConfigExame('preta')"
                     style="width:100%;padding:10px;background:#94a3b8;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.75rem;">
                     <i class="fas fa-save"></i> SALVAR FAIXA PRETA
-                </button>
+                </button>`;
+
+        const secaoPreta = () => accordion('cfg-preta', '⬛ FAIXA PRETA', '#94a3b8', secaoPretaInner());
+
+        // Accordion de convocados com botão notificar no header
+        const convocadosAccordion = `
+            <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:12px;margin-bottom:10px;overflow:hidden;">
+                <div onclick="(()=>{const b=document.getElementById('acc-convocados');const c=document.getElementById('chev-convocados');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='block'?'rotate(180deg)':''})()"
+                    style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer;user-select:none;">
+                    <div style="font-size:0.62rem;font-weight:800;color:#64748b;letter-spacing:0.5px;">👥 CONVOCADOS — CONFIRMAÇÕES</div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <button onclick="event.stopPropagation();exame.migrarConvocacoesPendentes()"
+                            style="font-size:0.55rem;font-weight:800;background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 8px;border-radius:6px;cursor:pointer;">📣 Notificar todos</button>
+                        <span id="chev-convocados" style="color:#64748b;font-size:0.7rem;transition:transform 0.2s;">▼</span>
+                    </div>
+                </div>
+                <div id="acc-convocados" style="display:none;padding:0 14px 14px;">
+                    <div id="lista-confirmados-exame"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>
+                </div>
             </div>`;
 
         container.innerHTML =
-            `<div id="relatorio-exame" style="margin-bottom:16px;"><small style="color:#475569;font-size:0.65rem;">Carregando relatório...</small></div>` +
+            `<div id="relatorio-exame" style="margin-bottom:10px;"><small style="color:#475569;font-size:0.65rem;">Carregando relatório...</small></div>` +
             secao('🧒 KIDS', '#f59e0b', 'kids', kids) +
             secao('🥋 16+ ATÉ MARROM', '#3b82f6', 'adulto', adulto) +
             secaoPreta() +
-            `<div style="margin-top:4px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <div style="font-size:0.62rem; font-weight:800; color:#64748b; letter-spacing:0.5px;">👥 CONVOCADOS — CONFIRMAÇÕES</div>
-                    <button onclick="exame.migrarConvocacoesPendentes()" style="font-size:0.55rem; font-weight:800; background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:4px 8px; border-radius:6px; cursor:pointer;">📣 Notificar todos</button>
-                </div>
-                <div id="lista-confirmados-exame"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>
-             </div>
-             <div id="tecnicas-exame-painel" style="margin-top:16px;"><small style="color:#475569;font-size:0.65rem;">Carregando técnicas...</small></div>`;
+            convocadosAccordion +
+            `<div id="tecnicas-exame-painel" style="margin-top:10px;"></div>`;
 
         this.carregarConfirmados();
         this.carregarRelatorioExame({ kids, adulto, preta });
@@ -6872,74 +6893,73 @@ const exame = {
 
             const infantil = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
             const adultoOrder = { 'Azul':10, 'Roxa':20, 'Marrom':30, 'Preta':40 };
+            const groupLabels = { kids:'🧒 KIDS', Azul:'🔵 AZUL', Roxa:'🟣 ROXA', Marrom:'🟤 MARROM → PRETA', Preta:'⬛ FAIXA PRETA' };
 
-            // Monta lista com sort key
-            const lista = snap.docs.map(doc => {
+            // Monta lista e agrupa
+            const grupos = {};
+            snap.docs.forEach(doc => {
                 const a = doc.data(); const id = doc.id;
-                const cat      = this._getCategoria(a);
+                const cat = this._getCategoria(a);
                 const proxFaixa = this._getProxFaixa(a, cat);
-                // sort: 0=kids (por ordem infantil), 1=adulto (por faixa destino)
-                let sortKey;
-                if (cat === 'kids') {
-                    sortKey = infantil.indexOf(proxFaixa);
-                    if (sortKey < 0) sortKey = 99;
-                    sortKey = `0_${String(sortKey).padStart(2,'0')}`;
-                } else {
-                    const base = proxFaixa.split(' ')[0];
-                    sortKey = `1_${String(adultoOrder[base] || 50).padStart(2,'0')}`;
-                }
-                return { doc, a, id, cat, proxFaixa, sortKey };
-            }).sort((x, y) => x.sortKey.localeCompare(y.sortKey));
-
-            // Renderiza agrupado por categoria
-            let lastGroup = null;
-            let html = '';
-
-            lista.forEach(({ a, id, cat, proxFaixa }) => {
-                const confirmou   = a.examePresencaConfirmada === true;
-                const corNome     = this._corNome(proxFaixa);
-                const group       = cat === 'kids' ? 'kids' : proxFaixa.split(' ')[0];
-
-                // Cabeçalho de grupo
-                if (group !== lastGroup) {
-                    lastGroup = group;
-                    const labels = {
-                        kids:'🧒 KIDS', Azul:'🔵 AZUL', Roxa:'🟣 ROXA',
-                        Marrom:'🟤 MARROM → PRETA', Preta:'⬛ FAIXA PRETA'
-                    };
-                    html += `<div style="font-size:0.58rem; font-weight:800; color:${corNome}; letter-spacing:0.8px; margin:10px 0 5px 0; opacity:0.8;">
-                        ${labels[group] || group.toUpperCase()}
-                    </div>`;
-                }
-
-                // Seletor kids
-                const seletorKids = cat === 'kids' ? `
-                    <div style="margin-top:5px; display:flex; gap:6px; align-items:center;">
-                        <small style="color:#f59e0b; font-size:0.55rem; font-weight:800; white-space:nowrap;">Faixa destino:</small>
-                        <select onchange="exame.salvarProxFaixaKids('${id}', this.value); exame.atualizarCorNome('${id}', this.value)"
-                            style="flex:1; padding:3px 6px; background:#1e293b; border:1px solid #f59e0b44; color:white; border-radius:6px; font-size:0.68rem; outline:none;">
-                            ${infantil.map(f => `<option value="${f}" ${(a.proxFaixaCustom||proxFaixa)===f?'selected':''}>${f}</option>`).join('')}
-                        </select>
-                    </div>` : '';
-
-                const faixaDestino = a.proxFaixaCustom || proxFaixa;
-                html += `<div id="card-conv-${id}" style="background:#0f172a; border:1px solid ${confirmou ? '#10b98130' : '#1e293b'}; border-left:3px solid ${corNome}; border-radius:8px; padding:10px 12px; margin-bottom:6px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div style="flex:1; min-width:0;">
-                            <div id="nome-conv-${id}" style="font-size:0.82rem; font-weight:800; color:${corNome}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}</div>
-                            <div id="sub-conv-${id}" data-faixa-atual="${a.faixa}" style="font-size:0.6rem; color:#64748b; margin-top:1px;">${a.faixa} → <span style="color:${corNome}; font-weight:700;">${faixaDestino}</span> • ${a.aulas||0} aulas</div>
-                        </div>
-                        <span style="font-size:0.58rem; font-weight:800; color:${confirmou ? '#10b981' : '#f59e0b'}; white-space:nowrap; margin-left:8px;">
-                            ${confirmou ? '✅ CONF.' : '⏳ PEND.'}
-                        </span>
-                    </div>
-                    ${seletorKids}
-                    <button onclick="exame.graduarAluno('${id}')" data-faixa-destino="${faixaDestino}"
-                        style="margin-top:8px; width:100%; padding:7px; background:linear-gradient(135deg,${corNome},${corNome}99); color:#000; font-weight:900; font-size:0.7rem; border:none; border-radius:8px; cursor:pointer; letter-spacing:1px;">
-                        🥋 GRADUAR
-                    </button>
-                </div>`;
+                const group = cat === 'kids' ? 'kids' : proxFaixa.split(' ')[0];
+                let sortKey = cat === 'kids'
+                    ? `0_${String(infantil.indexOf(proxFaixa) >= 0 ? infantil.indexOf(proxFaixa) : 99).padStart(2,'0')}`
+                    : `1_${String(adultoOrder[proxFaixa.split(' ')[0]] || 50).padStart(2,'0')}`;
+                if (!grupos[group]) grupos[group] = { sortKey, items: [] };
+                grupos[group].items.push({ a, id, cat, proxFaixa });
             });
+
+            // Renderiza cada grupo como sub-accordion
+            const grupoCor = { kids:'#f59e0b', Azul:'#60a5fa', Roxa:'#a78bfa', Marrom:'#d97706', Preta:'#f59e0b' };
+            let html = Object.entries(grupos)
+                .sort(([,a],[,b]) => a.sortKey.localeCompare(b.sortKey))
+                .map(([group, { items }]) => {
+                    const cor = grupoCor[group] || '#94a3b8';
+                    const label = groupLabels[group] || group.toUpperCase();
+                    const total = items.length;
+                    const conf  = items.filter(i => i.a.examePresencaConfirmada).length;
+
+                    const cardsHtml = items.map(({ a, id, cat, proxFaixa }) => {
+                        const confirmou    = a.examePresencaConfirmada === true;
+                        const corNome      = this._corNome(proxFaixa);
+                        const faixaDestino = a.proxFaixaCustom || proxFaixa;
+                        const seletorKids  = cat === 'kids' ? `
+                            <div style="margin-top:5px;display:flex;gap:6px;align-items:center;">
+                                <small style="color:#f59e0b;font-size:0.55rem;font-weight:800;white-space:nowrap;">Faixa destino:</small>
+                                <select onchange="exame.salvarProxFaixaKids('${id}',this.value);exame.atualizarCorNome('${id}',this.value)"
+                                    style="flex:1;padding:3px 6px;background:#1e293b;border:1px solid #f59e0b44;color:white;border-radius:6px;font-size:0.68rem;outline:none;">
+                                    ${infantil.map(f=>`<option value="${f}" ${faixaDestino===f?'selected':''}>${f}</option>`).join('')}
+                                </select>
+                            </div>` : '';
+                        return `<div id="card-conv-${id}" style="background:#0f172a;border:1px solid ${confirmou?'#10b98130':'#1e293b'};border-left:3px solid ${corNome};border-radius:8px;padding:10px 12px;margin-bottom:6px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="flex:1;min-width:0;">
+                                    <div id="nome-conv-${id}" style="font-size:0.82rem;font-weight:800;color:${corNome};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome}</div>
+                                    <div id="sub-conv-${id}" data-faixa-atual="${a.faixa}" style="font-size:0.6rem;color:#64748b;margin-top:1px;">${a.faixa} → <span style="color:${corNome};font-weight:700;">${faixaDestino}</span> • ${a.aulas||0} aulas</div>
+                                </div>
+                                <span style="font-size:0.58rem;font-weight:800;color:${confirmou?'#10b981':'#f59e0b'};white-space:nowrap;margin-left:8px;">${confirmou?'✅ CONF.':'⏳ PEND.'}</span>
+                            </div>
+                            ${seletorKids}
+                            <button onclick="exame.graduarAluno('${id}')" data-faixa-destino="${faixaDestino}"
+                                style="margin-top:8px;width:100%;padding:7px;background:linear-gradient(135deg,${corNome},${corNome}99);color:#000;font-weight:900;font-size:0.7rem;border:none;border-radius:8px;cursor:pointer;letter-spacing:1px;">
+                                🥋 GRADUAR
+                            </button>
+                        </div>`;
+                    }).join('');
+
+                    const gid = `grp-${group}`;
+                    return `<div style="background:#0a0f1a;border:1px solid ${cor}33;border-radius:10px;margin-bottom:8px;overflow:hidden;">
+                        <div onclick="(()=>{const b=document.getElementById('${gid}');const c=document.getElementById('chev-${gid}');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='block'?'rotate(180deg)':''})()"
+                            style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;cursor:pointer;user-select:none;">
+                            <div style="font-size:0.62rem;font-weight:800;color:${cor};">${label}</div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span style="font-size:0.58rem;color:#64748b;">${conf}/${total} conf.</span>
+                                <span id="chev-${gid}" style="color:${cor};font-size:0.65rem;transition:transform 0.2s;">▼</span>
+                            </div>
+                        </div>
+                        <div id="${gid}" style="display:none;padding:0 10px 10px;">${cardsHtml}</div>
+                    </div>`;
+                }).join('');
 
             container.innerHTML = html;
         } catch(e) {

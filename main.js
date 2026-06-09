@@ -6732,24 +6732,44 @@ const exame = {
     },
 
     // ── Cor do nome conforme faixa DESTINO ────────────────
-    _corNome(proxFaixa) {
-        const f = proxFaixa.split(' ')[0]; // pega a primeira palavra
+    _corNome(faixa) {
         const cores = {
-            'Preta':        '#ef4444',  // vermelho — especial
-            'Marrom':       '#d97706',
-            'Roxa':         '#a78bfa',
-            'Azul':         '#60a5fa',
-            'Verde':        '#4ade80',
-            'Verde/Preta':  '#4ade80',
-            'Laranja':      '#fb923c',
-            'Laranja/Preta':'#fb923c',
-            'Amarela':      '#facc15',
-            'Amarela/Preta':'#facc15',
-            'Cinza':        '#94a3b8',
-            'Cinza/Preta':  '#94a3b8',
-            'Branca':       '#e2e8f0',
+            // Adulto
+            'Preta':            '#ef4444',  // vermelho — especial
+            'Marrom':           '#d97706',
+            'Roxa':             '#a78bfa',
+            'Azul':             '#60a5fa',
+            // Kids — base
+            'Branca':           '#e2e8f0',
+            'Cinza/Branca':     '#b0bec5',
+            'Cinza':            '#90a4ae',
+            'Cinza/Preta':      '#607d8b',
+            'Amarela/Branca':   '#fff176',
+            'Amarela':          '#facc15',
+            'Amarela/Preta':    '#f59e0b',
+            'Laranja/Branca':   '#ffb74d',
+            'Laranja':          '#fb923c',
+            'Laranja/Preta':    '#f97316',
+            'Verde/Branca':     '#a5d6a7',
+            'Verde':            '#4ade80',
+            'Verde/Preta':      '#22c55e',
         };
-        return cores[proxFaixa] || cores[f] || '#e2e8f0';
+        return cores[faixa] || '#e2e8f0';
+    },
+
+    // ── Atualiza cor do nome quando dropdown muda ─────────
+    atualizarCorNome(alunoId, novaFaixa) {
+        const cor = this._corNome(novaFaixa);
+        const el = document.getElementById(`nome-conv-${alunoId}`);
+        if (el) el.style.color = cor;
+        const sub = document.getElementById(`sub-conv-${alunoId}`);
+        if (sub) {
+            const faixaAtual = sub.dataset.faixaAtual || '';
+            const aulas = sub.textContent.match(/• (\d+) aulas/)?.[1] || '0';
+            sub.innerHTML = `${faixaAtual} → <span style="color:${cor};font-weight:700;">${novaFaixa}</span> • ${aulas} aulas`;
+        }
+        const card = document.getElementById(`card-conv-${alunoId}`);
+        if (card) card.style.borderLeftColor = cor;
     },
 
     async carregarConfirmados() {
@@ -6805,17 +6825,17 @@ const exame = {
                 const seletorKids = cat === 'kids' ? `
                     <div style="margin-top:5px; display:flex; gap:6px; align-items:center;">
                         <small style="color:#f59e0b; font-size:0.55rem; font-weight:800; white-space:nowrap;">Faixa destino:</small>
-                        <select onchange="exame.salvarProxFaixaKids('${id}', this.value)"
+                        <select onchange="exame.salvarProxFaixaKids('${id}', this.value); exame.atualizarCorNome('${id}', this.value)"
                             style="flex:1; padding:3px 6px; background:#1e293b; border:1px solid #f59e0b44; color:white; border-radius:6px; font-size:0.68rem; outline:none;">
                             ${infantil.map(f => `<option value="${f}" ${(a.proxFaixaCustom||proxFaixa)===f?'selected':''}>${f}</option>`).join('')}
                         </select>
                     </div>` : '';
 
-                html += `<div style="background:#0f172a; border:1px solid ${confirmou ? '#10b98130' : '#1e293b'}; border-left:3px solid ${corNome}; border-radius:8px; padding:10px 12px; margin-bottom:6px;">
+                html += `<div id="card-conv-${id}" style="background:#0f172a; border:1px solid ${confirmou ? '#10b98130' : '#1e293b'}; border-left:3px solid ${corNome}; border-radius:8px; padding:10px 12px; margin-bottom:6px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div style="flex:1; min-width:0;">
-                            <div style="font-size:0.82rem; font-weight:800; color:${corNome}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}</div>
-                            <div style="font-size:0.6rem; color:#64748b; margin-top:1px;">${a.faixa} → <span style="color:${corNome}; font-weight:700;">${proxFaixa}</span> • ${a.aulas||0} aulas</div>
+                            <div id="nome-conv-${id}" style="font-size:0.82rem; font-weight:800; color:${corNome}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}</div>
+                            <div id="sub-conv-${id}" data-faixa-atual="${a.faixa}" style="font-size:0.6rem; color:#64748b; margin-top:1px;">${a.faixa} → <span style="color:${corNome}; font-weight:700;">${proxFaixa}</span> • ${a.aulas||0} aulas</div>
                         </div>
                         <span style="font-size:0.58rem; font-weight:800; color:${confirmou ? '#10b981' : '#f59e0b'}; white-space:nowrap; margin-left:8px;">
                             ${confirmou ? '✅ CONF.' : '⏳ PEND.'}

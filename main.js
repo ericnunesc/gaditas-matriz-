@@ -5601,6 +5601,9 @@ const ui = {
         // Card config exame admin
         const cardExame = document.getElementById('card-config-exame');
         if (cardExame) cardExame.style.display = isAdmin ? 'block' : 'none';
+        // Tab exame — esconde para admin, professor mostra se convocado
+        const menuExame = document.getElementById('menu-exame');
+        if (menuExame && isAdmin) menuExame.style.display = 'none';
         // Toggle VITRINE/GERENCIAR na aba loja — só admin
         const lojaToggle = document.getElementById('loja-admin-toggle');
         if (lojaToggle) lojaToggle.style.display = isAdmin ? 'flex' : 'none';
@@ -6300,13 +6303,20 @@ const exame = {
 
     // ── Verifica se aluno está convocado e mostra/esconde a tab ──
     async verificarConvocacao(alunoId) {
+        const btn = document.getElementById('menu-exame');
         try {
+            // Admin nunca vê a tab de exame
+            if (auth.role === 'admin' || !alunoId || alunoId === 'admin') {
+                if (btn) btn.style.display = 'none';
+                return;
+            }
             const doc = await db.collection('alunos').doc(alunoId).get();
-            if (!doc.exists) return;
+            if (!doc.exists) { if (btn) btn.style.display = 'none'; return; }
             const convocado = doc.data().aspiranteGraduacao === true;
-            const btn = document.getElementById('menu-exame');
             if (btn) btn.style.display = convocado ? 'flex' : 'none';
-        } catch(e) { /* silencioso */ }
+        } catch(e) {
+            if (btn) btn.style.display = 'none';
+        }
     },
 
     // ── Carrega a tela do aluno convocado ──

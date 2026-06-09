@@ -1942,6 +1942,11 @@ const academia = {
                 if (isMT) upd.aulasMT = (d.aulasMT || 0) + 1;
                 else       upd.aulas   = (d.aulas   || 0) + 1;
                 await ref.update(upd);
+                // Pós-treino para o próprio aluno (se ele estiver logado)
+                if (alunoId === auth.currentUser?.id) {
+                    const novasAulas = isMT ? (d.aulasMT||0)+1 : (d.aulas||0)+1;
+                    treinoPost.aoCheckinConcluido(alunoId, novasAulas, turma);
+                }
                 salvos++;
             } catch(e) { erros++; }
         }));
@@ -4072,14 +4077,8 @@ Ele voltará a ser aluno normal.`)) return;
     // ══════════════════════════════════════════════════════════
     async renderDashboardAdmin() {
         if (auth.role !== 'admin') return;
-        let container = document.getElementById('dashboard-admin-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'dashboard-admin-container';
-            container.style.marginBottom = '16px';
-            const relTab = document.getElementById('tab-relatorios');
-            if (relTab) relTab.insertBefore(container, relTab.firstChild);
-        }
+        const container = document.getElementById('dashboard-admin-container');
+        if (!container) return;
         container.innerHTML = `<div style="text-align:center;padding:12px;color:#64748b;font-size:0.75rem;"><i class="fas fa-spinner fa-spin"></i> Carregando dashboard...</div>`;
         try {
             const snap = await db.collection('alunos').get();
@@ -7704,14 +7703,8 @@ const treinoPost = {
 
     // ── Painel de avaliações (admin, aba relatórios) ──────
     async renderAvaliacoesPainel() {
-        let el = document.getElementById('avaliacoes-painel');
-        if (!el) {
-            el = document.createElement('div');
-            el.id = 'avaliacoes-painel';
-            el.style.marginBottom = '12px';
-            const tab = document.getElementById('tab-relatorios');
-            if (tab) tab.appendChild(el);
-        }
+        const el = document.getElementById('avaliacoes-painel');
+        if (!el) return;
         el.innerHTML = `<small style="color:#475569;font-size:0.65rem;"><i class="fas fa-spinner fa-spin"></i></small>`;
         try {
             const snap = await db.collection('avaliacoes_aula').orderBy('ts','desc').limit(300).get();
@@ -7762,14 +7755,8 @@ const treinoPost = {
 
     // ── Radar de Sumidos (admin) ──────────────────────────
     async renderRadarSumidos() {
-        let el = document.getElementById('radar-sumidos-container');
-        if (!el) {
-            el = document.createElement('div');
-            el.id = 'radar-sumidos-container';
-            el.style.marginBottom = '12px';
-            const tab = document.getElementById('tab-relatorios');
-            if (tab) tab.appendChild(el);
-        }
+        const el = document.getElementById('radar-sumidos-container');
+        if (!el) return;
         // Começa ABERTO
         el.innerHTML = `
             <div style="background:#0a0f1a;border:1px solid #ef444433;border-radius:12px;overflow:hidden;">

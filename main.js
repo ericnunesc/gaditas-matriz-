@@ -6302,15 +6302,17 @@ const aniversario = {
 const exame = {
 
     // ── Categoria do aluno ─────────────────────────────────
+    // Convocação é sempre troca de FAIXA — grau é irrelevante
     _getCategoria(aluno) {
         const ano = new Date().getFullYear();
         const idade = aluno.nascimento ? (ano - new Date(aluno.nascimento).getFullYear()) : 99;
         if (idade < 16) return 'kids';
-        if (aluno.faixa === 'Marrom' && (aluno.grau || 0) === 4) return 'preta';
+        if (aluno.faixa === 'Marrom') return 'preta'; // qualquer grau de Marrom → candidato a Preta
         return 'adulto';
     },
 
     // ── Próxima faixa conforme categoria ──────────────────
+    // Grau NUNCA aparece na convocação — só a faixa destino
     _getProxFaixa(aluno, categoria) {
         if (categoria === 'kids') {
             if (aluno.proxFaixaCustom) return aluno.proxFaixaCustom;
@@ -6319,9 +6321,8 @@ const exame = {
             return idx >= 0 && idx < infantil.length - 1 ? infantil[idx + 1] : aluno.faixa;
         }
         if (categoria === 'preta') return 'Preta';
+        // Adulto: sempre próxima FAIXA, independente de grau
         const faixas = ['Branca','Azul','Roxa','Marrom','Preta'];
-        const grau = aluno.grau || 0;
-        if (grau < 4) return `${aluno.faixa} — ${grau + 1}º Grau`;
         const idx = faixas.indexOf(aluno.faixa);
         return idx >= 0 && idx < faixas.length - 1 ? faixas[idx + 1] : aluno.faixa;
     },

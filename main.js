@@ -184,9 +184,10 @@ const auth = {
             if (wp) wp.classList.remove('hidden');
         }
 
-        // ── TAB DE EXAME — aparece só se aluno estiver convocado ──
+        // ── TAB DE EXAME + BANNER TREINO ──────────────────────
         if (this.role === 'aluno' && this.currentUser?.id) {
             exame.verificarConvocacao(this.currentUser.id);
+            setTimeout(() => exame.carregarBannerExame(), 600);
         }
 
         // ── LISTENERS RELATOS DE SAÚDE ────────────────────
@@ -6727,6 +6728,49 @@ const exame = {
         } catch(e) {
             container.innerHTML = `<small style="color:#f43f5e;font-size:0.65rem;">Erro: ${e.message}</small>`;
         }
+    },
+
+    // ── Banner verde na aba TREINO quando convocado ──────────
+    async carregarBannerExame() {
+        const banner = document.getElementById('banner-exame-treino');
+        if (!banner) return;
+        const alunoId = auth.currentUser?.id;
+        if (!alunoId || alunoId === 'admin') { banner.innerHTML = ''; return; }
+        try {
+            const doc = await db.collection('alunos').doc(alunoId).get();
+            if (!doc.exists || !doc.data().aspiranteGraduacao) { banner.innerHTML = ''; return; }
+
+            const aluno     = doc.data();
+            const categoria = this._getCategoria(aluno);
+            const proxFaixa = this._getProxFaixa(aluno, categoria);
+            const cor       = this._corFaixa(proxFaixa);
+
+            banner.innerHTML = `
+                <div onclick="ui.showTab('tab-exame'); exame.carregarExameAluno()"
+                     style="background:linear-gradient(135deg,#052e16,#064e3b);
+                            border:2px solid #10b981;
+                            border-radius:14px;
+                            padding:14px 16px;
+                            margin-bottom:14px;
+                            cursor:pointer;
+                            display:flex;
+                            align-items:center;
+                            gap:12px;
+                            box-shadow:0 0 20px #10b98122;">
+                    <div style="font-size:2rem; flex-shrink:0;">🥋</div>
+                    <div style="flex:1;">
+                        <div style="color:#10b981; font-size:0.82rem; font-weight:900; letter-spacing:0.3px;">
+                            CONVOCADO PARA O EXAME DE FAIXA! ✅
+                        </div>
+                        <div style="color:#a7f3d0; font-size:0.7rem; margin-top:3px;">
+                            ${aluno.faixa} →
+                            <strong style="color:${cor.border};">${proxFaixa}</strong>
+                            · Toque para ver detalhes
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:#10b981; font-size:0.8rem; flex-shrink:0;"></i>
+                </div>`;
+        } catch(e) { banner.innerHTML = ''; }
     },
 
     // ── Admin define faixa destino personalizada para kids ──

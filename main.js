@@ -611,6 +611,20 @@ const academia = {
         } catch(e) { return null; }
     },
 
+    // ── Em Brasa: aparece 2 dias, oculta 5, volta 2 dias... ──
+    _deveExibirEmBrasa(alunoId, estaEmBrasa) {
+        const key = `embrasa_${alunoId}`;
+        if (!estaEmBrasa) { localStorage.removeItem(key); return false; }
+        const hoje = new Date().toISOString().split('T')[0];
+        const stored = localStorage.getItem(key);
+        if (!stored) { localStorage.setItem(key, hoje); return true; }
+        const dias = Math.floor((new Date(hoje) - new Date(stored)) / 86400000);
+        if (dias <= 1) return true;        // dias 1-2: exibe
+        if (dias <= 6) return false;       // dias 3-7: oculta (5 dias de intervalo)
+        localStorage.setItem(key, hoje);   // dia 7+: novo ciclo
+        return true;
+    },
+
     async carregarConquistas() {
         const snap = await db.collection("alunos").get();
         const agora = Date.now();
@@ -630,12 +644,16 @@ const academia = {
                     }
                 }
             }
-            // Aniversário: aparece o dia inteiro (sem filtro)
+            // Aniversário
             if (a.nascimento) {
                 const parts = a.nascimento.split('-');
-                if (parts.length === 3 && parseInt(parts[2]) === dH && parseInt(parts[1]) === mH) html += `<div class="conquista-item">🎂 Hoje é o aniversário de <b>${a.nome}</b>!</div>`;
+                if (parts.length === 3 && parseInt(parts[2]) === dH && parseInt(parts[1]) === mH)
+                    html += `<div class="conquista-item">🎂 Hoje é o aniversário de <b>${a.nome}</b>!</div>`;
             }
-            if (this.calcularEngajamento(a.historico).label === "Em Brasa") html += `<div class="conquista-item">🔥 <b>${a.nome}</b> está em brasa!</div>`;
+            // Em Brasa — mostra 2 dias, oculta 5, mostra 2...
+            const emBrasa = this.calcularEngajamento(a.historico).label === "Em Brasa";
+            if (this._deveExibirEmBrasa(doc.id, emBrasa))
+                html += `<div class="conquista-item">🔥 <b>${a.nome}</b> está em brasa!</div>`;
         });
         const c = document.getElementById('mural-conquistas');
         if (html !== "") { document.getElementById('lista-conquistas').innerHTML = html; c.classList.remove('hidden'); } else { c.classList.add('hidden'); }

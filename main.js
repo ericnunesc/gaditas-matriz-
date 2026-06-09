@@ -5892,13 +5892,12 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                         </button>
                     </div>
                     <!-- Diário de Treino -->
-                    ${(d.diarioTreino||[]).length > 0 ? `
                     <div style="margin-top:8px;">
                         <button onclick="treinoPost.abrirDiario()"
                             style="width:100%; padding:11px; background:#0f172a; border:1px solid #33415555; color:#94a3b8; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; gap:8px;">
                             📓 MEU DIÁRIO DE TREINO
                         </button>
-                    </div>` : ''}
+                    </div>
                 </div>`;
             // Renderiza calendário/lista após o HTML do perfil ser inserido
             setTimeout(() => this._renderCal(), 50);

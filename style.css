@@ -528,8 +528,6 @@ label {
     z-index: 999 !important;
 }
 
-.nav-item-hidden { display: none !important; }
-
 .nav-item {
     background: transparent !important;
     border: none !important;
@@ -574,6 +572,11 @@ label {
 
 .nav-item.active i {
     transform: translateY(-1px);
+}
+
+/* Esconde itens de nav condicionais — especificidade dupla para vencer display:flex!important */
+.nav-item.nav-item-hidden {
+    display: none !important;
 }
 
 .logout-item {

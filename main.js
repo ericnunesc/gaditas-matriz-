@@ -6468,20 +6468,30 @@ const exame = {
                     ${this._countdownHtml(cfg.dataExame, cfg.horario, 'EXAME', cor)}
                 </div>` : ''}
 
-                ${isKids && cfg.dataGraduacao ? `
+                ${cfg.dataGraduacao ? `
                 <div style="background:#0f172a; border:1px solid #f59e0b44; border-radius:12px; padding:12px 14px; margin-bottom:10px;">
                     <div style="font-size:0.6rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px; margin-bottom:4px;">🏆 DATA DA GRADUAÇÃO (CERIMÔNIA)</div>
                     <div style="font-size:0.82rem; font-weight:700; color:white; margin-bottom:4px;">${dataGradFmt}${cfg.horarioGraduacao ? ' às ' + cfg.horarioGraduacao + 'h' : ''}</div>
                     ${this._countdownHtml(cfg.dataGraduacao, cfg.horarioGraduacao, 'GRADUAÇÃO', { border: '#f59e0b', text: '#fcd34d' })}
                 </div>` : ''}
 
-                <!-- LOCAL -->
+                <!-- LOCAL DO EXAME -->
                 ${cfg.local ? `
                 <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px;">
                     <i class="fas fa-map-marker-alt" style="color:#f43f5e; font-size:1rem; flex-shrink:0;"></i>
                     <div>
-                        <div style="font-size:0.6rem; color:#64748b; font-weight:700;">LOCAL</div>
+                        <div style="font-size:0.6rem; color:#64748b; font-weight:700;">LOCAL DO EXAME</div>
                         <div style="font-size:0.85rem; font-weight:700; color:white;">${cfg.local}</div>
+                    </div>
+                </div>` : ''}
+
+                <!-- LOCAL DA GRADUAÇÃO -->
+                ${cfg.localGraduacao ? `
+                <div style="background:#0f172a; border:1px solid #f59e0b22; border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-map-marker-alt" style="color:#f59e0b; font-size:1rem; flex-shrink:0;"></i>
+                    <div>
+                        <div style="font-size:0.6rem; color:#f59e0b; font-weight:700;">LOCAL DA GRADUAÇÃO</div>
+                        <div style="font-size:0.85rem; font-weight:700; color:white;">${cfg.localGraduacao}</div>
                     </div>
                 </div>` : ''}
 
@@ -6584,15 +6594,25 @@ const exame = {
             `<input type="${type}" id="${id}" value="${val||''}" placeholder="${ph}"
              style="width:100%;padding:9px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.78rem;"/>`;
 
-        const secao = (titulo, cor, cat, cfg, extraHtml = '') => `
+        // Todos os 3 formulários idênticos — local do exame e local da graduação separados
+        const secao = (titulo, cor, cat, cfg) => `
             <div style="background:#0a0f1a; border:1px solid ${cor}44; border-radius:12px; padding:14px; margin-bottom:14px;">
                 <div style="font-size:0.65rem; font-weight:800; color:${cor}; letter-spacing:0.5px; margin-bottom:12px;">${titulo}</div>
+
+                <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:6px; letter-spacing:0.5px;">🗓️ EXAME</div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
                     <div><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📅 DATA DO EXAME</small>${inp(`${cat}-dataExame`,cfg.dataExame,'date')}</div>
                     <div><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">⏰ HORÁRIO</small>${inp(`${cat}-horario`,cfg.horario,'time')}</div>
                 </div>
-                ${extraHtml}
-                <div style="margin-bottom:8px;"><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📍 LOCAL</small>${inp(`${cat}-local`,cfg.local,'text','Gaditas Academy — Matriz')}</div>
+                <div style="margin-bottom:10px;"><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📍 LOCAL DO EXAME</small>${inp(`${cat}-local`,cfg.local,'text','Ex: Gaditas Academy — Matriz')}</div>
+
+                <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:6px; letter-spacing:0.5px;">🏆 GRADUAÇÃO (CERIMÔNIA)</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <div><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📅 DATA GRADUAÇÃO</small>${inp(`${cat}-dataGraduacao`,cfg.dataGraduacao,'date')}</div>
+                    <div><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">⏰ HORÁRIO GRAD.</small>${inp(`${cat}-horarioGraduacao`,cfg.horarioGraduacao,'time')}</div>
+                </div>
+                <div style="margin-bottom:10px;"><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📍 LOCAL DA GRADUAÇÃO</small>${inp(`${cat}-localGraduacao`,cfg.localGraduacao,'text','Ex: Gaditas Academy — Matriz')}</div>
+
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
                     <div><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">💰 TAXA (R$)</small>${inp(`${cat}-valor`,cfg.valor,'number','0,00')}</div>
                     <div><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">💳 LINK PAG.</small>${inp(`${cat}-link`,cfg.linkPagamento,'url','https://...')}</div>
@@ -6608,16 +6628,8 @@ const exame = {
                 </button>
             </div>`;
 
-        const extraKids = `
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
-                <div><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">🏆 DATA GRADUAÇÃO</small>${inp('kids-dataGraduacao', kids.dataGraduacao,'date')}</div>
-                <div><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">⏰ HORÁRIO GRAD.</small>${inp('kids-horarioGraduacao', kids.horarioGraduacao,'time')}</div>
-            </div>`;
-
-        const isTabExame = !!document.getElementById('exame-aluno-container');
-
         container.innerHTML =
-            secao('🧒 KIDS', '#f59e0b', 'kids', kids, extraKids) +
+            secao('🧒 KIDS', '#f59e0b', 'kids', kids) +
             secao('🥋 16+ ATÉ MARROM', '#3b82f6', 'adulto', adulto) +
             secao('⬛ FAIXA PRETA', '#94a3b8', 'preta', preta) +
             `<div style="margin-top:4px;">
@@ -6634,15 +6646,14 @@ const exame = {
             dataExame:        g('dataExame'),
             horario:          g('horario'),
             local:            g('local').trim(),
+            dataGraduacao:    g('dataGraduacao'),
+            horarioGraduacao: g('horarioGraduacao'),
+            localGraduacao:   g('localGraduacao').trim(),
             valor:            parseFloat(g('valor')) || 0,
             linkPagamento:    g('link').trim(),
             instrucoes:       g('instrucoes').trim(),
             atualizadoEm:     new Date().toLocaleDateString('pt-BR')
         };
-        if (categoria === 'kids') {
-            cfg.dataGraduacao    = g('dataGraduacao');
-            cfg.horarioGraduacao = g('horarioGraduacao');
-        }
         await db.collection('configuracoes').doc(this._docId(categoria)).set(cfg);
         const labels = { kids:'🧒 Kids', adulto:'🥋 16+ até Marrom', preta:'⬛ Faixa Preta' };
         alert(`✅ Exame ${labels[categoria]} salvo! Alunos convocados já verão as informações.`);

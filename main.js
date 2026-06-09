@@ -6317,7 +6317,15 @@ const exame = {
         try {
             // Dados do aluno
             const alunoId = auth.currentUser?.id;
+            if (!alunoId || alunoId === 'admin') {
+                container.innerHTML = `<p style="color:#64748b; text-align:center; padding:30px; font-size:0.8rem;">Painel de exame disponível apenas para alunos.</p>`;
+                return;
+            }
             const alunoDoc = await db.collection('alunos').doc(alunoId).get();
+            if (!alunoDoc.exists) {
+                container.innerHTML = `<p style="color:#64748b; text-align:center; padding:30px; font-size:0.8rem;">Dados do aluno não encontrados.</p>`;
+                return;
+            }
             const aluno = alunoDoc.data();
 
             // Configuração do exame

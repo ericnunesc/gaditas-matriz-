@@ -6644,7 +6644,11 @@ const exame = {
                         ${jaConfirmou ? '✅ PRESENÇA CONFIRMADA' : '🙋 CONFIRMAR MINHA PRESENÇA'}
                     </button>
                 </div>
+                <div id="btn-tecnicas-exame-aluno"></div>
                 <div style="text-align:center; margin-top:20px; font-size:0.7rem; color:#475569; font-style:italic;">"A faixa é o reconhecimento de quem você se tornou. OSS!" 🦁</div>`;
+
+        // Carrega botão de técnicas (só aparece se houver técnicas ativas)
+        setTimeout(() => tecnicasExame.carregarBotaoAluno(proxFaixa, 'btn-tecnicas-exame-aluno'), 100);
 
         } catch(e) {
             if (container) container.innerHTML = `<p style="color:#f43f5e;text-align:center;padding:20px;font-size:0.8rem;">Erro: ${e.message}</p>`;
@@ -6785,10 +6789,12 @@ const exame = {
                     <button onclick="exame.migrarConvocacoesPendentes()" style="font-size:0.55rem; font-weight:800; background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:4px 8px; border-radius:6px; cursor:pointer;">📣 Notificar todos</button>
                 </div>
                 <div id="lista-confirmados-exame"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>
-             </div>`;
+             </div>
+             <div id="tecnicas-exame-painel" style="margin-top:16px;"><small style="color:#475569;font-size:0.65rem;">Carregando técnicas...</small></div>`;
 
         this.carregarConfirmados();
         this.carregarRelatorioExame({ kids, adulto, preta });
+        tecnicasExame.carregarPainel();
     },
 
     async salvarConfigExame(categoria) {
@@ -7162,6 +7168,288 @@ const exame = {
             if (btn) { btn.disabled = false; btn.textContent = '🥋 GRADUAR'; }
         }
     }
+};
+
+// ══════════════════════════════════════════════════════════
+// TÉCNICAS DO EXAME
+// ══════════════════════════════════════════════════════════
+const tecnicasExame = {
+
+    _BIB_ADULTO: {
+        quedas:          { nome:'Quedas / Takedowns',   icon:'🥋', lista:['Dupla (Double Leg)','Simples (Single Leg)','Seoi Nage','Osoto Gari','Kouchi Gari','Ouchi Gari','Tomoe Nage','Ippon Seoi Nage'] },
+        raspagens:       { nome:'Raspagens',             icon:'🔄', lista:['De La Riva','Gancho (Hook Sweep)','Tesoura','Fechada (Scissor)','Laço / Lasso','X-Guard','Spider Guard','Cem Quilos Invertido','Pendulo','Sumi Gaeshi','Tripod Sweep'] },
+        passagens:       { nome:'Passagens de Guarda',  icon:'➡️', lista:['Toreando','Esmagadora (Smash Pass)','Over-Under','X-Pass','Leg Drag','Double Under','Bullfighter','Knee Slice'] },
+        estrangulamentos:{ nome:'Estrangulamentos',     icon:'🔒', lista:['Triângulo','Mata Leão (RNC)','Anaconda','Darce','Guilhotina','Loop Choke','Bow & Arrow','Ezekiel','Cross Collar','Clock Choke','Brabo Choke'] },
+        chaves_braco:    { nome:'Chaves de Braço',      icon:'💪', lista:['Americana','Kimura','Omoplata','Armbar (Juji Gatame)','Gogoplata','Wristlock','Baratoplata'] },
+        chaves_perna:    { nome:'Chaves de Perna',      icon:'🦵', lista:['Heel Hook Interno','Heel Hook Externo','Kneebar','Estrangulamento de Tornozelo','Calf Slicer'] },
+        posicoes:        { nome:'Posições / Controles', icon:'📍', lista:['Montada','Costas','Meia Guarda','Norte-Sul','Cem Quilos (Side Control)','Joelho na Barriga','Guarda Fechada','Guarda Aberta'] },
+        escapes:         { nome:'Escapes',              icon:'🚪', lista:['Escape da Montada (Upa)','Escape da Montada (Cotovelo-Joelho)','Escape do Cem Quilos','Escape das Costas','Escape do Joelho na Barriga'] },
+    },
+    _BIB_KIDS: {
+        movimentos:      { nome:'Movimentos Básicos',   icon:'🤸', lista:['Rolamento Frontal','Rolamento para Trás','Ginga','Queda de Quadril','Ponte (Upa)','Cambalhota Lateral','Shrimping (Camarão)'] },
+        quedas_kids:     { nome:'Quedas',               icon:'🥋', lista:['Queda Simples','Queda Dupla','Projeção com Quadril','Queda com Giro'] },
+        raspagens_kids:  { nome:'Raspagens',            icon:'🔄', lista:['Gancho','Tesoura','Pendulo','Cem Quilos Invertido','Spider Guard'] },
+        estrang_kids:    { nome:'Estrangulamentos',     icon:'🔒', lista:['Guilhotina','Triângulo','Mata Leão','Loop Choke'] },
+        chaves_kids:     { nome:'Chaves',               icon:'💪', lista:['Americana','Kimura','Armbar'] },
+        posicoes_kids:   { nome:'Posições',             icon:'📍', lista:['Montada','Cem Quilos','Guarda Fechada','Costas','Meia Guarda','Norte-Sul'] },
+        escapes_kids:    { nome:'Escapes',              icon:'🚪', lista:['Escape da Montada (Upa)','Escape do Cem Quilos','Escape das Costas','Escape do Joelho na Barriga'] },
+    },
+
+    _GRUPOS: {
+        kids_ca: { label:'Kids Cinza / Amarela', emoji:'🟡', cor:'#facc15', bib:'kids' },
+        kids_lv: { label:'Kids Laranja / Verde',  emoji:'🟢', cor:'#4ade80', bib:'kids' },
+        azul:    { label:'Azul',                  emoji:'🔵', cor:'#60a5fa', bib:'adulto' },
+        roxa:    { label:'Roxa',                  emoji:'🟣', cor:'#a78bfa', bib:'adulto' },
+        marrom:  { label:'Marrom',                emoji:'🟤', cor:'#d97706', bib:'adulto' },
+        preta:   { label:'Preta',                 emoji:'⬛', cor:'#f59e0b', bib:'adulto' },
+    },
+
+    _grupoAtivo: 'kids_ca',
+    _cache: {},
+
+    _grupoDeProxFaixa(pf) {
+        const ca = ['Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta'];
+        const lv = ['Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
+        if (ca.includes(pf)) return 'kids_ca';
+        if (lv.includes(pf)) return 'kids_lv';
+        if (pf === 'Azul')   return 'azul';
+        if (pf === 'Roxa')   return 'roxa';
+        if (pf === 'Marrom') return 'marrom';
+        if (pf?.startsWith('Preta')) return 'preta';
+        return null;
+    },
+
+    async _carregarGrupo(grupo) {
+        if (this._cache[grupo]) return this._cache[grupo];
+        const snap = await db.collection('configuracoes').doc(`tecnicas_${grupo}`).get();
+        this._cache[grupo] = snap.exists ? (snap.data().tecnicas || []) : [];
+        return this._cache[grupo];
+    },
+
+    async salvarGrupo(grupo) {
+        const tecnicas = this._lerDOM(grupo);
+        await db.collection('configuracoes').doc(`tecnicas_${grupo}`).set({ tecnicas });
+        this._cache[grupo] = tecnicas;
+        const btn = document.getElementById(`btn-salvar-tec-${grupo}`);
+        if (btn) { btn.textContent = '✅ Salvo!'; setTimeout(() => btn.textContent = '💾 Salvar', 2000); }
+    },
+
+    _lerDOM(grupo) {
+        const c = document.getElementById(`tec-grupo-${grupo}`);
+        if (!c) return [];
+        return Array.from(c.querySelectorAll('[data-tec-id]')).map(el => ({
+            id:         el.dataset.tecId,
+            nome:       el.querySelector('.tec-nome')?.value?.trim() || '',
+            categoria:  el.dataset.categoria,
+            quantidade: parseInt(el.querySelector('.tec-qtd')?.value || '0') || 0,
+            ativo:      el.querySelector('.tec-toggle')?.checked || false,
+        })).filter(t => t.nome);
+    },
+
+    // ── Painel Admin ───────────────────────────────────────
+    async carregarPainel() {
+        const el = document.getElementById('tecnicas-exame-painel');
+        if (!el) return;
+
+        const tabsHtml = Object.entries(this._GRUPOS).map(([g, info]) =>
+            `<button onclick="tecnicasExame.trocarGrupo('${g}')" id="tab-tec-${g}"
+                style="padding:6px 12px;border:none;border-radius:8px;font-size:0.63rem;font-weight:800;cursor:pointer;white-space:nowrap;
+                background:${g===this._grupoAtivo?info.cor:'#1e293b'};color:${g===this._grupoAtivo?'#000':'#64748b'};">
+                ${info.emoji} ${info.label}
+            </button>`
+        ).join('');
+
+        el.innerHTML = `
+            <div style="background:#0a0f1a;border:1px solid #312e8144;border-radius:14px;padding:14px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#8b5cf6;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">📚 Técnicas do Exame</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${tabsHtml}</div>
+                <div id="tec-conteudo"><small style="color:#475569;font-size:0.65rem;">Selecione um grupo...</small></div>
+            </div>`;
+
+        await this.trocarGrupo(this._grupoAtivo, true);
+    },
+
+    async trocarGrupo(grupo, forcar = false) {
+        if (!forcar && this._grupoAtivo === grupo) return;
+        this._grupoAtivo = grupo;
+
+        Object.keys(this._GRUPOS).forEach(g => {
+            const btn = document.getElementById(`tab-tec-${g}`);
+            if (!btn) return;
+            btn.style.background = g===grupo ? this._GRUPOS[g].cor : '#1e293b';
+            btn.style.color      = g===grupo ? '#000' : '#64748b';
+        });
+
+        const conteudo = document.getElementById('tec-conteudo');
+        if (!conteudo) return;
+        conteudo.innerHTML = `<small style="color:#475569;font-size:0.65rem;">Carregando...</small>`;
+
+        const info    = this._GRUPOS[grupo];
+        const bib     = info.bib === 'kids' ? this._BIB_KIDS : this._BIB_ADULTO;
+        const salvas  = await this._carregarGrupo(grupo);
+        const mapaS   = {};
+        salvas.forEach(t => { mapaS[t.id] = t; });
+
+        let html = `<div id="tec-grupo-${grupo}">`;
+        Object.entries(bib).forEach(([catId, catInfo]) => {
+            html += `<div style="margin-bottom:14px;">
+                <div style="font-size:0.58rem;font-weight:800;color:#475569;letter-spacing:0.5px;margin-bottom:5px;">${catInfo.icon} ${catInfo.nome.toUpperCase()}</div>`;
+
+            catInfo.lista.forEach((nome, i) => {
+                const id = `${catId}_${i}`;
+                const s  = mapaS[id] || { ativo:false, quantidade:0, nome };
+                html += this._cardHTML(id, s.nome||nome, catId, s.ativo, s.quantidade);
+            });
+
+            // Técnicas customizadas desta categoria
+            salvas.filter(t => t.categoria===catId && !catInfo.lista.some((_,i)=>`${catId}_${i}`===t.id))
+                  .forEach(t => html += this._cardHTML(t.id, t.nome, catId, t.ativo, t.quantidade, true));
+
+            html += `<button onclick="tecnicasExame.adicionarCustom('${grupo}','${catId}')"
+                style="width:100%;padding:5px;background:transparent;border:1px dashed #1e293b;color:#334155;border-radius:8px;font-size:0.62rem;cursor:pointer;margin-top:2px;">
+                + adicionar técnica</button></div>`;
+        });
+        html += `</div>
+        <button id="btn-salvar-tec-${grupo}" onclick="tecnicasExame.salvarGrupo('${grupo}')"
+            style="width:100%;padding:11px;background:${info.cor};border:none;color:#000;border-radius:10px;font-weight:900;font-size:0.78rem;cursor:pointer;margin-top:6px;">
+            💾 Salvar ${info.emoji} ${info.label}
+        </button>`;
+        conteudo.innerHTML = html;
+    },
+
+    _cardHTML(id, nome, categoria, ativo, quantidade, custom=false) {
+        return `<div data-tec-id="${id}" data-categoria="${categoria}"
+            style="display:flex;align-items:center;gap:7px;padding:6px 8px;background:#0f172a;border:1px solid ${ativo?'#33415580':'#1e293b'};border-radius:8px;margin-bottom:3px;">
+            <input type="checkbox" class="tec-toggle" ${ativo?'checked':''}
+                style="width:15px;height:15px;accent-color:#8b5cf6;cursor:pointer;flex-shrink:0;"
+                onchange="this.closest('[data-tec-id]').style.borderColor=this.checked?'#33415580':'#1e293b'">
+            <input type="text" class="tec-nome" value="${nome}"
+                style="flex:1;background:transparent;border:none;color:#e2e8f0;font-size:0.72rem;outline:none;min-width:0;">
+            <input type="number" class="tec-qtd" value="${quantidade||''}" min="1" placeholder="qtd"
+                style="width:44px;padding:3px 5px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.65rem;text-align:center;outline:none;">
+            ${custom?`<button onclick="this.closest('[data-tec-id]').remove()"
+                style="background:none;border:none;color:#ef444460;cursor:pointer;font-size:0.85rem;padding:0 2px;line-height:1;">✕</button>`:''}
+        </div>`;
+    },
+
+    adicionarCustom(grupo, categoria) {
+        const c = document.getElementById(`tec-grupo-${grupo}`);
+        if (!c) return;
+        const btns = Array.from(c.querySelectorAll('button')).filter(b => b.textContent.includes('+ adicionar') && b.getAttribute('onclick')?.includes(`'${categoria}'`));
+        const btn  = btns[0];
+        if (!btn) return;
+        const id  = `${categoria}_c${Date.now()}`;
+        const div = document.createElement('div');
+        div.innerHTML = this._cardHTML(id, '', categoria, true, 1, true);
+        btn.before(div.firstElementChild);
+        btn.previousElementSibling?.querySelector('.tec-nome')?.focus();
+    },
+
+    // ── Botão para o aluno ─────────────────────────────────
+    async carregarBotaoAluno(proxFaixa, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const grupo = this._grupoDeProxFaixa(proxFaixa);
+        if (!grupo) { container.innerHTML=''; return; }
+        const tecs  = await this._carregarGrupo(grupo);
+        const ativas = tecs.filter(t => t.ativo && t.quantidade > 0);
+        if (!ativas.length) { container.innerHTML=''; return; }
+        const info = this._GRUPOS[grupo];
+        container.innerHTML = `
+            <button onclick="tecnicasExame.abrirModal('${grupo}')"
+                style="width:100%;padding:13px;background:#0f172a;border:2px solid ${info.cor}55;color:${info.cor};border-radius:12px;font-weight:800;font-size:0.82rem;cursor:pointer;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+                📋 VER TÉCNICAS DO EXAME
+            </button>`;
+    },
+
+    async abrirModal(grupo) {
+        const tecs  = await this._carregarGrupo(grupo);
+        const ativas = tecs.filter(t => t.ativo && t.quantidade > 0);
+        if (!ativas.length) return;
+        const info = this._GRUPOS[grupo];
+        const bib  = info.bib==='kids' ? this._BIB_KIDS : this._BIB_ADULTO;
+
+        const porCat = {};
+        ativas.forEach(t => { (porCat[t.categoria] = porCat[t.categoria]||[]).push(t); });
+
+        let listHtml = '';
+        Object.entries(porCat).forEach(([catId, tecs]) => {
+            const catInfo = bib[catId] || { nome:catId, icon:'•' };
+            listHtml += `<div class="tec-secao" style="margin-bottom:16px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#64748b;letter-spacing:0.5px;margin-bottom:6px;text-transform:uppercase;">${catInfo.icon} ${catInfo.nome}</div>
+                ${tecs.map(t=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0f172a;border-left:3px solid ${info.cor};border-radius:0 8px 8px 0;margin-bottom:4px;">
+                    <span style="font-size:0.78rem;color:#e2e8f0;font-weight:600;">${t.nome}</span>
+                    <span style="font-size:0.7rem;font-weight:900;color:${info.cor};background:${info.cor}22;padding:3px 9px;border-radius:999px;">${t.quantidade}×</span>
+                </div>`).join('')}
+            </div>`;
+        });
+
+        document.getElementById('modal-tecnicas-exame')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-tecnicas-exame';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#020617;z-index:99999;overflow-y:auto;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="max-width:500px;margin:0 auto;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <div>
+                        <div style="font-size:0.55rem;color:${info.cor};font-weight:800;letter-spacing:1.5px;text-transform:uppercase;">Técnicas do Exame</div>
+                        <div style="font-size:1rem;font-weight:900;color:white;">${info.emoji} ${info.label}</div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="tecnicasExame._imprimir('${grupo}')"
+                            style="padding:8px 12px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;">
+                            🖨️ Imprimir
+                        </button>
+                        <button onclick="document.getElementById('modal-tecnicas-exame').remove()"
+                            style="padding:8px 12px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;">
+                            ✕
+                        </button>
+                    </div>
+                </div>
+                <div id="tec-modal-lista">${listHtml}</div>
+                <div style="text-align:center;margin-top:24px;font-size:0.65rem;color:#334155;font-style:italic;">OSS! Treine cada técnica com dedicação. 🥋</div>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async _imprimir(grupo) {
+        const tecs   = await this._carregarGrupo(grupo);
+        const ativas = tecs.filter(t => t.ativo && t.quantidade > 0);
+        const info   = this._GRUPOS[grupo];
+        const bib    = info.bib==='kids' ? this._BIB_KIDS : this._BIB_ADULTO;
+        const porCat = {};
+        ativas.forEach(t => { (porCat[t.categoria] = porCat[t.categoria]||[]).push(t); });
+
+        let corpo = '';
+        Object.entries(porCat).forEach(([catId, tecs]) => {
+            const catInfo = bib[catId] || { nome:catId, icon:'' };
+            corpo += `<h3>${catInfo.icon} ${catInfo.nome}</h3>
+                <table><tr><th>Técnica</th><th>Qtd</th></tr>
+                ${tecs.map(t=>`<tr><td>${t.nome}</td><td>${t.quantidade}×</td></tr>`).join('')}
+                </table>`;
+        });
+
+        const w = window.open('','_blank');
+        w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+        <title>Técnicas — ${info.label}</title>
+        <style>
+            body{font-family:Arial,sans-serif;padding:28px;color:#000;max-width:700px;margin:0 auto;}
+            h1{font-size:1.3rem;margin-bottom:4px;} h2{font-size:0.9rem;color:#555;font-weight:400;margin-bottom:20px;}
+            h3{font-size:0.85rem;font-weight:bold;text-transform:uppercase;color:#333;margin:18px 0 6px;border-bottom:1px solid #ccc;padding-bottom:4px;}
+            table{width:100%;border-collapse:collapse;margin-bottom:10px;}
+            th{background:#f0f0f0;text-align:left;padding:6px 10px;font-size:0.8rem;}
+            td{padding:6px 10px;font-size:0.85rem;border-bottom:1px solid #eee;}
+            td:last-child{font-weight:bold;text-align:center;width:50px;}
+            @media print{button{display:none!important;}}
+        </style></head><body>
+        <h1>📋 Técnicas do Exame de Faixa</h1>
+        <h2>${info.emoji} ${info.label} — Gaditas Academy</h2>
+        ${corpo}
+        <p style="margin-top:28px;font-size:0.75rem;color:#888;text-align:center;">OSS! 🥋 Gaditas Academy</p>
+        <script>window.onload=()=>window.print();<\/script>
+        </body></html>`);
+        w.document.close();
+    },
 };
 
 // ══════════════════════════════════════════════════════════

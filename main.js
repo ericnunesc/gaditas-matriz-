@@ -7260,13 +7260,32 @@ const tecnicasExame = {
         ).join('');
 
         el.innerHTML = `
-            <div style="background:#0a0f1a;border:1px solid #312e8144;border-radius:14px;padding:14px;">
-                <div style="font-size:0.6rem;font-weight:800;color:#8b5cf6;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">📚 Técnicas do Exame</div>
-                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${tabsHtml}</div>
-                <div id="tec-conteudo"><small style="color:#475569;font-size:0.65rem;">Selecione um grupo...</small></div>
+            <div style="background:#0a0f1a;border:1px solid #312e8144;border-radius:14px;overflow:hidden;">
+                <div onclick="tecnicasExame._togglePainel()" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;">
+                    <div style="font-size:0.6rem;font-weight:800;color:#8b5cf6;letter-spacing:1px;text-transform:uppercase;">📚 Técnicas do Exame</div>
+                    <span id="tec-chevron" style="color:#8b5cf6;font-size:0.75rem;transition:transform 0.2s;">▼</span>
+                </div>
+                <div id="tec-painel-body" style="display:none;padding:0 14px 14px;">
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${tabsHtml}</div>
+                    <div id="tec-conteudo"><small style="color:#475569;font-size:0.65rem;">Selecione um grupo...</small></div>
+                </div>
             </div>`;
 
-        await this.trocarGrupo(this._grupoAtivo, true);
+        // começa recolhido — não carrega grupo ainda
+    },
+
+    _painelAberto: false,
+
+    _togglePainel() {
+        this._painelAberto = !this._painelAberto;
+        const body    = document.getElementById('tec-painel-body');
+        const chevron = document.getElementById('tec-chevron');
+        if (body)    body.style.display    = this._painelAberto ? 'block' : 'none';
+        if (chevron) chevron.style.transform = this._painelAberto ? 'rotate(180deg)' : '';
+        // Carrega o grupo só na primeira abertura
+        if (this._painelAberto && !document.getElementById('tec-conteudo')?.querySelector('[data-tec-id]')) {
+            this.trocarGrupo(this._grupoAtivo, true);
+        }
     },
 
     async trocarGrupo(grupo, forcar = false) {

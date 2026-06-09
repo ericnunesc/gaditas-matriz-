@@ -6495,15 +6495,21 @@ const exame = {
                     </div>
                 </div>` : ''}
 
-                <!-- TAXA -->
-                ${cfg.valor ? `
-                <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px;">
-                    <i class="fas fa-tag" style="color:#f59e0b; font-size:1rem; flex-shrink:0;"></i>
-                    <div>
-                        <div style="font-size:0.6rem; color:#64748b; font-weight:700;">TAXA DE EXAME</div>
-                        <div style="font-size:0.85rem; font-weight:700; color:white;">R$ ${parseFloat(cfg.valor).toFixed(2).replace('.', ',')}</div>
-                    </div>
-                </div>` : ''}
+                <!-- TAXA — Preta usa valor1 (Marrom→Preta) ou valor2 (Preta→Grau) -->
+                ${(() => {
+                    let v = cfg.valor, l = cfg.linkPagamento;
+                    if (categoria === 'preta' && faixa === 'Preta') {
+                        v = cfg.valor2; l = cfg.linkPagamento2;
+                    }
+                    return v ? `
+                    <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px;">
+                        <i class="fas fa-tag" style="color:#f59e0b; font-size:1rem; flex-shrink:0;"></i>
+                        <div>
+                            <div style="font-size:0.6rem; color:#64748b; font-weight:700;">TAXA DE EXAME</div>
+                            <div style="font-size:0.85rem; font-weight:700; color:white;">R$ ${parseFloat(v).toFixed(2).replace('.', ',')}</div>
+                        </div>
+                    </div>` : '';
+                })()}
 
                 <!-- SUA JORNADA -->
                 <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:14px; margin-bottom:10px;">
@@ -6538,11 +6544,15 @@ const exame = {
 
                 <!-- BOTÕES -->
                 <div style="display:flex; flex-direction:column; gap:10px;">
-                    ${cfg.linkPagamento ? `
-                    <button onclick="window.open('${cfg.linkPagamento}','_blank')"
-                        style="width:100%; padding:15px; background:linear-gradient(135deg,#059669,#10b981); border:none; color:white; border-radius:12px; font-weight:900; font-size:0.88rem; cursor:pointer; box-shadow:0 4px 15px #10b98133;">
-                        <i class="fas fa-credit-card"></i> PAGAR TAXA DE EXAME
-                    </button>` : ''}
+                    ${(() => {
+                        let link = cfg.linkPagamento;
+                        if (categoria === 'preta' && faixa === 'Preta') link = cfg.linkPagamento2;
+                        return link ? `
+                        <button onclick="window.open('${link}','_blank')"
+                            style="width:100%; padding:15px; background:linear-gradient(135deg,#059669,#10b981); border:none; color:white; border-radius:12px; font-weight:900; font-size:0.88rem; cursor:pointer; box-shadow:0 4px 15px #10b98133;">
+                            <i class="fas fa-credit-card"></i> PAGAR TAXA DE EXAME
+                        </button>` : '';
+                    })()}
                     <button id="btn-confirmar-exame" onclick="exame.confirmarPresenca('${alunoId}')"
                         style="width:100%; padding:13px; background:${jaConfirmou ? '#064e3b' : '#1e3a8a'}; border:2px solid ${jaConfirmou ? '#10b981' : '#3b82f6'}; color:${jaConfirmou ? '#10b981' : '#93c5fd'}; border-radius:12px; font-weight:800; font-size:0.85rem; cursor:pointer;">
                         ${jaConfirmou ? '✅ PRESENÇA CONFIRMADA' : '🙋 CONFIRMAR MINHA PRESENÇA'}
@@ -6628,10 +6638,58 @@ const exame = {
                 </button>
             </div>`;
 
+        // Seção especial para Preta — 2 valores e 2 links
+        const secaoPreta = () => `
+            <div style="background:#0a0f1a; border:1px solid #94a3b844; border-radius:12px; padding:14px; margin-bottom:14px;">
+                <div style="font-size:0.65rem; font-weight:800; color:#94a3b8; letter-spacing:0.5px; margin-bottom:12px;">⬛ FAIXA PRETA</div>
+
+                <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:6px; letter-spacing:0.5px;">🗓️ EXAME</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <div><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📅 DATA DO EXAME</small>${inp('preta-dataExame',preta.dataExame,'date')}</div>
+                    <div><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">⏰ HORÁRIO</small>${inp('preta-horario',preta.horario,'time')}</div>
+                </div>
+                <div style="margin-bottom:10px;"><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📍 LOCAL DO EXAME</small>${inp('preta-local',preta.local,'text','Ex: Gaditas Academy — Matriz')}</div>
+
+                <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:6px; letter-spacing:0.5px;">🏆 GRADUAÇÃO (CERIMÔNIA)</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <div><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📅 DATA GRADUAÇÃO</small>${inp('preta-dataGraduacao',preta.dataGraduacao,'date')}</div>
+                    <div><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">⏰ HORÁRIO GRAD.</small>${inp('preta-horarioGraduacao',preta.horarioGraduacao,'time')}</div>
+                </div>
+                <div style="margin-bottom:12px;"><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📍 LOCAL DA GRADUAÇÃO</small>${inp('preta-localGraduacao',preta.localGraduacao,'text','Ex: Gaditas Academy — Matriz')}</div>
+
+                <!-- PAGAMENTO 1: Marrom → Preta -->
+                <div style="background:#1a1a2e; border:1px solid #ef444433; border-radius:8px; padding:10px; margin-bottom:10px;">
+                    <div style="font-size:0.6rem; font-weight:800; color:#ef4444; margin-bottom:8px; letter-spacing:0.3px;">🔴 MARROM → PRETA (1ª faixa preta)</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">💰 TAXA (R$)</small>${inp('preta-valor',preta.valor,'number','0,00')}</div>
+                        <div><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">💳 LINK PAG.</small>${inp('preta-link',preta.linkPagamento,'url','https://...')}</div>
+                    </div>
+                </div>
+
+                <!-- PAGAMENTO 2: Preta → Preta Grau -->
+                <div style="background:#1a1a2e; border:1px solid #f59e0b33; border-radius:8px; padding:10px; margin-bottom:10px;">
+                    <div style="font-size:0.6rem; font-weight:800; color:#f59e0b; margin-bottom:8px; letter-spacing:0.3px;">🟡 PRETA → PRÓXIMO GRAU</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">💰 TAXA (R$)</small>${inp('preta-valor2',preta.valor2,'number','0,00')}</div>
+                        <div><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">💳 LINK PAG.</small>${inp('preta-link2',preta.linkPagamento2,'url','https://...')}</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:10px;">
+                    <small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📌 INSTRUÇÕES</small>
+                    <textarea id="preta-instrucoes" rows="2" placeholder="Ex: Chegar 30min antes..."
+                        style="width:100%;padding:9px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.78rem;resize:none;">${preta.instrucoes||''}</textarea>
+                </div>
+                <button onclick="exame.salvarConfigExame('preta')"
+                    style="width:100%;padding:10px;background:#94a3b8;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.75rem;">
+                    <i class="fas fa-save"></i> SALVAR FAIXA PRETA
+                </button>
+            </div>`;
+
         container.innerHTML =
             secao('🧒 KIDS', '#f59e0b', 'kids', kids) +
             secao('🥋 16+ ATÉ MARROM', '#3b82f6', 'adulto', adulto) +
-            secao('⬛ FAIXA PRETA', '#94a3b8', 'preta', preta) +
+            secaoPreta() +
             `<div style="margin-top:4px;">
                 <div style="font-size:0.62rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:8px;">👥 CONVOCADOS — CONFIRMAÇÕES</div>
                 <div id="lista-confirmados-exame"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>
@@ -6654,6 +6712,11 @@ const exame = {
             instrucoes:       g('instrucoes').trim(),
             atualizadoEm:     new Date().toLocaleDateString('pt-BR')
         };
+        // Faixa Preta tem 2 valores/links
+        if (categoria === 'preta') {
+            cfg.valor2         = parseFloat(g('valor2')) || 0;
+            cfg.linkPagamento2 = g('link2').trim();
+        }
         await db.collection('configuracoes').doc(this._docId(categoria)).set(cfg);
         const labels = { kids:'🧒 Kids', adulto:'🥋 16+ até Marrom', preta:'⬛ Faixa Preta' };
         alert(`✅ Exame ${labels[categoria]} salvo! Alunos convocados já verão as informações.`);

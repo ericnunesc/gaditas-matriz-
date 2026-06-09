@@ -1663,13 +1663,9 @@ const academia = {
             const upd = { historico: h };
             if (isMT) upd.aulasMT = (d.aulasMT || 0) + 1;
             else       upd.aulas   = (d.aulas   || 0) + 1;
+            // Salva feedback pendente — aparece pro aluno até ele responder
+            upd.feedbackPendente = { turma: t, data: dataOriginal };
             await r.update(upd);
-
-            // Pós-treino para o próprio aluno (se ele estiver logado)
-            if (aId === auth.currentUser?.id) {
-                const novasAulas = isMT ? (d.aulasMT||0)+1 : (d.aulas||0)+1;
-                treinoPost.aoCheckinConcluido(aId, novasAulas, t);
-            }
         }
         await db.collection("checkins").doc(cId).delete();
         this.renderCheckins(); academia.renderRanking(); academia.carregarConquistas();
@@ -1944,12 +1940,8 @@ const academia = {
                 const upd = { historico: h };
                 if (isMT) upd.aulasMT = (d.aulasMT || 0) + 1;
                 else       upd.aulas   = (d.aulas   || 0) + 1;
+                upd.feedbackPendente = { turma, data: dataStr };
                 await ref.update(upd);
-                // Pós-treino para o próprio aluno (se ele estiver logado)
-                if (alunoId === auth.currentUser?.id) {
-                    const novasAulas = isMT ? (d.aulasMT||0)+1 : (d.aulas||0)+1;
-                    treinoPost.aoCheckinConcluido(alunoId, novasAulas, turma);
-                }
                 salvos++;
             } catch(e) { erros++; }
         }));
@@ -4712,6 +4704,7 @@ Ele voltará a ser aluno normal.`)) return;
                 const updQR = { historico: h };
                 if (isMTqr) updQR.aulasMT = (d.aulasMT || 0) + 1;
                 else         updQR.aulas   = (d.aulas   || 0) + 1;
+                updQR.feedbackPendente = { turma: turmaQR, data: new Date().toLocaleDateString('pt-BR') };
                 await alunoRef.update(updQR);
 
                 // Remove checkin pendente se existir
@@ -4721,12 +4714,6 @@ Ele voltará a ser aluno normal.`)) return;
                 await batch.commit();
 
                 alert("✅ Presença computada automaticamente! Turma: " + turmaQR + " OSS! 🥋");
-
-                // Pós-treino: marco + diário + avaliação
-                if (alunoId === auth.currentUser?.id) {
-                    const novasAulas = isMTqr ? (d.aulasMT||0)+1 : (d.aulas||0)+1;
-                    treinoPost.aoCheckinConcluido(alunoId, novasAulas, turmaQR);
-                }
             } else {
                 // Fora da janela — envia para fila do professor aprovar
                 const snapCI = await db.collection("checkins").where("alunoId", "==", alunoId).get();
@@ -6212,14 +6199,12 @@ const aniversario = {
                     this._mostrarPopupConvocacao(auth.currentUser.nome, dados.faixa);
                 }
 
-                // 3. Detecta presença computada (aulas aumentou) → modal pós-treino
-                const aulasAgora = dados.aulas || 0;
-                if (_aulasAntes !== null && aulasAgora > _aulasAntes) {
-                    const ultimaEntrada = (dados.historico || [])[0];
-                    const turma = ultimaEntrada?.turma || '';
-                    treinoPost.aoCheckinConcluido(alunoId, aulasAgora, turma);
+                // 3. Feedback pendente → modal pós-treino (persiste até o aluno responder)
+                if (dados.feedbackPendente) {
+                    const { turma, data } = dados.feedbackPendente;
+                    const novasAulas = dados.aulas || 0;
+                    treinoPost.aoCheckinConcluido(alunoId, novasAulas, turma);
                 }
-                _aulasAntes = aulasAgora;
 
             }, e => console.warn('Convocação listener:', e.message));
     },
@@ -7591,10 +7576,9 @@ const treinoPost = {
 
     // ── Modal pós-treino: ⭐ Avaliação + 📝 Diário ────────
     abrirModalPosTreino(alunoId, turma) {
-        // Não abre se já abriu para esta aula hoje
+        // Chave apenas para fechar com localStorage (não bloqueia reabertura no Firestore)
         const hoje = new Date().toLocaleDateString('pt-BR');
         const chave = `gaditas_postreino_${alunoId}_${hoje}_${turma}`;
-        if (localStorage.getItem(chave)) return;
 
         document.getElementById('modal-pos-treino')?.remove();
         const modal = document.createElement('div');
@@ -7607,7 +7591,7 @@ const treinoPost = {
                         <div style="font-size:0.6rem;color:#8b5cf6;font-weight:800;letter-spacing:1px;text-transform:uppercase;">Como foi o treino?</div>
                         <div style="font-size:0.75rem;color:#e2e8f0;font-weight:700;margin-top:2px;">${turma}</div>
                     </div>
-                    <button onclick="treinoPost._fecharModalPosTreino('${chave}')" style="background:none;border:none;color:#475569;cursor:pointer;font-size:1rem;">✕</button>
+                    <button onclick="treinoPost._fecharModalPosTreino('${chave}','${alunoId}')" style="background:none;border:none;color:#475569;cursor:pointer;font-size:1rem;">✕</button>
                 </div>
 
                 <!-- Estrelas -->
@@ -7652,6 +7636,11 @@ const treinoPost = {
         const horaStr = hoje.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 
         try {
+            // Remove feedbackPendente do Firestore (respondido)
+            await db.collection('alunos').doc(alunoId).update({
+                feedbackPendente: firebase.firestore.FieldValue.delete()
+            });
+
             const updates = {};
 
             // Salva avaliação com nome e ID do aluno
@@ -7680,7 +7669,13 @@ const treinoPost = {
         document.getElementById('modal-pos-treino')?.remove();
     },
 
-    _fecharModalPosTreino(chave) {
+    _fecharModalPosTreino(chave, alunoId) {
+        // Remove feedbackPendente do Firestore (dispensado sem responder)
+        if (alunoId) {
+            db.collection('alunos').doc(alunoId).update({
+                feedbackPendente: firebase.firestore.FieldValue.delete()
+            }).catch(() => {});
+        }
         localStorage.setItem(chave, '1');
         this._notaSelecionada = 0;
         document.getElementById('modal-pos-treino')?.remove();

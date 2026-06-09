@@ -511,7 +511,7 @@
 
                 <!-- ══ ANIVERSARIANTES (admin) ══ -->
                 <div id="card-aniversariantes-admin" class="gestao-acc-fechado" style="display:none; background:linear-gradient(135deg,#1e1040,#1e293b); border:1px solid #f59e0b55; border-radius:12px; padding:15px; margin-bottom:15px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div onclick="if(!event.target.closest('button')) ui.toggleCard('card-aniversariantes-admin')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; user-select:none;">
                         <span style="font-size:0.8rem; font-weight:800; color:#f59e0b;">🎂 ANIVERSARIANTES</span>
                         <button onclick="aniversario.renderAdminAniversariantes()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem;"><i class="fas fa-sync-alt"></i></button>
                     </div>
@@ -520,7 +520,7 @@
 
                 <!-- ══ ALERTAS DE SAÚDE (professor/admin) ══ -->
                 <div id="card-alertas-saude" class="gestao-acc-fechado" style="background:#1e293b; border:1px solid #f43f5e55; border-radius:12px; padding:15px; margin-bottom:15px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div onclick="if(!event.target.closest('button')) ui.toggleCard('card-alertas-saude')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; user-select:none;">
                         <span style="font-size:0.8rem; font-weight:800; color:#f43f5e;">
                             <i class="fas fa-heartbeat"></i> RELATOS DE SAÚDE
                             <span id="badge-relatos" style="background:#f43f5e; color:white; border-radius:10px; padding:1px 7px; font-size:0.6rem; margin-left:6px; font-weight:800;">0</span>
@@ -532,7 +532,7 @@
 
                 <!-- ══ DEPOIMENTOS PENDENTES (admin) ══ -->
                 <div id="card-depoimentos-admin" class="gestao-acc-fechado" style="background:#1e293b; border:1px solid #f59e0b55; border-radius:12px; padding:15px; margin-bottom:15px; display:none;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div onclick="if(!event.target.closest('button')) ui.toggleCard('card-depoimentos-admin')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; user-select:none;">
                         <span style="font-size:0.8rem; font-weight:800; color:#f59e0b;">
                             <i class="fas fa-star"></i> DEPOIMENTOS PENDENTES
                             <span id="badge-dep-pendentes" style="background:#f59e0b; color:#000; border-radius:10px; padding:1px 7px; font-size:0.6rem; margin-left:6px; font-weight:800;">0</span>
@@ -544,7 +544,7 @@
 
                 <!-- ══ ENQUETES (admin) ══ -->
                 <div id="card-enquetes-admin" class="gestao-acc-fechado" style="display:none; background:#1e293b; border:1px solid #8b5cf655; border-radius:12px; padding:15px; margin-bottom:15px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div onclick="if(!event.target.closest('button')) ui.toggleCard('card-enquetes-admin')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; user-select:none;">
                         <span style="font-size:0.8rem; font-weight:800; color:#a78bfa;">📋 ENQUETES</span>
                         <div style="display:flex; gap:6px;">
                             <button onclick="enquetes.abrirModalCriarEnquete()" style="background:#8b5cf6; border:none; color:white; padding:6px 12px; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">+ ENQUETE</button>

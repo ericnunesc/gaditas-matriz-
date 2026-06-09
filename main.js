@@ -5570,68 +5570,28 @@ const ui = {
         if (wrapperPerfil && isProf) wrapperPerfil.classList.remove('hidden');
     },
     // ── ACORDEÕES DA ABA GESTÃO ──────────────────────────────
-    _fecharFilhosCard(card) {
-        card.classList.add('gestao-acc-fechado');
-    },
-    _abrirFilhosCard(card) {
-        card.classList.remove('gestao-acc-fechado');
+    // Toggle simples — chamado pelo onclick inline do HTML
+    toggleCard(cardId) {
+        const card = document.getElementById(cardId);
+        if (!card) return;
+        const fechado = card.classList.contains('gestao-acc-fechado');
+        if (fechado) {
+            card.classList.remove('gestao-acc-fechado');
+            // Carrega conteúdo ao abrir
+            if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined') aniversario.renderAdminAniversariantes();
+            if (cardId === 'card-alertas-saude') academia.carregarRelatosSaude();
+            if (cardId === 'card-depoimentos-admin') academia.carregarDepoimentosPendentes();
+            if (cardId === 'card-enquetes-admin' && typeof enquetes !== 'undefined') enquetes.renderAdminEnquetes();
+        } else {
+            card.classList.add('gestao-acc-fechado');
+        }
     },
 
     _aplicarAcordeoesGestao() {
-        const secoes = [
-            { id: 'card-aniversariantes-admin', cor: '#f59e0b' },
-            { id: 'card-alertas-saude',         cor: '#f43f5e' },
-            { id: 'card-depoimentos-admin',      cor: '#f59e0b' },
-            { id: 'card-enquetes-admin',         cor: '#8b5cf6' },
-        ];
-
-        secoes.forEach(({ id, cor }) => {
+        // Fecha todos ao (re)abrir a aba — o onclick inline no HTML cuida do toggle
+        ['card-aniversariantes-admin','card-alertas-saude','card-depoimentos-admin','card-enquetes-admin'].forEach(id => {
             const card = document.getElementById(id);
-            if (!card) return;
-
-            // Fecha sempre ao (re)abrir a aba
-            this._fecharFilhosCard(card);
-
-            if (card._acordeaoAplicado) {
-                const chv = card.querySelector('.gestao-acc-chv');
-                if (chv) chv.style.transform = 'rotate(0deg)';
-                card._gestaoAberto = false;
-                return;
-            }
-
-            const header = card.children[0];
-            if (!header) return;
-
-            // Cursor de clique em todo o card
-            card.style.cursor = 'pointer';
-
-            // Chevron no header
-            header.style.display = 'flex';
-            header.style.justifyContent = 'space-between';
-            header.style.alignItems = 'center';
-
-            const chevron = document.createElement('i');
-            chevron.className = 'fas fa-chevron-down gestao-acc-chv';
-            chevron.style.cssText = `color:${cor}; font-size:0.8rem; transition:transform 0.2s; flex-shrink:0; margin-left:8px;`;
-            header.appendChild(chevron);
-
-            // Listener no CARD inteiro para não depender do clique exato no header
-            card.addEventListener('click', (e) => {
-                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
-                const aberto = card._gestaoAberto;
-                if (aberto) {
-                    this._fecharFilhosCard(card);
-                    chevron.style.transform = 'rotate(0deg)';
-                    card._gestaoAberto = false;
-                } else {
-                    this._abrirFilhosCard(card);
-                    chevron.style.transform = 'rotate(180deg)';
-                    card._gestaoAberto = true;
-                }
-            });
-
-            card._gestaoAberto = false;
-            card._acordeaoAplicado = true;
+            if (card) card.classList.add('gestao-acc-fechado');
         });
     },
 

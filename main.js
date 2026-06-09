@@ -7654,11 +7654,12 @@ const treinoPost = {
         try {
             const updates = {};
 
-            // Salva avaliação com nome do aluno (admin pode ver, mas sem ID)
+            // Salva avaliação com nome e ID do aluno
             if (nota > 0 || texto) {
                 await db.collection('avaliacoes_aula').add({
                     turma, nota: nota || 0, texto: texto || '',
-                    alunoNome: auth.currentUser?.nome || 'Aluno',
+                    alunoId: alunoId || '',
+                    alunoNome: auth.currentUser?.nome || '',
                     data: dataStr, hora: horaStr, ts: Date.now()
                 });
             }
@@ -7785,23 +7786,36 @@ const treinoPost = {
     },
 
     // ── Detalhe avaliações por turma (admin) ─────────────
-    abrirDetalheAvaliacao(idx) {
+    async abrirDetalheAvaliacao(idx) {
         try {
         const cache = window._avaliacoesAdminCache || {};
         const turma = Object.keys(cache)[idx];
         if (!turma) return;
         const avaliacoes = (cache[turma] || []).sort((a,b)=>(b.ts||0)-(a.ts||0));
-        const estrelas = n => n > 0 ? ('⭐'.repeat(n) + '☆'.repeat(5-n)) : '—';
 
-        const itens = avaliacoes.map(a => `
+        // Busca nomes faltantes pelo alunoId
+        const idsSemNome = [...new Set(avaliacoes.filter(a => !a.alunoNome && a.alunoId).map(a => a.alunoId))];
+        const nomesMap = {};
+        await Promise.all(idsSemNome.map(async id => {
+            try {
+                const d = await db.collection('alunos').doc(id).get();
+                if (d.exists) nomesMap[id] = d.data().nome || '—';
+            } catch(e) {}
+        }));
+
+        const estrelas = n => n > 0 ? ('⭐'.repeat(n) + '☆'.repeat(5-n)) : '—';
+        const itens = avaliacoes.map(a => {
+            const nome = a.alunoNome || nomesMap[a.alunoId] || 'Avaliação anônima';
+            return `
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:12px;margin-bottom:8px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                    <span style="font-size:0.78rem;font-weight:800;color:#e2e8f0;">${a.alunoNome || 'Aluno'}</span>
+                    <span style="font-size:0.78rem;font-weight:800;color:#e2e8f0;">${nome}</span>
                     <span style="font-size:0.7rem;">${estrelas(a.nota)}</span>
                 </div>
                 ${a.texto ? `<div style="font-size:0.75rem;color:#94a3b8;line-height:1.5;margin-bottom:4px;">"${a.texto}"</div>` : ''}
                 <div style="font-size:0.58rem;color:#475569;">${a.data || ''}${a.hora ? ' às '+a.hora : ''}</div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
 
         document.getElementById('modal-detalhe-aval')?.remove();
         const modal = document.createElement('div');

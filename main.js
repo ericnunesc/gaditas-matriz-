@@ -198,9 +198,10 @@ const auth = {
         // Badge e painel de solicitações de avaliação física (admin/professor)
         if (this.role === 'admin' || this.role === 'professor') avaliacaoFisica.iniciarListenerSolicitacoes();
 
-        // ── ANIVERSÁRIO e GRADUAÇÃO — para aluno e professor promovido ─────────────
+        // ── ANIVERSÁRIO, CONVOCAÇÃO e GRADUAÇÃO — para aluno e professor promovido ─────────────
         if (this.role === 'aluno' || this.role === 'professor') {
             setTimeout(() => aniversario.verificarAniversario(), 800);
+            setTimeout(() => aniversario.verificarConvocacao(), 1200);
             setTimeout(() => aniversario.verificarGraduacao(), 1500);
         }
 
@@ -1082,7 +1083,7 @@ const academia = {
 
     async marcarParaExame(id, nome) {
         if (!confirm(`Convocar ${nome} para o exame de faixa?\n\nEle(a) verá um aviso fixo no perfil até ser graduado(a).`)) return;
-        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true });
+        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, convocacaoPendente: true });
         alert(`✅ ${nome} foi convocado(a) para o exame de faixa! OSS!`);
         this.generarRelatorioGraduacao();
     },
@@ -6155,6 +6156,74 @@ const aniversario = {
     _dispensar(chave) {
         if (chave) localStorage.setItem(chave, '1');
         document.getElementById('modal-aniversario')?.remove();
+    },
+
+    // ── CONVOCAÇÃO PARA EXAME ──────────────────────────────
+    _convocacaoListener: null,
+
+    verificarConvocacao() {
+        if (auth.role !== 'aluno' && auth.role !== 'professor') return;
+        const alunoId = auth.currentUser?.id;
+        if (!alunoId || alunoId === 'admin') return;
+
+        if (this._convocacaoListener) { this._convocacaoListener(); this._convocacaoListener = null; }
+
+        this._convocacaoListener = db.collection('alunos').doc(alunoId)
+            .onSnapshot(async snap => {
+                if (!snap.exists) return;
+                const dados = snap.data();
+                if (!dados.convocacaoPendente) return;
+                try {
+                    await db.collection('alunos').doc(alunoId).update({ convocacaoPendente: firebase.firestore.FieldValue.delete() });
+                } catch(e) { /* ignora */ }
+                this._mostrarPopupConvocacao(auth.currentUser.nome, dados.faixa);
+            }, e => console.warn('Convocação listener:', e.message));
+    },
+
+    _mostrarPopupConvocacao(nomeCompleto, faixaAtual) {
+        document.getElementById('modal-convocacao')?.remove();
+        const primeiroNome = (nomeCompleto || '').split(' ')[0];
+        const corFaixa = {
+            'Branca':'#e2e8f0','Cinza/Branca':'#b0bec5','Cinza':'#94a3b8','Cinza/Preta':'#607d8b',
+            'Amarela/Branca':'#fff176','Amarela':'#facc15','Amarela/Preta':'#f59e0b',
+            'Laranja/Branca':'#ffb74d','Laranja':'#fb923c','Laranja/Preta':'#f97316',
+            'Verde/Branca':'#a5d6a7','Verde':'#4ade80','Verde/Preta':'#22c55e',
+            'Azul':'#60a5fa','Roxa':'#a78bfa','Marrom':'#d97706','Preta':'#f59e0b'
+        }[faixaAtual] || '#10b981';
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-convocacao';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+
+        modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#0f172a,#1e293b);border:2px solid #10b981;border-radius:24px;padding:36px 28px;max-width:400px;width:100%;text-align:center;box-shadow:0 0 80px #10b98133;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:-10px;left:0;right:0;font-size:1.4rem;opacity:0.12;user-select:none;line-height:1.8;pointer-events:none;">
+                    🥋🏅🎖️🥋🏅🎖️🥋🏅🎖️🥋🏅🎖️🥋🏅🎖️🥋🏅🎖️🥋🏅🎖️🥋🏅🎖️
+                </div>
+                <div style="font-size:3.5rem;margin-bottom:8px;animation:bounce 0.8s infinite alternate;">📋</div>
+                <div style="font-size:0.6rem;color:#10b981;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Gaditas Academy</div>
+                <div style="font-size:1.5rem;font-weight:800;color:white;line-height:1.3;margin-bottom:6px;">
+                    Parabéns,<br>
+                    <span style="color:#10b981;">${primeiroNome}!</span>
+                </div>
+                <div style="display:inline-block;background:#10b981;color:#000;font-weight:800;font-size:0.9rem;padding:8px 24px;border-radius:999px;margin:12px 0;letter-spacing:1px;">
+                    🏆 CONVOCADO PARA O EXAME DE FAIXA
+                </div>
+                <div style="font-size:0.82rem;color:#94a3b8;line-height:1.7;margin:16px 0 24px;">
+                    Seu professor reconheceu sua evolução no tatame e você foi <strong style="color:white;">convocado(a) para o exame de faixa!</strong> 🎉<br><br>
+                    Isso é fruto de muito esforço, dedicação e presença. A família <strong style="color:white;">Gaditas</strong> está orgulhosa de você!<br><br>
+                    <span style="font-size:1.1rem;font-weight:800;color:#10b981;">OSS! 💪🥋</span>
+                </div>
+                <button onclick="document.getElementById('modal-convocacao').remove()"
+                    style="width:100%;padding:16px;background:linear-gradient(135deg,#10b981,#059669);color:#000;border:none;border-radius:12px;font-weight:800;font-size:0.9rem;cursor:pointer;letter-spacing:0.5px;">
+                    🙏 OSS, VAMOS NESSA!
+                </button>
+            </div>
+            <style>
+                @keyframes bounce { from { transform:translateY(0); } to { transform:translateY(-10px); } }
+            </style>`;
+
+        document.body.appendChild(modal);
     },
 
     // ── PARABÉNS POR GRADUAÇÃO ─────────────────────────────

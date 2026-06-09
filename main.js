@@ -5601,9 +5601,9 @@ const ui = {
         // Card config exame admin
         const cardExame = document.getElementById('card-config-exame');
         if (cardExame) cardExame.style.display = isAdmin ? 'block' : 'none';
-        // Tab exame — esconde para admin, professor mostra se convocado
+        // Tab exame — admin sempre vê (painel de gestão), aluno só se convocado
         const menuExame = document.getElementById('menu-exame');
-        if (menuExame && isAdmin) menuExame.style.display = 'none';
+        if (menuExame && isAdmin) menuExame.style.display = 'flex';
         // Toggle VITRINE/GERENCIAR na aba loja — só admin
         const lojaToggle = document.getElementById('loja-admin-toggle');
         if (lojaToggle) lojaToggle.style.display = isAdmin ? 'flex' : 'none';
@@ -6400,8 +6400,9 @@ const exame = {
         container.innerHTML = `<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="color:#f59e0b;font-size:2rem;"></i></div>`;
         try {
             const alunoId = auth.currentUser?.id;
-            if (!alunoId || alunoId === 'admin') {
-                container.innerHTML = `<p style="color:#64748b;text-align:center;padding:30px;font-size:0.8rem;">Painel de exame disponível apenas para alunos.</p>`;
+            // Admin vê o painel de configuração + lista de convocados
+            if (auth.role === 'admin' || alunoId === 'admin') {
+                await this.carregarPainelAdmin();
                 return;
             }
             const alunoDoc = await db.collection('alunos').doc(alunoId).get();
@@ -6549,7 +6550,9 @@ const exame = {
 
     // ── Painel admin — 3 categorias ──────────────────────────
     async carregarPainelAdmin() {
-        const container = document.getElementById('painel-config-exame');
+        // Funciona tanto na aba EXAME (exame-aluno-container) quanto na aba GESTÃO
+        const container = document.getElementById('exame-aluno-container')
+                       || document.getElementById('painel-config-exame');
         if (!container) return;
 
         // Carrega as 3 configs em paralelo
@@ -6596,6 +6599,8 @@ const exame = {
                 <div><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">⏰ HORÁRIO GRAD.</small>${inp('kids-horarioGraduacao', kids.horarioGraduacao,'time')}</div>
             </div>`;
 
+        const isTabExame = !!document.getElementById('exame-aluno-container');
+
         container.innerHTML =
             secao('🧒 KIDS', '#f59e0b', 'kids', kids, extraKids) +
             secao('🥋 16+ ATÉ MARROM', '#3b82f6', 'adulto', adulto) +
@@ -6628,6 +6633,27 @@ const exame = {
         alert(`✅ Exame ${labels[categoria]} salvo! Alunos convocados já verão as informações.`);
     },
 
+    // ── Cor do nome conforme faixa DESTINO ────────────────
+    _corNome(proxFaixa) {
+        const f = proxFaixa.split(' ')[0]; // pega a primeira palavra
+        const cores = {
+            'Preta':        '#ef4444',  // vermelho — especial
+            'Marrom':       '#d97706',
+            'Roxa':         '#a78bfa',
+            'Azul':         '#60a5fa',
+            'Verde':        '#4ade80',
+            'Verde/Preta':  '#4ade80',
+            'Laranja':      '#fb923c',
+            'Laranja/Preta':'#fb923c',
+            'Amarela':      '#facc15',
+            'Amarela/Preta':'#facc15',
+            'Cinza':        '#94a3b8',
+            'Cinza/Preta':  '#94a3b8',
+            'Branca':       '#e2e8f0',
+        };
+        return cores[proxFaixa] || cores[f] || '#e2e8f0';
+    },
+
     async carregarConfirmados() {
         const container = document.getElementById('lista-confirmados-exame');
         if (!container) return;
@@ -6636,37 +6662,72 @@ const exame = {
             if (snap.empty) { container.innerHTML = '<small style="color:#475569;font-size:0.65rem;">Nenhum aluno convocado.</small>'; return; }
 
             const infantil = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
+            const adultoOrder = { 'Azul':10, 'Roxa':20, 'Marrom':30, 'Preta':40 };
 
-            container.innerHTML = snap.docs.map(doc => {
+            // Monta lista com sort key
+            const lista = snap.docs.map(doc => {
                 const a = doc.data(); const id = doc.id;
-                const cat = this._getCategoria(a);
-                const confirmou = a.examePresencaConfirmada === true;
+                const cat      = this._getCategoria(a);
                 const proxFaixa = this._getProxFaixa(a, cat);
-                const catLabel = cat === 'kids' ? '🧒' : cat === 'preta' ? '⬛' : '🥋';
+                // sort: 0=kids (por ordem infantil), 1=adulto (por faixa destino)
+                let sortKey;
+                if (cat === 'kids') {
+                    sortKey = infantil.indexOf(proxFaixa);
+                    if (sortKey < 0) sortKey = 99;
+                    sortKey = `0_${String(sortKey).padStart(2,'0')}`;
+                } else {
+                    const base = proxFaixa.split(' ')[0];
+                    sortKey = `1_${String(adultoOrder[base] || 50).padStart(2,'0')}`;
+                }
+                return { doc, a, id, cat, proxFaixa, sortKey };
+            }).sort((x, y) => x.sortKey.localeCompare(y.sortKey));
 
-                // Seletor de faixa destino para kids
+            // Renderiza agrupado por categoria
+            let lastGroup = null;
+            let html = '';
+
+            lista.forEach(({ a, id, cat, proxFaixa }) => {
+                const confirmou   = a.examePresencaConfirmada === true;
+                const corNome     = this._corNome(proxFaixa);
+                const group       = cat === 'kids' ? 'kids' : proxFaixa.split(' ')[0];
+
+                // Cabeçalho de grupo
+                if (group !== lastGroup) {
+                    lastGroup = group;
+                    const labels = {
+                        kids:'🧒 KIDS', Azul:'🔵 AZUL', Roxa:'🟣 ROXA',
+                        Marrom:'🟤 MARROM → PRETA', Preta:'⬛ FAIXA PRETA'
+                    };
+                    html += `<div style="font-size:0.58rem; font-weight:800; color:${corNome}; letter-spacing:0.8px; margin:10px 0 5px 0; opacity:0.8;">
+                        ${labels[group] || group.toUpperCase()}
+                    </div>`;
+                }
+
+                // Seletor kids
                 const seletorKids = cat === 'kids' ? `
-                    <div style="margin-top:6px; display:flex; gap:6px; align-items:center;">
-                        <small style="color:#f59e0b; font-size:0.58rem; font-weight:800; white-space:nowrap;">Faixa destino:</small>
+                    <div style="margin-top:5px; display:flex; gap:6px; align-items:center;">
+                        <small style="color:#f59e0b; font-size:0.55rem; font-weight:800; white-space:nowrap;">Faixa destino:</small>
                         <select onchange="exame.salvarProxFaixaKids('${id}', this.value)"
-                            style="flex:1; padding:4px 6px; background:#1e293b; border:1px solid #f59e0b44; color:white; border-radius:6px; font-size:0.7rem; outline:none;">
+                            style="flex:1; padding:3px 6px; background:#1e293b; border:1px solid #f59e0b44; color:white; border-radius:6px; font-size:0.68rem; outline:none;">
                             ${infantil.map(f => `<option value="${f}" ${(a.proxFaixaCustom||proxFaixa)===f?'selected':''}>${f}</option>`).join('')}
                         </select>
                     </div>` : '';
 
-                return `<div style="background:#0f172a; border:1px solid ${confirmou ? '#10b98144' : '#334155'}; border-radius:8px; padding:10px 12px; margin-bottom:7px;">
+                html += `<div style="background:#0f172a; border:1px solid ${confirmou ? '#10b98130' : '#1e293b'}; border-left:3px solid ${corNome}; border-radius:8px; padding:10px 12px; margin-bottom:6px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <div style="font-size:0.8rem; font-weight:700; color:white;">${catLabel} ${a.nome}</div>
-                            <div style="font-size:0.6rem; color:#64748b;">${a.faixa} → ${proxFaixa} • ${a.aulas||0} aulas</div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:0.82rem; font-weight:800; color:${corNome}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}</div>
+                            <div style="font-size:0.6rem; color:#64748b; margin-top:1px;">${a.faixa} → <span style="color:${corNome}; font-weight:700;">${proxFaixa}</span> • ${a.aulas||0} aulas</div>
                         </div>
-                        <span style="font-size:0.58rem; font-weight:800; color:${confirmou ? '#10b981' : '#f59e0b'}; white-space:nowrap;">
+                        <span style="font-size:0.58rem; font-weight:800; color:${confirmou ? '#10b981' : '#f59e0b'}; white-space:nowrap; margin-left:8px;">
                             ${confirmou ? '✅ CONF.' : '⏳ PEND.'}
                         </span>
                     </div>
                     ${seletorKids}
                 </div>`;
-            }).join('');
+            });
+
+            container.innerHTML = html;
         } catch(e) {
             container.innerHTML = `<small style="color:#f43f5e;font-size:0.65rem;">Erro: ${e.message}</small>`;
         }

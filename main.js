@@ -7710,12 +7710,19 @@ const treinoPost = {
             el.id = 'avaliacoes-painel';
             el.style.marginBottom = '12px';
             const tab = document.getElementById('tab-relatorios');
-            if (tab) tab.insertBefore(el, tab.firstChild);
+            if (tab) tab.appendChild(el);
         }
         el.innerHTML = `<small style="color:#475569;font-size:0.65rem;"><i class="fas fa-spinner fa-spin"></i></small>`;
         try {
             const snap = await db.collection('avaliacoes_aula').orderBy('ts','desc').limit(300).get();
-            if (snap.empty) { el.innerHTML = ''; return; }
+            if (snap.empty) {
+                el.innerHTML = `
+                    <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:12px;padding:14px;margin-bottom:10px;">
+                        <div style="font-size:0.6rem;font-weight:800;color:#8b5cf6;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">⭐ Avaliações das Aulas</div>
+                        <div style="font-size:0.72rem;color:#475569;text-align:center;padding:10px;">Nenhuma avaliação ainda. Aparecem após o primeiro check-in.</div>
+                    </div>`;
+                return;
+            }
 
             // Agrupa por turma
             const porTurma = {};
@@ -7761,17 +7768,17 @@ const treinoPost = {
             el.id = 'radar-sumidos-container';
             el.style.marginBottom = '12px';
             const tab = document.getElementById('tab-relatorios');
-            if (tab) tab.insertBefore(el, tab.firstChild);
+            if (tab) tab.appendChild(el);
         }
-        // Wrap in accordion
+        // Começa ABERTO
         el.innerHTML = `
             <div style="background:#0a0f1a;border:1px solid #ef444433;border-radius:12px;overflow:hidden;">
-                <div onclick="(()=>{const b=document.getElementById('acc-radar');const c=document.getElementById('chev-acc-radar');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='block'?'rotate(180deg)':''})()"
+                <div onclick="(()=>{const b=document.getElementById('acc-radar');const c=document.getElementById('chev-acc-radar');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='block'?'rotate(180deg)':'rotate(-90deg)'})()"
                     style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer;user-select:none;">
                     <div style="font-size:0.62rem;font-weight:800;color:#ef4444;">📡 Radar de Sumidos</div>
-                    <span id="chev-acc-radar" style="color:#ef4444;font-size:0.7rem;transition:transform 0.2s;">▼</span>
+                    <span id="chev-acc-radar" style="color:#ef4444;font-size:0.7rem;transition:transform 0.2s;transform:rotate(180deg);">▼</span>
                 </div>
-                <div id="acc-radar" style="display:none;padding:0 12px 12px;">
+                <div id="acc-radar" style="display:block;padding:0 12px 12px;">
                     <div id="radar-sumidos-lista"><small style="color:#475569;font-size:0.65rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small></div>
                 </div>
             </div>`;

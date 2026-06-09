@@ -7749,14 +7749,17 @@ const treinoPost = {
                 porTurma[d.turma].push(d);
             });
 
-            const turmasHtml = Object.entries(porTurma).map(([turma, avaliacoes]) => {
+            // Guarda mapa turma→avaliações acessível globalmente para o popup
+            window._avaliacoesAdminCache = porTurma;
+
+            const turmasHtml = Object.keys(porTurma).map((turma, idx) => {
+                const avaliacoes = porTurma[turma];
                 const notas = avaliacoes.map(a => a.nota).filter(n => n > 0);
                 const media = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length).toFixed(1) : '—';
                 const bar   = notas.length ? Math.round((parseFloat(media)/5)*100) : 0;
                 const cor   = bar>=80?'#10b981':bar>=60?'#f59e0b':'#ef4444';
                 const total = avaliacoes.length;
-                const turmaKey = encodeURIComponent(turma);
-                return `<div onclick="treinoPost.abrirDetalheAvaliacao('${turmaKey}')"
+                return `<div onclick="treinoPost.abrirDetalheAvaliacao(${idx})"
                     style="padding:8px 0;border-bottom:1px solid #1e293b;cursor:pointer;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                         <span style="font-size:0.72rem;color:#e2e8f0;font-weight:700;">${turma}</span>
@@ -7782,13 +7785,12 @@ const treinoPost = {
     },
 
     // ── Detalhe avaliações por turma (admin) ─────────────
-    async abrirDetalheAvaliacao(turmaKey) {
-        const turma = decodeURIComponent(turmaKey);
-        const snap = await db.collection('avaliacoes_aula')
-            .where('turma','==',turma).orderBy('ts','desc').get();
-        if (snap.empty) return;
-
-        const avaliacoes = snap.docs.map(d => d.data());
+    abrirDetalheAvaliacao(idx) {
+        try {
+        const cache = window._avaliacoesAdminCache || {};
+        const turma = Object.keys(cache)[idx];
+        if (!turma) return;
+        const avaliacoes = (cache[turma] || []).sort((a,b)=>(b.ts||0)-(a.ts||0));
         const estrelas = n => n > 0 ? ('⭐'.repeat(n) + '☆'.repeat(5-n)) : '—';
 
         const itens = avaliacoes.map(a => `
@@ -7819,6 +7821,7 @@ const treinoPost = {
                 ${itens}
             </div>`;
         document.body.appendChild(modal);
+        } catch(e) { alert('Erro ao carregar avaliações: ' + e.message); }
     },
 
     // ── Radar de Sumidos (admin) ──────────────────────────

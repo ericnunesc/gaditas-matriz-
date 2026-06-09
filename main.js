@@ -6779,7 +6779,10 @@ const exame = {
             secao('🥋 16+ ATÉ MARROM', '#3b82f6', 'adulto', adulto) +
             secaoPreta() +
             `<div style="margin-top:4px;">
-                <div style="font-size:0.62rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:8px;">👥 CONVOCADOS — CONFIRMAÇÕES</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="font-size:0.62rem; font-weight:800; color:#64748b; letter-spacing:0.5px;">👥 CONVOCADOS — CONFIRMAÇÕES</div>
+                    <button onclick="exame.migrarConvocacoesPendentes()" style="font-size:0.55rem; font-weight:800; background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:4px 8px; border-radius:6px; cursor:pointer;">📣 Notificar todos</button>
+                </div>
                 <div id="lista-confirmados-exame"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>
              </div>`;
 
@@ -6977,6 +6980,25 @@ const exame = {
                     <i class="fas fa-chevron-right" style="color:#10b981; font-size:0.8rem; flex-shrink:0;"></i>
                 </div>`;
         } catch(e) { banner.innerHTML = ''; }
+    },
+
+    // ── Migra alunos convocados antes da implementação do popup ──
+    async migrarConvocacoesPendentes() {
+        try {
+            const snap = await db.collection('alunos')
+                .where('aspiranteGraduacao', '==', true)
+                .get();
+            const semNotificacao = snap.docs.filter(d => !d.data().convocacaoPendente);
+            if (semNotificacao.length === 0) {
+                alert('Todos os convocados já foram notificados!');
+                return;
+            }
+            if (!confirm(`Enviar notificação de convocação para ${semNotificacao.length} aluno(s) que ainda não receberam?\n\nEles verão o popup na próxima vez que abrirem o app.`)) return;
+            const batch = db.batch();
+            semNotificacao.forEach(d => batch.update(d.ref, { convocacaoPendente: true }));
+            await batch.commit();
+            alert(`✅ ${semNotificacao.length} aluno(s) serão notificados!`);
+        } catch(e) { alert('Erro: ' + e.message); }
     },
 
     // ── Admin define faixa destino personalizada para kids ──

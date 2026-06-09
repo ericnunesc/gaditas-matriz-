@@ -2303,7 +2303,7 @@ const academia = {
             bairro:      (document.getElementById('me-bairro')?.value || '').trim(),
             cidade:      (document.getElementById('me-cidade')?.value || '').trim(),
             estado:      (document.getElementById('me-estado')?.value || '').trim().toUpperCase(),
-            treinaComAdultos: document.getElementById('me-treina-com-adultos')?.checked || false,
+            treinaComAdultos: document.getElementById('me-treina-toggle')?.dataset.on === 'true',
         };
         // Leões
         const painelLeoes = document.getElementById('me-painel-leoes');
@@ -2445,8 +2445,7 @@ const academia = {
                     <div style="font-size:0.62rem; color:#64748b; margin-top:2px;">Aparece na aba Adultos além de Kids</div>
                 </div>
                 <label style="position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; cursor:pointer;">
-                    <input type="checkbox" id="me-treina-com-adultos" ${a.treinaComAdultos ? 'checked' : ''} ${dis} style="opacity:0; width:0; height:0;">
-                    <span onclick="const cb=document.getElementById('me-treina-com-adultos'); cb.checked=!cb.checked; this.style.background=cb.checked?'#3b82f6':'#334155'; this.querySelector('span').style.left=cb.checked?'23px':'3px';" style="position:absolute; top:0; left:0; right:0; bottom:0; background:${a.treinaComAdultos ? '#3b82f6' : '#334155'}; border-radius:24px; transition:0.3s;">
+                    <span id="me-treina-toggle" data-on="${a.treinaComAdultos ? 'true' : 'false'}" onclick="if('${dis}'==='disabled')return; const on=this.dataset.on==='true'; this.dataset.on=on?'false':'true'; this.style.background=(!on)?'#3b82f6':'#334155'; this.querySelector('span').style.left=(!on)?'23px':'3px';" style="position:absolute; top:0; left:0; right:0; bottom:0; background:${a.treinaComAdultos ? '#3b82f6' : '#334155'}; border-radius:24px; transition:background 0.3s; cursor:pointer;">
                         <span style="position:absolute; height:18px; width:18px; left:${a.treinaComAdultos ? '23px' : '3px'}; bottom:3px; background:white; border-radius:50%; transition:0.3s;"></span>
                     </span>
                 </label>
@@ -4449,8 +4448,7 @@ Ele voltará a ser aluno normal.`)) return;
                             <div style="font-size:0.62rem; color:#64748b; margin-top:2px;">Permite marcar atletas kids para aparecerem na aba Adultos</div>
                         </div>
                         <label style="position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0;">
-                            <input type="checkbox" id="cfg-kids-com-adultos" ${auth.adminCreds?.permitirKidsComAdultos ? 'checked' : ''} style="opacity:0; width:0; height:0;">
-                            <span onclick="const cb=document.getElementById('cfg-kids-com-adultos'); cb.checked=!cb.checked; this.style.background=cb.checked?'#3b82f6':'#334155'; this.querySelector('span').style.left=cb.checked?'23px':'3px';" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:${auth.adminCreds?.permitirKidsComAdultos ? '#3b82f6' : '#334155'}; border-radius:24px; transition:background 0.3s;">
+                            <span id="cfg-kids-toggle" data-on="${auth.adminCreds?.permitirKidsComAdultos ? 'true' : 'false'}" onclick="const on=this.dataset.on==='true'; this.dataset.on=on?'false':'true'; this.style.background=(!on)?'#3b82f6':'#334155'; this.querySelector('span').style.left=(!on)?'23px':'3px';" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:${auth.adminCreds?.permitirKidsComAdultos ? '#3b82f6' : '#334155'}; border-radius:24px; transition:background 0.3s;">
                                 <span style="position:absolute; height:18px; width:18px; left:${auth.adminCreds?.permitirKidsComAdultos ? '23px' : '3px'}; bottom:3px; background:white; border-radius:50%; transition:left 0.3s;"></span>
                             </span>
                         </label>
@@ -4532,7 +4530,7 @@ Ele voltará a ser aluno normal.`)) return;
         if (pass1 && pass1 !== pass2) return alert('As senhas não coincidem.');
         const faixa = document.getElementById('cfg-admin-faixa')?.value || 'Preta';
         const grau  = parseInt(document.getElementById('cfg-admin-grau')?.value ?? 3);
-        const permitirKids = document.getElementById('cfg-kids-com-adultos')?.checked || false;
+        const permitirKids = document.getElementById('cfg-kids-toggle')?.dataset.on === 'true';
         const dados = { nome, user, faixa, grau, permitirKidsComAdultos: permitirKids };
         if (pass1) dados.pass = pass1;
         try {

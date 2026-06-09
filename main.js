@@ -185,9 +185,9 @@ const auth = {
         }
 
         // ── TAB DE EXAME + BANNER TREINO ──────────────────────
-        // Garante escondida antes de verificar (evita flash)
+        // Garante escondida antes de verificar (usa classe por causa do !important no CSS)
         const _btnExame = document.getElementById('menu-exame');
-        if (_btnExame && this.role !== 'admin') _btnExame.style.display = 'none';
+        if (_btnExame && this.role !== 'admin') _btnExame.classList.add('nav-item-hidden');
         if ((this.role === 'aluno' || this.role === 'professor') && this.currentUser?.id) {
             exame.verificarConvocacao(this.currentUser.id);
             setTimeout(() => exame.carregarBannerExame(), 600);
@@ -2143,12 +2143,7 @@ const academia = {
         } catch(e) { console.warn("Verificação duplicado falhou:", e.message); }
 
         await db.collection("checkins").add({ alunoId: auth.currentUser.id, alunoNome: auth.currentUser.nome, turma: t, data: new Date().getTime() });
-        alert("Check-in enviado!"); this.atualizarPresencaAntecipada(); this.carregarMeusCheckinsPendentes();
-        // Pós-treino: avaliação + diário (aluno acabou de treinar)
-        const alunoSnap = await db.collection('alunos').doc(auth.currentUser.id).get();
-        const aulasAtuais = alunoSnap.data()?.aulas || 0;
-        treinoPost.abrirModalPosTreino(auth.currentUser.id, t);
-        treinoPost.verificarMarco(auth.currentUser.id, aulasAtuais);
+        alert("Check-in enviado! Aguarde a aprovação do professor."); this.atualizarPresencaAntecipada(); this.carregarMeusCheckinsPendentes();
     },
 
     async renderRanking() {
@@ -5639,7 +5634,10 @@ const ui = {
         if (cardAniv) cardAniv.style.display = isAdmin ? 'block' : 'none';
         // Tab exame — admin sempre vê; aluno/professor só se convocado (verificarConvocacao cuida disso)
         const menuExame = document.getElementById('menu-exame');
-        if (menuExame) menuExame.style.display = isAdmin ? 'flex' : 'none';
+        if (menuExame) {
+            if (isAdmin) menuExame.classList.remove('nav-item-hidden');
+            else menuExame.classList.add('nav-item-hidden');
+        }
         // Toggle VITRINE/GERENCIAR na aba loja — só admin
         const lojaToggle = document.getElementById('loja-admin-toggle');
         if (lojaToggle) lojaToggle.style.display = isAdmin ? 'flex' : 'none';
@@ -6195,18 +6193,35 @@ const aniversario = {
 
         if (this._convocacaoListener) { this._convocacaoListener(); this._convocacaoListener = null; }
 
+        let _aulasAntes = null; // rastreia aulas para detectar presença computada
+
         this._convocacaoListener = db.collection('alunos').doc(alunoId)
             .onSnapshot(async snap => {
                 if (!snap.exists) return;
                 const dados = snap.data();
-                // Atualiza visibilidade da tab em tempo real
+
+                // 1. Atualiza visibilidade da aba EXAME
                 const btn = document.getElementById('menu-exame');
-                if (btn && auth.role !== 'admin') btn.style.display = (dados.aspiranteGraduacao === true) ? 'flex' : 'none';
-                if (!dados.convocacaoPendente) return;
-                try {
-                    await db.collection('alunos').doc(alunoId).update({ convocacaoPendente: firebase.firestore.FieldValue.delete() });
-                } catch(e) { /* ignora */ }
-                this._mostrarPopupConvocacao(auth.currentUser.nome, dados.faixa);
+                if (btn && auth.role !== 'admin') {
+                    if (dados.aspiranteGraduacao === true) btn.classList.remove('nav-item-hidden');
+                    else btn.classList.add('nav-item-hidden');
+                }
+
+                // 2. Popup de convocação
+                if (dados.convocacaoPendente) {
+                    try { await db.collection('alunos').doc(alunoId).update({ convocacaoPendente: firebase.firestore.FieldValue.delete() }); } catch(e) {}
+                    this._mostrarPopupConvocacao(auth.currentUser.nome, dados.faixa);
+                }
+
+                // 3. Detecta presença computada (aulas aumentou) → modal pós-treino
+                const aulasAgora = dados.aulas || 0;
+                if (_aulasAntes !== null && aulasAgora > _aulasAntes) {
+                    const ultimaEntrada = (dados.historico || [])[0];
+                    const turma = ultimaEntrada?.turma || '';
+                    treinoPost.aoCheckinConcluido(alunoId, aulasAgora, turma);
+                }
+                _aulasAntes = aulasAgora;
+
             }, e => console.warn('Convocação listener:', e.message));
     },
 
@@ -6504,15 +6519,16 @@ const exame = {
     async verificarConvocacao(alunoId) {
         const btn = document.getElementById('menu-exame');
         if (!btn) return;
-        // Admin sempre vê (painel de gestão); já tratado em onRoleDetected
+        // Admin sempre vê (painel de gestão); já tratado em configurarVisao
         if (auth.role === 'admin') return;
-        if (!alunoId || alunoId === 'admin') { btn.style.display = 'none'; return; }
+        if (!alunoId || alunoId === 'admin') { btn.classList.add('nav-item-hidden'); return; }
         try {
             const doc = await db.collection('alunos').doc(alunoId).get();
-            if (!doc.exists) { btn.style.display = 'none'; return; }
+            if (!doc.exists) { btn.classList.add('nav-item-hidden'); return; }
             const convocado = doc.data().aspiranteGraduacao === true;
-            btn.style.display = convocado ? 'flex' : 'none';
-        } catch(e) { btn.style.display = 'none'; }
+            if (convocado) btn.classList.remove('nav-item-hidden');
+            else btn.classList.add('nav-item-hidden');
+        } catch(e) { btn.classList.add('nav-item-hidden'); }
     },
 
     // ── Carrega a tela do aluno convocado ──

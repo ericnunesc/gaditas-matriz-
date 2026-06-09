@@ -185,6 +185,9 @@ const auth = {
         }
 
         // ── TAB DE EXAME + BANNER TREINO ──────────────────────
+        // Garante escondida antes de verificar (evita flash)
+        const _btnExame = document.getElementById('menu-exame');
+        if (_btnExame && this.role !== 'admin') _btnExame.style.display = 'none';
         if ((this.role === 'aluno' || this.role === 'professor') && this.currentUser?.id) {
             exame.verificarConvocacao(this.currentUser.id);
             setTimeout(() => exame.carregarBannerExame(), 600);
@@ -2141,6 +2144,11 @@ const academia = {
 
         await db.collection("checkins").add({ alunoId: auth.currentUser.id, alunoNome: auth.currentUser.nome, turma: t, data: new Date().getTime() });
         alert("Check-in enviado!"); this.atualizarPresencaAntecipada(); this.carregarMeusCheckinsPendentes();
+        // Pós-treino: avaliação + diário (aluno acabou de treinar)
+        const alunoSnap = await db.collection('alunos').doc(auth.currentUser.id).get();
+        const aulasAtuais = alunoSnap.data()?.aulas || 0;
+        treinoPost.abrirModalPosTreino(auth.currentUser.id, t);
+        treinoPost.verificarMarco(auth.currentUser.id, aulasAtuais);
     },
 
     async renderRanking() {
@@ -6193,7 +6201,7 @@ const aniversario = {
                 const dados = snap.data();
                 // Atualiza visibilidade da tab em tempo real
                 const btn = document.getElementById('menu-exame');
-                if (btn && auth.role !== 'admin') btn.style.display = dados.aspiranteGraduacao ? 'flex' : 'none';
+                if (btn && auth.role !== 'admin') btn.style.display = (dados.aspiranteGraduacao === true) ? 'flex' : 'none';
                 if (!dados.convocacaoPendente) return;
                 try {
                     await db.collection('alunos').doc(alunoId).update({ convocacaoPendente: firebase.firestore.FieldValue.delete() });

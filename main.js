@@ -4450,8 +4450,8 @@ Ele voltará a ser aluno normal.`)) return;
                         </div>
                         <label style="position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0;">
                             <input type="checkbox" id="cfg-kids-com-adultos" ${auth.adminCreds?.permitirKidsComAdultos ? 'checked' : ''} style="opacity:0; width:0; height:0;">
-                            <span onclick="this.previousElementSibling.checked=!this.previousElementSibling.checked" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:${auth.adminCreds?.permitirKidsComAdultos ? '#3b82f6' : '#334155'}; border-radius:24px; transition:0.3s;">
-                                <span style="position:absolute; height:18px; width:18px; left:${auth.adminCreds?.permitirKidsComAdultos ? '23px' : '3px'}; bottom:3px; background:white; border-radius:50%; transition:0.3s;"></span>
+                            <span onclick="const cb=document.getElementById('cfg-kids-com-adultos'); cb.checked=!cb.checked; this.style.background=cb.checked?'#3b82f6':'#334155'; this.querySelector('span').style.left=cb.checked?'23px':'3px';" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:${auth.adminCreds?.permitirKidsComAdultos ? '#3b82f6' : '#334155'}; border-radius:24px; transition:background 0.3s;">
+                                <span style="position:absolute; height:18px; width:18px; left:${auth.adminCreds?.permitirKidsComAdultos ? '23px' : '3px'}; bottom:3px; background:white; border-radius:50%; transition:left 0.3s;"></span>
                             </span>
                         </label>
                     </div>

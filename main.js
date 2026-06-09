@@ -1661,6 +1661,12 @@ const academia = {
             if (isMT) upd.aulasMT = (d.aulasMT || 0) + 1;
             else       upd.aulas   = (d.aulas   || 0) + 1;
             await r.update(upd);
+
+            // Pós-treino para o próprio aluno (se ele estiver logado)
+            if (aId === auth.currentUser?.id) {
+                const novasAulas = isMT ? (d.aulasMT||0)+1 : (d.aulas||0)+1;
+                treinoPost.aoCheckinConcluido(aId, novasAulas, t);
+            }
         }
         await db.collection("checkins").doc(cId).delete();
         this.renderCheckins(); academia.renderRanking(); academia.carregarConquistas();
@@ -4713,6 +4719,12 @@ Ele voltará a ser aluno normal.`)) return;
                 await batch.commit();
 
                 alert("✅ Presença computada automaticamente! Turma: " + turmaQR + " OSS! 🥋");
+
+                // Pós-treino: marco + diário + avaliação
+                if (alunoId === auth.currentUser?.id) {
+                    const novasAulas = isMTqr ? (d.aulasMT||0)+1 : (d.aulas||0)+1;
+                    treinoPost.aoCheckinConcluido(alunoId, novasAulas, turmaQR);
+                }
             } else {
                 // Fora da janela — envia para fila do professor aprovar
                 const snapCI = await db.collection("checkins").where("alunoId", "==", alunoId).get();
@@ -5489,7 +5501,7 @@ const ui = {
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
         if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
-        if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); avaliacaoFisica._garantirPainelSolicitacoes(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
+        if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }
     },
@@ -5874,6 +5886,14 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                             🎖️ HISTÓRICO DE GRADUAÇÕES
                         </button>
                     </div>
+                    <!-- Diário de Treino -->
+                    ${(d.diarioTreino||[]).length > 0 ? `
+                    <div style="margin-top:8px;">
+                        <button onclick="treinoPost.abrirDiario()"
+                            style="width:100%; padding:11px; background:#0f172a; border:1px solid #33415555; color:#94a3b8; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; gap:8px;">
+                            📓 MEU DIÁRIO DE TREINO
+                        </button>
+                    </div>` : ''}
                 </div>`;
             // Renderiza calendário/lista após o HTML do perfil ser inserido
             setTimeout(() => this._renderCal(), 50);
@@ -7488,6 +7508,348 @@ const tecnicasExame = {
         <script>window.onload=()=>window.print();<\/script>
         </body></html>`);
         w.document.close();
+    },
+};
+
+// ══════════════════════════════════════════════════════════
+// PÓS-TREINO: Diário + Avaliação + Marcos de Aulas
+// ══════════════════════════════════════════════════════════
+const treinoPost = {
+
+    _MARCOS: [50, 100, 150, 200, 300, 500, 1000],
+
+    // Chamado após qualquer check-in bem-sucedido do aluno atual
+    async aoCheckinConcluido(alunoId, novasAulas, turma) {
+        // 1. Verificar marco
+        await this.verificarMarco(alunoId, novasAulas);
+        // 2. Modal de avaliação + diário (leve delay para não conflitar com marco)
+        setTimeout(() => this.abrirModalPosTreino(alunoId, turma), 800);
+    },
+
+    // ── Marcos de aulas ──────────────────────────────────
+    async verificarMarco(alunoId, aulas) {
+        if (!this._MARCOS.includes(aulas)) return;
+        const chave = `gaditas_marco_${alunoId}_${aulas}`;
+        if (localStorage.getItem(chave)) return;
+        localStorage.setItem(chave, '1');
+        this._mostrarPopupMarco(auth.currentUser?.nome || '', aulas);
+    },
+
+    _mostrarPopupMarco(nomeCompleto, aulas) {
+        document.getElementById('modal-marco-aulas')?.remove();
+        const primeiroNome = (nomeCompleto || '').split(' ')[0];
+        const emojis = { 50:'🥉', 100:'🥈', 150:'🎖️', 200:'🥇', 300:'🏆', 500:'👑', 1000:'🐉' };
+        const emoji  = emojis[aulas] || '🏅';
+        const modal  = document.createElement('div');
+        modal.id = 'modal-marco-aulas';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#0f172a,#1e293b);border:2px solid #f59e0b;border-radius:24px;padding:36px 28px;max-width:400px;width:100%;text-align:center;box-shadow:0 0 80px #f59e0b44;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:-10px;left:0;right:0;font-size:1.4rem;opacity:0.12;user-select:none;line-height:1.8;pointer-events:none;">⭐🏅🎯⭐🏅🎯⭐🏅🎯⭐🏅🎯⭐🏅🎯⭐🏅🎯</div>
+                <div style="font-size:4rem;margin-bottom:8px;animation:bounce 0.8s infinite alternate;">${emoji}</div>
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Marco Alcançado!</div>
+                <div style="font-size:1.5rem;font-weight:800;color:white;line-height:1.3;margin-bottom:10px;">
+                    ${primeiroNome}, você bateu<br>
+                    <span style="color:#f59e0b;font-size:2.2rem;">${aulas}</span>
+                    <span style="color:#f59e0b;"> aulas!</span>
+                </div>
+                <div style="font-size:0.82rem;color:#94a3b8;line-height:1.7;margin:12px 0 24px;">
+                    Cada aula é um passo na sua jornada. 💪<br>
+                    A família <strong style="color:white;">Gaditas</strong> celebra cada treino seu com muito orgulho!<br><br>
+                    <span style="font-size:1.1rem;font-weight:800;color:#f59e0b;">OSS! 🥋</span>
+                </div>
+                <button onclick="document.getElementById('modal-marco-aulas').remove()"
+                    style="width:100%;padding:16px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:12px;font-weight:800;font-size:0.9rem;cursor:pointer;">
+                    🙏 QUE VENHAM MAIS ${aulas === 1000 ? '500' : aulas}!
+                </button>
+            </div>
+            <style>@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-10px)}}</style>`;
+        document.body.appendChild(modal);
+    },
+
+    // ── Modal pós-treino: ⭐ Avaliação + 📝 Diário ────────
+    abrirModalPosTreino(alunoId, turma) {
+        // Não abre se já abriu para esta aula hoje
+        const hoje = new Date().toLocaleDateString('pt-BR');
+        const chave = `gaditas_postreino_${alunoId}_${hoje}_${turma}`;
+        if (localStorage.getItem(chave)) return;
+
+        document.getElementById('modal-pos-treino')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-pos-treino';
+        modal.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;z-index:99997;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#0f172a;border:1px solid #334155;border-top:3px solid #8b5cf6;border-radius:20px 20px 16px 16px;padding:20px;max-width:480px;margin:0 auto;box-shadow:0 -8px 30px rgba(0,0,0,0.5);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <div>
+                        <div style="font-size:0.6rem;color:#8b5cf6;font-weight:800;letter-spacing:1px;text-transform:uppercase;">Como foi o treino?</div>
+                        <div style="font-size:0.75rem;color:#e2e8f0;font-weight:700;margin-top:2px;">${turma}</div>
+                    </div>
+                    <button onclick="treinoPost._fecharModalPosTreino('${chave}')" style="background:none;border:none;color:#475569;cursor:pointer;font-size:1rem;">✕</button>
+                </div>
+
+                <!-- Estrelas -->
+                <div style="display:flex;justify-content:center;gap:10px;margin-bottom:16px;" id="estrelas-treino">
+                    ${[1,2,3,4,5].map(n => `
+                        <button onclick="treinoPost._selecionarEstrela(${n})" id="star-${n}"
+                            style="font-size:2rem;background:none;border:none;cursor:pointer;opacity:0.3;transition:all 0.15s;filter:grayscale(1);">⭐</button>
+                    `).join('')}
+                </div>
+
+                <!-- Diário -->
+                <div style="margin-bottom:14px;">
+                    <textarea id="diario-treino-txt" placeholder="O que você treinou hoje? Como se sentiu? (opcional)"
+                        style="width:100%;padding:10px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:10px;font-size:0.78rem;outline:none;resize:none;box-sizing:border-box;line-height:1.5;" rows="3"></textarea>
+                </div>
+
+                <button onclick="treinoPost._salvar('${alunoId}','${turma}','${chave}')"
+                    style="width:100%;padding:12px;background:#8b5cf6;border:none;color:white;border-radius:10px;font-weight:800;font-size:0.82rem;cursor:pointer;">
+                    💾 Salvar e Fechar
+                </button>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    _notaSelecionada: 0,
+    _selecionarEstrela(n) {
+        this._notaSelecionada = n;
+        [1,2,3,4,5].forEach(i => {
+            const btn = document.getElementById(`star-${i}`);
+            if (!btn) return;
+            btn.style.opacity  = i <= n ? '1' : '0.3';
+            btn.style.filter   = i <= n ? 'none' : 'grayscale(1)';
+            btn.style.transform = i <= n ? 'scale(1.15)' : 'scale(1)';
+        });
+    },
+
+    async _salvar(alunoId, turma, chave) {
+        const nota  = this._notaSelecionada;
+        const texto = document.getElementById('diario-treino-txt')?.value?.trim() || '';
+        const hoje  = new Date();
+        const dataStr = hoje.toLocaleDateString('pt-BR');
+        const horaStr = hoje.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+
+        try {
+            const updates = {};
+
+            // Salva avaliação anônima (só se preencheu estrelas)
+            if (nota > 0) {
+                await db.collection('avaliacoes_aula').add({
+                    turma, nota, data: dataStr, hora: horaStr,
+                    ts: Date.now()
+                });
+            }
+
+            // Salva diário no perfil do aluno
+            if (texto) {
+                const snap = await db.collection('alunos').doc(alunoId).get();
+                const diario = snap.data()?.diarioTreino || [];
+                diario.unshift({ data: dataStr, hora: horaStr, turma, texto, nota: nota || null });
+                if (diario.length > 200) diario.splice(200); // limite
+                updates.diarioTreino = diario;
+                await db.collection('alunos').doc(alunoId).update(updates);
+            }
+        } catch(e) { /* ignora erros silenciosamente */ }
+
+        localStorage.setItem(chave, '1');
+        this._notaSelecionada = 0;
+        document.getElementById('modal-pos-treino')?.remove();
+    },
+
+    _fecharModalPosTreino(chave) {
+        localStorage.setItem(chave, '1');
+        this._notaSelecionada = 0;
+        document.getElementById('modal-pos-treino')?.remove();
+    },
+
+    // ── Diário do aluno ───────────────────────────────────
+    async abrirDiario() {
+        const alunoId = auth.currentUser?.id;
+        if (!alunoId) return;
+        const snap = await db.collection('alunos').doc(alunoId).get();
+        const entradas = snap.data()?.diarioTreino || [];
+
+        document.getElementById('modal-diario-treino')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-diario-treino';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#020617;z-index:99999;overflow-y:auto;padding:20px;box-sizing:border-box;';
+
+        const estrelas = n => n ? '⭐'.repeat(n) + '☆'.repeat(5-n) : '';
+
+        const entradasHtml = entradas.length ? entradas.map(e => `
+            <div style="background:#0f172a;border:1px solid #1e293b;border-left:3px solid #8b5cf6;border-radius:0 10px 10px 0;padding:10px 12px;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <span style="font-size:0.6rem;color:#475569;font-weight:700;">${e.data}${e.hora ? ' às '+e.hora : ''} · ${e.turma||''}</span>
+                    ${e.nota ? `<span style="font-size:0.65rem;">${estrelas(e.nota)}</span>` : ''}
+                </div>
+                <div style="font-size:0.78rem;color:#e2e8f0;line-height:1.5;">${e.texto}</div>
+            </div>`).join('')
+        : `<div style="text-align:center;padding:30px;color:#475569;font-size:0.8rem;">Nenhuma entrada ainda.</div>`;
+
+        modal.innerHTML = `
+            <div style="max-width:500px;margin:0 auto;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <div>
+                        <div style="font-size:0.55rem;color:#8b5cf6;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;">Seus registros</div>
+                        <div style="font-size:1rem;font-weight:900;color:white;">📓 Diário de Treino</div>
+                    </div>
+                    <button onclick="document.getElementById('modal-diario-treino').remove()"
+                        style="padding:8px 14px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.75rem;font-weight:800;cursor:pointer;">✕ Fechar</button>
+                </div>
+                <div style="font-size:0.6rem;color:#475569;font-weight:700;margin-bottom:8px;">${entradas.length} entrada${entradas.length!==1?'s':''}</div>
+                ${entradasHtml}
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    // ── Painel de avaliações (admin, aba relatórios) ──────
+    async renderAvaliacoesPainel() {
+        let el = document.getElementById('avaliacoes-painel');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'avaliacoes-painel';
+            el.style.marginBottom = '12px';
+            const tab = document.getElementById('tab-relatorios');
+            if (tab) tab.insertBefore(el, tab.firstChild);
+        }
+        el.innerHTML = `<small style="color:#475569;font-size:0.65rem;"><i class="fas fa-spinner fa-spin"></i></small>`;
+        try {
+            const snap = await db.collection('avaliacoes_aula').orderBy('ts','desc').limit(300).get();
+            if (snap.empty) { el.innerHTML = ''; return; }
+
+            // Agrupa por turma
+            const porTurma = {};
+            snap.forEach(doc => {
+                const d = doc.data();
+                if (!porTurma[d.turma]) porTurma[d.turma] = [];
+                porTurma[d.turma].push(d.nota);
+            });
+
+            const turmasHtml = Object.entries(porTurma).map(([turma, notas]) => {
+                const media = (notas.reduce((a,b)=>a+b,0)/notas.length).toFixed(1);
+                const stars = Math.round(parseFloat(media));
+                const bar   = Math.round((parseFloat(media)/5)*100);
+                const cor   = bar>=80?'#10b981':bar>=60?'#f59e0b':'#ef4444';
+                return `<div style="padding:7px 0;border-bottom:1px solid #1e293b;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                        <span style="font-size:0.72rem;color:#e2e8f0;font-weight:700;">${turma}</span>
+                        <div style="display:flex;align-items:center;gap:5px;">
+                            <span style="font-size:0.65rem;color:#f59e0b;">★</span>
+                            <span style="font-size:0.78rem;font-weight:900;color:white;">${media}</span>
+                            <span style="font-size:0.58rem;color:#475569;">(${notas.length} avaliações)</span>
+                        </div>
+                    </div>
+                    <div style="background:#1e293b;border-radius:999px;height:4px;overflow:hidden;">
+                        <div style="width:${bar}%;height:100%;background:${cor};border-radius:999px;"></div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            el.innerHTML = `
+                <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:12px;padding:14px;margin-bottom:10px;">
+                    <div style="font-size:0.6rem;font-weight:800;color:#8b5cf6;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">⭐ Avaliações das Aulas</div>
+                    ${turmasHtml}
+                </div>`;
+        } catch(e) { el.innerHTML = ''; }
+    },
+
+    // ── Radar de Sumidos (admin) ──────────────────────────
+    async renderRadarSumidos() {
+        let el = document.getElementById('radar-sumidos-container');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'radar-sumidos-container';
+            el.style.marginBottom = '12px';
+            const tab = document.getElementById('tab-relatorios');
+            if (tab) tab.insertBefore(el, tab.firstChild);
+        }
+        // Wrap in accordion
+        el.innerHTML = `
+            <div style="background:#0a0f1a;border:1px solid #ef444433;border-radius:12px;overflow:hidden;">
+                <div onclick="(()=>{const b=document.getElementById('acc-radar');const c=document.getElementById('chev-acc-radar');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='block'?'rotate(180deg)':''})()"
+                    style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer;user-select:none;">
+                    <div style="font-size:0.62rem;font-weight:800;color:#ef4444;">📡 Radar de Sumidos</div>
+                    <span id="chev-acc-radar" style="color:#ef4444;font-size:0.7rem;transition:transform 0.2s;">▼</span>
+                </div>
+                <div id="acc-radar" style="display:none;padding:0 12px 12px;">
+                    <div id="radar-sumidos-lista"><small style="color:#475569;font-size:0.65rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small></div>
+                </div>
+            </div>`;
+        this._carregarRadarLista();
+    },
+
+    async _carregarRadarLista() {
+        const el = document.getElementById('radar-sumidos-lista');
+        if (!el) return;
+        el.innerHTML = `<small style="color:#475569;font-size:0.65rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small>`;
+        try {
+            const snap = await db.collection('alunos').get();
+            const agora = Date.now();
+            const d14 = agora - 14 * 86400000;
+            const d30 = agora - 30 * 86400000;
+
+            const sumidos14 = [], sumidos30 = [];
+
+            snap.forEach(doc => {
+                const a = doc.data();
+                if (a.status === 'trancado' || a.status === 'inativo') return;
+                const hist = a.historico || [];
+                if (!hist.length) return; // sem histórico ainda
+                const ultima = hist[0]?.data;
+                if (!ultima) return;
+                const p = ultima.split(',')[0].split('/');
+                if (p.length < 3) return;
+                const ms = new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime();
+                if (ms < d30)      sumidos30.push({ id: doc.id, a, ultimaAula: ultima, diasSem: Math.floor((agora - ms) / 86400000) });
+                else if (ms < d14) sumidos14.push({ id: doc.id, a, ultimaAula: ultima, diasSem: Math.floor((agora - ms) / 86400000) });
+            });
+
+            sumidos14.sort((a,b) => b.diasSem - a.diasSem);
+            sumidos30.sort((a,b) => b.diasSem - a.diasSem);
+
+            const cardAluno = ({ id, a, ultimaAula, diasSem }) => {
+                const tel = (a.telefone || '').replace(/\D/g,'');
+                const wpp = tel ? `https://wa.me/55${tel}?text=${encodeURIComponent(`Olá ${a.nome.split(' ')[0]}, sentimos sua falta no tatame! OSS 🥋`)}` : '';
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0f172a;border-left:3px solid ${diasSem>=30?'#ef4444':'#f59e0b'};border-radius:0 8px 8px 0;margin-bottom:5px;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:0.78rem;font-weight:800;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome}</div>
+                        <div style="font-size:0.6rem;color:#64748b;margin-top:1px;">${a.faixa||'Branca'} · Última aula: ${ultimaAula.split(',')[0]}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px;">
+                        <span style="font-size:0.65rem;font-weight:900;color:${diasSem>=30?'#ef4444':'#f59e0b'};">${diasSem}d</span>
+                        ${wpp ? `<a href="${wpp}" target="_blank"
+                            style="background:#064e3b;border:1px solid #10b981;color:#10b981;padding:4px 8px;border-radius:6px;font-size:0.6rem;font-weight:800;text-decoration:none;">
+                            💬 WhatsApp</a>` : ''}
+                    </div>
+                </div>`;
+            };
+
+            const grupo = (titulo, cor, lista) => {
+                if (!lista.length) return '';
+                const gid = `radar-grp-${cor.replace('#','')}`;
+                return `<div style="background:#0a0f1a;border:1px solid ${cor}33;border-radius:10px;margin-bottom:8px;overflow:hidden;">
+                    <div onclick="(()=>{const b=document.getElementById('${gid}');const c=document.getElementById('chev-${gid}');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='block'?'rotate(180deg)':''})()"
+                        style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;cursor:pointer;user-select:none;">
+                        <div style="font-size:0.62rem;font-weight:800;color:${cor};">${titulo}</div>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:0.65rem;font-weight:900;background:${cor}22;color:${cor};padding:2px 8px;border-radius:999px;">${lista.length}</span>
+                            <span id="chev-${gid}" style="color:${cor};font-size:0.65rem;transition:transform 0.2s;">▼</span>
+                        </div>
+                    </div>
+                    <div id="${gid}" style="display:none;padding:0 10px 10px;">${lista.map(cardAluno).join('')}</div>
+                </div>`;
+            };
+
+            if (!sumidos14.length && !sumidos30.length) {
+                el.innerHTML = `<div style="text-align:center;padding:20px;color:#10b981;font-size:0.8rem;font-weight:800;">✅ Nenhum aluno sumido! Turma unida! 💪</div>`;
+                return;
+            }
+
+            el.innerHTML =
+                grupo('⚠️ 14 a 29 dias sem treinar', '#f59e0b', sumidos14) +
+                grupo('🚨 30+ dias sem treinar',      '#ef4444', sumidos30);
+
+        } catch(e) { el.innerHTML = `<small style="color:#f43f5e;font-size:0.65rem;">Erro: ${e.message}</small>`; }
     },
 };
 

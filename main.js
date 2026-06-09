@@ -33,7 +33,7 @@ const graduacao = {
     },
     infantil: ["Branca", "Cinza/Branca", "Cinza", "Cinza/Preta", "Amarela/Branca", "Amarela", "Amarela/Preta", "Laranja/Branca", "Laranja", "Laranja/Preta", "Verde/Branca", "Verde", "Verde/Preta"],
     adulto: ["Branca", "Azul", "Roxa", "Marrom", "Preta"],
-    getFaixas(idade) { return idade <= 14 ? this.infantil : this.adulto; },
+    getFaixas(idade) { return idade <= 15 ? this.infantil : this.adulto; },
     getMaxGraus(faixa) { return faixa === "Preta" ? 6 : 4; }
 };
 
@@ -968,7 +968,7 @@ const academia = {
         // ── Aplica filtros de categoria e faixa ───────────────
         const _passaFiltro = (a) => {
             const idade  = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
-            const isKids = idade <= 13;
+            const isKids = idade <= 15;
             if (this._gradFiltroCategoria === 'kids'   && !isKids) return false;
             if (this._gradFiltroCategoria === 'adulto' && isKids)  return false;
             if (this._gradFiltroFaixa !== 'all' && a.faixa !== this._gradFiltroFaixa) return false;
@@ -1466,7 +1466,7 @@ const academia = {
             const nomeAtleta = a.nome ? a.nome.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") : "";
             const buscaNorm = this.textoBuscaNome.normalize("NFD").replace(/[̀-ͯ]/g, "");
             const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
-            const isKids = idade <= 13;
+            const isKids = idade <= 15;
             if (buscaNorm !== "" && !nomeAtleta.includes(buscaNorm)) return;
             if (this.categoriaFiltroAtual === "adult" && isKids && !a.treinaComAdultos) return;
             if (this.categoriaFiltroAtual === "kids" && !isKids) return;
@@ -1565,7 +1565,7 @@ const academia = {
             const a = doc.data();
             const nomeAtleta = a.nome ? a.nome.toLowerCase() : "";
             const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
-            const isKids = idade <= 13;
+            const isKids = idade <= 15;
             if (this.textoBuscaNome !== "" && !nomeAtleta.includes(this.textoBuscaNome)) return false;
             if (this.categoriaFiltroAtual === "adult" && isKids && !a.treinaComAdultos) return false;
             if (this.categoriaFiltroAtual === "kids" && !isKids) return false;
@@ -2067,7 +2067,7 @@ const academia = {
         const nascimento = auth.currentUser?.nascimento;
         if (nascimento) {
             const idade = anoAtual - new Date(nascimento).getFullYear();
-            const isKids          = idade <= 13;
+            const isKids          = idade <= 15;
             const isIntermediario = idade === 14 || idade === 15;
             const turmaKids       = this._isTurmaKids(t);
             const turmaMT         = this._isTurmaMT(t);
@@ -2175,7 +2175,7 @@ const academia = {
             const aulasJJMes = aulasDoMes(a.historico, false);
             const entrada = { ...a, _aulasRanking: aulasJJMes };
             if      (idade <= 8)  listasJJ.kids1.push(entrada);
-            else if (idade <= 14) listasJJ.kids2.push(entrada);
+            else if (idade <= 15) listasJJ.kids2.push(entrada);
             else                  listasJJ.adulto.push(entrada);
         });
         ['kids1','kids2','adulto'].forEach(id => {
@@ -2199,7 +2199,7 @@ const academia = {
             if (mod !== 'muaythai' && mod !== 'ambos') return;
             const aulasMTMes = aulasDoMes(a.historico, true);
             const idade = anoAtual - new Date(a.nascimento).getFullYear();
-            const tag = idade <= 14 ? ' <span style="font-size:0.5rem;color:#f59e0b;font-weight:800;background:#1c1400;border:1px solid #f59e0b44;border-radius:4px;padding:1px 5px;margin-left:3px;">KIDS</span>' : '';
+            const tag = idade <= 15 ? ' <span style="font-size:0.5rem;color:#f59e0b;font-weight:800;background:#1c1400;border:1px solid #f59e0b44;border-radius:4px;padding:1px 5px;margin-left:3px;">KIDS</span>' : '';
             listaMTGeral.push({ ...a, _aulasRanking: aulasMTMes, _tag: tag });
         });
         const cMTG = document.getElementById('lista-ranking-mt-geral');
@@ -2253,7 +2253,7 @@ const academia = {
             if (selFaixaMT && a.faixaMT) selFaixaMT.value = a.faixaMT;
         }
         const idadeAtleta = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
-        if (idadeAtleta <= 14 && isAdmin) {
+        if (idadeAtleta <= 15 && isAdmin) {
             document.getElementById('admin-painel-leoes').classList.remove('hidden');
             const hist = a.historicoLeoes || [];
             this.leoesFichaTemp.leaoAtencao = hist.filter(i => i.campo === 'leaoAtencao' && i.faixa === a.faixa).length;
@@ -2376,7 +2376,7 @@ const academia = {
         const faixasMT = ['Branco (Iniciante)','Branco ponta Vermelha','Vermelha','Vermelha ponta Azul Clara','Azul Clara','Azul Clara ponta Azul Escura (Monitor)','Azul Escura (Instrutor Auxiliar)','Azul Escura ponta Preta (Instrutor)','Preta (Professor)','Preta ponta Branca (Mestre)','Preta, Ponta Branca e Vermelha (Grão Mestre)'];
         const faixasMTOpts = faixasMT.map(f => `<option value="${f}" ${f === a.faixaMT ? 'selected' : ''}>${f}</option>`).join('');
 
-        const usaLeoes = idadeAtleta <= 14 && isAdmin;
+        const usaLeoes = idadeAtleta <= 15 && isAdmin;
         const hist = a.historicoLeoes || [];
         this._meLeoesFichaTemp = {
             leaoAtencao:       hist.filter(i => i.campo === 'leaoAtencao'        && i.faixa === a.faixa).length,
@@ -2463,7 +2463,7 @@ const academia = {
 
             ${leoesPanelHtml}
 
-            ${idadeAtleta <= 13 ? `
+            ${idadeAtleta <= 15 ? `
             <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:14px; margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-size:0.75rem; font-weight:800; color:#e2e8f0;">👥 Treina com Adultos</div>
@@ -2919,7 +2919,7 @@ Ele voltará a ser aluno normal.`)) return;
                     if (!aluno) return false;
                     if (pub === 'individual') return av.alunoId === aluno.id;
                     const idade = aluno.nascimento ? (anoAtual - new Date(aluno.nascimento).getFullYear()) : 99;
-                    const isKids = idade <= 14;
+                    const isKids = idade <= 15;
                     const faixa = aluno.faixa || '';
                     if (pub === 'adulto') return !isKids;
                     if (pub === 'kids') return isKids;
@@ -3988,7 +3988,7 @@ Ele voltará a ser aluno normal.`)) return;
                     if (publico === 'todos')      { tokens.push(a.fcmToken); return; }
                     if (publico === 'individual') { if (doc.id === alunoIndivId) tokens.push(a.fcmToken); return; }
                     const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
-                    const isKids = idade <= 14;
+                    const isKids = idade <= 15;
                     const faixa = a.faixa || '';
                     const mod   = a.modalidade || 'jiujitsu';
                     if (publico === 'adulto'           && !isKids)                                       tokens.push(a.fcmToken);
@@ -4032,7 +4032,7 @@ Ele voltará a ser aluno normal.`)) return;
             if (pub === 'todos') return true;
             if (pub === 'individual') return av.alunoId === aluno.id;
             const idade = aluno.nascimento ? (anoAtual - new Date(aluno.nascimento).getFullYear()) : 99;
-            const isKids = idade <= 14;
+            const isKids = idade <= 15;
             const faixa = aluno.faixa || '';
             if (pub === 'adulto') return !isKids;
             if (pub === 'kids') return isKids;
@@ -4098,7 +4098,7 @@ Ele voltará a ser aluno normal.`)) return;
                 if (ultimaDataMs && ultimaDataMs >= ms7)  ativos7++;
                 if (!ultimaDataMs || ultimaDataMs < ms30) inativos30++;
                 const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
-                if (idade <= 14) {
+                if (idade <= 15) {
                     kids++;
                     const fk = a.faixa || 'Branca';
                     kidsGraus[fk] = (kidsGraus[fk] || 0) + 1;
@@ -4665,7 +4665,7 @@ Ele voltará a ser aluno normal.`)) return;
             // Bloqueia adulto em turma kids e vice-versa
             if (d.nascimento) {
                 const idade = new Date().getFullYear() - new Date(d.nascimento).getFullYear();
-                const isKids          = idade <= 13;
+                const isKids          = idade <= 15;
                 const isIntermediario = idade === 14 || idade === 15;
                 const turmaKids       = this._isTurmaKids(turmaQR);
                 const turmaMT         = this._isTurmaMT(turmaQR);
@@ -5755,7 +5755,7 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             const anoAtual = new Date().getFullYear();
             const idadeAtleta = d.nascimento ? (anoAtual - new Date(d.nascimento).getFullYear()) : 99;
             const cardLeoes = document.getElementById('card-leoes-kids');
-            if (idadeAtleta <= 14) {
+            if (idadeAtleta <= 15) {
                 cardLeoes.classList.remove('hidden');
                 const histLeoes = d.historicoLeoes || [];
                 const lAtencao = histLeoes.filter(i => i.campo === 'leaoAtencao' && i.faixa === d.faixa).length;
@@ -7205,7 +7205,7 @@ const enquetes = {
         if (publico === 'todos') return true;
         const anoAtual = new Date().getFullYear();
         const idade  = aluno.nascimento ? (anoAtual - new Date(aluno.nascimento).getFullYear()) : 99;
-        const isKids = idade <= 13;
+        const isKids = idade <= 15;
         const mod    = aluno.modalidade || 'jiujitsu';
         const faixa  = aluno.faixa || 'Branca';
         switch (publico) {

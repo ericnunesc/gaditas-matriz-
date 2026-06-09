@@ -2438,7 +2438,7 @@ const academia = {
 
             ${leoesPanelHtml}
 
-            ${auth.adminCreds?.permitirKidsComAdultos && idadeAtleta <= 13 ? `
+            ${idadeAtleta <= 13 ? `
             <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:14px; margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-size:0.75rem; font-weight:800; color:#e2e8f0;">👥 Treina com Adultos</div>

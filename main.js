@@ -6842,17 +6842,22 @@ const exame = {
                         </select>
                     </div>` : '';
 
+                const faixaDestino = a.proxFaixaCustom || proxFaixa;
                 html += `<div id="card-conv-${id}" style="background:#0f172a; border:1px solid ${confirmou ? '#10b98130' : '#1e293b'}; border-left:3px solid ${corNome}; border-radius:8px; padding:10px 12px; margin-bottom:6px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div style="flex:1; min-width:0;">
                             <div id="nome-conv-${id}" style="font-size:0.82rem; font-weight:800; color:${corNome}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}</div>
-                            <div id="sub-conv-${id}" data-faixa-atual="${a.faixa}" style="font-size:0.6rem; color:#64748b; margin-top:1px;">${a.faixa} → <span style="color:${corNome}; font-weight:700;">${proxFaixa}</span> • ${a.aulas||0} aulas</div>
+                            <div id="sub-conv-${id}" data-faixa-atual="${a.faixa}" style="font-size:0.6rem; color:#64748b; margin-top:1px;">${a.faixa} → <span style="color:${corNome}; font-weight:700;">${faixaDestino}</span> • ${a.aulas||0} aulas</div>
                         </div>
                         <span style="font-size:0.58rem; font-weight:800; color:${confirmou ? '#10b981' : '#f59e0b'}; white-space:nowrap; margin-left:8px;">
                             ${confirmou ? '✅ CONF.' : '⏳ PEND.'}
                         </span>
                     </div>
                     ${seletorKids}
+                    <button onclick="exame.graduarAluno('${id}')" data-faixa-destino="${faixaDestino}"
+                        style="margin-top:8px; width:100%; padding:7px; background:linear-gradient(135deg,${corNome},${corNome}99); color:#000; font-weight:900; font-size:0.7rem; border:none; border-radius:8px; cursor:pointer; letter-spacing:1px;">
+                        🥋 GRADUAR
+                    </button>
                 </div>`;
             });
 
@@ -6910,6 +6915,49 @@ const exame = {
         try {
             await db.collection('alunos').doc(alunoId).update({ proxFaixaCustom: faixa });
         } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    // ── Graduar aluno direto pela lista de convocados ────────
+    async graduarAluno(alunoId) {
+        const card = document.getElementById(`card-conv-${alunoId}`);
+        const btn = card?.querySelector('button[data-faixa-destino]');
+        const faixaDestino = btn?.dataset.faixaDestino;
+        if (!faixaDestino) return;
+
+        const nomeEl = document.getElementById(`nome-conv-${alunoId}`);
+        const nome = nomeEl?.textContent || '';
+        if (!confirm(`Graduar ${nome} para ${faixaDestino}?`)) return;
+
+        try {
+            btn.disabled = true;
+            btn.textContent = '⏳ Graduando...';
+
+            const docRef = db.collection('alunos').doc(alunoId);
+            const snap = await docRef.get();
+            if (!snap.exists) throw new Error('Aluno não encontrado');
+            const dados = snap.data();
+
+            const hoje = new Date();
+            const dataFormatada = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
+            const historicoGrad = dados.historicoGraduacao || [];
+            historicoGrad.push({ faixa: faixaDestino, grau: 0, faixaMT: null, modalidade: 'jiujitsu', data: dataFormatada });
+
+            await docRef.update({
+                faixa: faixaDestino,
+                grau: 0,
+                aspiranteGraduacao: false,
+                proxFaixaCustom: firebase.firestore.FieldValue.delete(),
+                graduacaoPendente: { faixa: faixaDestino, grau: 0, faixaMT: null, modalidadeAlterada: 'jiujitsu' },
+                historicoGraduacao: historicoGrad,
+                aulas: 0
+            });
+
+            // Remove card da lista
+            card?.remove();
+        } catch(e) {
+            alert('Erro ao graduar: ' + e.message);
+            if (btn) { btn.disabled = false; btn.textContent = '🥋 GRADUAR'; }
+        }
     }
 };
 

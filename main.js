@@ -2057,8 +2057,8 @@ const academia = {
                 // Adulto (>15 anos) bloqueado em turma infantil
                 alert("🚫 Esta turma é exclusiva para alunos até 13 anos.");
                 return;
-            } else if (isKids && !turmaKids) {
-                // Criança (≤13 anos) bloqueada em turma adulto
+            } else if (isKids && !turmaKids && !auth.currentUser?.treinaComAdultos) {
+                // Criança (≤13 anos) bloqueada em turma adulto (exceto se treinaComAdultos)
                 alert("🚫 Alunos até 13 anos não podem fazer check-in nas turmas adulto.");
                 return;
             }
@@ -4654,7 +4654,7 @@ Ele voltará a ser aluno normal.`)) return;
                 } else if (!isKids && turmaKids) {
                     alert("🚫 Esta turma é exclusiva para alunos até 13 anos.");
                     return;
-                } else if (isKids && !turmaKids) {
+                } else if (isKids && !turmaKids && !auth.currentUser?.treinaComAdultos) {
                     alert("🚫 Alunos até 13 anos não podem fazer check-in nas turmas adulto.");
                     return;
                 }

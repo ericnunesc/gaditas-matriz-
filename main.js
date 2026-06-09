@@ -5598,9 +5598,6 @@ const ui = {
         // Card aniversariantes admin
         const cardAniv = document.getElementById('card-aniversariantes-admin');
         if (cardAniv) cardAniv.style.display = isAdmin ? 'block' : 'none';
-        // Card config exame admin
-        const cardExame = document.getElementById('card-config-exame');
-        if (cardExame) cardExame.style.display = isAdmin ? 'block' : 'none';
         // Tab exame — admin sempre vê (painel de gestão), aluno só se convocado
         const menuExame = document.getElementById('menu-exame');
         if (menuExame && isAdmin) menuExame.style.display = 'flex';
@@ -5620,8 +5617,7 @@ const ui = {
         if (fechado) {
             card.classList.remove('gestao-acc-fechado');
             // Carrega conteúdo ao abrir
-            if (cardId === 'card-config-exame') exame.carregarPainelAdmin();
-            if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined') aniversario.renderAdminAniversariantes();
+if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined') aniversario.renderAdminAniversariantes();
             if (cardId === 'card-alertas-saude') academia.carregarRelatosSaude();
             if (cardId === 'card-depoimentos-admin') academia.carregarDepoimentosPendentes();
             if (cardId === 'card-enquetes-admin' && typeof enquetes !== 'undefined') enquetes.renderAdminEnquetes();
@@ -5632,7 +5628,7 @@ const ui = {
 
     _aplicarAcordeoesGestao() {
         // Fecha todos ao (re)abrir a aba — o onclick inline no HTML cuida do toggle
-        ['card-config-exame','card-aniversariantes-admin','card-alertas-saude','card-depoimentos-admin','card-enquetes-admin'].forEach(id => {
+        ['card-aniversariantes-admin','card-alertas-saude','card-depoimentos-admin','card-enquetes-admin'].forEach(id => {
             const card = document.getElementById(id);
             if (card) card.classList.add('gestao-acc-fechado');
         });

@@ -1514,7 +1514,7 @@ const academia = {
                         </div>
                     </div>
                     <div style="display:flex; gap:5px; flex-shrink:0;">
-                        <button onclick="academia.editarAluno('${doc.id}')" style="background:#16161a; border:1px solid #2d2d34; color:#94a3b8; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-eye"></i></button>
+                        <button onclick="academia.abrirModalEditarAluno('${doc.id}')" title="Editar atleta" style="background:#1e3a5f; border:1px solid #3b82f6; color:#93c5fd; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-edit"></i></button>
                         ${telLimpo ? `<button onclick="academia.abrirWhatsappBusiness('${telLimpo}')" title="WhatsApp Business" style="background:#064e3b; border:none; color:#25d366; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : ''}
                         <button onclick="academia.verFichaSaudeAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Ficha de Saúde" style="background:#0c2344; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-notes-medical"></i></button>
                         <button onclick="graduacaoHistorico.abrirModal('${doc.id}')" title="Histórico de Graduações" style="background:#1e1040; border:none; color:#a78bfa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-medal"></i></button>
@@ -2244,6 +2244,206 @@ const academia = {
         document.querySelectorAll('#card-gestao-atleta input, #card-gestao-atleta select').forEach(el => el.disabled = !isAdmin);
         document.getElementById('btn-salvar-atleta').style.display = isAdmin ? 'block' : 'none';
         ui.showTab('tab-alunos');
+    },
+
+    // ── MODAL POPUP EDITAR ATLETA ────────────────────────
+    _meLeoesFichaTemp: { leaoAtencao:0, leaoComportamento:0, leaoCompanheirismo:0, leaoDisciplina:0 },
+
+    _meModalidade(mod) {
+        document.getElementById('me-modalidade').value = mod;
+        const mods = ['jiujitsu','muaythai','ambos'];
+        mods.forEach(m => {
+            const btn = document.getElementById('me-mod-btn-' + m);
+            if (btn) { btn.style.background = m === mod ? '#1e3a8a' : '#0f172a'; btn.style.border = m === mod ? '1px solid #1d4ed8' : '1px solid #334155'; btn.style.color = m === mod ? '#93c5fd' : '#64748b'; }
+        });
+        const secJj = document.getElementById('me-section-jj');
+        const secMt = document.getElementById('me-section-mt');
+        if (secJj) secJj.style.display = (mod === 'muaythai') ? 'none' : 'block';
+        if (secMt) secMt.style.display  = (mod === 'jiujitsu') ? 'none' : 'block';
+    },
+
+    _meAtualizarGraus() {
+        const f = document.getElementById('me-faixa')?.value || 'Branca';
+        const m = graduacao.getMaxGraus(f);
+        let h = '';
+        for (let i = 0; i <= m; i++) h += `<option value="${i}">${i}º G</option>`;
+        const sel = document.getElementById('me-graus');
+        if (sel) sel.innerHTML = h;
+    },
+
+    _meAtualizarFaixas() {
+        const n = document.getElementById('me-nascimento')?.value;
+        const selF = document.getElementById('me-faixa');
+        if (!selF) return;
+        const faixaAtual = selF.value;
+        const idade = n ? (new Date().getFullYear() - new Date(n).getFullYear()) : 99;
+        selF.innerHTML = graduacao.getFaixas(idade).map(f => `<option value="${f}">${f}</option>`).join('');
+        if (faixaAtual && selF.querySelector(`option[value="${faixaAtual}"]`)) selF.value = faixaAtual;
+        this._meAtualizarGraus();
+    },
+
+    async _meSalvar(id) {
+        const mod = document.getElementById('me-modalidade')?.value || 'jiujitsu';
+        const novaFaixa = document.getElementById('me-faixa')?.value || 'Branca';
+        const dados = {
+            nome:        (document.getElementById('me-nome')?.value || '').trim(),
+            email:       (document.getElementById('me-email')?.value || '').trim().toLowerCase(),
+            nascimento:  document.getElementById('me-nascimento')?.value || '',
+            modalidade:  mod,
+            faixa:       (mod === 'muaythai') ? 'Branca' : novaFaixa,
+            grau:        (mod === 'muaythai') ? 0 : (parseInt(document.getElementById('me-graus')?.value) || 0),
+            faixaMT:     (mod === 'muaythai' || mod === 'ambos') ? (document.getElementById('me-faixa-mt')?.value || 'Branco (Iniciante)') : '',
+            cpf:         (document.getElementById('me-cpf')?.value || '').replace(/\D/g,''),
+            telefone:    (document.getElementById('me-telefone')?.value || '').replace(/\D/g,''),
+            cep:         (document.getElementById('me-cep')?.value || '').replace(/\D/g,''),
+            rua:         (document.getElementById('me-rua')?.value || '').trim(),
+            numero:      (document.getElementById('me-numero')?.value || '').trim(),
+            complemento: (document.getElementById('me-complemento')?.value || '').trim(),
+            bairro:      (document.getElementById('me-bairro')?.value || '').trim(),
+            cidade:      (document.getElementById('me-cidade')?.value || '').trim(),
+            estado:      (document.getElementById('me-estado')?.value || '').trim().toUpperCase(),
+        };
+        // Leões
+        const painelLeoes = document.getElementById('me-painel-leoes');
+        if (painelLeoes && !painelLeoes.classList.contains('hidden')) {
+            try {
+                const antigoDoc = await db.collection('alunos').doc(id).get();
+                const antigoDado = antigoDoc.data();
+                let historicoLeoes = antigoDado.historicoLeoes || [];
+                const dataHoje = new Date().toLocaleDateString('pt-BR');
+                const nomesAmigaveis = { leaoAtencao:'Atenção', leaoComportamento:'Comportamento', leaoCompanheirismo:'Companheirismo', leaoDisciplina:'Disciplina' };
+                if (antigoDado.faixa !== novaFaixa) {
+                    this._meLeoesFichaTemp = { leaoAtencao:0, leaoComportamento:0, leaoCompanheirismo:0, leaoDisciplina:0 };
+                } else {
+                    historicoLeoes = historicoLeoes.filter(i => !(i.faixa === antigoDado.faixa));
+                }
+                for (const key in this._meLeoesFichaTemp) {
+                    const qtd = this._meLeoesFichaTemp[key];
+                    for (let i = 0; i < qtd; i++) {
+                        historicoLeoes.unshift({ data: dataHoje, campo: key, faixa: novaFaixa, mensagem: `🎖️ Leão de ${nomesAmigaveis[key]} na Faixa ${novaFaixa}` });
+                    }
+                }
+                dados.historicoLeoes = historicoLeoes;
+            } catch(e) { console.error(e); }
+        }
+        await db.collection('alunos').doc(id).update(dados);
+        document.getElementById('modal-editar-atleta')?.remove();
+        alert('✅ Atleta salvo!');
+        this.renderAlunos();
+    },
+
+    async abrirModalEditarAluno(id) {
+        const docSnap = await db.collection('alunos').doc(id).get();
+        if (!docSnap.exists) return alert('Atleta não encontrado.');
+        const a = docSnap.data();
+        const isAdmin = auth.role === 'admin';
+        const anoAtual = new Date().getFullYear();
+        const idadeAtleta = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
+        const mod = a.modalidade || 'jiujitsu';
+
+        const faixasOpts = graduacao.getFaixas(idadeAtleta).map(f => `<option value="${f}" ${f === a.faixa ? 'selected' : ''}>${f}</option>`).join('');
+        const maxGrau = graduacao.getMaxGraus(a.faixa || 'Branca');
+        let grausOpts = '';
+        for (let i = 0; i <= maxGrau; i++) grausOpts += `<option value="${i}" ${i === (a.grau || 0) ? 'selected' : ''}>${i}º G</option>`;
+
+        const faixasMT = ['Branco (Iniciante)','Branco ponta Vermelha','Vermelha','Vermelha ponta Azul Clara','Azul Clara','Azul Clara ponta Azul Escura (Monitor)','Azul Escura (Instrutor Auxiliar)','Azul Escura ponta Preta (Instrutor)','Preta (Professor)','Preta ponta Branca (Mestre)','Preta, Ponta Branca e Vermelha (Grão Mestre)'];
+        const faixasMTOpts = faixasMT.map(f => `<option value="${f}" ${f === a.faixaMT ? 'selected' : ''}>${f}</option>`).join('');
+
+        const usaLeoes = idadeAtleta <= 14 && isAdmin;
+        const hist = a.historicoLeoes || [];
+        this._meLeoesFichaTemp = {
+            leaoAtencao:       hist.filter(i => i.campo === 'leaoAtencao'        && i.faixa === a.faixa).length,
+            leaoComportamento: hist.filter(i => i.campo === 'leaoComportamento'  && i.faixa === a.faixa).length,
+            leaoCompanheirismo:hist.filter(i => i.campo === 'leaoCompanheirismo' && i.faixa === a.faixa).length,
+            leaoDisciplina:    hist.filter(i => i.campo === 'leaoDisciplina'     && i.faixa === a.faixa).length,
+        };
+
+        const leoesPanelHtml = usaLeoes ? `
+        <div id="me-painel-leoes" style="background:#0f172a; padding:15px; border-radius:12px; margin-top:15px; border:1px solid #334155;">
+            <small style="color:#f59e0b; font-weight:800; display:block; font-size:0.6rem; margin-bottom:10px; text-transform:uppercase;">🦁 Conceder Leões de Conquest</small>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                ${[['leaoAtencao','🟢 Atenção'],['leaoComportamento','🔴 Comportamento'],['leaoCompanheirismo','🔵 Companheirismo'],['leaoDisciplina','🟡 Disciplina']].map(([k,lbl]) => `
+                <div style="background:#1e293b; padding:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid #334155;">
+                    <span style="font-size:0.65rem; color:white; font-weight:700;">${lbl}</span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <button onclick="academia._meLeoesFichaTemp['${k}'] = Math.max(0,(academia._meLeoesFichaTemp['${k}']||0)-1); document.getElementById('me-leao-qty-${k}').innerText = academia._meLeoesFichaTemp['${k}'];" style="background:#334155; border:none; color:white; width:22px; height:22px; border-radius:4px; font-weight:bold; cursor:pointer;">-</button>
+                        <b id="me-leao-qty-${k}" style="font-size:0.8rem; color:white; min-width:12px; text-align:center;">${this._meLeoesFichaTemp[k]}</b>
+                        <button onclick="academia._meLeoesFichaTemp['${k}'] = (academia._meLeoesFichaTemp['${k}']||0)+1; document.getElementById('me-leao-qty-${k}').innerText = academia._meLeoesFichaTemp['${k}'];" style="background:#3b82f6; border:none; color:white; width:22px; height:22px; border-radius:4px; font-weight:bold; cursor:pointer;">+</button>
+                    </div>
+                </div>`).join('')}
+            </div>
+        </div>` : `<div id="me-painel-leoes" class="hidden"></div>`;
+
+        const phoneClean = (a.telefone || '').replace(/\D/g,'');
+        const btnWaHtml = phoneClean ? `<a href="https://wa.me/${phoneClean.startsWith('55') ? phoneClean : '55'+phoneClean}" target="_blank" style="background:#25D366; color:#000; border:none; padding:5px 10px; border-radius:6px; font-size:0.65rem; font-weight:800; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📱 WhatsApp</a>` : '';
+
+        const dis = isAdmin ? '' : 'disabled';
+
+        document.getElementById('modal-editar-atleta')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-editar-atleta';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.88); z-index:9999; display:flex; flex-direction:column; overflow-y:auto; padding:20px; box-sizing:border-box;';
+        modal.innerHTML = `
+        <div style="background:#1e293b; border-radius:16px; padding:20px; max-width:500px; margin:0 auto; width:100%; box-sizing:border-box;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div>
+                    <div style="font-size:0.6rem; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:1px;">✏️ Editar Atleta</div>
+                    <div style="font-size:1rem; font-weight:900; color:white; margin-top:2px;">${a.nome}</div>
+                    ${btnWaHtml}
+                </div>
+                <button onclick="document.getElementById('modal-editar-atleta').remove()" style="background:#334155; border:none; color:white; width:36px; height:36px; border-radius:8px; cursor:pointer; font-size:1rem; font-weight:700; flex-shrink:0;">✕</button>
+            </div>
+
+            <input type="text" id="me-nome" value="${(a.nome||'').replace(/"/g,'&quot;')}" placeholder="Nome Completo" ${dis} style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
+            <input type="email" id="me-email" value="${(a.email||'').replace(/"/g,'&quot;')}" placeholder="E-mail" ${dis} style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
+            <input type="text" id="me-cpf" value="${a.cpf||''}" placeholder="CPF (apenas números)" maxlength="11" ${dis} style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
+            <input type="text" id="me-telefone" value="${a.telefone||''}" placeholder="Telefone com DDD" maxlength="11" ${dis} style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
+            <input type="text" id="me-cep" value="${a.cep||''}" placeholder="CEP" maxlength="8" ${dis} style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
+            <input type="text" id="me-rua" value="${(a.rua||'').replace(/"/g,'&quot;')}" placeholder="Rua / Logradouro" ${dis} style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <input type="text" id="me-numero" value="${(a.numero||'').replace(/"/g,'&quot;')}" placeholder="Nº" ${dis} style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"/>
+                <input type="text" id="me-bairro" value="${(a.bairro||'').replace(/"/g,'&quot;')}" placeholder="Bairro" ${dis} style="flex:2; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"/>
+            </div>
+            <input type="text" id="me-complemento" value="${(a.complemento||'').replace(/"/g,'&quot;')}" placeholder="Complemento" ${dis} style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <input type="text" id="me-cidade" value="${(a.cidade||'').replace(/"/g,'&quot;')}" placeholder="Cidade" ${dis} style="flex:3; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"/>
+                <input type="text" id="me-estado" value="${(a.estado||'').replace(/"/g,'&quot;')}" placeholder="UF" maxlength="2" ${dis} style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; text-align:center; text-transform:uppercase;"/>
+            </div>
+
+            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">MODALIDADE:</small>
+            <input type="hidden" id="me-modalidade" value="${mod}"/>
+            <div style="display:flex; gap:6px; margin-bottom:12px;">
+                <button id="me-mod-btn-jiujitsu" type="button" onclick="academia._meModalidade('jiujitsu')" ${dis} style="flex:1; padding:9px 4px; background:${mod==='jiujitsu'?'#1e3a8a':'#0f172a'}; border:1px solid ${mod==='jiujitsu'?'#1d4ed8':'#334155'}; color:${mod==='jiujitsu'?'#93c5fd':'#64748b'}; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥋 JIU-JITSU</button>
+                <button id="me-mod-btn-muaythai"  type="button" onclick="academia._meModalidade('muaythai')"  ${dis} style="flex:1; padding:9px 4px; background:${mod==='muaythai'?'#1e3a8a':'#0f172a'}; border:1px solid ${mod==='muaythai'?'#1d4ed8':'#334155'}; color:${mod==='muaythai'?'#93c5fd':'#64748b'}; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥊 MUAY THAI</button>
+                <button id="me-mod-btn-ambos"     type="button" onclick="academia._meModalidade('ambos')"     ${dis} style="flex:1; padding:9px 4px; background:${mod==='ambos'?'#1e3a8a':'#0f172a'}; border:1px solid ${mod==='ambos'?'#1d4ed8':'#334155'}; color:${mod==='ambos'?'#93c5fd':'#64748b'}; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">⚔️ AMBOS</button>
+            </div>
+
+            <label style="color:#94a3b8; font-size:0.7rem; margin-left:2px; font-weight:700;">Data de Nascimento:</label>
+            <input type="date" id="me-nascimento" value="${a.nascimento||''}" onchange="academia._meAtualizarFaixas()" ${dis} style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
+
+            <div id="me-section-jj" style="display:${mod==='muaythai'?'none':'block'};">
+                <small style="color:#93c5fd; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px; letter-spacing:0.5px;">🥋 FAIXA JIU-JITSU:</small>
+                <div style="display:flex; gap:10px; margin-bottom:8px;">
+                    <select id="me-faixa" onchange="academia._meAtualizarGraus()" ${dis} style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;">${faixasOpts}</select>
+                    <select id="me-graus" ${dis} style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;">${grausOpts}</select>
+                </div>
+            </div>
+
+            <div id="me-section-mt" style="display:${mod==='jiujitsu'?'none':'block'};">
+                <small style="color:#fca5a5; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px; letter-spacing:0.5px;">🥊 PRAJIOUD MUAY THAI:</small>
+                <select id="me-faixa-mt" ${dis} style="width:100%; padding:10px; background:#0f172a; border:1px solid #7f1d1d; color:white; border-radius:8px; outline:none; font-size:0.78rem; margin-bottom:8px;">${faixasMTOpts}</select>
+            </div>
+
+            ${leoesPanelHtml}
+
+            <div style="display:flex; gap:8px; margin-top:20px;">
+                ${isAdmin ? `<button onclick="academia._meSalvar('${id}')" style="flex:2; padding:13px; background:#3b82f6; border:none; color:white; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.85rem;">💾 SALVAR ALTERAÇÕES</button>` : ''}
+                <button onclick="document.getElementById('modal-editar-atleta').remove()" style="flex:1; padding:13px; background:#334155; border:none; color:white; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.85rem;">✕ FECHAR</button>
+            </div>
+        </div>`;
+
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        document.body.appendChild(modal);
     },
 
     // ── PROMOVER ALUNO A PROFESSOR ────────────────────────

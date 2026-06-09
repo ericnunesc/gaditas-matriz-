@@ -7654,20 +7654,21 @@ const treinoPost = {
         try {
             const updates = {};
 
-            // Salva avaliação anônima (só se preencheu estrelas)
-            if (nota > 0) {
+            // Salva avaliação com nome do aluno (admin pode ver, mas sem ID)
+            if (nota > 0 || texto) {
                 await db.collection('avaliacoes_aula').add({
-                    turma, nota, data: dataStr, hora: horaStr,
-                    ts: Date.now()
+                    turma, nota: nota || 0, texto: texto || '',
+                    alunoNome: auth.currentUser?.nome || 'Aluno',
+                    data: dataStr, hora: horaStr, ts: Date.now()
                 });
             }
 
-            // Salva diário no perfil do aluno
+            // Salva diário no perfil do aluno também
             if (texto) {
                 const snap = await db.collection('alunos').doc(alunoId).get();
                 const diario = snap.data()?.diarioTreino || [];
                 diario.unshift({ data: dataStr, hora: horaStr, turma, texto, nota: nota || null });
-                if (diario.length > 200) diario.splice(200); // limite
+                if (diario.length > 200) diario.splice(200);
                 updates.diarioTreino = diario;
                 await db.collection('alunos').doc(alunoId).update(updates);
             }
@@ -7740,26 +7741,30 @@ const treinoPost = {
                 return;
             }
 
-            // Agrupa por turma
+            // Agrupa por turma (guarda objeto completo)
             const porTurma = {};
             snap.forEach(doc => {
                 const d = doc.data();
                 if (!porTurma[d.turma]) porTurma[d.turma] = [];
-                porTurma[d.turma].push(d.nota);
+                porTurma[d.turma].push(d);
             });
 
-            const turmasHtml = Object.entries(porTurma).map(([turma, notas]) => {
-                const media = (notas.reduce((a,b)=>a+b,0)/notas.length).toFixed(1);
-                const stars = Math.round(parseFloat(media));
-                const bar   = Math.round((parseFloat(media)/5)*100);
+            const turmasHtml = Object.entries(porTurma).map(([turma, avaliacoes]) => {
+                const notas = avaliacoes.map(a => a.nota).filter(n => n > 0);
+                const media = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length).toFixed(1) : '—';
+                const bar   = notas.length ? Math.round((parseFloat(media)/5)*100) : 0;
                 const cor   = bar>=80?'#10b981':bar>=60?'#f59e0b':'#ef4444';
-                return `<div style="padding:7px 0;border-bottom:1px solid #1e293b;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                const total = avaliacoes.length;
+                const turmaKey = encodeURIComponent(turma);
+                return `<div onclick="treinoPost.abrirDetalheAvaliacao('${turmaKey}')"
+                    style="padding:8px 0;border-bottom:1px solid #1e293b;cursor:pointer;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                         <span style="font-size:0.72rem;color:#e2e8f0;font-weight:700;">${turma}</span>
                         <div style="display:flex;align-items:center;gap:5px;">
                             <span style="font-size:0.65rem;color:#f59e0b;">★</span>
                             <span style="font-size:0.78rem;font-weight:900;color:white;">${media}</span>
-                            <span style="font-size:0.58rem;color:#475569;">(${notas.length} avaliações)</span>
+                            <span style="font-size:0.58rem;color:#475569;">(${total})</span>
+                            <span style="font-size:0.6rem;color:#475569;">▶</span>
                         </div>
                     </div>
                     <div style="background:#1e293b;border-radius:999px;height:4px;overflow:hidden;">
@@ -7774,6 +7779,46 @@ const treinoPost = {
                     ${turmasHtml}
                 </div>`;
         } catch(e) { el.innerHTML = ''; }
+    },
+
+    // ── Detalhe avaliações por turma (admin) ─────────────
+    async abrirDetalheAvaliacao(turmaKey) {
+        const turma = decodeURIComponent(turmaKey);
+        const snap = await db.collection('avaliacoes_aula')
+            .where('turma','==',turma).orderBy('ts','desc').get();
+        if (snap.empty) return;
+
+        const avaliacoes = snap.docs.map(d => d.data());
+        const estrelas = n => n > 0 ? ('⭐'.repeat(n) + '☆'.repeat(5-n)) : '—';
+
+        const itens = avaliacoes.map(a => `
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:12px;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <span style="font-size:0.78rem;font-weight:800;color:#e2e8f0;">${a.alunoNome || 'Aluno'}</span>
+                    <span style="font-size:0.7rem;">${estrelas(a.nota)}</span>
+                </div>
+                ${a.texto ? `<div style="font-size:0.75rem;color:#94a3b8;line-height:1.5;margin-bottom:4px;">"${a.texto}"</div>` : ''}
+                <div style="font-size:0.58rem;color:#475569;">${a.data || ''}${a.hora ? ' às '+a.hora : ''}</div>
+            </div>`).join('');
+
+        document.getElementById('modal-detalhe-aval')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-detalhe-aval';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.96);z-index:99999;overflow-y:auto;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="max-width:480px;margin:0 auto;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <div>
+                        <div style="font-size:0.55rem;color:#8b5cf6;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;">Avaliações</div>
+                        <div style="font-size:0.95rem;font-weight:900;color:white;">⭐ ${turma}</div>
+                    </div>
+                    <button onclick="document.getElementById('modal-detalhe-aval').remove()"
+                        style="padding:8px 14px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.75rem;font-weight:800;cursor:pointer;">✕</button>
+                </div>
+                <div style="font-size:0.6rem;color:#475569;margin-bottom:10px;">${avaliacoes.length} avaliação(ões)</div>
+                ${itens}
+            </div>`;
+        document.body.appendChild(modal);
     },
 
     // ── Radar de Sumidos (admin) ──────────────────────────

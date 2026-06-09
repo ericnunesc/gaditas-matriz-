@@ -6485,14 +6485,20 @@ const exame = {
                     </div>
                 </div>` : ''}
 
-                <!-- LOCAL DA GRADUAÇÃO -->
+                <!-- LOCAL DA GRADUAÇÃO + BOTÃO MAPA -->
                 ${cfg.localGraduacao ? `
-                <div style="background:#0f172a; border:1px solid #f59e0b22; border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px;">
-                    <i class="fas fa-map-marker-alt" style="color:#f59e0b; font-size:1rem; flex-shrink:0;"></i>
-                    <div>
-                        <div style="font-size:0.6rem; color:#f59e0b; font-weight:700;">LOCAL DA GRADUAÇÃO</div>
-                        <div style="font-size:0.85rem; font-weight:700; color:white;">${cfg.localGraduacao}</div>
+                <div style="background:#0f172a; border:1px solid #f59e0b22; border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                        <i class="fas fa-map-marker-alt" style="color:#f59e0b; font-size:1rem; flex-shrink:0;"></i>
+                        <div style="flex:1;">
+                            <div style="font-size:0.6rem; color:#f59e0b; font-weight:700;">LOCAL DA GRADUAÇÃO</div>
+                            <div style="font-size:0.85rem; font-weight:700; color:white;">${cfg.localGraduacao}</div>
+                        </div>
                     </div>
+                    <button onclick="window.open('${cfg.mapaGraduacao || `https://maps.google.com/?q=${encodeURIComponent(cfg.localGraduacao || '')}`}','_blank')"
+                        style="width:100%; padding:10px; background:#1e3a8a; border:1px solid #3b82f6; color:#93c5fd; border-radius:8px; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <i class="fas fa-map-marked-alt"></i> ABRIR NO GOOGLE MAPS 🗺️
+                    </button>
                 </div>` : ''}
 
                 <!-- TAXA — Preta usa valor1 (Marrom→Preta) ou valor2 (Preta→Grau) -->
@@ -6621,7 +6627,8 @@ const exame = {
                     <div><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📅 DATA GRADUAÇÃO</small>${inp(`${cat}-dataGraduacao`,cfg.dataGraduacao,'date')}</div>
                     <div><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">⏰ HORÁRIO GRAD.</small>${inp(`${cat}-horarioGraduacao`,cfg.horarioGraduacao,'time')}</div>
                 </div>
-                <div style="margin-bottom:10px;"><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📍 LOCAL DA GRADUAÇÃO</small>${inp(`${cat}-localGraduacao`,cfg.localGraduacao,'text','Ex: Gaditas Academy — Matriz')}</div>
+                <div style="margin-bottom:6px;"><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📍 LOCAL DA GRADUAÇÃO</small>${inp(`${cat}-localGraduacao`,cfg.localGraduacao,'text','Ex: Gaditas Academy — Matriz')}</div>
+                <div style="margin-bottom:10px;"><small style="color:#64748b;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">🗺️ LINK GOOGLE MAPS (opcional — se vazio, gera automático pelo endereço)</small>${inp(`${cat}-mapaGraduacao`,cfg.mapaGraduacao,'url','https://maps.google.com/...')}</div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
                     <div><small style="color:#94a3b8;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">💰 TAXA (R$)</small>${inp(`${cat}-valor`,cfg.valor,'number','0,00')}</div>
@@ -6655,7 +6662,8 @@ const exame = {
                     <div><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📅 DATA GRADUAÇÃO</small>${inp('preta-dataGraduacao',preta.dataGraduacao,'date')}</div>
                     <div><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">⏰ HORÁRIO GRAD.</small>${inp('preta-horarioGraduacao',preta.horarioGraduacao,'time')}</div>
                 </div>
-                <div style="margin-bottom:12px;"><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📍 LOCAL DA GRADUAÇÃO</small>${inp('preta-localGraduacao',preta.localGraduacao,'text','Ex: Gaditas Academy — Matriz')}</div>
+                <div style="margin-bottom:6px;"><small style="color:#fbbf24;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">📍 LOCAL DA GRADUAÇÃO</small>${inp('preta-localGraduacao',preta.localGraduacao,'text','Ex: Gaditas Academy — Matriz')}</div>
+                <div style="margin-bottom:12px;"><small style="color:#64748b;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">🗺️ LINK GOOGLE MAPS (opcional)</small>${inp('preta-mapaGraduacao',preta.mapaGraduacao,'url','https://maps.google.com/...')}</div>
 
                 <!-- PAGAMENTO 1: Marrom → Preta -->
                 <div style="background:#1a1a2e; border:1px solid #ef444433; border-radius:8px; padding:10px; margin-bottom:10px;">
@@ -6707,6 +6715,7 @@ const exame = {
             dataGraduacao:    g('dataGraduacao'),
             horarioGraduacao: g('horarioGraduacao'),
             localGraduacao:   g('localGraduacao').trim(),
+            mapaGraduacao:    g('mapaGraduacao').trim(),
             valor:            parseFloat(g('valor')) || 0,
             linkPagamento:    g('link').trim(),
             instrucoes:       g('instrucoes').trim(),

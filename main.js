@@ -6158,17 +6158,28 @@ const aniversario = {
     },
 
     // ── PARABÉNS POR GRADUAÇÃO ─────────────────────────────
+    _graduacaoListener: null,
+
     async verificarGraduacao() {
         if (auth.role !== 'aluno' && auth.role !== 'professor') return;
-        try {
-            const doc = await db.collection('alunos').doc(auth.currentUser.id).get();
-            if (!doc.exists) return;
-            const dados = doc.data();
-            if (!dados.graduacaoPendente) return;
-            const g = dados.graduacaoPendente;
-            await db.collection('alunos').doc(auth.currentUser.id).update({ graduacaoPendente: firebase.firestore.FieldValue.delete() });
-            this._mostrarPopupGraduacao(auth.currentUser.nome, g);
-        } catch(e) { console.warn('Graduação:', e.message); }
+        const alunoId = auth.currentUser?.id;
+        if (!alunoId || alunoId === 'admin') return;
+
+        // Cancela listener anterior se existir
+        if (this._graduacaoListener) { this._graduacaoListener(); this._graduacaoListener = null; }
+
+        // Listener em tempo real: dispara popup mesmo com aluno já logado
+        this._graduacaoListener = db.collection('alunos').doc(alunoId)
+            .onSnapshot(async snap => {
+                if (!snap.exists) return;
+                const dados = snap.data();
+                if (!dados.graduacaoPendente) return;
+                const g = dados.graduacaoPendente;
+                try {
+                    await db.collection('alunos').doc(alunoId).update({ graduacaoPendente: firebase.firestore.FieldValue.delete() });
+                } catch(e) { /* ignora erro de limpeza */ }
+                this._mostrarPopupGraduacao(auth.currentUser.nome, g);
+            }, e => console.warn('Graduação listener:', e.message));
     },
 
     _mostrarPopupGraduacao(nomeCompleto, g) {

@@ -6302,17 +6302,18 @@ const aniversario = {
 const exame = {
 
     // ── Categoria do aluno ─────────────────────────────────
-    // Convocação é sempre troca de FAIXA — grau é irrelevante
     _getCategoria(aluno) {
         const ano = new Date().getFullYear();
         const idade = aluno.nascimento ? (ano - new Date(aluno.nascimento).getFullYear()) : 99;
         if (idade < 16) return 'kids';
-        if (aluno.faixa === 'Marrom') return 'preta'; // qualquer grau de Marrom → candidato a Preta
+        // Marrom (qualquer grau) OU Preta (subindo grau) → categoria preta
+        if (aluno.faixa === 'Marrom' || aluno.faixa === 'Preta') return 'preta';
         return 'adulto';
     },
 
-    // ── Próxima faixa conforme categoria ──────────────────
-    // Grau NUNCA aparece na convocação — só a faixa destino
+    // ── Próxima promoção conforme categoria ───────────────
+    // Kids e Adulto: só troca de FAIXA (grau irrelevante)
+    // Preta: cada grau É uma promoção nova
     _getProxFaixa(aluno, categoria) {
         if (categoria === 'kids') {
             if (aluno.proxFaixaCustom) return aluno.proxFaixaCustom;
@@ -6320,9 +6321,14 @@ const exame = {
             const idx = infantil.indexOf(aluno.faixa);
             return idx >= 0 && idx < infantil.length - 1 ? infantil[idx + 1] : aluno.faixa;
         }
-        if (categoria === 'preta') return 'Preta';
-        // Adulto: sempre próxima FAIXA, independente de grau
-        const faixas = ['Branca','Azul','Roxa','Marrom','Preta'];
+        if (categoria === 'preta') {
+            const grau = aluno.grau || 0;
+            if (aluno.faixa === 'Marrom') return 'Preta';          // Marrom → Preta (sem grau)
+            if (grau === 0) return 'Preta 1º Grau';                // Preta → Preta 1G
+            return `Preta ${grau + 1}º Grau`;                      // Preta NG → Preta N+1G
+        }
+        // Adulto 16+: sempre próxima FAIXA, grau ignorado
+        const faixas = ['Branca','Azul','Roxa','Marrom'];
         const idx = faixas.indexOf(aluno.faixa);
         return idx >= 0 && idx < faixas.length - 1 ? faixas[idx + 1] : aluno.faixa;
     },

@@ -185,7 +185,7 @@ const auth = {
         }
 
         // ── TAB DE EXAME + BANNER TREINO ──────────────────────
-        if (this.role === 'aluno' && this.currentUser?.id) {
+        if ((this.role === 'aluno' || this.role === 'professor') && this.currentUser?.id) {
             exame.verificarConvocacao(this.currentUser.id);
             setTimeout(() => exame.carregarBannerExame(), 600);
         }
@@ -5630,9 +5630,9 @@ const ui = {
         // Card aniversariantes admin
         const cardAniv = document.getElementById('card-aniversariantes-admin');
         if (cardAniv) cardAniv.style.display = isAdmin ? 'block' : 'none';
-        // Tab exame — admin sempre vê (painel de gestão), aluno só se convocado
+        // Tab exame — admin sempre vê; aluno/professor só se convocado (verificarConvocacao cuida disso)
         const menuExame = document.getElementById('menu-exame');
-        if (menuExame && isAdmin) menuExame.style.display = 'flex';
+        if (menuExame) menuExame.style.display = isAdmin ? 'flex' : 'none';
         // Toggle VITRINE/GERENCIAR na aba loja — só admin
         const lojaToggle = document.getElementById('loja-admin-toggle');
         if (lojaToggle) lojaToggle.style.display = isAdmin ? 'flex' : 'none';
@@ -6192,6 +6192,9 @@ const aniversario = {
             .onSnapshot(async snap => {
                 if (!snap.exists) return;
                 const dados = snap.data();
+                // Atualiza visibilidade da tab em tempo real
+                const btn = document.getElementById('menu-exame');
+                if (btn && auth.role !== 'admin') btn.style.display = dados.aspiranteGraduacao ? 'flex' : 'none';
                 if (!dados.convocacaoPendente) return;
                 try {
                     await db.collection('alunos').doc(alunoId).update({ convocacaoPendente: firebase.firestore.FieldValue.delete() });
@@ -6493,19 +6496,16 @@ const exame = {
     // ── Verifica se aluno está convocado e mostra/esconde a tab ──
     async verificarConvocacao(alunoId) {
         const btn = document.getElementById('menu-exame');
+        if (!btn) return;
+        // Admin sempre vê (painel de gestão); já tratado em onRoleDetected
+        if (auth.role === 'admin') return;
+        if (!alunoId || alunoId === 'admin') { btn.style.display = 'none'; return; }
         try {
-            // Admin nunca vê a tab de exame
-            if (auth.role === 'admin' || !alunoId || alunoId === 'admin') {
-                if (btn) btn.style.display = 'none';
-                return;
-            }
             const doc = await db.collection('alunos').doc(alunoId).get();
-            if (!doc.exists) { if (btn) btn.style.display = 'none'; return; }
+            if (!doc.exists) { btn.style.display = 'none'; return; }
             const convocado = doc.data().aspiranteGraduacao === true;
-            if (btn) btn.style.display = convocado ? 'flex' : 'none';
-        } catch(e) {
-            if (btn) btn.style.display = 'none';
-        }
+            btn.style.display = convocado ? 'flex' : 'none';
+        } catch(e) { btn.style.display = 'none'; }
     },
 
     // ── Carrega a tela do aluno convocado ──

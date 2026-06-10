@@ -248,6 +248,60 @@
         .sem-treino { font-size: 0.72rem; color: var(--muted); font-style: italic; padding: 4px 0; }
         #horarios-loading { text-align: center; padding: 30px; color: var(--muted); font-size: 0.82rem; }
 
+        /* ── PLANOS ── */
+        .planos { background: var(--bg); }
+        .planos-grid {
+            display: flex; flex-direction: column; gap: 16px;
+            max-width: 480px; margin: 0 auto;
+        }
+        .plano-card {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 20px; padding: 24px 20px;
+            position: relative; overflow: hidden;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .plano-card:hover { transform: translateY(-4px); }
+        .plano-card.destaque {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px #3b82f622;
+        }
+        .plano-badge-top {
+            position: absolute; top: 14px; right: 14px;
+            background: var(--accent); color: #000;
+            font-size: 0.55rem; font-weight: 900;
+            letter-spacing: 1px; padding: 3px 9px;
+            border-radius: 20px; text-transform: uppercase;
+        }
+        .plano-icon { font-size: 1.8rem; margin-bottom: 10px; }
+        .plano-nome { font-size: 1rem; font-weight: 900; margin-bottom: 4px; }
+        .plano-desc { font-size: 0.75rem; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+        .plano-preco {
+            display: flex; align-items: baseline; gap: 4px;
+            margin-bottom: 16px;
+        }
+        .plano-cifrao { font-size: 0.85rem; font-weight: 700; color: var(--accent); }
+        .plano-valor  { font-size: 2rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        .plano-periodo{ font-size: 0.7rem; color: var(--muted); }
+        .plano-itens  { display: flex; flex-direction: column; gap: 7px; }
+        .plano-item   { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text); }
+        .plano-item i { color: var(--green); font-size: 0.7rem; flex-shrink: 0; }
+        .plano-cta {
+            display: block; width: 100%; margin-top: 20px;
+            padding: 12px; border-radius: 12px;
+            font-size: 0.85rem; font-weight: 800;
+            text-align: center; text-decoration: none; cursor: pointer; border: none;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .plano-cta.filled {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: #000; box-shadow: 0 6px 20px #3b82f633;
+        }
+        .plano-cta.outline {
+            background: transparent; color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .plano-cta:hover { transform: translateY(-2px); }
+
         /* ── CTA FINAL ── */
         .cta-final {
             background:
@@ -434,6 +488,71 @@
             <div class="ben-title">Resultados Reais</div>
             <div class="ben-desc">Emagrecimento, disciplina, defesa pessoal e qualidade de vida</div>
         </div>
+    </div>
+</section>
+
+<!-- PLANOS -->
+<section class="planos" id="planos">
+    <p class="section-label">Invista em você</p>
+    <h2 class="section-title">Nossos <span>Planos</span></h2>
+    <p class="section-sub">Sem taxa de matrícula. Cancele quando quiser.</p>
+    <div class="planos-grid">
+
+        <div class="plano-card">
+            <div class="plano-icon">🥋</div>
+            <div class="plano-nome">Brazilian Jiu-Jitsu</div>
+            <div class="plano-desc">Acesso completo às aulas de BJJ adulto, graduação e eventos.</div>
+            <div class="plano-preco">
+                <span class="plano-cifrao">R$</span>
+                <span class="plano-valor">150</span>
+                <span class="plano-periodo">/mês</span>
+            </div>
+            <div class="plano-itens">
+                <div class="plano-item"><i class="fas fa-check-circle"></i> Aulas ilimitadas de BJJ</div>
+                <div class="plano-item"><i class="fas fa-check-circle"></i> Sistema de graduação</div>
+                <div class="plano-item"><i class="fas fa-check-circle"></i> Acesso ao app exclusivo</div>
+                <div class="plano-item"><i class="fas fa-check-circle"></i> Participação em eventos</div>
+            </div>
+            <a href="cadastro.html" class="plano-cta outline">Quero me matricular</a>
+        </div>
+
+        <div class="plano-card destaque">
+            <div class="plano-badge-top">Popular</div>
+            <div class="plano-icon">🥊</div>
+            <div class="plano-nome">Muay Thai</div>
+            <div class="plano-desc">Acesso completo às aulas de Muay Thai, condicionamento e competição.</div>
+            <div class="plano-preco">
+                <span class="plano-cifrao">R$</span>
+                <span class="plano-valor">150</span>
+                <span class="plano-periodo">/mês</span>
+            </div>
+            <div class="plano-itens">
+                <div class="plano-item"><i class="fas fa-check-circle"></i> Aulas ilimitadas de Muay Thai</div>
+                <div class="plano-item"><i class="fas fa-check-circle"></i> Treino de condicionamento</div>
+                <div class="plano-item"><i class="fas fa-check-circle"></i> Acesso ao app exclusivo</div>
+                <div class="plano-item"><i class="fas fa-check-circle"></i> Participação em eventos</div>
+            </div>
+            <a href="cadastro.html" class="plano-cta filled">Quero me matricular</a>
+        </div>
+
+        <div class="plano-card">
+            <div class="plano-icon">⭐</div>
+            <div class="plano-nome">Jiu-Jitsu Kids</div>
+            <div class="plano-desc">Programa infantil completo: disciplina, respeito e diversão no tatame.</div>
+            <div class="plano-preco">
+                <span class="plano-cifrao">R$</span>
+                <span class="plano-valor">120</span>
+                <span class="plano-periodo">/mês</span>
+            </div>
+            <div class="plano-itens">
+                <div class="plano-item"><i class="fas fa-check-circle"></i> Aulas de Jiu-Jitsu Kids</div>
+                <div class="plano-item"><i class="fas fa-check-circle"></i> Turmas por faixa etária</div>
+                <div class="plano-item"><i class="fas fa-check-circle"></i> Acesso ao app exclusivo</div>
+                <div class="plano-item"><i class="fas fa-check-circle"></i> Eventos e graduações kids</div>
+            </div>
+            <a href="cadastro.html" class="plano-cta outline">Quero me matricular</a>
+        </div>
+
     </div>
 </section>
 

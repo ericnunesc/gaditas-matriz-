@@ -3062,8 +3062,13 @@ Ele voltará a ser aluno normal.`)) return;
       }
     },
 
+    _muralListener: null,
+    _popupAvisoMostrado: false, // evita reaparecer na mesma sessão
+
     async carregarMural() {
-        db.collection("mural_avisos").onSnapshot((snap) => {
+        // Cancela listener anterior para não acumular múltiplos
+        if (this._muralListener) { this._muralListener(); this._muralListener = null; }
+        this._muralListener = db.collection("mural_avisos").onSnapshot((snap) => {
             const muralCard = document.getElementById('mural-avisos'); 
             const tC = document.getElementById('texto-aviso');
             const lH = document.getElementById('lista-historico-avisos'); 
@@ -3096,15 +3101,21 @@ Ele voltará a ser aluno normal.`)) return;
                     if (muralCard) { muralCard.classList.add('hidden'); muralCard.classList.remove('mural-urgente-neon'); }
                     return;
                 }
-                this.idUltimoAvisoMural = docsOrdenados[0].id;
+                const novoId = docsOrdenados[0].id;
+                if (novoId !== this.idUltimoAvisoMural) this._popupAvisoMostrado = false; // novo comunicado → permite mostrar
+                this.idUltimoAvisoMural = novoId;
                 const popTexto = document.getElementById('popup-texto-aviso');
                 const popData = document.getElementById('popup-data-aviso');
                 const popModal = document.getElementById('modal-popup-aviso');
                 if (popTexto && popData && popModal) {
-                    if ((auth.role === 'aluno' || auth.role === 'professor') && localStorage.getItem('gaditas_ultimo_aviso_visto') !== this.idUltimoAvisoMural) {
+                    const jaVisto = localStorage.getItem('gaditas_ultimo_aviso_visto') === this.idUltimoAvisoMural;
+                    const ehNovo  = !jaVisto;
+                    // Mostra popup só se: é novo comunicado E ainda não mostrou nesta sessão
+                    if ((auth.role === 'aluno' || auth.role === 'professor') && ehNovo && !this._popupAvisoMostrado) {
                         popTexto.innerHTML = linkificar(docsOrdenados[0].data().texto);
                         popData.innerText = `Publicado em: ${docsOrdenados[0].data().dataFormatada}`;
                         popModal.classList.remove('hidden');
+                        this._popupAvisoMostrado = true; // não mostra de novo até nova sessão ou novo comunicado
                     }
                 }
                 if (tC) {

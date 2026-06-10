@@ -2935,12 +2935,16 @@ Ele voltará a ser aluno normal.`)) return;
             const dadosCliente = await resCliente.json();
             if (!dadosCliente.data || dadosCliente.data.length === 0) { conteudo.innerHTML = `<p style="color:#f59e0b;">Aluno não localizado no Asaas.<br><small style="color:#64748b;">${email}</small></p>`; return; }
             const customerId = dadosCliente.data[0].id;
-            const [resPendente, resPago, resSubs] = await Promise.all([
+            const [resPendente, resVencida, resPago, resSubs] = await Promise.all([
                 fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=PENDING&limit=10`),
+                fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=OVERDUE&limit=10`),
                 fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=RECEIVED&limit=5`),
                 fetch(`${asaasUrl}?endpoint=subscriptions&customer=${customerId}&status=ACTIVE&limit=5`)
             ]);
-            const pendentes = await resPendente.json(); const pagos = await resPago.json(); const subs = await resSubs.json();
+            const _pend = await resPendente.json(); const _venc = await resVencida.json();
+            const pagos = await resPago.json(); const subs = await resSubs.json();
+            // Combina PENDING + OVERDUE numa lista única de "em aberto"
+            const pendentes = { data: [...(_pend.data||[]), ...(_venc.data||[])] };
             const dataHoje = new Date(); dataHoje.setHours(0,0,0,0); let html = '';
 
             // Assinaturas ativas

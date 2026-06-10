@@ -6279,10 +6279,15 @@ const profComms = {
 
     abrirConvocacaoRapida(turma, dia) {
         document.getElementById('modal-agenda-prof')?.remove();
-        // Abre o modal de convocação com a turma pré-selecionada
-        // Busca todos os professores para selecionar
-        db.collection('professores').get().then(snap => {
-            const profs = snap.docs.map(d => ({ id: d.id, col: 'professores', ...d.data() }));
+        // Busca professores das DUAS coleções
+        Promise.all([
+            db.collection('professores').get(),
+            db.collection('alunos').where('role', '==', 'professor').get()
+        ]).then(([snapProfs, snapAlunos]) => {
+            const profs = [
+                ...snapProfs.docs.map(d => ({ id: d.id, col: 'professores', ...d.data() })),
+                ...snapAlunos.docs.map(d => ({ id: d.id, col: 'alunos', ...d.data() }))
+            ];
             let modal = document.getElementById('modal-conv-rapida');
             if (!modal) { modal = document.createElement('div'); modal.id = 'modal-conv-rapida'; document.body.appendChild(modal); }
             modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
@@ -6309,15 +6314,14 @@ const profComms = {
     async _enviarConvRapida(turma, dia) {
         const sel = document.getElementById('conv-rapida-prof')?.value.split('|');
         if (!sel || sel.length < 3) return;
-        const [profId, , profNome] = sel;
-        document.getElementById('conv-rapida-prof').value = `${profId}|professores|${profNome}`;
+        const [profId, colecao, profNome] = sel;
         const data = document.getElementById('conv-rapida-data')?.value;
         const hora = document.getElementById('conv-rapida-hora')?.value;
         const msg  = document.getElementById('conv-rapida-msg')?.value.trim();
         if (!data) return alert('Informe a data.');
         const [ay,am,ad] = data.split('-');
         const dataExib = `${ad}/${am}/${ay}${hora ? ' às ' + hora : ''}`;
-        await db.collection('convocacoes_prof').add({ profId, profNome, colecao: 'professores', turma, data, hora, dataExib, mensagem: msg||'', status:'pendente', criadoEm: Date.now() });
+        await db.collection('convocacoes_prof').add({ profId, profNome, colecao, turma, data, hora, dataExib, mensagem: msg||'', status:'pendente', criadoEm: Date.now() });
         document.getElementById('modal-conv-rapida')?.remove();
         alert(`✅ Convocação enviada para ${profNome}!`);
         this.renderPainelConvocacoes();

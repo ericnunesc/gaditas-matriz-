@@ -621,7 +621,6 @@ function renderGrade(grade) {
 
 async function carregarHorarios() {
     try {
-        await firebase.auth().signInAnonymously();
         const doc = await db.collection('configuracoes').doc('horarios').get();
         const grade = doc.exists ? doc.data() : {};
         renderGrade(grade);
@@ -649,8 +648,6 @@ async function carregarLandingConfig() {
         if (ig  && cfg.instagram) { ig.href = `https://instagram.com/${cfg.instagram.replace('@','')}`; ig.textContent = cfg.instagram; ig.style.display = ''; }
     } catch(e) {}
 }
-
-carregarHorarios();
 
 // ── PLANOS ──────────────────────────────────────────────────
 const PLANOS_CONFIG = {
@@ -714,8 +711,16 @@ async function carregarPlanos() {
     }
 }
 
-carregarPlanos();
-carregarLandingConfig();
+// Autentica uma vez e carrega tudo em paralelo
+firebase.auth().signInAnonymously().then(() => {
+    carregarHorarios();
+    carregarPlanos();
+    carregarLandingConfig();
+}).catch(() => {
+    carregarHorarios();
+    carregarPlanos();
+    carregarLandingConfig();
+});
 </script>
 </body>
 </html>

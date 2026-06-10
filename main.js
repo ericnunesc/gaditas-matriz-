@@ -4210,21 +4210,30 @@ Ele voltará a ser aluno normal.`)) return;
 
     // ── Helpers do dashboard admin ────────────────────────
     _irParaCheckin() {
-        // Garante que está na aba treino, mostra a área e scrolla até ela
         ui.showTab('tab-checkin');
         setTimeout(() => {
-            const el = document.getElementById('area-aluno-checkin');
-            if (el) { el.classList.remove('hidden'); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-        }, 150);
+            // Admin vê a fila de check-ins pendentes
+            const profArea = document.getElementById('area-professor-checkin');
+            if (profArea) {
+                profArea.classList.remove('hidden');
+                profArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            academia.renderPresencaAdmin();
+        }, 200);
     },
 
     _irParaChamada() {
         ui.showTab('tab-checkin');
+        // Renderiza o card de chamada (cria se não existir)
+        academia.renderChamadaProf();
         setTimeout(() => {
-            const el = document.getElementById('area-professor-checkin');
-            if (el) { el.classList.remove('hidden'); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-            academia.renderChamadaProf();
-        }, 150);
+            // Tenta scrollar para o card de chamada
+            const card = document.getElementById('card-chamada-prof');
+            if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+            // Fallback: mostra área professor
+            const profArea = document.getElementById('area-professor-checkin');
+            if (profArea) { profArea.classList.remove('hidden'); profArea.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        }, 300);
     },
 
     _irParaAniversarios() {
@@ -4234,10 +4243,10 @@ Ele voltará a ser aluno normal.`)) return;
             if (card) {
                 card.style.display = 'block';
                 card.classList.remove('gestao-acc-fechado');
-                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 aniversario.renderAdminAniversariantes();
+                setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
             }
-        }, 150);
+        }, 200);
     },
 
     async renderDashboardGrid() {

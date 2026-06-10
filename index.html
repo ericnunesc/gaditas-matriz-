@@ -686,6 +686,10 @@
                     </button>
                 </div>
                 <h4 id="title-professores" style="color: #94a3b8; font-size: 0.7rem; margin: 20px 0 8px 4px; font-weight: 800;" class="hidden">PROFESSORES ATIVOS</h4>
+                <div style="display:flex;gap:8px;margin-bottom:10px;" id="btns-prof-admin" class="hidden">
+                    <button onclick="profComms.abrirAgenda()" style="flex:1;padding:10px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">📅 Agenda</button>
+                    <button onclick="profComms.abrirRankingProfs()" style="flex:1;padding:10px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🏅 Ranking</button>
+                </div>
                 <div id="list-professores" class="list-container hidden"></div>
                 <!-- Painel de convocações -->
                 <div id="painel-convocacoes-prof" style="margin-top:12px;"></div>

@@ -2767,6 +2767,7 @@ const academia = {
         });
 
         l.innerHTML = html || '<p style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:10px;">Nenhum professor cadastrado.</p>';
+        document.getElementById('btns-prof-admin')?.classList.toggle('hidden', !html);
     },
 
     async removerPrivilegioProf(id, nome) {
@@ -4325,6 +4326,9 @@ Ele voltará a ser aluno normal.`)) return;
                     </div>
                 </div>
 
+                <!-- Convocações pendentes (professor) -->
+                <div id="dash-convocacoes-prof"></div>
+
                 <!-- Grid 3x3 -->
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
                     ${cardsHtml}
@@ -4339,6 +4343,31 @@ Ele voltará a ser aluno normal.`)) return;
                     ${rankingHtml}
                     ${minhaPosHtml}
                 </div>`;
+        // Convocações pendentes para professor
+        if (auth.role === 'professor' && alunoId) {
+            db.collection('convocacoes_prof')
+                .where('profId', '==', alunoId)
+                .where('status', '==', 'pendente')
+                .get().then(snap => {
+                    const cont = document.getElementById('dash-convocacoes-prof');
+                    if (!cont || snap.empty) return;
+                    let html = `<div style="background:#1e3a1a;border:1px solid #10b981;border-radius:12px;padding:12px;margin-bottom:12px;">
+                        <div style="font-size:0.65rem;font-weight:800;color:#10b981;margin-bottom:8px;">📋 CONVOCAÇÕES PENDENTES</div>`;
+                    snap.forEach(doc => {
+                        const c = doc.data();
+                        html += `<div style="background:#0f172a;border-radius:8px;padding:10px;margin-bottom:6px;">
+                            <div style="font-size:0.78rem;font-weight:700;color:#e2e8f0;">${c.turma} — ${c.dataExib}</div>
+                            ${c.mensagem ? `<div style="font-size:0.62rem;color:#94a3b8;margin:3px 0;">"${c.mensagem}"</div>` : ''}
+                            <div style="display:flex;gap:8px;margin-top:8px;">
+                                <button onclick="profComms._responderConvocacao('${doc.id}','confirmado')" style="flex:1;padding:7px;background:#10b981;border:none;color:white;border-radius:6px;font-weight:800;cursor:pointer;font-size:0.7rem;">✅ CONFIRMAR</button>
+                                <button onclick="profComms._responderConvocacao('${doc.id}','recusado')" style="flex:1;padding:7px;background:#1e293b;border:1px solid #ef4444;color:#ef4444;border-radius:6px;font-weight:800;cursor:pointer;font-size:0.7rem;">❌ NÃO POSSO</button>
+                            </div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                    cont.innerHTML = html;
+                }).catch(() => {});
+        }
         } catch(e) { console.warn('Dashboard aluno:', e.message); }
     },
 
@@ -6166,6 +6195,200 @@ const profComms = {
         this.renderPainelConvocacoes();
     },
 
+    // ── AGENDA DE PROFESSORES ──────────────────────────────
+    async abrirAgenda() {
+        let modal = document.getElementById('modal-agenda-prof');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-agenda-prof'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
+        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:480px;margin-top:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <span style="font-size:0.95rem;font-weight:800;color:white;">📅 Agenda de Professores</span>
+                <button onclick="document.getElementById('modal-agenda-prof').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+            </div>
+            <div id="agenda-content"><div style="text-align:center;padding:20px;color:#64748b;font-size:0.8rem;">⏳ Carregando...</div></div>
+        </div>`;
+
+        // Busca professores e grade de horários
+        const [snapProfs, snapAlunos] = await Promise.all([
+            db.collection('professores').get(),
+            db.collection('alunos').where('role','==','professor').get()
+        ]);
+        const profs = [];
+        snapProfs.forEach(d => profs.push({ id: d.id, col: 'professores', ...d.data() }));
+        snapAlunos.forEach(d => profs.push({ id: d.id, col: 'alunos', ...d.data() }));
+
+        const grade = academia.getGrade ? academia.getGrade() : {};
+        const dias = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+        const diasKey = ['segunda','terca','quarta','quinta','sexta','sabado','domingo'];
+
+        let html = '';
+        dias.forEach((dia, i) => {
+            const key = diasKey[i];
+            const turmasDia = (grade[key] || []).filter(t => t && !t.includes('Sem treino'));
+            if (!turmasDia.length) return;
+            html += `<div style="margin-bottom:14px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;letter-spacing:1px;margin-bottom:6px;">${dia.toUpperCase()}</div>`;
+            turmasDia.forEach(turma => {
+                const profsNaTurma = profs.filter(p => (p.turmasAcesso || []).some(t => turma.includes(t.replace(/\s*\d+$/, '').trim()) || t === turma));
+                // Convocações do dia
+                html += `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <div style="font-size:0.75rem;font-weight:700;color:#e2e8f0;">${turma}</div>
+                        <div style="font-size:0.6rem;color:${profsNaTurma.length ? '#10b981' : '#f59e0b'};margin-top:3px;font-weight:700;">
+                            ${profsNaTurma.length ? '👤 ' + profsNaTurma.map(p => p.nome).join(', ') : '⚠️ Sem professor alocado'}
+                        </div>
+                    </div>
+                    <button onclick="profComms.abrirConvocacaoRapida('${turma.replace(/'/g,"\\'")}','${dia}')" style="background:#10b981;border:none;color:white;padding:5px 10px;border-radius:6px;font-size:0.62rem;font-weight:700;cursor:pointer;white-space:nowrap;">📋 Convocar</button>
+                </div>`;
+            });
+            html += '</div>';
+        });
+
+        document.getElementById('agenda-content').innerHTML = html || '<p style="color:#64748b;text-align:center;">Nenhuma turma configurada na grade.</p>';
+    },
+
+    abrirConvocacaoRapida(turma, dia) {
+        document.getElementById('modal-agenda-prof')?.remove();
+        // Abre o modal de convocação com a turma pré-selecionada
+        // Busca todos os professores para selecionar
+        db.collection('professores').get().then(snap => {
+            const profs = snap.docs.map(d => ({ id: d.id, col: 'professores', ...d.data() }));
+            let modal = document.getElementById('modal-conv-rapida');
+            if (!modal) { modal = document.createElement('div'); modal.id = 'modal-conv-rapida'; document.body.appendChild(modal); }
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+            const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;';
+            const opts = profs.map(p => `<option value="${p.id}|${p.col}|${p.nome.replace(/"/g,'')}">${p.nome} (${p.tipo === 'reserva' ? 'Reserva' : 'Titular'})</option>`).join('');
+            modal.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:360px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <span style="font-size:0.85rem;font-weight:800;color:white;">📋 Convocar para ${turma}</span>
+                    <button onclick="document.getElementById('modal-conv-rapida').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;">✕</button>
+                </div>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">PROFESSOR</small>
+                <select id="conv-rapida-prof" style="${inp}">${opts}</select>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DATA</small>
+                <input type="date" id="conv-rapida-data" style="${inp}" value="${new Date().toISOString().slice(0,10)}"/>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">HORÁRIO</small>
+                <input type="time" id="conv-rapida-hora" style="${inp}"/>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">MENSAGEM (opcional)</small>
+                <textarea id="conv-rapida-msg" rows="2" style="${inp}resize:none;" placeholder="Ex: Preciso de você nessa aula..."></textarea>
+                <button onclick="profComms._enviarConvRapida('${turma.replace(/'/g,"\\'")}','${dia}')" style="width:100%;padding:12px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;">📋 ENVIAR CONVOCAÇÃO</button>
+            </div>`;
+        });
+    },
+
+    async _enviarConvRapida(turma, dia) {
+        const sel = document.getElementById('conv-rapida-prof')?.value.split('|');
+        if (!sel || sel.length < 3) return;
+        const [profId, , profNome] = sel;
+        document.getElementById('conv-rapida-prof').value = `${profId}|professores|${profNome}`;
+        const data = document.getElementById('conv-rapida-data')?.value;
+        const hora = document.getElementById('conv-rapida-hora')?.value;
+        const msg  = document.getElementById('conv-rapida-msg')?.value.trim();
+        if (!data) return alert('Informe a data.');
+        const [ay,am,ad] = data.split('-');
+        const dataExib = `${ad}/${am}/${ay}${hora ? ' às ' + hora : ''}`;
+        await db.collection('convocacoes_prof').add({ profId, profNome, colecao: 'professores', turma, data, hora, dataExib, mensagem: msg||'', status:'pendente', criadoEm: Date.now() });
+        document.getElementById('modal-conv-rapida')?.remove();
+        alert(`✅ Convocação enviada para ${profNome}!`);
+        this.renderPainelConvocacoes();
+    },
+
+    // ── RANKING DE PROFESSORES ─────────────────────────────
+    async abrirRankingProfs() {
+        let modal = document.getElementById('modal-ranking-profs');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-ranking-profs'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
+        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;margin-top:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <span style="font-size:0.95rem;font-weight:800;color:white;">🏅 Ranking de Professores</span>
+                <button onclick="document.getElementById('modal-ranking-profs').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:12px;">
+                <button onclick="profComms._carregarRanking('mes',this)" style="flex:1;padding:7px;background:#3b82f6;border:none;color:white;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Este mês</button>
+                <button onclick="profComms._carregarRanking('ano',this)" style="flex:1;padding:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Este ano</button>
+                <button onclick="profComms._carregarRanking('total',this)" style="flex:1;padding:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Total</button>
+            </div>
+            <div id="ranking-profs-lista"><div style="text-align:center;padding:20px;color:#64748b;font-size:0.8rem;">⏳ Carregando...</div></div>
+        </div>`;
+        this._carregarRanking('mes', modal.querySelector('button'));
+    },
+
+    async _carregarRanking(periodo, btnEl) {
+        // Atualiza visual dos botões
+        btnEl?.closest('div')?.querySelectorAll('button').forEach(b => { b.style.background='#1e293b'; b.style.color='#94a3b8'; b.style.border='1px solid #334155'; });
+        if (btnEl) { btnEl.style.background='#3b82f6'; btnEl.style.color='white'; btnEl.style.border='none'; }
+
+        const lista = document.getElementById('ranking-profs-lista');
+        if (!lista) return;
+        lista.innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;font-size:0.8rem;">⏳ Calculando...</div>';
+
+        // Busca todos os professores
+        const [snapProfs, snapAlunos] = await Promise.all([
+            db.collection('professores').get(),
+            db.collection('alunos').where('role','==','professor').get()
+        ]);
+        const profs = [];
+        snapProfs.forEach(d => profs.push({ id: d.id, nome: d.data().nome, turmas: d.data().turmasAcesso || [] }));
+        snapAlunos.forEach(d => profs.push({ id: d.id, nome: d.data().nome, turmas: d.data().turmasAcesso || [] }));
+
+        // Filtra check-ins pelo período
+        const agora = new Date();
+        const inicio = periodo === 'mes'
+            ? new Date(agora.getFullYear(), agora.getMonth(), 1).getTime()
+            : periodo === 'ano'
+            ? new Date(agora.getFullYear(), 0, 1).getTime()
+            : 0;
+
+        const snapCheckins = await db.collection('checkins').where('data','>=', inicio).get();
+        // Conta sessões únicas por professor (turma+data = 1 sessão)
+        const sessoesProf = {};
+        const sessoesVistas = new Set();
+        snapCheckins.forEach(doc => {
+            const c = doc.data();
+            if (!c.turma || !c.data) return;
+            const chave = `${c.turma}__${new Date(c.data).toDateString()}`;
+            if (sessoesVistas.has(chave)) return;
+            sessoesVistas.add(chave);
+            profs.forEach(p => {
+                const pertence = p.turmas.some(t => c.turma.includes(t.replace(/\s*\d+$/,'').trim()) || t === c.turma);
+                if (pertence) { sessoesProf[p.id] = (sessoesProf[p.id] || 0) + 1; }
+            });
+        });
+
+        const ranking = profs
+            .map(p => ({ ...p, aulas: sessoesProf[p.id] || 0 }))
+            .sort((a, b) => b.aulas - a.aulas)
+            .filter(p => p.aulas > 0 || periodo === 'total');
+
+        const labels = { mes: 'este mês', ano: 'este ano', total: 'no total' };
+        const medalhas = ['🥇','🥈','🥉'];
+        let html = `<div style="font-size:0.6rem;color:#64748b;margin-bottom:10px;text-align:center;">Aulas ministradas ${labels[periodo]}</div>`;
+        if (!ranking.length) { lista.innerHTML = '<p style="color:#64748b;text-align:center;font-size:0.78rem;padding:16px;">Nenhuma aula registrada no período.</p>'; return; }
+        ranking.forEach((p, i) => {
+            const medalha = medalhas[i] || `${i+1}º`;
+            const barW = ranking[0].aulas > 0 ? Math.round((p.aulas / ranking[0].aulas) * 100) : 0;
+            html += `<div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:1.1rem;">${medalha}</span>
+                        <div>
+                            <div style="font-size:0.78rem;font-weight:700;color:#e2e8f0;">${p.nome}</div>
+                            <div style="font-size:0.6rem;color:#64748b;">Turmas: ${p.turmas.join(', ') || '—'}</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:1rem;font-weight:900;color:#3b82f6;">${p.aulas}</div>
+                        <div style="font-size:0.5rem;color:#64748b;">aulas</div>
+                    </div>
+                </div>
+                <div style="background:#1e293b;border-radius:999px;height:5px;overflow:hidden;">
+                    <div style="width:${barW}%;height:100%;background:#3b82f6;border-radius:999px;"></div>
+                </div>
+            </div>`;
+        });
+        lista.innerHTML = html;
+    },
+
     // ── RECADOS ────────────────────────────────────────────
     abrirRecado(profId, profNome, colecao) {
         let modal = document.getElementById('modal-recado-prof');
@@ -6196,6 +6419,32 @@ const profComms = {
         alert(`✅ Recado enviado para ${profNome}!`);
     },
 
+    _mostrarPopupConvocacaoProf(conv) {
+        document.getElementById('modal-conv-prof')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-conv-prof';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#0f172a,#1e293b);border:2px solid #10b981;border-radius:24px;padding:32px 24px;max-width:380px;width:100%;text-align:center;box-shadow:0 0 80px #10b98133;position:relative;">
+                <div style="font-size:3rem;margin-bottom:8px;animation:bounce 0.8s infinite alternate;">📋</div>
+                <div style="font-size:0.6rem;color:#10b981;font-weight:800;letter-spacing:2px;margin-bottom:8px;">GADITAS ACADEMY</div>
+                <div style="font-size:1.4rem;font-weight:800;color:white;margin-bottom:6px;">Você foi convocado!</div>
+                <div style="background:#10b98122;border:1px solid #10b981;border-radius:12px;padding:14px;margin:14px 0;text-align:left;">
+                    <div style="font-size:0.85rem;font-weight:800;color:#10b981;">🏫 ${conv.turma}</div>
+                    <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">📅 ${conv.dataExib}</div>
+                    ${conv.mensagem ? `<div style="font-size:0.72rem;color:#e2e8f0;margin-top:6px;font-style:italic;">"${conv.mensagem}"</div>` : ''}
+                </div>
+                <div style="display:flex;gap:10px;margin-top:16px;">
+                    <button onclick="profComms._responderConvocacao('${conv.id}','confirmado');document.getElementById('modal-conv-prof').remove();"
+                        style="flex:1;padding:14px;background:#10b981;border:none;color:#000;border-radius:12px;font-weight:800;cursor:pointer;font-size:0.85rem;">✅ CONFIRMAR</button>
+                    <button onclick="profComms._responderConvocacao('${conv.id}','recusado');document.getElementById('modal-conv-prof').remove();"
+                        style="flex:1;padding:14px;background:#1e293b;border:1px solid #ef4444;color:#ef4444;border-radius:12px;font-weight:800;cursor:pointer;font-size:0.85rem;">❌ NÃO POSSO</button>
+                </div>
+            </div>
+            <style>@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-10px)}}</style>`;
+        document.body.appendChild(modal);
+    },
+
     // Carrega recados pendentes para o professor logado
     async iniciarListenerRecadosProf() {
         if (auth.role !== 'professor') return;
@@ -6210,12 +6459,18 @@ const profComms = {
                 if (badge) badge.style.display = snap.size > 0 ? 'inline-block' : 'none';
                 if (snap.size > 0) this._mostrarRecadosPendentes(snap.docs);
             });
-        // Carrega convocações pendentes
+        // Convocações pendentes com popup para novas
         db.collection('convocacoes_prof')
             .where('profId', '==', profId)
             .where('status', '==', 'pendente')
             .onSnapshot(snap => {
                 if (snap.size > 0) this._mostrarConvocacoesPendentes(snap.docs);
+                snap.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        const c = { id: change.doc.id, ...change.doc.data() };
+                        setTimeout(() => this._mostrarPopupConvocacaoProf(c), 800);
+                    }
+                });
             });
     },
 

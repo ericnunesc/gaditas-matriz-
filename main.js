@@ -227,6 +227,7 @@ const auth = {
         // ── ANIVERSÁRIO, CONVOCAÇÃO e GRADUAÇÃO — para aluno e professor promovido ─────────────
         if (this.role === 'aluno' || this.role === 'professor') {
             setTimeout(() => aniversario.verificarAniversario(), 800);
+            setTimeout(() => aniversario.verificarAniversarioColegas(), 1000);
             setTimeout(() => aniversario.verificarConvocacao(), 1200);
             setTimeout(() => aniversario.verificarGraduacao(), 1500);
         }
@@ -7701,6 +7702,8 @@ const aniversario = {
                     <span style="font-size:1rem;">OSS! 🥋💪</span>
                 </div>
 
+                <div id="parabens-recebidos-aniv" style="margin-bottom:16px;"></div>
+
                 <button onclick="aniversario._dispensar('${chaveLocalStorage}')"
                     style="width:100%;padding:16px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:12px;font-weight:800;font-size:0.9rem;cursor:pointer;letter-spacing:0.5px;">
                     🙏 MUITO OBRIGADO!
@@ -7711,6 +7714,24 @@ const aniversario = {
             </style>`;
 
         document.body.appendChild(modal);
+
+        // Carrega parabéns recebidos em tempo real
+        const hojeStr = chaveLocalStorage.split('_').slice(-1)[0];
+        const alunoId = auth.currentUser?.id;
+        if (alunoId) {
+            db.collection('parabens').doc(`${alunoId}_${hojeStr}`)
+                .onSnapshot(snap => {
+                    const el = document.getElementById('parabens-recebidos-aniv');
+                    if (!el) return;
+                    if (!snap.exists || !(snap.data().desejos || []).length) { el.innerHTML = ''; return; }
+                    const nomes = snap.data().desejos.map(d => d.deNome.split(' ')[0]).join(', ');
+                    const qtd = snap.data().desejos.length;
+                    el.innerHTML = `<div style="background:#1e293b;border:1px solid #f59e0b44;border-radius:10px;padding:10px 14px;font-size:0.75rem;color:#f59e0b;font-weight:700;">
+                        🎉 ${qtd} ${qtd===1?'colega desejou':'colegas desejaram'} parabéns!<br>
+                        <span style="color:#94a3b8;font-weight:400;font-size:0.68rem;">${nomes}</span>
+                    </div>`;
+                });
+        }
     },
 
     _dispensar(chave) {
@@ -7888,6 +7909,135 @@ const aniversario = {
             </style>`;
 
         document.body.appendChild(modal);
+    },
+
+    // ── ANIVERSÁRIO DE COLEGAS ────────────────────────────
+    async verificarAniversarioColegas() {
+        if (auth.role !== 'aluno') return;
+        const eu = auth.currentUser;
+        if (!eu) return;
+
+        const hoje = new Date();
+        const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+        const chave = `gaditas_colegas_aniv_${eu.id}_${hojeStr}`;
+        if (localStorage.getItem(chave)) return;
+
+        try {
+            const euDoc = await db.collection('alunos').doc(eu.id).get();
+            if (!euDoc.exists) return;
+            const euData = euDoc.data();
+
+            const anoAtual = hoje.getFullYear();
+            const euIdade = euData.nascimento ? (anoAtual - new Date(euData.nascimento + 'T12:00:00').getFullYear()) : 99;
+            const euEhKids = euIdade <= 15;
+            const euMod = euData.modalidade || 'jiujitsu';
+            const euTreinaComAdultos = euData.treinaComAdultos === true;
+
+            const snap = await db.collection('alunos').get();
+            const aniversariantes = [];
+
+            snap.docs.forEach(doc => {
+                if (doc.id === eu.id) return;
+                const a = doc.data();
+                if (!a.nascimento || !a.nome) return;
+                const parts = a.nascimento.split('-');
+                if (parts.length < 3) return;
+                if (parseInt(parts[2],10) !== hoje.getDate()) return;
+                if (parseInt(parts[1],10)-1 !== hoje.getMonth()) return;
+
+                const aIdade = anoAtual - new Date(a.nascimento + 'T12:00:00').getFullYear();
+                const aEhKids = aIdade <= 15;
+                const aMod = a.modalidade || 'jiujitsu';
+
+                let deveVer = false;
+                if (euEhKids) {
+                    if (aEhKids) deveVer = true;
+                    if (!aEhKids && euTreinaComAdultos && (aMod === 'jiujitsu' || aMod === 'ambos')) deveVer = true;
+                } else {
+                    if (!aEhKids) {
+                        if ((euMod === 'jiujitsu' || euMod === 'ambos') && (aMod === 'jiujitsu' || aMod === 'ambos')) deveVer = true;
+                        if ((euMod === 'muaythai' || euMod === 'ambos') && (aMod === 'muaythai' || aMod === 'ambos')) deveVer = true;
+                    }
+                }
+                if (deveVer) aniversariantes.push({ id: doc.id, nome: a.nome });
+            });
+
+            if (aniversariantes.length === 0) return;
+            localStorage.setItem(chave, '1');
+            this._mostrarPopupColegas(aniversariantes, eu.id, hojeStr);
+        } catch(e) { console.warn('Aniversário colegas:', e.message); }
+    },
+
+    _mostrarPopupColegas(colegas, meuId, hojeStr) {
+        document.getElementById('modal-aniv-colegas')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-aniv-colegas';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.96);z-index:99997;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+
+        const cards = colegas.map(c => {
+            const primeiroNome = c.nome.split(' ')[0];
+            return `<div style="background:#0f172a;border:1px solid #f59e0b44;border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                <div>
+                    <div style="font-size:0.9rem;font-weight:800;color:white;">${primeiroNome}</div>
+                    <div style="font-size:0.62rem;color:#94a3b8;margin-top:2px;">${c.nome}</div>
+                </div>
+                <button id="btn-parabens-${c.id}"
+                    onclick="aniversario.darParabens('${c.id}','${c.nome.replace(/'/g,"\\'")}','${meuId}','${hojeStr}',this)"
+                    style="padding:8px 14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:10px;font-weight:800;font-size:0.7rem;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+                    🎉 Dar Parabéns
+                </button>
+            </div>`;
+        }).join('');
+
+        modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#1e1040,#1e293b);border:2px solid #f59e0b;border-radius:24px;padding:28px 24px;max-width:400px;width:100%;text-align:center;box-shadow:0 0 60px rgba(245,158,11,0.25);max-height:85vh;overflow-y:auto;">
+                <div style="font-size:3rem;margin-bottom:6px;">🎂</div>
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:2px;margin-bottom:8px;">ANIVERSARIANTES DE HOJE</div>
+                <div style="font-size:1.1rem;font-weight:800;color:white;margin-bottom:20px;">
+                    ${colegas.length === 1 ? 'Um colega faz aniversário hoje!' : `${colegas.length} colegas fazem aniversário hoje!`}
+                </div>
+                ${cards}
+                <button onclick="document.getElementById('modal-aniv-colegas').remove()"
+                    style="margin-top:12px;width:100%;padding:14px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:12px;font-weight:800;font-size:0.85rem;cursor:pointer;">
+                    Fechar
+                </button>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async darParabens(alunoId, alunoNome, meuId, hojeStr, btnEl) {
+        try {
+            btnEl.disabled = true;
+            btnEl.textContent = '⏳';
+            const eu = auth.currentUser;
+            const ref = db.collection('parabens').doc(`${alunoId}_${hojeStr}`);
+            await ref.set({
+                alunoId, alunoNome,
+                desejos: firebase.firestore.FieldValue.arrayUnion({ deId: meuId, deNome: eu.nome || '', at: new Date().toISOString() })
+            }, { merge: true });
+            btnEl.textContent = '✅ Enviado!';
+            btnEl.style.background = 'linear-gradient(135deg,#10b981,#059669)';
+            // Push para o aniversariante
+            try {
+                const aDoc = await db.collection('alunos').doc(alunoId).get();
+                const token = aDoc.exists ? aDoc.data().fcmToken : null;
+                if (token) {
+                    await fetch('/api/push-comunicado', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            token,
+                            title: `🎉 Parabéns, ${alunoNome.split(' ')[0]}!`,
+                            body: `${eu.nome?.split(' ')[0] || 'Um colega'} te desejou feliz aniversário! 🎂`
+                        })
+                    });
+                }
+            } catch(e) { /* push opcional */ }
+        } catch(e) {
+            btnEl.disabled = false;
+            btnEl.textContent = '🎉 Dar Parabéns';
+            alert('Erro ao enviar parabéns: ' + e.message);
+        }
     },
 
     // ── CARD ADMIN — HOJE E ESTA SEMANA ───────────────────

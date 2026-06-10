@@ -242,10 +242,8 @@ const auth = {
             }
         }
 
-        // Registra token FCM para push notifications
-        if (this.role === 'aluno' || this.role === 'professor') {
-            setTimeout(() => this._registrarFcmToken(), 3000);
-        }
+        // Registra token FCM para push notifications (todos os roles)
+        setTimeout(() => this._registrarFcmToken(), 3000);
 
         // Carrega foto no header
         if (this.currentUser.id && this.currentUser.id !== 'admin') {

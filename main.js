@@ -6104,9 +6104,14 @@ const profComms = {
         const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;';
         // Turmas do professor para selecionar
         const turmas = turmasStr && turmasStr !== '—' ? turmasStr.split(', ') : [];
-        const turmaOpts = turmas.length > 0
-            ? turmas.map(t => `<option value="${t}">${t}</option>`).join('')
-            : ui._turmasDinamicas?.map(t => `<option value="${t}">${t}</option>`).join('') || '';
+        // Se professor não tem turmas fixas (reserva), usa todas as turmas da grade
+        const todasTurmas = [...new Set(
+            Object.values(academia.getGrade())
+                .filter(v => Array.isArray(v)).flat()
+                .filter(t => t && !t.includes('Sem treino'))
+        )].sort();
+        const listaTurmas = turmas.length > 0 ? turmas : todasTurmas;
+        const turmaOpts = listaTurmas.map(t => `<option value="${t}">${t}</option>`).join('');
         modal.innerHTML = `
             <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">

@@ -279,6 +279,18 @@ const auth = {
             if (!swReg) return;
             log('SW pronto');
 
+            // FCM v9 compat exige usuário autenticado no Firebase Auth para registrar o token
+            if (!firebase.auth().currentUser) {
+                log('Fazendo signInAnonymously para FCM...');
+                try {
+                    await firebase.auth().signInAnonymously();
+                    log('Auth anônimo OK');
+                } catch(e) {
+                    log('signInAnonymously falhou — habilite "Anonymous" em Firebase Console → Authentication: ' + e.message, true);
+                    return;
+                }
+            }
+
             const messaging = firebase.messaging();
             const token = await messaging.getToken({ vapidKey: this._VAPID_KEY, serviceWorkerRegistration: swReg });
             if (!token) { log('Token vazio — verifique VAPID key no Firebase Console', true); return; }

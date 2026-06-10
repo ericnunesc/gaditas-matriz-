@@ -4070,6 +4070,144 @@ Ele voltará a ser aluno normal.`)) return;
     // ══════════════════════════════════════════════════════════
     // ── 11. DASHBOARD VISUAL ADMIN ────────────────────────────
     // ══════════════════════════════════════════════════════════
+    // ── Dashboard Aluno ───────────────────────────────────
+    async renderDashboardAluno() {
+        if (auth.role !== 'aluno' && auth.role !== 'professor') return;
+        const el = document.getElementById('dashboard-grid-aluno');
+        if (!el) return;
+        el.style.display = 'block';
+
+        // Dados do aluno
+        const alunoId = auth.currentUser?.id;
+        let nome = auth.currentUser?.nome || '';
+        let faixa = 'Branca', grau = 0, aulas = 0, meta = 40;
+        let corFaixa = '#e2e8f0', rankPos = null, rankTotal = 0;
+
+        try {
+            const doc = await db.collection('alunos').doc(alunoId).get();
+            if (doc.exists) {
+                const d = doc.data();
+                faixa  = d.faixa  || 'Branca';
+                grau   = d.grau   || 0;
+                aulas  = d.aulas  || 0;
+                const s = academia.verificarMeta(d);
+                meta   = s.meta || 40;
+            }
+            corFaixa = ui.getCorFaixa(faixa);
+
+            // Ranking do mês
+            const snap = await db.collection('alunos').get();
+            const hoje = new Date();
+            const mesAtual = hoje.getMonth();
+            const anoAtual = hoje.getFullYear();
+            const ranking = [];
+            snap.docs.forEach(doc => {
+                const d = doc.data();
+                if (d.status === 'trancado') return;
+                const aulasMs = (d.historico || []).filter(h => {
+                    if (!h.data) return false;
+                    const p = h.data.split(',')[0].split('/');
+                    if (p.length < 3) return false;
+                    const dt = new Date(`${p[2]}-${p[1]}-${p[0]}`);
+                    return dt.getMonth() === mesAtual && dt.getFullYear() === anoAtual;
+                }).length;
+                ranking.push({ id: doc.id, nome: d.nome, aulasMs });
+            });
+            ranking.sort((a, b) => b.aulasMs - a.aulasMs);
+            rankTotal = ranking.length;
+            const myIdx = ranking.findIndex(r => r.id === alunoId);
+            rankPos = myIdx >= 0 ? myIdx + 1 : null;
+
+            // Top 3 para exibir
+            const top3 = ranking.slice(0, 3);
+            const medals = ['🥇','🥈','🥉'];
+            const mesNome = hoje.toLocaleDateString('pt-BR', { month: 'long' });
+
+            const pct  = Math.min(Math.round((aulas / meta) * 100), 100);
+            const primeiroNome = nome.split(' ')[0];
+
+            const cards = [
+                { icon:'fa-qrcode',       label:'Check-in',   cor:'#10b981', fn:`academia._irParaCheckin()` },
+                { icon:'fa-camera',       label:'QR Code',    cor:'#3b82f6', fn:`academia.abrirScannerQR()` },
+                { icon:'fa-clock',        label:'Horários',   cor:'#8b5cf6', fn:`ui.showTab('tab-horarios')` },
+                { icon:'fa-dollar-sign',  label:'Financeiro', cor:'#22c55e', fn:`ui.showTab('tab-financeiro')` },
+                { icon:'fa-shopping-bag', label:'Loja',       cor:'#ec4899', fn:`ui.showTab('tab-loja')` },
+                { icon:'fa-calendar-alt', label:'Eventos',    cor:'#f97316', fn:`ui.showTab('tab-eventos')` },
+                { icon:'fa-video',        label:'Técnica',    cor:'#f43f5e', fn:`document.getElementById('card-tecnica-semana').scrollIntoView({behavior:'smooth'})` },
+                { icon:'fa-book',         label:'Diário',     cor:'#a78bfa', fn:`treinoPost.abrirDiario()` },
+                { icon:'fa-medal',        label:'Conquistas', cor:'#f59e0b', fn:`document.getElementById('mural-conquistas').scrollIntoView({behavior:'smooth'})` },
+            ];
+
+            const cardsHtml = cards.map(c => `
+                <button onclick="${c.fn}"
+                    style="background:#1e293b;border:1px solid ${c.cor}22;border-radius:14px;padding:16px 6px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;"
+                    onmousedown="this.style.transform='scale(0.93)'" onmouseup="this.style.transform=''" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform=''">
+                    <div style="width:44px;height:44px;background:${c.cor}18;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas ${c.icon}" style="font-size:1.2rem;color:${c.cor};"></i>
+                    </div>
+                    <span style="font-size:0.58rem;font-weight:800;color:#cbd5e1;letter-spacing:0.3px;text-align:center;">${c.label.toUpperCase()}</span>
+                </button>`).join('');
+
+            const rankingHtml = top3.map((r, i) => {
+                const isMe = r.id === alunoId;
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1e293b${isMe?';background:#f59e0b0a;border-radius:6px;padding:6px 8px;':''}">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:0.85rem;">${medals[i]}</span>
+                        <span style="font-size:0.72rem;font-weight:${isMe?'900':'600'};color:${isMe?'#f59e0b':'#e2e8f0'};">${r.nome.split(' ')[0]} ${r.nome.split(' ')[1]||''}</span>
+                    </div>
+                    <span style="font-size:0.7rem;font-weight:800;color:${isMe?'#f59e0b':'#94a3b8'};">${r.aulasMs} aula${r.aulasMs!==1?'s':''}</span>
+                </div>`;
+            }).join('');
+
+            const minhaPosHtml = rankPos && rankPos > 3 ? `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#f59e0b0a;border-radius:6px;margin-top:4px;border:1px dashed #f59e0b44;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:0.72rem;color:#64748b;">${rankPos}°</span>
+                        <span style="font-size:0.72rem;font-weight:900;color:#f59e0b;">${primeiroNome} (você)</span>
+                    </div>
+                    <span style="font-size:0.7rem;font-weight:800;color:#f59e0b;">${ranking[rankPos-1]?.aulasMs||0} aulas</span>
+                </div>` : '';
+
+            el.innerHTML = `
+                <!-- Header com faixa e progresso -->
+                <div style="background:#1e293b;border:1px solid ${corFaixa}33;border-radius:16px;padding:16px;margin-bottom:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <div>
+                            <div style="font-size:0.55rem;color:#64748b;font-weight:700;letter-spacing:1px;text-transform:uppercase;">OSS, bem-vindo(a)!</div>
+                            <div style="font-size:1rem;font-weight:900;color:white;margin-top:1px;">${primeiroNome} 👋</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:0.65rem;font-weight:800;color:${corFaixa};">${faixa.toUpperCase()}</div>
+                            <div style="font-size:0.55rem;color:#64748b;">${grau}° Grau</div>
+                        </div>
+                    </div>
+                    <!-- Barra de progresso -->
+                    <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                        <span style="font-size:0.58rem;color:#64748b;font-weight:700;">Meta de aulas</span>
+                        <span style="font-size:0.58rem;font-weight:800;color:${pct>=100?'#10b981':corFaixa};">${aulas}/${meta} · ${pct}%</span>
+                    </div>
+                    <div style="background:#0f172a;border-radius:999px;height:8px;overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:${pct>=100?'#10b981':corFaixa};border-radius:999px;transition:width 0.8s;"></div>
+                    </div>
+                </div>
+
+                <!-- Grid 3x3 -->
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+                    ${cardsHtml}
+                </div>
+
+                <!-- Ranking do mês -->
+                <div style="background:#1e293b;border:1px solid #f59e0b22;border-radius:14px;padding:14px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <div style="font-size:0.62rem;font-weight:800;color:#f59e0b;">🔥 RANKING — ${mesNome.toUpperCase()}</div>
+                        <span style="font-size:0.55rem;color:#475569;">${rankTotal} alunos</span>
+                    </div>
+                    ${rankingHtml}
+                    ${minhaPosHtml}
+                </div>`;
+        } catch(e) { console.warn('Dashboard aluno:', e.message); }
+    },
+
     // ── Helpers do dashboard admin ────────────────────────
     _irParaCheckin() {
         // Garante que está na aba treino, mostra a área e scrolla até ela
@@ -5611,7 +5749,7 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
-        if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
+        if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
         if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }

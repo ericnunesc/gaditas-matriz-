@@ -129,21 +129,8 @@
                 <!-- Stories bar — preenchida via renderStoriesBar() -->
                 <div id="stories-bar" style="margin-bottom:12px;"></div>
 
-                <!-- Quick actions Inter Bank -->
-                <div class="quick-actions-grid">
-                    <button class="quick-action-btn qa-green" onclick="document.getElementById('area-aluno-checkin').scrollIntoView({behavior:'smooth'}); document.getElementById('area-aluno-checkin').classList.remove('hidden');">
-                        <i class="fas fa-qrcode"></i><span>CHECK-IN</span>
-                    </button>
-                    <button class="quick-action-btn qa-blue" onclick="academia.abrirScannerQR()">
-                        <i class="fas fa-camera"></i><span>QR CODE</span>
-                    </button>
-                    <button class="quick-action-btn qa-amber" onclick="document.getElementById('card-tecnica-semana').scrollIntoView({behavior:'smooth'})">
-                        <i class="fas fa-video"></i><span>TÉCNICA</span>
-                    </button>
-                    <button class="quick-action-btn qa-red" onclick="ui.showTab('tab-horarios')">
-                        <i class="fas fa-clock"></i><span>HORÁRIOS</span>
-                    </button>
-                </div>
+                <!-- Dashboard aluno (substitui quick actions) -->
+                <div id="dashboard-grid-aluno" style="display:none; margin-bottom:14px;"></div>
 
                 <div id="mural-avisos" class="mural-urgente-neon hidden">
                     <div id="texto-aviso"></div>

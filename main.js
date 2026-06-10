@@ -4223,30 +4223,90 @@ Ele voltará a ser aluno normal.`)) return;
     },
 
     _irParaChamada() {
-        ui.showTab('tab-checkin');
-        // Renderiza o card de chamada (cria se não existir)
-        academia.renderChamadaProf();
-        setTimeout(() => {
-            // Tenta scrollar para o card de chamada
-            const card = document.getElementById('card-chamada-prof');
-            if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
-            // Fallback: mostra área professor
-            const profArea = document.getElementById('area-professor-checkin');
-            if (profArea) { profArea.classList.remove('hidden'); profArea.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-        }, 300);
+        // Abre modal direto com seleção de turma
+        const grade = this.getGrade();
+        const turmas = [...new Set(Object.values(grade).filter(v => Array.isArray(v)).flat())]
+            .filter(t => typeof t === 'string' && !t.includes('Sem treinos'));
+
+        document.getElementById('modal-chamada-dash')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-chamada-dash';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.96);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #0ea5e944;border-radius:16px;padding:24px;width:100%;max-width:400px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <div style="font-size:0.85rem;font-weight:800;color:#0ea5e9;">📋 Chamada por Lista</div>
+                    <button onclick="document.getElementById('modal-chamada-dash').remove()" style="background:none;border:none;color:#64748b;font-size:1rem;cursor:pointer;">✕</button>
+                </div>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:6px;">SELECIONE A TURMA:</small>
+                <select id="chamada-dash-turma" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:12px;">
+                    ${turmas.map(t => `<option value="${t}">${t}</option>`).join('')}
+                </select>
+                <button onclick="
+                    const t=document.getElementById('chamada-dash-turma').value;
+                    document.getElementById('modal-chamada-dash').remove();
+                    // Garante que o card-chamada existe com a turma certa
+                    setTimeout(()=>{
+                        academia.renderChamadaProf();
+                        setTimeout(()=>{
+                            const sel=document.getElementById('chamada-select-turma');
+                            if(sel){sel.value=t;}
+                            academia.abrirChamada();
+                        },200);
+                    },100);"
+                    style="width:100%;padding:12px;background:#0ea5e9;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">
+                    <i class="fas fa-users"></i> ABRIR LISTA DE ALUNOS
+                </button>
+            </div>`;
+        document.body.appendChild(modal);
     },
 
     _irParaAniversarios() {
-        ui.showTab('tab-checkin');
-        setTimeout(() => {
-            const card = document.getElementById('card-aniversariantes-admin');
-            if (card) {
-                card.style.display = 'block';
-                card.classList.remove('gestao-acc-fechado');
-                aniversario.renderAdminAniversariantes();
-                setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
-            }
-        }, 200);
+        // Abre aniversariantes em modal para não precisar trocar de aba
+        document.getElementById('modal-aniv-dash')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-aniv-dash';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.96);z-index:99999;overflow-y:auto;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="max-width:480px;margin:0 auto;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <div style="font-size:0.95rem;font-weight:900;color:#f59e0b;">🎂 Aniversariantes</div>
+                    <button onclick="document.getElementById('modal-aniv-dash').remove()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.75rem;font-weight:800;cursor:pointer;">✕ Fechar</button>
+                </div>
+                <div id="lista-aniv-dash"><div style="text-align:center;padding:20px;color:#64748b;"><i class="fas fa-spinner fa-spin"></i></div></div>
+            </div>`;
+        document.body.appendChild(modal);
+
+        // Carrega aniversariantes direto no modal
+        db.collection('alunos').get().then(snap => {
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
+            const lista = [];
+            snap.docs.forEach(doc => {
+                const a = doc.data();
+                if (!a.nascimento) return;
+                const p = a.nascimento.split('-');
+                if (p.length < 3) return;
+                const dia = parseInt(p[2]); const mes = parseInt(p[1]) - 1;
+                for (let d = 0; d < 7; d++) {
+                    const dt = new Date(hoje); dt.setDate(hoje.getDate() + d);
+                    if (dia === dt.getDate() && mes === dt.getMonth()) {
+                        lista.push({ nome: a.nome, faixa: a.faixa||'Branca', dias: d });
+                    }
+                }
+            });
+            lista.sort((a,b) => a.dias - b.dias);
+            const el = document.getElementById('lista-aniv-dash');
+            if (!el) return;
+            if (!lista.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:#475569;font-size:0.8rem;">Nenhum aniversariante nos próximos 7 dias.</div>'; return; }
+            el.innerHTML = lista.map(a => `
+                <div style="background:#0f172a;border:1px solid #f59e0b22;border-left:3px solid #f59e0b;border-radius:0 10px 10px 0;padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <div style="font-size:0.8rem;font-weight:800;color:white;">${a.nome}</div>
+                        <div style="font-size:0.6rem;color:#64748b;">${a.faixa}</div>
+                    </div>
+                    <span style="font-size:0.65rem;font-weight:800;color:${a.dias===0?'#10b981':'#f59e0b'};">${a.dias===0?'🎂 HOJE!':a.dias===1?'Amanhã':'Em '+a.dias+' dias'}</span>
+                </div>`).join('');
+        }).catch(e => { const el = document.getElementById('lista-aniv-dash'); if(el) el.innerHTML = '<small style="color:#f43f5e;">Erro: '+e.message+'</small>'; });
     },
 
     async renderDashboardGrid() {

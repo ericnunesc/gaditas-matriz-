@@ -1375,8 +1375,6 @@ const academia = {
         this.limparImagemEvento();
         const btn = document.getElementById('btn-salvar-evento');
         if(btn) { btn.innerText = "PUBLICAR EVENTO"; btn.disabled = false; }
-        const toggle = document.getElementById('toggle-story-evento');
-        if (toggle) { toggle.dataset.on = 'false'; toggle.style.background = '#334155'; toggle.querySelector('span').style.left = '3px'; }
     },
 
     async carregarEventosAbas() {

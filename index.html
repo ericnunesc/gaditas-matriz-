@@ -206,6 +206,42 @@
         .ben-title { font-size: 0.78rem; font-weight: 800; margin-bottom: 4px; }
         .ben-desc { font-size: 0.68rem; color: var(--muted); line-height: 1.5; }
 
+        /* ── HORÁRIOS ── */
+        .horarios { background: var(--bg2); }
+        .dias-grid {
+            display: flex; flex-direction: column; gap: 10px;
+            max-width: 480px; margin: 0 auto;
+        }
+        .dia-card {
+            background: var(--bg); border: 1px solid var(--border);
+            border-radius: 14px; overflow: hidden;
+        }
+        .dia-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .dia-nome { font-size: 0.75rem; font-weight: 800; color: white; letter-spacing: 0.5px; }
+        .dia-qtd  { font-size: 0.62rem; color: var(--muted); font-weight: 700; }
+        .dia-turmas { padding: 10px 16px; display: flex; flex-direction: column; gap: 6px; }
+        .turma-item {
+            display: flex; align-items: center; gap: 10px;
+        }
+        .turma-hora {
+            font-size: 0.72rem; font-weight: 800; color: var(--gold);
+            min-width: 52px; flex-shrink: 0;
+        }
+        .turma-nome {
+            font-size: 0.78rem; color: var(--text);
+            padding: 4px 10px; border-radius: 8px; font-weight: 600;
+        }
+        .turma-nome.bjj   { background: #3b82f622; color: #93c5fd; }
+        .turma-nome.mt    { background: #ef444422; color: #fca5a5; }
+        .turma-nome.kids  { background: #f59e0b22; color: #fcd34d; }
+        .turma-nome.other { background: #8b5cf622; color: #c4b5fd; }
+        .sem-treino { font-size: 0.72rem; color: var(--muted); font-style: italic; padding: 4px 0; }
+        #horarios-loading { text-align: center; padding: 30px; color: var(--muted); font-size: 0.82rem; }
+
         /* ── CTA FINAL ── */
         .cta-final {
             background:
@@ -395,6 +431,16 @@
     </div>
 </section>
 
+<!-- HORÁRIOS -->
+<section class="horarios" id="horarios">
+    <p class="section-label">Quando treinar</p>
+    <h2 class="section-title">Grade de <span>Horários</span></h2>
+    <p class="section-sub">Turmas todos os dias da semana. Escolha o melhor horário para você.</p>
+    <div class="dias-grid" id="grade-container">
+        <div id="horarios-loading"><i class="fas fa-spinner fa-spin" style="color:#f59e0b;font-size:1.5rem;"></i><br/>Carregando horários...</div>
+    </div>
+</section>
+
 <!-- CTA FINAL -->
 <section class="cta-final">
     <p class="section-label">Comece hoje</p>
@@ -418,5 +464,90 @@
     </p>
 </footer>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+    apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+    authDomain: "gaditasmatriz.firebaseapp.com",
+    projectId: "gaditasmatriz",
+    storageBucket: "gaditasmatriz.firebasestorage.app",
+    messagingSenderId: "166834416988",
+    appId: "1:166834416988:web:2921c95c87c42019282599"
+});
+const db = firebase.firestore();
+
+const DIAS = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const DIAS_CORES = {
+    1:'#3b82f6', 2:'#8b5cf6', 3:'#3b82f6', 4:'#8b5cf6', 5:'#3b82f6', 6:'#f59e0b', 0:'#475569'
+};
+
+function classeModalidade(turma) {
+    const t = turma.toLowerCase();
+    if (t.includes('kids')) return 'kids';
+    if (t.includes('muay') || t.includes('thai') || t.includes(' mt') || t.startsWith('mt')) return 'mt';
+    return 'bjj';
+}
+
+function parseTurma(str) {
+    // Formato esperado: "HH:MM - Nome da Turma"
+    const match = str.match(/^(\d{1,2}:\d{2})\s*[-–]\s*(.+)$/);
+    if (match) return { hora: match[1], nome: match[2].trim() };
+    return { hora: '', nome: str };
+}
+
+function renderGrade(grade) {
+    const container = document.getElementById('grade-container');
+    // Ordem: Seg a Sáb, depois Dom
+    const ordem = [1,2,3,4,5,6,0];
+    let html = '';
+
+    ordem.forEach(dia => {
+        const turmas = grade[dia] || grade[String(dia)] || [];
+        const cor = DIAS_CORES[dia];
+        const temTreino = turmas.length > 0 && !turmas.every(t => t.toLowerCase().includes('sem treino'));
+        if (!temTreino && dia === 0) return; // pula domingo se vazio
+
+        const turmasHtml = temTreino
+            ? turmas.filter(t => !t.toLowerCase().includes('sem treino')).map(t => {
+                const { hora, nome } = parseTurma(t);
+                const cls = classeModalidade(nome);
+                return `<div class="turma-item">
+                    ${hora ? `<span class="turma-hora">${hora}</span>` : ''}
+                    <span class="turma-nome ${cls}">${nome}</span>
+                </div>`;
+              }).join('')
+            : `<span class="sem-treino">Sem treinos</span>`;
+
+        const qtd = temTreino ? turmas.filter(t => !t.toLowerCase().includes('sem treino')).length : 0;
+
+        html += `<div class="dia-card">
+            <div class="dia-header" style="border-left:3px solid ${cor};">
+                <span class="dia-nome" style="color:${cor};">${DIAS[dia]}</span>
+                ${qtd > 0 ? `<span class="dia-qtd">${qtd} turma${qtd>1?'s':''}</span>` : ''}
+            </div>
+            <div class="dia-turmas">${turmasHtml}</div>
+        </div>`;
+    });
+
+    container.innerHTML = html || '<p style="text-align:center;color:#64748b;font-size:0.82rem;">Nenhum horário cadastrado.</p>';
+}
+
+async function carregarHorarios() {
+    try {
+        await firebase.auth().signInAnonymously();
+        const doc = await db.collection('configuracoes').doc('horarios').get();
+        const grade = doc.exists ? doc.data() : {};
+        renderGrade(grade);
+    } catch(e) {
+        document.getElementById('grade-container').innerHTML =
+            '<p style="text-align:center;color:#64748b;font-size:0.82rem;">Horários em breve.</p>';
+    }
+}
+
+carregarHorarios();
+</script>
 </body>
 </html>

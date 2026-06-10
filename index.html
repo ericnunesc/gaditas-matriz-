@@ -251,8 +251,13 @@
         /* ── PLANOS ── */
         .planos { background: var(--bg); }
         .planos-grid {
-            display: flex; flex-direction: column; gap: 16px;
-            max-width: 480px; margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            max-width: 900px; margin: 0 auto;
+        }
+        @media (max-width: 540px) {
+            .planos-grid { grid-template-columns: 1fr; max-width: 480px; }
         }
         .plano-card {
             background: var(--bg2); border: 1px solid var(--border);

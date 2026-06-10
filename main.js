@@ -4070,6 +4070,38 @@ Ele voltará a ser aluno normal.`)) return;
     // ══════════════════════════════════════════════════════════
     // ── 11. DASHBOARD VISUAL ADMIN ────────────────────────────
     // ══════════════════════════════════════════════════════════
+    // ── Helpers do dashboard admin ────────────────────────
+    _irParaCheckin() {
+        // Garante que está na aba treino, mostra a área e scrolla até ela
+        ui.showTab('tab-checkin');
+        setTimeout(() => {
+            const el = document.getElementById('area-aluno-checkin');
+            if (el) { el.classList.remove('hidden'); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        }, 150);
+    },
+
+    _irParaChamada() {
+        ui.showTab('tab-checkin');
+        setTimeout(() => {
+            const el = document.getElementById('area-professor-checkin');
+            if (el) { el.classList.remove('hidden'); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            academia.renderChamadaProf();
+        }, 150);
+    },
+
+    _irParaAniversarios() {
+        ui.showTab('tab-checkin');
+        setTimeout(() => {
+            const card = document.getElementById('card-aniversariantes-admin');
+            if (card) {
+                card.style.display = 'block';
+                card.classList.remove('gestao-acc-fechado');
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                aniversario.renderAdminAniversariantes();
+            }
+        }, 150);
+    },
+
     async renderDashboardGrid() {
         if (auth.role !== 'admin') return;
         const el = document.getElementById('dashboard-grid-admin');
@@ -4099,7 +4131,7 @@ Ele voltará a ser aluno normal.`)) return;
         } catch(e) {}
 
         const cards = [
-            { icon:'fa-qrcode',        label:'Check-in',     cor:'#10b981', fn:`document.getElementById('area-aluno-checkin').scrollIntoView({behavior:'smooth'})` },
+            { icon:'fa-qrcode',        label:'Check-in',     cor:'#10b981', fn:`academia._irParaCheckin()` },
             { icon:'fa-users',         label:'Alunos',       cor:'#3b82f6', fn:`ui.showTab('tab-alunos')` },
             { icon:'fa-clock',         label:'Horários',     cor:'#8b5cf6', fn:`ui.showTab('tab-horarios')` },
             { icon:'fa-dollar-sign',   label:'Financeiro',   cor:'#22c55e', fn:`ui.showTab('tab-financeiro')` },
@@ -4107,10 +4139,10 @@ Ele voltará a ser aluno normal.`)) return;
             { icon:'fa-chart-bar',     label:'Relatórios',   cor:'#06b6d4', fn:`ui.showTab('tab-relatorios')` },
             { icon:'fa-shopping-bag',  label:'Loja',         cor:'#ec4899', fn:`ui.showTab('tab-loja')` },
             { icon:'fa-calendar-alt',  label:'Eventos',      cor:'#f97316', fn:`ui.showTab('tab-eventos')` },
-            { icon:'fa-clipboard-list',label:'Chamada',      cor:'#84cc16', fn:`academia.renderChamadaProf()` },
+            { icon:'fa-clipboard-list',label:'Chamada',      cor:'#84cc16', fn:`academia._irParaChamada()` },
             { icon:'fa-satellite-dish',label:'Sumidos',      cor:'#ef4444', fn:`ui.showTab('tab-relatorios'); setTimeout(()=>treinoPost.renderRadarSumidos(),300)` },
             { icon:'fa-star',          label:'Avaliações',   cor:'#facc15', fn:`ui.showTab('tab-relatorios'); setTimeout(()=>treinoPost.renderAvaliacoesPainel(),300)` },
-            { icon:'fa-birthday-cake', label:'Aniversários', cor:'#a78bfa', fn:`ui.showTab('tab-relatorios'); setTimeout(()=>aniversario.renderAdminAniversariantes(),300)` },
+            { icon:'fa-birthday-cake', label:'Aniversários', cor:'#a78bfa', fn:`academia._irParaAniversarios()` },
         ];
 
         const cardsHtml = cards.map(c => `

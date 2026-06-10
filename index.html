@@ -354,7 +354,7 @@
     <div class="hero-badge">🥋 Academia de Alto Nível — Sergipe</div>
     <img src="gaditasstore.png" alt="Gaditas Academy" class="hero-logo"/>
     <h1>Gaditas<br/><span>Academy</span></h1>
-    <p class="hero-sub">
+    <p class="hero-sub" id="hero-descricao">
         Jiu-Jitsu, Muay Thai e programa Kids.<br/>
         Aqui o tatame transforma vidas.
     </p>
@@ -535,8 +535,14 @@
     <img src="gaditasstore.png" alt="Gaditas"/>
     <p>
         <strong style="color:white;">Gaditas Academy</strong><br/>
-        Sergipe — Brasil<br/>
-        <span style="font-size:0.65rem;color:#475569;margin-top:6px;display:block;">
+        <a id="contato-whatsapp" href="#" style="color:#10b981;text-decoration:none;display:none;font-size:0.78rem;">
+            <i class="fas fa-whatsapp"></i>
+        </a><br/>
+        <span id="contato-endereco" style="display:none;font-size:0.72rem;color:#94a3b8;"></span><br/>
+        <a id="contato-instagram" href="#" target="_blank" style="color:#3b82f6;text-decoration:none;display:none;font-size:0.72rem;">
+            <i class="fab fa-instagram"></i>
+        </a>
+        <span style="font-size:0.65rem;color:#475569;margin-top:8px;display:block;">
             © 2026 Gaditas Academy. Todos os direitos reservados.
         </span>
     </p>
@@ -625,6 +631,25 @@ async function carregarHorarios() {
     }
 }
 
+async function carregarLandingConfig() {
+    try {
+        const doc = await db.collection('configuracoes').doc('landing_config').get();
+        if (!doc.exists) return;
+        const cfg = doc.data();
+        if (cfg.hero_descricao) {
+            const el = document.getElementById('hero-descricao');
+            if (el) el.innerHTML = cfg.hero_descricao.replace(/\n/g, '<br/>');
+        }
+        // Contato
+        const wa  = document.getElementById('contato-whatsapp');
+        const end = document.getElementById('contato-endereco');
+        const ig  = document.getElementById('contato-instagram');
+        if (wa  && cfg.whatsapp)  { wa.href = `https://wa.me/55${cfg.whatsapp.replace(/\D/g,'')}`; wa.textContent = cfg.whatsapp; wa.style.display = ''; }
+        if (end && cfg.endereco)  { end.textContent = cfg.endereco; end.style.display = ''; }
+        if (ig  && cfg.instagram) { ig.href = `https://instagram.com/${cfg.instagram.replace('@','')}`; ig.textContent = cfg.instagram; ig.style.display = ''; }
+    } catch(e) {}
+}
+
 carregarHorarios();
 
 // ── PLANOS ──────────────────────────────────────────────────
@@ -641,26 +666,29 @@ const PLANOS_ITENS = [
     'Participação em eventos',
 ];
 
-function renderPlanos(data) {
+function renderPlanos(precos, landing) {
     const container = document.getElementById('planos-grid');
     const ordem = ['mensal','trimestral','semestral','anual'];
     container.innerHTML = ordem.map(key => {
-        const cfg = PLANOS_CONFIG[key];
-        const valor = data[key]?.valor ?? '--';
-        const label = data[key]?.label ?? key;
+        const cfg   = PLANOS_CONFIG[key];
+        const valor = precos[key]?.valor ?? '--';
+        const label = precos[key]?.label ?? key;
+        const desc  = landing?.planos_desc?.[key] || cfg.desc;
+        const itensRaw = landing?.planos_itens?.[key] || PLANOS_ITENS.join('\n');
+        const itens = itensRaw.split('\n').filter(i => i.trim());
         return `
         <div class="plano-card${cfg.destaque ? ' destaque' : ''}">
             ${cfg.destaque ? '<div class="plano-badge-top">Mais popular</div>' : ''}
             <div class="plano-icon">${cfg.icone}</div>
             <div class="plano-nome">${label}</div>
-            <div class="plano-desc">${cfg.desc}</div>
+            <div class="plano-desc">${desc}</div>
             <div class="plano-preco">
                 <span class="plano-cifrao">R$</span>
                 <span class="plano-valor">${typeof valor === 'number' ? valor.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2}) : valor}</span>
                 <span class="plano-periodo">/mês</span>
             </div>
             <div class="plano-itens">
-                ${PLANOS_ITENS.map(i=>`<div class="plano-item"><i class="fas fa-check-circle"></i> ${i}</div>`).join('')}
+                ${itens.map(i=>`<div class="plano-item"><i class="fas fa-check-circle"></i> ${i}</div>`).join('')}
             </div>
             <a href="cadastro.html" class="plano-cta ${cfg.destaque ? 'filled' : 'outline'}">Quero me matricular</a>
         </div>`;
@@ -670,20 +698,24 @@ function renderPlanos(data) {
 async function carregarPlanos() {
     const loading = document.getElementById('planos-loading');
     try {
-        const doc = await db.collection('configuracoes').doc('planos').get();
-        const data = doc.exists ? doc.data() : {};
-        // cria o grid agora que temos os dados
+        const [docPlanos, docLanding] = await Promise.all([
+            db.collection('configuracoes').doc('planos').get(),
+            db.collection('configuracoes').doc('landing_config').get()
+        ]);
+        const precos  = docPlanos.exists  ? docPlanos.data()  : {};
+        const landing = docLanding.exists ? docLanding.data() : {};
         const grid = document.createElement('div');
         grid.id = 'planos-grid';
         grid.className = 'planos-grid';
         loading.replaceWith(grid);
-        renderPlanos(data);
+        renderPlanos(precos, landing);
     } catch(e) {
         loading.innerHTML = '<p style="color:#64748b;font-size:0.82rem;">Planos em breve.</p>';
     }
 }
 
 carregarPlanos();
+carregarLandingConfig();
 </script>
 </body>
 </html>

@@ -640,6 +640,112 @@ const academia = {
             </div>`;
     },
 
+    // ── CMS LANDING PAGE ────────────────────────────────────
+    async _carregarLandingConfig() {
+        const doc = await db.collection('configuracoes').doc('landing_config').get();
+        return doc.exists ? doc.data() : {
+            whatsapp: '', endereco: '', instagram: '',
+            hero_descricao: 'Jiu-Jitsu, Muay Thai e programa Kids.\nAqui o tatame transforma vidas.',
+            planos_desc: {
+                mensal: 'Renovação mensal, sem fidelidade.',
+                trimestral: 'Pague 3 meses e economize.',
+                semestral: 'Melhor custo-benefício do ano.',
+                anual: 'Comprometimento total com sua evolução.'
+            },
+            planos_itens: {
+                mensal:     'Aulas ilimitadas (BJJ, MT e Kids)\nSistema de graduação\nAcesso ao app exclusivo\nParticipação em eventos',
+                trimestral: 'Aulas ilimitadas (BJJ, MT e Kids)\nSistema de graduação\nAcesso ao app exclusivo\nParticipação em eventos',
+                semestral:  'Aulas ilimitadas (BJJ, MT e Kids)\nSistema de graduação\nAcesso ao app exclusivo\nParticipação em eventos',
+                anual:      'Aulas ilimitadas (BJJ, MT e Kids)\nSistema de graduação\nAcesso ao app exclusivo\nParticipação em eventos'
+            }
+        };
+    },
+
+    async salvarLandingConfig() {
+        const cfg = {
+            whatsapp:       document.getElementById('lnd-whatsapp').value.trim(),
+            endereco:       document.getElementById('lnd-endereco').value.trim(),
+            instagram:      document.getElementById('lnd-instagram').value.trim(),
+            hero_descricao: document.getElementById('lnd-hero-desc').value.trim(),
+            planos_desc: {
+                mensal:     document.getElementById('lnd-desc-mensal').value.trim(),
+                trimestral: document.getElementById('lnd-desc-trimestral').value.trim(),
+                semestral:  document.getElementById('lnd-desc-semestral').value.trim(),
+                anual:      document.getElementById('lnd-desc-anual').value.trim()
+            },
+            planos_itens: {
+                mensal:     document.getElementById('lnd-itens-mensal').value.trim(),
+                trimestral: document.getElementById('lnd-itens-trimestral').value.trim(),
+                semestral:  document.getElementById('lnd-itens-semestral').value.trim(),
+                anual:      document.getElementById('lnd-itens-anual').value.trim()
+            }
+        };
+        await db.collection('configuracoes').doc('landing_config').set(cfg);
+        alert('✅ Conteúdo do site atualizado!');
+    },
+
+    async renderPainelLanding() {
+        const container = document.getElementById('painel-config-landing');
+        if (!container) return;
+        const cfg = await this._carregarLandingConfig();
+
+        const inputStyle = `width:100%; padding:9px 11px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.82rem; box-sizing:border-box;`;
+        const taStyle   = `${inputStyle} resize:vertical; min-height:72px; font-family:inherit;`;
+        const label     = (txt) => `<small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin:10px 0 4px;letter-spacing:0.5px;">${txt}</small>`;
+
+        const planoRow = (key, label_) => `
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:12px;margin-top:8px;">
+                <div style="font-size:0.65rem;font-weight:900;color:#3b82f6;letter-spacing:1px;margin-bottom:8px;">${label_.toUpperCase()}</div>
+                ${label('DESCRIÇÃO CURTA')}
+                <input id="lnd-desc-${key}" value="${(cfg.planos_desc?.[key] || '').replace(/"/g,'&quot;')}" style="${inputStyle}" placeholder="Ex: Renovação mensal, sem fidelidade."/>
+                ${label('O QUE ESTÁ INCLUSO (um item por linha)')}
+                <textarea id="lnd-itens-${key}" style="${taStyle}" placeholder="Item 1&#10;Item 2&#10;Item 3">${cfg.planos_itens?.[key] || ''}</textarea>
+            </div>`;
+
+        container.innerHTML = `
+        <div style="background:#0f172a; border:1px solid #3b82f644; border-radius:12px; overflow:hidden; margin-bottom:4px;">
+            <div onclick="const b=this.nextElementSibling;const o=b.style.display!=='none';b.style.display=o?'none':'block';this.querySelector('.lnd-chv').style.transform=o?'rotate(0)':'rotate(180deg)'"
+                style="padding:13px 15px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+                <span style="font-size:0.7rem;font-weight:800;color:#3b82f6;letter-spacing:0.5px;">
+                    <i class="fas fa-globe"></i> EDITAR CONTEÚDO DO SITE
+                </span>
+                <i class="fas fa-chevron-down lnd-chv" style="color:#3b82f6;font-size:0.8rem;transition:transform 0.25s;"></i>
+            </div>
+            <div style="display:none;padding:0 15px 15px;">
+
+                <!-- CONTATO -->
+                <div style="font-size:0.65rem;font-weight:900;color:#10b981;letter-spacing:1px;margin-top:4px;">CONTATO</div>
+                ${label('WHATSAPP (só números, ex: 79912345678)')}
+                <input id="lnd-whatsapp" value="${cfg.whatsapp||''}" style="${inputStyle}" placeholder="79912345678" type="tel"/>
+                ${label('ENDEREÇO')}
+                <input id="lnd-endereco" value="${cfg.endereco||''}" style="${inputStyle}" placeholder="Rua X, Bairro — Aracaju/SE"/>
+                ${label('INSTAGRAM (com @)')}
+                <input id="lnd-instagram" value="${cfg.instagram||''}" style="${inputStyle}" placeholder="@gaditasacademy"/>
+
+                <!-- HERO -->
+                <div style="font-size:0.65rem;font-weight:900;color:#10b981;letter-spacing:1px;margin-top:16px;">TEXTO PRINCIPAL</div>
+                ${label('SUBTÍTULO DO HERO')}
+                <textarea id="lnd-hero-desc" style="${taStyle}" placeholder="Jiu-Jitsu, Muay Thai e programa Kids.&#10;Aqui o tatame transforma vidas.">${cfg.hero_descricao||''}</textarea>
+
+                <!-- PLANOS -->
+                <div style="font-size:0.65rem;font-weight:900;color:#10b981;letter-spacing:1px;margin-top:16px;">PLANOS — DESCRIÇÃO E ITENS</div>
+                ${planoRow('mensal','Mensal')}
+                ${planoRow('trimestral','Trimestral')}
+                ${planoRow('semestral','Semestral')}
+                ${planoRow('anual','Anual')}
+
+                <div style="display:flex;gap:8px;margin-top:14px;">
+                    <button onclick="academia.salvarLandingConfig()" style="flex:1;padding:12px;background:#3b82f6;border:none;color:#fff;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;">
+                        <i class="fas fa-save"></i> SALVAR CONTEÚDO DO SITE
+                    </button>
+                    <button onclick="window.open('index.html','_blank')" style="padding:12px 14px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;white-space:nowrap;">
+                        <i class="fas fa-external-link-alt"></i> VER SITE
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    },
+
     // ── ALERTAS DE NOVOS CADASTROS ──────────────────────────
     async carregarNovoCadastrosAlerta() {
         const container = document.getElementById('painel-novos-cadastros');

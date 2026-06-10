@@ -30,6 +30,8 @@ const GaditasPainelAdm = {
 
             <div id="painel-config-planos" style="margin-top:4px;"></div>
 
+            <div id="painel-config-landing" style="margin-top:4px;"></div>
+
             <!-- ══ COBRANÇA AVULSA ══ -->
             <div id="fin-card-avulsa" class="card" style="background:#1e293b; border:1px solid #f59e0b44; padding:15px; border-radius:12px; margin-top:4px;">
                 <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#f59e0b; margin-bottom:14px; letter-spacing:0.5px;">
@@ -311,6 +313,7 @@ const GaditasPainelAdm = {
         if (typeof academia !== 'undefined') {
             academia.carregarNovoCadastrosAlerta();
             academia.renderPainelPlanos();
+            academia.renderPainelLanding();
         }
 
         // Aplica acordeões nas seções recolhíveis

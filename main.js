@@ -175,6 +175,38 @@ const auth = {
             alert("Erro ao fazer login: " + e.message);
         }
     },
+    async recuperarSenha() {
+        const email = prompt('Digite seu e-mail cadastrado:');
+        if (!email || !email.includes('@')) return;
+        const e = email.trim().toLowerCase();
+        try {
+            // Garante sessão anônima para poder consultar Firestore
+            if (!firebase.auth().currentUser) {
+                try { await firebase.auth().signInAnonymously(); } catch(_) {}
+            }
+            // Tenta enviar pelo Firebase Auth (funciona para alunos com conta Firebase)
+            try {
+                await firebase.auth().sendPasswordResetEmail(e);
+                alert('✅ Email de recuperação enviado!\n\nVerifique sua caixa de entrada (e o spam).');
+                return;
+            } catch(authErr) {
+                if (authErr.code !== 'auth/user-not-found') throw authErr;
+            }
+            // Usuário não tem conta Firebase — verifica se existe como prof/aluno no Firestore
+            const [snapP, snapA] = await Promise.all([
+                db.collection('professores').where('email','==',e).get(),
+                db.collection('alunos').where('email','==',e).get()
+            ]);
+            if (!snapP.empty || !snapA.empty) {
+                alert('⚠️ Sua conta não usa login por e-mail.\n\nContate o professor ou admin para redefinir sua senha.');
+            } else {
+                alert('❌ Nenhuma conta encontrada com esse e-mail.');
+            }
+        } catch(err) {
+            alert('Erro: ' + err.message);
+        }
+    },
+
     sucesso() {
         document.getElementById('screen-login').classList.add('hidden');
         document.getElementById('screen-dashboard').classList.remove('hidden');

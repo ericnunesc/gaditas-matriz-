@@ -215,7 +215,10 @@ const auth = {
         if (this.role === 'aluno') academia.iniciarListenerRelatoAluno();
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerRelatosProf();
         if (this.role === 'professor') { profComms.iniciarListenerRecadosProf(); setTimeout(() => profComms.renderPainelDispensas(), 1000); }
-        if (this.role === 'admin') setTimeout(() => profComms.renderPainelConvocacoes(), 1500);
+        if (this.role === 'admin') {
+            setTimeout(() => profComms.renderPainelConvocacoes(), 1500);
+            setTimeout(() => profComms.verificarDispensasAdmin(), 2000);
+        }
         // Badge de depoimentos aprovados (carrega em background)
         academia._carregarBadgeDepoimentos();
         // Badge e painel de solicitações de avaliação física (admin/professor)
@@ -6504,6 +6507,70 @@ const profComms = {
         document.getElementById('modal-conv-rapida')?.remove();
         alert(`✅ Convocação enviada para ${profNome}!`);
         this.renderPainelConvocacoes();
+    },
+
+    // ── ALERTA DE DISPENSAS NO LOGIN DO ADMIN ─────────────
+    async verificarDispensasAdmin() {
+        if (auth.role !== 'admin') return;
+        const hoje   = new Date().toISOString().slice(0,10);
+        const amanha = new Date(Date.now() + 86400000).toISOString().slice(0,10);
+
+        const snap = await db.collection('dispensas_prof').get();
+        const dispensasHoje   = [];
+        const dispensasAmanha = [];
+
+        snap.forEach(doc => {
+            const d = doc.data();
+            const fim = d.dataFim || d.data;
+            if (d.data <= hoje   && fim >= hoje)   dispensasHoje.push(d);
+            if (d.data <= amanha && fim >= amanha && !(d.data <= hoje && fim >= hoje)) dispensasAmanha.push(d);
+        });
+
+        if (!dispensasHoje.length && !dispensasAmanha.length) return;
+
+        // Monta popup
+        let modal = document.getElementById('modal-aviso-dispensas');
+        if (modal) modal.remove();
+        modal = document.createElement('div');
+        modal.id = 'modal-aviso-dispensas';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.95);z-index:99997;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+
+        let corpo = '';
+        if (dispensasHoje.length) {
+            corpo += `<div style="background:#3a1a00;border:1px solid #f59e0b;border-radius:10px;padding:12px;margin-bottom:10px;">
+                <div style="font-size:0.68rem;font-weight:800;color:#f59e0b;margin-bottom:8px;">⚠️ DISPENSAS HOJE</div>
+                ${dispensasHoje.map(d => `
+                    <div style="font-size:0.75rem;color:#e2e8f0;margin-bottom:4px;">
+                        👤 <b>${d.profNome}</b> — ${d.turma === 'todas' ? 'todas as turmas' : d.turma}
+                        <div style="font-size:0.62rem;color:#94a3b8;margin-top:1px;font-style:italic;">"${d.motivo}"</div>
+                    </div>`).join('')}
+            </div>`;
+        }
+        if (dispensasAmanha.length) {
+            corpo += `<div style="background:#1a2a1a;border:1px solid #10b981;border-radius:10px;padding:12px;margin-bottom:10px;">
+                <div style="font-size:0.68rem;font-weight:800;color:#10b981;margin-bottom:8px;">📅 DISPENSAS AMANHÃ</div>
+                ${dispensasAmanha.map(d => `
+                    <div style="font-size:0.75rem;color:#e2e8f0;margin-bottom:4px;">
+                        👤 <b>${d.profNome}</b> — ${d.turma === 'todas' ? 'todas as turmas' : d.turma}
+                        <div style="font-size:0.62rem;color:#94a3b8;margin-top:1px;font-style:italic;">"${d.motivo}"</div>
+                    </div>`).join('')}
+            </div>`;
+        }
+
+        modal.innerHTML = `
+            <div style="background:#1e293b;border:2px solid #f59e0b;border-radius:20px;padding:24px;max-width:380px;width:100%;">
+                <div style="text-align:center;margin-bottom:16px;">
+                    <div style="font-size:2.5rem;margin-bottom:6px;">🗓️</div>
+                    <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:2px;">GADITAS ACADEMY</div>
+                    <div style="font-size:1rem;font-weight:800;color:white;margin-top:4px;">Aviso de Dispensas</div>
+                </div>
+                ${corpo}
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                    <button onclick="document.getElementById('modal-aviso-dispensas').remove()" style="flex:1;padding:12px;background:#334155;border:none;color:white;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.8rem;">Fechar</button>
+                    <button onclick="document.getElementById('modal-aviso-dispensas').remove();profComms.abrirDispensasAdmin();" style="flex:1;padding:12px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.8rem;">Ver todas</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
     },
 
     // ── DISPENSAS (VISÃO ADMIN) ────────────────────────────

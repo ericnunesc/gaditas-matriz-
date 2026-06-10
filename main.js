@@ -4808,7 +4808,7 @@ Ele voltará a ser aluno normal.`)) return;
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
         const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;';
         modal.innerHTML = `
-            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;max-height:90vh;overflow-y:auto;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                     <span style="font-size:0.95rem;font-weight:800;color:white;">⚙️ Configurações do Admin</span>
                     <button onclick="document.getElementById('modal-config-admin').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>

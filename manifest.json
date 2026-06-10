@@ -2,7 +2,7 @@
   "name": "Gaditas Academy",
   "short_name": "Gaditas",
   "description": "Sistema de gestão e check-in da Gaditas Academy",
-  "start_url": "./index.html",
+  "start_url": "./app.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

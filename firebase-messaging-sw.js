@@ -1,9 +1,10 @@
 // firebase-messaging-sw.js — também serve como SW do PWA
 
-const CACHE = 'gaditas-v7';
+const CACHE = 'gaditas-v8';
 const PRECACHE = [
     './',
     './index.html',
+    './app.html',
     './main.js',
     './style.css',
     './manifest.json',

@@ -222,7 +222,10 @@ const auth = {
             }
         }
 
-        // FCM token desativado temporariamente
+        // Registra token FCM para push notifications
+        if (this.role === 'aluno' || this.role === 'professor') {
+            setTimeout(() => this._registrarFcmToken(), 3000);
+        }
 
         // Carrega foto no header
         if (this.currentUser.id && this.currentUser.id !== 'admin') {
@@ -1087,6 +1090,7 @@ const academia = {
     async marcarParaExame(id, nome) {
         if (!confirm(`Convocar ${nome} para o exame de faixa?\n\nEle(a) verá um aviso fixo no perfil até ser graduado(a).`)) return;
         await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, convocacaoPendente: true });
+        push.paraAluno(id, '🏆 Você foi convocado(a)!', `Parabéns! Seu professor te indicou para o exame de faixa. OSS! 🥋`);
         alert(`✅ ${nome} foi convocado(a) para o exame de faixa! OSS!`);
         this.generarRelatorioGraduacao();
     },
@@ -1666,6 +1670,8 @@ const academia = {
             // Salva feedback pendente — aparece pro aluno até ele responder
             upd.feedbackPendente = { turma: t, data: dataOriginal };
             await r.update(upd);
+            // Push para o aluno
+            push.paraAluno(aId, '✅ Presença confirmada!', `Sua presença na turma ${t} foi registrada. OSS! 🥋`);
         }
         await db.collection("checkins").doc(cId).delete();
         this.renderCheckins(); academia.renderRanking(); academia.carregarConquistas();
@@ -5043,6 +5049,7 @@ Ele voltará a ser aluno normal.`)) return;
                 await batch.commit();
 
                 alert("✅ Presença computada automaticamente! Turma: " + turmaQR + " OSS! 🥋");
+                push.paraAluno(alunoId, '✅ Presença confirmada!', `Sua presença na turma ${turmaQR} foi registrada. OSS! 🥋`);
             } else {
                 // Fora da janela — envia para fila do professor aprovar
                 const snapCI = await db.collection("checkins").where("alunoId", "==", alunoId).get();
@@ -7537,6 +7544,9 @@ const exame = {
                 aulas: 0
             });
 
+            // Push de parabéns
+            push.paraAluno(alunoId, '🏆 Parabéns! Nova faixa!', `Você foi graduado(a) para a faixa ${faixaDestino}! Muito orgulho! OSS! 🥋`);
+
             // Remove card da lista
             card?.remove();
         } catch(e) {
@@ -8547,6 +8557,47 @@ const enquetes = {
             await db.collection('enquetes').doc(id).delete();
             this.renderAdminEnquetes();
         } catch(e) { alert('Erro: ' + e.message); }
+    }
+};
+
+// ══════════════════════════════════════════════════════════
+// PUSH NOTIFICATIONS
+// ══════════════════════════════════════════════════════════
+const push = {
+    _api: '/api/push-comunicado',
+
+    // Envia push para um aluno específico pelo ID
+    async paraAluno(alunoId, title, body) {
+        try {
+            const doc = await db.collection('alunos').doc(alunoId).get();
+            if (!doc.exists) return;
+            const token = doc.data().fcmToken;
+            if (!token) return;
+            await fetch(this._api, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tokens: [token], title, body })
+            });
+        } catch(e) { console.warn('Push falhou:', e.message); }
+    },
+
+    // Envia para todos os alunos (ou filtro de IDs)
+    async paraTodos(title, body, ids = null) {
+        try {
+            const snap = await db.collection('alunos').get();
+            const tokens = [];
+            snap.forEach(doc => {
+                if (ids && !ids.includes(doc.id)) return;
+                const t = doc.data().fcmToken;
+                if (t) tokens.push(t);
+            });
+            if (!tokens.length) return;
+            await fetch(this._api, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tokens, title, body })
+            });
+        } catch(e) { console.warn('Push falhou:', e.message); }
     }
 };
 

@@ -1626,34 +1626,32 @@ const academia = {
                 : `<div style="width:36px; height:36px; border-radius:50%; background:#1e293b; border:2px solid #334155; display:inline-flex; align-items:center; justify-content:center; margin-right:10px; flex-shrink:0; font-size:0.85rem; font-weight:800; color:#94a3b8;">${a.nome.charAt(0).toUpperCase()}</div>`;
 
             const telLimpo = (a.telefone || '').replace(/\D/g, '');
-            cardsHtml += `<div class="item-card" style="border-left: 4px solid ${trancado ? '#64748b' : corBorda}; flex-direction:column; align-items:stretch; gap:10px; ${trancado ? 'opacity:0.7;' : ''}">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="display:flex; align-items:center; flex:1; min-width:0;">
-                        ${fotoMini}
-                        <div style="color:#e2e8f0; flex:1; font-size:0.85rem; font-weight:600; min-width:0;">
-                            <span>${a.nome.toUpperCase()}${modBadge} ${eng.icon}${trancado ? ' <span style="background:#334155; color:#94a3b8; font-size:0.5rem; padding:2px 6px; border-radius:4px; font-weight:800; vertical-align:middle;">🔒 TRANCADO</span>' : ''}</span>
-                            ${beltBarHtml}
-                            ${gradInfo}
-                            ${tagsLeoes}
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:5px; flex-shrink:0;">
-                        <button onclick="academia.abrirModalEditarAluno('${doc.id}')" title="Editar atleta" style="background:#1e3a5f; border:1px solid #3b82f6; color:#93c5fd; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-edit"></i></button>
-                        ${telLimpo ? `<button onclick="academia.abrirWhatsappBusiness('${telLimpo}')" title="WhatsApp Business" style="background:#064e3b; border:none; color:#25d366; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : ''}
-                        <button onclick="academia.verFichaSaudeAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Ficha de Saúde" style="background:#0c2344; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-notes-medical"></i></button>
-                        <button onclick="graduacaoHistorico.abrirModal('${doc.id}')" title="Histórico de Graduações" style="background:#1e1040; border:none; color:#a78bfa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-medal"></i></button>
-                        <button onclick="avaliacaoFisica.abrirMenu('${doc.id}')" title="Avaliação Física" style="background:#0c2a1a; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-chart-line"></i></button>
-                        ${isAdmin ? `<button onclick="academia.verFinanceiroAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#064e3b; border:none; color:#10b981; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-dollar-sign"></i></button>` : ''}
-                        ${isAdmin ? (trancado
-                            ? `<button onclick="academia.ativarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Reativar matrícula" style="background:#1e3a8a; border:none; color:#60a5fa; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-lock-open"></i></button>`
-                            : `<button onclick="academia.trancarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Trancar matrícula" style="background:#1c1000; border:1px solid #92400e; color:#f59e0b; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-lock"></i></button>`)
-                        : ''}
-                        ${isAdmin ? `<button onclick="academia.reenviarContrato('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Reenviar Contrato" style="background:#1c1000; border:1px solid #92400e; color:#f59e0b; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-file-contract"></i></button>` : ''}
-                        ${isAdmin ? `<button onclick="academia.excluirAluno('${doc.id}')" style="background:#2a0808; border:none; color:#ef4444; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-trash"></i></button>` : ''}
+            cardsHtml += `<div class="item-card" style="border-left: 4px solid ${trancado ? '#64748b' : corBorda}; flex-direction:column; align-items:stretch; gap:8px; ${trancado ? 'opacity:0.7;' : ''}">
+                <!-- Linha info -->
+                <div style="display:flex; align-items:center; gap:10px;">
+                    ${fotoMini}
+                    <div style="color:#e2e8f0; flex:1; font-size:0.85rem; font-weight:600; min-width:0;">
+                        <div style="word-break:break-word; line-height:1.3;">${a.nome.toUpperCase()}${modBadge} ${eng.icon}${trancado ? ' <span style="background:#334155; color:#94a3b8; font-size:0.5rem; padding:2px 6px; border-radius:4px; font-weight:800; vertical-align:middle;">🔒 TRANCADO</span>' : ''}</div>
+                        ${beltBarHtml}
+                        ${gradInfo}
+                        ${tagsLeoes}
                     </div>
                 </div>
-                <div style="display:flex; justify-content:flex-start; padding-top:4px;">
-                    <button onclick="academia.lancarPresencaManualAdmin('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#1e3a8a; border:none; color:#60a5fa; padding:6px 12px; border-radius:6px; font-size:0.7rem; font-weight:700; cursor:pointer;"><i class="fas fa-plus"></i> Presença Manual</button>
+                <!-- Linha botões -->
+                <div style="display:flex; flex-wrap:wrap; gap:5px; padding-top:2px; border-top:1px solid #1e293b;">
+                    <button onclick="academia.abrirModalEditarAluno('${doc.id}')" title="Editar" style="background:#1e3a5f;border:1px solid #3b82f6;color:#93c5fd;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-edit"></i></button>
+                    ${telLimpo ? `<button onclick="academia.abrirWhatsappBusiness('${telLimpo}')" title="WhatsApp" style="background:#064e3b;border:none;color:#25d366;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fab fa-whatsapp"></i></button>` : ''}
+                    <button onclick="academia.verFichaSaudeAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Ficha de Saúde" style="background:#0c2344;border:none;color:#10b981;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-notes-medical"></i></button>
+                    <button onclick="graduacaoHistorico.abrirModal('${doc.id}')" title="Graduações" style="background:#1e1040;border:none;color:#a78bfa;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-medal"></i></button>
+                    <button onclick="avaliacaoFisica.abrirMenu('${doc.id}')" title="Avaliação Física" style="background:#0c2a1a;border:none;color:#10b981;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-chart-line"></i></button>
+                    ${isAdmin ? `<button onclick="academia.verFinanceiroAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Financeiro" style="background:#064e3b;border:none;color:#10b981;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-dollar-sign"></i></button>` : ''}
+                    ${isAdmin ? (trancado
+                        ? `<button onclick="academia.ativarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Reativar" style="background:#1e3a8a;border:none;color:#60a5fa;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-lock-open"></i></button>`
+                        : `<button onclick="academia.trancarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Trancar" style="background:#1c1000;border:1px solid #92400e;color:#f59e0b;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-lock"></i></button>`)
+                    : ''}
+                    ${isAdmin ? `<button onclick="academia.reenviarContrato('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Contrato" style="background:#1c1000;border:1px solid #92400e;color:#f59e0b;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-file-contract"></i></button>` : ''}
+                    ${isAdmin ? `<button onclick="academia.excluirAluno('${doc.id}')" title="Excluir" style="background:#2a0808;border:none;color:#ef4444;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-trash"></i></button>` : ''}
+                    <button onclick="academia.lancarPresencaManualAdmin('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#1e3a8a;border:none;color:#60a5fa;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;"><i class="fas fa-plus"></i> Presença</button>
                 </div>
             </div>`;
         });

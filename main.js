@@ -59,6 +59,24 @@ const auth = {
     adminCreds: { user: "admin", pass: "admin", nome: "Eric (Adm)", faixa: "Preta", grau: 3, modalidade: "jiujitsu" },
     role: null, currentUser: null,
 
+    // Carrega metas de aulas por faixa/grau salvas no Firestore
+    async carregarMetasAulas() {
+        try {
+            const doc = await db.collection('configuracoes').doc('metas_aulas').get();
+            if (doc.exists) {
+                const d = doc.data();
+                // Mescla sobre o objeto hardcoded, permitindo override pelo admin
+                for (const faixa of Object.keys(d)) {
+                    if (graduacao.regrasAulas[faixa] !== undefined) {
+                        if (typeof d[faixa] === 'object') {
+                            graduacao.regrasAulas[faixa] = { ...graduacao.regrasAulas[faixa], ...d[faixa] };
+                        }
+                    }
+                }
+            }
+        } catch(e) { console.warn('carregarMetasAulas:', e.message); }
+    },
+
     // Carrega credenciais do admin salvas no Firestore
     async carregarCredenciaisAdmin() {
         try {
@@ -4833,6 +4851,35 @@ Ele voltará a ser aluno normal.`)) return;
                 <div style="height:10px;"></div>
                 <button onclick="academia.salvarConfigAdmin()" style="width:100%;padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">💾 SALVAR CONFIGURAÇÕES</button>
                 <div style="height:1px;background:#334155;margin:16px 0;"></div>
+                <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">🎯 META DE AULAS POR FAIXA/GRAU</div>
+                <div style="font-size:0.62rem;color:#475569;margin-bottom:10px;line-height:1.4;">Aulas necessárias para progressão em cada grau. Grau 4 = convocação automática para exame.</div>
+                ${['Branca','Azul','Roxa','Marrom'].map(f => {
+                    const regs = graduacao.regrasAulas[f] || {};
+                    return `<div style="margin-bottom:10px;">
+                        <div style="font-size:0.65rem;color:#e2e8f0;font-weight:700;margin-bottom:4px;">${f}</div>
+                        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;">
+                            ${[0,1,2,3,4].map(g => `
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.5rem;color:#64748b;margin-bottom:2px;">${g}ºG</div>
+                                    <input type="number" id="meta-${f}-${g}" value="${regs[g] ?? 40}" min="1" max="999"
+                                        style="width:100%;padding:5px 2px;background:#0f172a;border:1px solid #334155;color:white;border-radius:6px;text-align:center;font-size:0.72rem;box-sizing:border-box;"/>
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+                }).join('')}
+                <div style="margin-bottom:10px;">
+                    <div style="font-size:0.65rem;color:#e2e8f0;font-weight:700;margin-bottom:4px;">Kids</div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;">
+                        ${['Pré-Mirim','Mirim','Infanto'].map(cat => `
+                            <div style="text-align:center;">
+                                <div style="font-size:0.5rem;color:#64748b;margin-bottom:2px;">${cat}</div>
+                                <input type="number" id="meta-Kids-${cat}" value="${(graduacao.regrasAulas['Kids'] || {})[cat] ?? 12}" min="1" max="999"
+                                    style="width:100%;padding:5px 2px;background:#0f172a;border:1px solid #334155;color:white;border-radius:6px;text-align:center;font-size:0.72rem;box-sizing:border-box;"/>
+                            </div>`).join('')}
+                    </div>
+                </div>
+                <button onclick="academia.salvarMetasAulas()" style="width:100%;padding:11px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.78rem;">🎯 SALVAR METAS</button>
+                <div style="height:1px;background:#334155;margin:16px 0;"></div>
                 <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">📋 GESTÃO DE CONTRATOS</div>
                 <button onclick="academia.solicitarNovaAssinaturaGeral()" style="width:100%;padding:12px;background:#1c1000;border:1px solid #92400e;color:#f59e0b;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;">
                     🔄 SOLICITAR NOVA ASSINATURA DE TODOS
@@ -4928,6 +4975,32 @@ Ele voltará a ser aluno normal.`)) return;
             }
             document.getElementById('modal-config-admin')?.remove();
             alert('✅ Configurações salvas!');
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async salvarMetasAulas() {
+        try {
+            const dados = {};
+            for (const f of ['Branca','Azul','Roxa','Marrom']) {
+                dados[f] = {};
+                for (let g = 0; g <= 4; g++) {
+                    const v = parseInt(document.getElementById(`meta-${f}-${g}`)?.value);
+                    if (!isNaN(v) && v > 0) dados[f][g] = v;
+                }
+            }
+            dados['Kids'] = {};
+            for (const cat of ['Pré-Mirim','Mirim','Infanto']) {
+                const v = parseInt(document.getElementById(`meta-Kids-${cat}`)?.value);
+                if (!isNaN(v) && v > 0) dados['Kids'][cat] = v;
+            }
+            await db.collection('configuracoes').doc('metas_aulas').set(dados);
+            // Atualiza em memória imediatamente
+            for (const f of Object.keys(dados)) {
+                if (graduacao.regrasAulas[f] !== undefined) {
+                    graduacao.regrasAulas[f] = { ...graduacao.regrasAulas[f], ...dados[f] };
+                }
+            }
+            alert('✅ Metas de aulas salvas!');
         } catch(e) { alert('Erro: ' + e.message); }
     },
 
@@ -5683,11 +5756,17 @@ Ele voltará a ser aluno normal.`)) return;
         // Aluno exclusivo de Muay Thai não tem meta JJ
         if ((a.modalidade || 'jiujitsu') === 'muaythai') return { meta: 0, pronto: false, percent: 0 };
         if (a.faixa === "Preta") return { meta: 0, pronto: false, percent: 100 };
+        // Determina se é kids pela idade — precisa vir ANTES de checar faixa adulto,
+        // porque "Branca" existe nos dois arrays e kids Branca tem meta diferente
+        const anoAtual = new Date().getFullYear();
+        const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
+        const isKids = idade <= 15;
         let m = 40;
-        if (graduacao.adulto.includes(a.faixa)) m = graduacao.regrasAulas[a.faixa][a.grau] || 40;
-        else {
-            const i = new Date().getFullYear() - new Date(a.nascimento).getFullYear();
-            let cat = (i <= 6) ? "Pré-Mirim" : (i <= 9) ? "Mirim" : "Infanto"; m = graduacao.regrasAulas["Kids"][cat];
+        if (isKids) {
+            const cat = (idade <= 6) ? "Pré-Mirim" : (idade <= 9) ? "Mirim" : "Infanto";
+            m = (graduacao.regrasAulas["Kids"] || {})[cat] || 12;
+        } else if (graduacao.adulto.includes(a.faixa)) {
+            m = ((graduacao.regrasAulas[a.faixa] || {})[a.grau ?? 0]) || 40;
         }
         return { meta: m, pronto: (a.aulas || 0) >= m, percent: Math.min(((a.aulas || 0) / m) * 100, 100) };
     },
@@ -10289,6 +10368,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('btnEntrar');
     if(btn) btn.addEventListener('click', () => auth.login());
 
-    // Carrega credenciais do admin salvas no Firestore
+    // Carrega credenciais e metas do admin salvas no Firestore
     auth.carregarCredenciaisAdmin();
+    auth.carregarMetasAulas();
 });

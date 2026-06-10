@@ -8507,6 +8507,7 @@ const exame = {
                                     ${infantil.map(f=>`<option value="${f}" ${faixaDestino===f?'selected':''}>${f}</option>`).join('')}
                                 </select>
                             </div>` : '';
+                        const taxaPaga = a.taxaExamePaga === true;
                         return `<div id="card-conv-${id}" style="background:#0f172a;border:1px solid ${confirmou?'#10b98130':'#1e293b'};border-left:3px solid ${corNome};border-radius:8px;padding:10px 12px;margin-bottom:6px;">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <div style="flex:1;min-width:0;">
@@ -8516,8 +8517,17 @@ const exame = {
                                 <span style="font-size:0.58rem;font-weight:800;color:${confirmou?'#10b981':'#f59e0b'};white-space:nowrap;margin-left:8px;">${confirmou?'✅ CONF.':'⏳ PEND.'}</span>
                             </div>
                             ${seletorKids}
+                            <div onclick="exame.toggleTaxaPaga('${id}', this)"
+                                style="margin-top:8px;display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 10px;background:${taxaPaga?'#05200f':'#1e293b'};border:1px solid ${taxaPaga?'#10b98155':'#334155'};border-radius:8px;transition:all 0.2s;">
+                                <div id="taxa-toggle-${id}" style="width:32px;height:18px;border-radius:9px;background:${taxaPaga?'#10b981':'#334155'};position:relative;transition:all 0.2s;flex-shrink:0;">
+                                    <div style="position:absolute;top:2px;left:${taxaPaga?'14px':'2px'};width:14px;height:14px;border-radius:50%;background:white;transition:all 0.2s;"></div>
+                                </div>
+                                <span id="taxa-label-${id}" style="font-size:0.65rem;font-weight:700;color:${taxaPaga?'#10b981':'#94a3b8'};">
+                                    ${taxaPaga?'💰 TAXA PAGA':'💸 Taxa não paga'}
+                                </span>
+                            </div>
                             <button onclick="exame.graduarAluno('${id}')" data-faixa-destino="${faixaDestino}"
-                                style="margin-top:8px;width:100%;padding:7px;background:linear-gradient(135deg,${corNome},${corNome}99);color:#000;font-weight:900;font-size:0.7rem;border:none;border-radius:8px;cursor:pointer;letter-spacing:1px;">
+                                style="margin-top:6px;width:100%;padding:7px;background:linear-gradient(135deg,${corNome},${corNome}99);color:#000;font-weight:900;font-size:0.7rem;border:none;border-radius:8px;cursor:pointer;letter-spacing:1px;">
                                 🥋 GRADUAR
                             </button>
                         </div>`;
@@ -8720,6 +8730,30 @@ const exame = {
         try {
             await db.collection('alunos').doc(alunoId).update({ proxFaixaCustom: faixa });
         } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    // ── Toggle taxa do exame paga/não paga ───────────────────
+    async toggleTaxaPaga(alunoId, wrapEl) {
+        const ref = db.collection('alunos').doc(alunoId);
+        const doc = await ref.get();
+        const atual = doc.exists ? (doc.data().taxaExamePaga === true) : false;
+        const novo = !atual;
+        await ref.update({ taxaExamePaga: novo });
+        // Atualiza visual sem re-renderizar tudo
+        const toggle = document.getElementById(`taxa-toggle-${alunoId}`);
+        const label  = document.getElementById(`taxa-label-${alunoId}`);
+        if (toggle) {
+            toggle.style.background = novo ? '#10b981' : '#334155';
+            toggle.querySelector('div').style.left = novo ? '14px' : '2px';
+        }
+        if (label) {
+            label.style.color = novo ? '#10b981' : '#94a3b8';
+            label.textContent = novo ? '💰 TAXA PAGA' : '💸 Taxa não paga';
+        }
+        if (wrapEl) {
+            wrapEl.style.background = novo ? '#05200f' : '#1e293b';
+            wrapEl.style.borderColor = novo ? '#10b98155' : '#334155';
+        }
     },
 
     // ── Graduar aluno direto pela lista de convocados ────────

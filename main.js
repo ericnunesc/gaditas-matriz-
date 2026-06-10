@@ -5604,6 +5604,17 @@ Ele voltará a ser aluno normal.`)) return;
 
         container.innerHTML = html;
 
+        // Painel de dispensas para professor (inserido após o render)
+        if (auth.role === 'professor') {
+            let painelDisp = document.getElementById('painel-dispensas-prof');
+            if (!painelDisp) {
+                painelDisp = document.createElement('div');
+                painelDisp.id = 'painel-dispensas-prof';
+                container.insertBefore(painelDisp, container.firstChild);
+            }
+            profComms.renderPainelDispensas();
+        }
+
         // Preenche bloco de duração separadamente (evita problema com template literal aninhado)
         const blocoDuracao = document.getElementById('bloco-duracao-aula');
         const blocoInfo    = document.getElementById('bloco-info-janela');

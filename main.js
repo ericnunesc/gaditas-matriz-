@@ -4587,16 +4587,21 @@ Ele voltará a ser aluno normal.`)) return;
                 </div>`;
             }
 
-            stories.forEach(s => {
+            // Salva lista para navegação por índice
+            academia._storiesList = stories;
+
+            stories.forEach((s, idx) => {
                 const visto = !!vistos[s.id];
                 const anel  = visto
                     ? 'border:2px solid #334155;'
                     : 'border:2px solid transparent;background-image:linear-gradient(white,white),linear-gradient(135deg,#f43f5e,#f59e0b);background-origin:border-box;background-clip:padding-box,border-box;';
-                html += `<div style="flex-shrink:0;cursor:pointer;text-align:center;position:relative;" onclick="academia.abrirStory('${s.id}','${s.imageUrl.replace(/'/g,"\\'")}','${(s.titulo||'').replace(/'/g,"\\'")}','${(s.link||'').replace(/'/g,"\\'")}')">
+                const nCurtidas = (s.curtidas || []).length;
+                html += `<div style="flex-shrink:0;cursor:pointer;text-align:center;position:relative;" onclick="academia.abrirStory(${idx})">
                     <div style="width:58px;height:58px;border-radius:50%;overflow:hidden;${anel}">
                         <img src="${s.imageUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=font-size:1.6rem;line-height:58px;>📸</div>'"/>
                     </div>
                     ${isAdmin ? `<button onclick="event.stopPropagation();academia.excluirStory('${s.id}')" style="position:absolute;top:-4px;right:-4px;background:#f43f5e;border:none;color:white;border-radius:50%;width:18px;height:18px;font-size:0.6rem;cursor:pointer;line-height:18px;padding:0;">✕</button>` : ''}
+                    ${nCurtidas > 0 ? `<div style="position:absolute;bottom:16px;right:-2px;background:#f43f5e;color:white;font-size:0.45rem;font-weight:800;border-radius:10px;padding:1px 4px;line-height:1.4;">❤️${nCurtidas}</div>` : ''}
                     <span style="font-size:0.5rem;color:#94a3b8;display:block;margin-top:4px;font-weight:700;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.titulo || 'Story'}</span>
                 </div>`;
             });
@@ -4607,38 +4612,124 @@ Ele voltará a ser aluno normal.`)) return;
         }
     },
 
-    abrirStory(id, imageUrl, titulo, link) {
+    _storiesList: [],
+    _storyIdx: 0,
+    _storyTimer: null,
+
+    abrirStory(idx) {
+        this._storyIdx = idx;
+        const stories = this._storiesList;
+        const s = stories[idx];
+        if (!s) return;
+
         // Marca como visto
         const vistos = JSON.parse(localStorage.getItem('gaditas_stories_vistos') || '{}');
-        vistos[id] = true;
+        vistos[s.id] = true;
         localStorage.setItem('gaditas_stories_vistos', JSON.stringify(vistos));
-        this.renderStoriesBar(); // atualiza borda
+        this.renderStoriesBar();
+
+        // Cancela timer anterior
+        if (this._storyTimer) { clearTimeout(this._storyTimer); this._storyTimer = null; }
+
+        // Verifica se já curtiu
+        const jaCurtiu = (s.curtidas || []).some(c => c.id === auth.currentUser?.id);
 
         let overlay = document.getElementById('overlay-story');
         if (!overlay) {
             overlay = document.createElement('div');
             overlay.id = 'overlay-story';
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;';
-            overlay.onclick = e => { if (e.target === overlay) this.fecharStory(); };
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;';
             document.body.appendChild(overlay);
         }
+
+        // Barras de progresso
+        const barras = stories.map((_, i) =>
+            `<div style="flex:1;height:3px;border-radius:2px;background:${i < idx ? '#fff' : '#ffffff44'};overflow:hidden;">
+                ${i === idx ? `<div id="story-progress-bar" style="height:100%;background:#fff;width:0;"></div>` : ''}
+            </div>`
+        ).join('');
+
+        const link = s.link || '';
+        const curtidas = s.curtidas || [];
+        const isAdmin = auth.role === 'admin';
+
         overlay.innerHTML = `
-            <style>@keyframes storyBar{from{width:0}to{width:100%}}</style>
-            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#1e293b;">
-                <div style="height:100%;background:linear-gradient(90deg,#f43f5e,#f59e0b);animation:storyBar 8s linear forwards;border-radius:2px;"></div>
-            </div>
-            <button onclick="academia.fecharStory()" style="position:absolute;top:18px;right:18px;background:rgba(255,255,255,0.15);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:1.1rem;cursor:pointer;z-index:1;">✕</button>
-            <img src="${imageUrl}" style="max-width:100%;max-height:82vh;object-fit:contain;border-radius:4px;" onerror="this.alt='Imagem indisponível'"/>
-            ${titulo ? `<div style="position:absolute;bottom:${link ? '70px' : '24px'};left:0;right:0;text-align:center;padding:0 24px;">
-                <span style="background:rgba(0,0,0,0.75);color:white;padding:8px 18px;border-radius:20px;font-size:0.9rem;font-weight:700;">${titulo}</span>
+            <style>@keyframes storyProg{from{width:0}to{width:100%}}</style>
+            <!-- Barras de progresso -->
+            <div style="position:absolute;top:10px;left:12px;right:12px;display:flex;gap:3px;z-index:2;">${barras}</div>
+            <!-- Fechar -->
+            <button onclick="academia.fecharStory()" style="position:absolute;top:20px;right:12px;background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:50%;font-size:1rem;cursor:pointer;z-index:3;">✕</button>
+            <!-- Toque esquerdo: voltar -->
+            <div onclick="academia._navStory(-1)" style="position:absolute;top:0;left:0;width:35%;height:100%;z-index:1;cursor:pointer;"></div>
+            <!-- Toque direito: avançar -->
+            <div onclick="academia._navStory(1)" style="position:absolute;top:0;right:0;width:35%;height:100%;z-index:1;cursor:pointer;"></div>
+            <!-- Imagem -->
+            <img src="${s.imageUrl}" style="max-width:100%;max-height:78vh;object-fit:contain;border-radius:4px;user-select:none;" onerror="this.alt='📸'"/>
+            <!-- Título -->
+            ${s.titulo ? `<div style="position:absolute;bottom:${link ? '80px' : '60px'};left:0;right:0;text-align:center;padding:0 24px;z-index:2;">
+                <span style="background:rgba(0,0,0,0.75);color:white;padding:8px 18px;border-radius:20px;font-size:0.85rem;font-weight:700;">${s.titulo}</span>
             </div>` : ''}
-            ${link ? `<div style="position:absolute;bottom:18px;left:0;right:0;text-align:center;">
-                <button onclick="academia.fecharStory();${link.startsWith('#tab-') ? `ui.showTab('${link.slice(1)}')` : `window.open('${link}')`}" style="background:#3b82f6;color:white;border:none;padding:10px 28px;border-radius:20px;font-size:0.8rem;font-weight:700;cursor:pointer;">🔗 VER EVENTO</button>
-            </div>` : ''}`;
+            <!-- Rodapé: curtir + link -->
+            <div style="position:absolute;bottom:14px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:12px;z-index:2;">
+                ${link ? `<button id="btn-story-link" onclick="academia.fecharStory();${link.startsWith('#tab-') ? `ui.showTab('${link.slice(1)}')` : `window.open('${link}')`}" style="background:#3b82f6;color:white;border:none;padding:9px 22px;border-radius:20px;font-size:0.78rem;font-weight:700;cursor:pointer;">🔗 VER EVENTO</button>` : ''}
+                ${auth.role !== 'admin' ? `<button id="btn-curtir-story" onclick="academia._curtirStory('${s.id}')" style="background:${jaCurtiu ? '#f43f5e' : 'rgba(255,255,255,0.15)'};border:none;color:white;padding:9px 18px;border-radius:20px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                    <span>${jaCurtiu ? '❤️' : '🤍'}</span><span id="curtidas-count">${curtidas.length || ''}</span>
+                </button>` : ''}
+                ${isAdmin && curtidas.length > 0 ? `<button onclick="academia._verCurtidas('${s.id}')" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:9px 16px;border-radius:20px;font-size:0.78rem;cursor:pointer;">❤️ ${curtidas.length} curtida${curtidas.length > 1 ? 's' : ''}</button>` : ''}
+            </div>`;
+
         overlay.style.display = 'flex';
+
+        // Inicia barra de progresso animada
+        const bar = document.getElementById('story-progress-bar');
+        if (bar) {
+            bar.style.animation = 'none';
+            void bar.offsetWidth;
+            bar.style.animation = 'storyProg 8s linear forwards';
+        }
+
+        // Auto-avança após 8s
+        this._storyTimer = setTimeout(() => this._navStory(1), 8000);
+    },
+
+    _navStory(delta) {
+        const next = this._storyIdx + delta;
+        if (next < 0 || next >= this._storiesList.length) { this.fecharStory(); return; }
+        this.abrirStory(next);
+    },
+
+    async _curtirStory(storyId) {
+        if (!auth.currentUser?.id || auth.role === 'admin') return;
+        const ref = db.collection('stories').doc(storyId);
+        const doc = await ref.get();
+        if (!doc.exists) return;
+        const curtidas = doc.data().curtidas || [];
+        const jaCurtiu = curtidas.some(c => c.id === auth.currentUser.id);
+        const novas = jaCurtiu
+            ? curtidas.filter(c => c.id !== auth.currentUser.id)
+            : [...curtidas, { id: auth.currentUser.id, nome: auth.currentUser.nome || 'Aluno' }];
+        await ref.update({ curtidas: novas });
+        // Atualiza no cache local
+        const s = this._storiesList.find(x => x.id === storyId);
+        if (s) s.curtidas = novas;
+        // Atualiza botão sem reabrir o story
+        const btn = document.getElementById('btn-curtir-story');
+        const count = document.getElementById('curtidas-count');
+        if (btn) btn.style.background = jaCurtiu ? 'rgba(255,255,255,0.15)' : '#f43f5e';
+        btn.querySelector('span').innerText = jaCurtiu ? '🤍' : '❤️';
+        if (count) count.innerText = novas.length || '';
+    },
+
+    async _verCurtidas(storyId) {
+        const doc = await db.collection('stories').doc(storyId).get();
+        const curtidas = doc.exists ? (doc.data().curtidas || []) : [];
+        if (!curtidas.length) return alert('Nenhuma curtida ainda.');
+        const lista = curtidas.map(c => `• ${c.nome}`).join('\n');
+        alert(`❤️ Curtidas (${curtidas.length}):\n\n${lista}`);
     },
 
     fecharStory() {
+        if (this._storyTimer) { clearTimeout(this._storyTimer); this._storyTimer = null; }
         document.getElementById('overlay-story')?.remove();
     },
 

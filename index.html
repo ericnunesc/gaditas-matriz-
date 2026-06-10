@@ -498,61 +498,9 @@
     <p class="section-sub">Sem taxa de matrícula. Cancele quando quiser.</p>
     <div class="planos-grid">
 
-        <div class="plano-card">
-            <div class="plano-icon">🥋</div>
-            <div class="plano-nome">Brazilian Jiu-Jitsu</div>
-            <div class="plano-desc">Acesso completo às aulas de BJJ adulto, graduação e eventos.</div>
-            <div class="plano-preco">
-                <span class="plano-cifrao">R$</span>
-                <span class="plano-valor">150</span>
-                <span class="plano-periodo">/mês</span>
-            </div>
-            <div class="plano-itens">
-                <div class="plano-item"><i class="fas fa-check-circle"></i> Aulas ilimitadas de BJJ</div>
-                <div class="plano-item"><i class="fas fa-check-circle"></i> Sistema de graduação</div>
-                <div class="plano-item"><i class="fas fa-check-circle"></i> Acesso ao app exclusivo</div>
-                <div class="plano-item"><i class="fas fa-check-circle"></i> Participação em eventos</div>
-            </div>
-            <a href="cadastro.html" class="plano-cta outline">Quero me matricular</a>
+        <div id="planos-loading" style="text-align:center;padding:30px;color:#64748b;font-size:0.82rem;">
+            <i class="fas fa-spinner fa-spin" style="color:#3b82f6;font-size:1.5rem;"></i><br/>Carregando planos...
         </div>
-
-        <div class="plano-card destaque">
-            <div class="plano-badge-top">Popular</div>
-            <div class="plano-icon">🥊</div>
-            <div class="plano-nome">Muay Thai</div>
-            <div class="plano-desc">Acesso completo às aulas de Muay Thai, condicionamento e competição.</div>
-            <div class="plano-preco">
-                <span class="plano-cifrao">R$</span>
-                <span class="plano-valor">150</span>
-                <span class="plano-periodo">/mês</span>
-            </div>
-            <div class="plano-itens">
-                <div class="plano-item"><i class="fas fa-check-circle"></i> Aulas ilimitadas de Muay Thai</div>
-                <div class="plano-item"><i class="fas fa-check-circle"></i> Treino de condicionamento</div>
-                <div class="plano-item"><i class="fas fa-check-circle"></i> Acesso ao app exclusivo</div>
-                <div class="plano-item"><i class="fas fa-check-circle"></i> Participação em eventos</div>
-            </div>
-            <a href="cadastro.html" class="plano-cta filled">Quero me matricular</a>
-        </div>
-
-        <div class="plano-card">
-            <div class="plano-icon">⭐</div>
-            <div class="plano-nome">Jiu-Jitsu Kids</div>
-            <div class="plano-desc">Programa infantil completo: disciplina, respeito e diversão no tatame.</div>
-            <div class="plano-preco">
-                <span class="plano-cifrao">R$</span>
-                <span class="plano-valor">120</span>
-                <span class="plano-periodo">/mês</span>
-            </div>
-            <div class="plano-itens">
-                <div class="plano-item"><i class="fas fa-check-circle"></i> Aulas de Jiu-Jitsu Kids</div>
-                <div class="plano-item"><i class="fas fa-check-circle"></i> Turmas por faixa etária</div>
-                <div class="plano-item"><i class="fas fa-check-circle"></i> Acesso ao app exclusivo</div>
-                <div class="plano-item"><i class="fas fa-check-circle"></i> Eventos e graduações kids</div>
-            </div>
-            <a href="cadastro.html" class="plano-cta outline">Quero me matricular</a>
-        </div>
-
     </div>
 </section>
 
@@ -673,6 +621,64 @@ async function carregarHorarios() {
 }
 
 carregarHorarios();
+
+// ── PLANOS ──────────────────────────────────────────────────
+const PLANOS_CONFIG = {
+    mensal:     { icone: '📅', destaque: false, desc: 'Renovação mensal, sem fidelidade.' },
+    trimestral: { icone: '📆', destaque: false, desc: 'Pague 3 meses e economize.' },
+    semestral:  { icone: '🏅', destaque: true,  desc: 'Melhor custo-benefício do ano.' },
+    anual:      { icone: '🏆', destaque: false, desc: 'Comprometimento total com sua evolução.' },
+};
+const PLANOS_ITENS = [
+    'Aulas ilimitadas (BJJ, MT e Kids)',
+    'Sistema de graduação',
+    'Acesso ao app exclusivo',
+    'Participação em eventos',
+];
+
+function renderPlanos(data) {
+    const container = document.getElementById('planos-grid');
+    const ordem = ['mensal','trimestral','semestral','anual'];
+    container.innerHTML = ordem.map(key => {
+        const cfg = PLANOS_CONFIG[key];
+        const valor = data[key]?.valor ?? '--';
+        const label = data[key]?.label ?? key;
+        return `
+        <div class="plano-card${cfg.destaque ? ' destaque' : ''}">
+            ${cfg.destaque ? '<div class="plano-badge-top">Mais popular</div>' : ''}
+            <div class="plano-icon">${cfg.icone}</div>
+            <div class="plano-nome">${label}</div>
+            <div class="plano-desc">${cfg.desc}</div>
+            <div class="plano-preco">
+                <span class="plano-cifrao">R$</span>
+                <span class="plano-valor">${typeof valor === 'number' ? valor.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2}) : valor}</span>
+                <span class="plano-periodo">/mês</span>
+            </div>
+            <div class="plano-itens">
+                ${PLANOS_ITENS.map(i=>`<div class="plano-item"><i class="fas fa-check-circle"></i> ${i}</div>`).join('')}
+            </div>
+            <a href="cadastro.html" class="plano-cta ${cfg.destaque ? 'filled' : 'outline'}">Quero me matricular</a>
+        </div>`;
+    }).join('');
+}
+
+async function carregarPlanos() {
+    const loading = document.getElementById('planos-loading');
+    try {
+        const doc = await db.collection('configuracoes').doc('planos').get();
+        const data = doc.exists ? doc.data() : {};
+        // cria o grid agora que temos os dados
+        const grid = document.createElement('div');
+        grid.id = 'planos-grid';
+        grid.className = 'planos-grid';
+        loading.replaceWith(grid);
+        renderPlanos(data);
+    } catch(e) {
+        loading.innerHTML = '<p style="color:#64748b;font-size:0.82rem;">Planos em breve.</p>';
+    }
+}
+
+carregarPlanos();
 </script>
 </body>
 </html>

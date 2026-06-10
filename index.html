@@ -499,6 +499,16 @@
                             <button onclick="academia.limparImagemEvento()" style="position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.7); border:none; color:#f43f5e; font-size:0.8rem; cursor:pointer; border-radius:6px; padding:4px 8px;"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
+                    <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-size:0.75rem; font-weight:800; color:#e2e8f0;">📸 Publicar também como Story</div>
+                            <div style="font-size:0.6rem; color:#64748b; margin-top:2px;">Usa o cartaz do evento. Alunos veem no topo do app.</div>
+                        </div>
+                        <span id="toggle-story-evento" data-on="false" onclick="const on=this.dataset.on==='true';this.dataset.on=on?'false':'true';this.style.background=(!on)?'#a855f7':'#334155';this.querySelector('span').style.left=(!on)?'23px':'3px';"
+                            style="position:relative;display:inline-block;width:44px;height:24px;background:#334155;border-radius:24px;cursor:pointer;transition:background 0.3s;flex-shrink:0;">
+                            <span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:white;border-radius:50%;transition:left 0.3s;"></span>
+                        </span>
+                    </div>
                     <div style="display:flex; gap:8px;">
                         <button id="btn-salvar-evento" onclick="academia.salvarEventoAdmin()" style="flex:2; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">PUBLICAR EVENTO</button>
                         <button onclick="academia.limparFormEvento()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">LIMPAR</button>

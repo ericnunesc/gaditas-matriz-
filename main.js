@@ -1258,13 +1258,28 @@ const academia = {
         const imagemUrl = document.getElementById('input-evento-imagemUrl')?.value || '';
         const dados = { titulo: t, dataEvento: dataExibicao, dataEventoISO: iso, vagasMax: v, linkPay: p, descricao: de, imagemUrl };
 
+        const publicarStory = document.getElementById('toggle-story-evento')?.dataset.on === 'true';
+
         try {
             if (id) {
                 await db.collection("eventos_oficiais").doc(id).update(dados);
                 alert("✅ Evento atualizado!");
             } else {
-                await db.collection("eventos_oficiais").add({ ...dados, inscritos: [], dataCriacao: new Date().getTime() });
-                alert("✅ Evento criado!");
+                const ref = await db.collection("eventos_oficiais").add({ ...dados, inscritos: [], dataCriacao: new Date().getTime() });
+                // Publica story se toggle ativado e tiver imagem
+                if (publicarStory && imagemUrl) {
+                    await db.collection('stories').add({
+                        imageUrl: imagemUrl,
+                        titulo: t,
+                        link: '#tab-eventos',
+                        duracaoDias: 7,
+                        criadoEm: Date.now()
+                    });
+                    academia.renderStoriesBar();
+                    alert("✅ Evento criado e Story publicado!");
+                } else {
+                    alert("✅ Evento criado!");
+                }
             }
         } catch(e) { alert("Erro: " + e.message); }
         this.limparFormEvento();
@@ -1360,6 +1375,8 @@ const academia = {
         this.limparImagemEvento();
         const btn = document.getElementById('btn-salvar-evento');
         if(btn) { btn.innerText = "PUBLICAR EVENTO"; btn.disabled = false; }
+        const toggle = document.getElementById('toggle-story-evento');
+        if (toggle) { toggle.dataset.on = 'false'; toggle.style.background = '#334155'; toggle.querySelector('span').style.left = '3px'; }
     },
 
     async carregarEventosAbas() {
@@ -4616,7 +4633,7 @@ Ele voltará a ser aluno normal.`)) return;
                 <span style="background:rgba(0,0,0,0.75);color:white;padding:8px 18px;border-radius:20px;font-size:0.9rem;font-weight:700;">${titulo}</span>
             </div>` : ''}
             ${link ? `<div style="position:absolute;bottom:18px;left:0;right:0;text-align:center;">
-                <button onclick="window.open('${link}')" style="background:#3b82f6;color:white;border:none;padding:10px 28px;border-radius:20px;font-size:0.8rem;font-weight:700;cursor:pointer;">🔗 VER MAIS</button>
+                <button onclick="academia.fecharStory();${link.startsWith('#tab-') ? `ui.showTab('${link.slice(1)}')` : `window.open('${link}')`}" style="background:#3b82f6;color:white;border:none;padding:10px 28px;border-radius:20px;font-size:0.8rem;font-weight:700;cursor:pointer;">🔗 VER EVENTO</button>
             </div>` : ''}`;
         overlay.style.display = 'flex';
     },
@@ -6476,12 +6493,13 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                         </div>`;
                     }).join('')}
                     ${eventosDia.map(ev => `
-                        <div style="font-size:0.72rem; color:#e2e8f0; margin-bottom:4px; display:flex; align-items:center; gap:6px; border-top:1px solid #1e293b; padding-top:4px;">
-                            <span style="font-size:0.7rem;">🏆</span>
-                            <div>
+                        <div onclick="ui.showTab('tab-eventos')" style="font-size:0.72rem; color:#e2e8f0; margin-bottom:4px; display:flex; align-items:center; gap:6px; border-top:1px solid #1e293b; padding-top:6px; cursor:pointer; background:#1e0a3c; border-radius:6px; padding:6px 8px; margin-top:4px;">
+                            <span style="font-size:0.9rem;">🏆</span>
+                            <div style="flex:1;">
                                 <div style="font-weight:700; color:#a855f7;">${ev.titulo}</div>
                                 <div style="font-size:0.6rem; color:#64748b;">${ev.dataEvento}</div>
                             </div>
+                            <span style="font-size:0.6rem; color:#a855f7;">ver →</span>
                         </div>`).join('')}
                 </div>`;
         }

@@ -2593,17 +2593,31 @@ const academia = {
                     style="width:100%; padding:11px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:10px;"/>
                 <div id="lista-candidatos-prof" style="max-height:180px; overflow-y:auto; margin-bottom:10px;"></div>
                 <div id="candidato-prof-selecionado" class="hidden" style="background:#0f172a; border:1px solid #3b82f6; border-radius:10px; padding:12px; margin-bottom:14px;"></div>
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">TURMAS DE RESPONSABILIDADE:</small>
-                <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:16px; max-height:220px; overflow-y:auto;">
-                    ${[...new Set(
-                        Object.values(academia.getGrade())
-                            .filter(v => Array.isArray(v))
-                            .flat()
-                            .filter(t => typeof t === 'string' && !t.includes("Sem treinos"))
-                    )].sort().map(t => `
-                        <label style="display:flex; align-items:center; gap:8px; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px; cursor:pointer; font-size:0.75rem; color:#e2e8f0; font-weight:600;">
-                            <input type="checkbox" class="check-turma-prof" value="${t}" style="accent-color:#3b82f6; width:16px; height:16px;"> ${t}
-                        </label>`).join('')}
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:6px;letter-spacing:0.5px;">TIPO DE PROFESSOR:</small>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+                    <label id="promo-tipo-titular" onclick="academia._selecionarTipoProfModal('titular')" style="display:flex;align-items:center;gap:8px;background:#0f172a;border:2px solid #3b82f6;border-radius:8px;padding:10px;cursor:pointer;">
+                        <span style="font-size:1rem;">🧑‍🏫</span>
+                        <div><div style="color:#e2e8f0;font-size:0.72rem;font-weight:700;">Titular</div><div style="color:#64748b;font-size:0.55rem;">Tem turmas fixas</div></div>
+                    </label>
+                    <label id="promo-tipo-reserva" onclick="academia._selecionarTipoProfModal('reserva')" style="display:flex;align-items:center;gap:8px;background:#0f172a;border:2px solid #334155;border-radius:8px;padding:10px;cursor:pointer;">
+                        <span style="font-size:1rem;">🔄</span>
+                        <div><div style="color:#e2e8f0;font-size:0.72rem;font-weight:700;">Reserva</div><div style="color:#64748b;font-size:0.55rem;">Convocado quando precisar</div></div>
+                    </label>
+                </div>
+                <input type="hidden" id="promo-tipo-prof" value="titular"/>
+                <div id="promo-section-turmas">
+                    <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">TURMAS DE RESPONSABILIDADE:</small>
+                    <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:16px; max-height:220px; overflow-y:auto;">
+                        ${[...new Set(
+                            Object.values(academia.getGrade())
+                                .filter(v => Array.isArray(v))
+                                .flat()
+                                .filter(t => typeof t === 'string' && !t.includes("Sem treinos"))
+                        )].sort().map(t => `
+                            <label style="display:flex; align-items:center; gap:8px; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px; cursor:pointer; font-size:0.75rem; color:#e2e8f0; font-weight:600;">
+                                <input type="checkbox" class="check-turma-prof" value="${t}" style="accent-color:#3b82f6; width:16px; height:16px;"> ${t}
+                            </label>`).join('')}
+                    </div>
                 </div>
                 <button onclick="academia.confirmarPromocaoProf()"
                     style="width:100%; padding:13px; background:#8b5cf6; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.85rem; letter-spacing:0.3px;">
@@ -2615,6 +2629,14 @@ const academia = {
     },
 
     _candidatoProf: null,
+
+    _selecionarTipoProfModal(tipo) {
+        document.getElementById('promo-tipo-prof').value = tipo;
+        document.getElementById('promo-tipo-titular').style.borderColor = tipo === 'titular' ? '#3b82f6' : '#334155';
+        document.getElementById('promo-tipo-reserva').style.borderColor = tipo === 'reserva' ? '#a855f7' : '#334155';
+        const sec = document.getElementById('promo-section-turmas');
+        if (sec) sec.style.display = tipo === 'reserva' ? 'none' : 'block';
+    },
 
     async buscarCandidatoProf() {
         const termo = document.getElementById('busca-candidato-prof').value.trim().toLowerCase();
@@ -2663,16 +2685,20 @@ const academia = {
 
     async confirmarPromocaoProf() {
         if (!this._candidatoProf) return alert("Selecione um atleta primeiro.");
-        const turmas = Array.from(document.querySelectorAll('.check-turma-prof:checked')).map(c => c.value);
-        if (turmas.length === 0) return alert("Selecione pelo menos uma turma de responsabilidade.");
+        const tipo = document.getElementById('promo-tipo-prof')?.value || 'titular';
+        const turmas = tipo === 'reserva' ? [] : Array.from(document.querySelectorAll('.check-turma-prof:checked')).map(c => c.value);
+        if (tipo === 'titular' && turmas.length === 0) return alert("Selecione pelo menos uma turma de responsabilidade.");
 
         try {
             await db.collection("alunos").doc(this._candidatoProf.id).update({
                 role: 'professor',
-                turmasAcesso: turmas
+                turmasAcesso: turmas,
+                tipo
             });
-            alert(`✅ ${this._candidatoProf.nome.toUpperCase()} agora é professor!
-Turmas: ${turmas.join(', ')}`);
+            const msg = tipo === 'reserva'
+                ? `✅ ${this._candidatoProf.nome.toUpperCase()} promovido como professor RESERVA!`
+                : `✅ ${this._candidatoProf.nome.toUpperCase()} agora é professor!\nTurmas: ${turmas.join(', ')}`;
+            alert(msg);
             document.getElementById('modal-promover-prof').remove();
             this._candidatoProf = null;
             this.renderProfessores();
@@ -2689,19 +2715,27 @@ Turmas: ${turmas.join(', ')}`);
         const snapPromovidos = await db.collection("alunos").where("role", "==", "professor").get();
         snapPromovidos.docs.forEach(doc => {
             const p = doc.data();
-            const turmas = (p.turmasAcesso || []).join(', ') || 'Nenhuma';
-            html += `<div class="item-card" style="padding:15px; border-left:4px solid #8b5cf6;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <span style="background:#8b5cf6; color:white; font-size:0.5rem; padding:2px 7px; border-radius:4px; font-weight:800; display:inline-block; margin-bottom:5px;">ATLETA/PROFESSOR</span>
-                        <div style="color:#e2e8f0; font-size:0.85rem; font-weight:700;">🥋 ${p.nome.toUpperCase()}</div>
-                        <div style="color:var(--text-muted); font-size:0.7rem; margin-top:2px;">📧 ${p.email} • Faixa ${p.faixa}</div>
-                        <div style="color:#8b5cf6; font-size:0.65rem; font-weight:700; margin-top:4px;">Turmas: ${turmas}</div>
+            const turmas = (p.turmasAcesso || []).join(', ') || '—';
+            const isReserva = p.tipo === 'reserva';
+            const tipoBadge = isReserva
+                ? `<span style="background:#7c3aed;color:white;font-size:0.48rem;padding:2px 7px;border-radius:4px;font-weight:800;">RESERVA</span>`
+                : `<span style="background:#8b5cf6;color:white;font-size:0.48rem;padding:2px 7px;border-radius:4px;font-weight:800;">TITULAR</span>`;
+            html += `<div class="item-card" style="padding:12px; border-left:4px solid ${isReserva ? '#7c3aed' : '#8b5cf6'};">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                    <div style="flex:1;">
+                        <div style="display:flex;gap:5px;margin-bottom:4px;">
+                            <span style="background:#8b5cf6;color:white;font-size:0.45rem;padding:2px 6px;border-radius:4px;font-weight:800;">ATLETA/PROF</span>
+                            ${tipoBadge}
+                        </div>
+                        <div style="color:#e2e8f0;font-size:0.82rem;font-weight:700;">🥋 ${p.nome.toUpperCase()}</div>
+                        <div style="color:var(--text-muted);font-size:0.65rem;margin-top:2px;">📧 ${p.email} • ${p.faixa}</div>
+                        ${!isReserva ? `<div style="color:#8b5cf6;font-size:0.6rem;font-weight:700;margin-top:3px;">Turmas: ${turmas}</div>` : ''}
                     </div>
-                    <button onclick="academia.removerPrivilegioProf('${doc.id}', '${p.nome.replace(/'/g, "\'")}')"
-                        style="background:none; border:none; color:#ef4444; cursor:pointer; padding:4px;" title="Remover privilégio">
-                        <i class="fas fa-user-minus"></i>
-                    </button>
+                    <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">
+                        <button onclick="profComms.abrirConvocacao('${doc.id}','${p.nome.replace(/'/g,"\\'")}','${turmas}')" style="background:#10b981;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">📋 Convocar</button>
+                        <button onclick="profComms.abrirRecado('${doc.id}','${p.nome.replace(/'/g,"\\'")}','alunos')" style="background:#3b82f6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">💬 Recado</button>
+                        <button onclick="academia.removerPrivilegioProf('${doc.id}','${p.nome.replace(/'/g,"\\'")}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.8rem;" title="Remover privilégio"><i class="fas fa-user-minus"></i></button>
+                    </div>
                 </div>
             </div>`;
         });

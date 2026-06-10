@@ -6100,11 +6100,9 @@ const profComms = {
     _turmasProf: [], // turmas fixas do professor (ou vazio para reserva)
 
     _turmasDoDia(dataISO) {
-        const diasKey = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
-        const diaSemana = new Date(dataISO + 'T12:00:00').getDay(); // evita bug de fuso
-        const key = diasKey[diaSemana];
+        const diaSemana = new Date(dataISO + 'T12:00:00').getDay(); // 0=Dom,1=Seg...6=Sáb
         const grade = academia.getGrade();
-        return (grade[key] || grade[String(diaSemana)] || [])
+        return (grade[diaSemana] || grade[String(diaSemana)] || [])
             .filter(t => t && !t.includes('Sem treino'));
     },
 
@@ -6239,27 +6237,38 @@ const profComms = {
         snapAlunos.forEach(d => profs.push({ id: d.id, col: 'alunos', ...d.data() }));
 
         const grade = academia.getGrade ? academia.getGrade() : {};
-        const dias = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
-        const diasKey = ['segunda','terca','quarta','quinta','sexta','sabado','domingo'];
+        // Grade usa chaves numéricas: 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
+        const diasConfig = [
+            { label: 'Segunda-feira',  key: 1 },
+            { label: 'Terça-feira',    key: 2 },
+            { label: 'Quarta-feira',   key: 3 },
+            { label: 'Quinta-feira',   key: 4 },
+            { label: 'Sexta-feira',    key: 5 },
+            { label: 'Sábado',         key: 6 },
+            { label: 'Domingo',        key: 0 },
+        ];
 
         let html = '';
-        dias.forEach((dia, i) => {
-            const key = diasKey[i];
-            const turmasDia = (grade[key] || []).filter(t => t && !t.includes('Sem treino'));
+        diasConfig.forEach(({ label, key }) => {
+            const turmasDia = (grade[key] || grade[String(key)] || [])
+                .filter(t => t && !t.includes('Sem treino'));
             if (!turmasDia.length) return;
-            html += `<div style="margin-bottom:14px;">
-                <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;letter-spacing:1px;margin-bottom:6px;">${dia.toUpperCase()}</div>`;
+            html += `<div style="margin-bottom:16px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;letter-spacing:1px;margin-bottom:6px;border-bottom:1px solid #1e293b;padding-bottom:4px;">${label.toUpperCase()}</div>`;
             turmasDia.forEach(turma => {
-                const profsNaTurma = profs.filter(p => (p.turmasAcesso || []).some(t => turma.includes(t.replace(/\s*\d+$/, '').trim()) || t === turma));
-                // Convocações do dia
-                html += `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;">
-                    <div>
-                        <div style="font-size:0.75rem;font-weight:700;color:#e2e8f0;">${turma}</div>
-                        <div style="font-size:0.6rem;color:${profsNaTurma.length ? '#10b981' : '#f59e0b'};margin-top:3px;font-weight:700;">
-                            ${profsNaTurma.length ? '👤 ' + profsNaTurma.map(p => p.nome).join(', ') : '⚠️ Sem professor alocado'}
+                const profsNaTurma = profs.filter(p =>
+                    (p.turmasAcesso || []).some(t => t === turma || turma.startsWith(t.replace(/\s*\d+$/,'').trim()))
+                );
+                html += `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:5px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                        <div style="flex:1;">
+                            <div style="font-size:0.75rem;font-weight:700;color:#e2e8f0;">${turma}</div>
+                            ${profsNaTurma.length
+                                ? profsNaTurma.map(p => `<div style="font-size:0.62rem;color:#10b981;margin-top:3px;font-weight:700;">👤 ${p.nome}</div>`).join('')
+                                : `<div style="font-size:0.62rem;color:#f59e0b;margin-top:3px;font-weight:700;">⚠️ Sem professor alocado</div>`}
                         </div>
+                        <button onclick="profComms.abrirConvocacaoRapida('${turma.replace(/'/g,"\\'")}','${label}')" style="background:#10b981;border:none;color:white;padding:5px 10px;border-radius:6px;font-size:0.62rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📋 Convocar</button>
                     </div>
-                    <button onclick="profComms.abrirConvocacaoRapida('${turma.replace(/'/g,"\\'")}','${dia}')" style="background:#10b981;border:none;color:white;padding:5px 10px;border-radius:6px;font-size:0.62rem;font-weight:700;cursor:pointer;white-space:nowrap;">📋 Convocar</button>
                 </div>`;
             });
             html += '</div>';
@@ -6449,18 +6458,17 @@ const profComms = {
             <div style="background:linear-gradient(145deg,#0f172a,#1e293b);border:2px solid #10b981;border-radius:24px;padding:32px 24px;max-width:380px;width:100%;text-align:center;box-shadow:0 0 80px #10b98133;position:relative;">
                 <div style="font-size:3rem;margin-bottom:8px;animation:bounce 0.8s infinite alternate;">📋</div>
                 <div style="font-size:0.6rem;color:#10b981;font-weight:800;letter-spacing:2px;margin-bottom:8px;">GADITAS ACADEMY</div>
-                <div style="font-size:1.4rem;font-weight:800;color:white;margin-bottom:6px;">Você foi convocado!</div>
+                <div style="font-size:1.4rem;font-weight:800;color:white;margin-bottom:6px;">Nova Convocação!</div>
                 <div style="background:#10b98122;border:1px solid #10b981;border-radius:12px;padding:14px;margin:14px 0;text-align:left;">
                     <div style="font-size:0.85rem;font-weight:800;color:#10b981;">🏫 ${conv.turma}</div>
                     <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">📅 ${conv.dataExib}</div>
                     ${conv.mensagem ? `<div style="font-size:0.72rem;color:#e2e8f0;margin-top:6px;font-style:italic;">"${conv.mensagem}"</div>` : ''}
                 </div>
-                <div style="display:flex;gap:10px;margin-top:16px;">
-                    <button onclick="profComms._responderConvocacao('${conv.id}','confirmado');document.getElementById('modal-conv-prof').remove();"
-                        style="flex:1;padding:14px;background:#10b981;border:none;color:#000;border-radius:12px;font-weight:800;cursor:pointer;font-size:0.85rem;">✅ CONFIRMAR</button>
-                    <button onclick="profComms._responderConvocacao('${conv.id}','recusado');document.getElementById('modal-conv-prof').remove();"
-                        style="flex:1;padding:14px;background:#1e293b;border:1px solid #ef4444;color:#ef4444;border-radius:12px;font-weight:800;cursor:pointer;font-size:0.85rem;">❌ NÃO POSSO</button>
-                </div>
+                <div style="font-size:0.7rem;color:#64748b;margin-bottom:16px;line-height:1.5;">Verifique sua disponibilidade e responda pelo painel de convocações abaixo. Se não puder, informe o motivo.</div>
+                <button onclick="document.getElementById('modal-conv-prof').remove()"
+                    style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);color:#000;border:none;border-radius:12px;font-weight:800;cursor:pointer;font-size:0.9rem;">
+                    👀 VER CONVOCAÇÃO
+                </button>
             </div>
             <style>@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-10px)}}</style>`;
         document.body.appendChild(modal);

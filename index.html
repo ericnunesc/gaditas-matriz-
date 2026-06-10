@@ -699,7 +699,12 @@ async function carregarPlanos() {
             db.collection('configuracoes').doc('planos').get(),
             db.collection('configuracoes').doc('landing_config').get()
         ]);
-        const precos  = docPlanos.exists  ? docPlanos.data()  : {};
+        const precos  = docPlanos.exists  ? docPlanos.data()  : {
+            mensal:     { valor: 120, label: 'Mensal' },
+            trimestral: { valor: 110, label: 'Trimestral' },
+            semestral:  { valor: 100, label: 'Semestral' },
+            anual:      { valor: 90,  label: 'Anual' }
+        };
         const landing = docLanding.exists ? docLanding.data() : {};
         const grid = document.createElement('div');
         grid.id = 'planos-grid';

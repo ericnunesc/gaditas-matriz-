@@ -6097,44 +6097,60 @@ Ele voltará a ser aluno normal.`)) return;
 const profComms = {
 
     // ── CONVOCAÇÃO ─────────────────────────────────────────
+    _turmasProf: [], // turmas fixas do professor (ou vazio para reserva)
+
+    _turmasDoDia(dataISO) {
+        const diasKey = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+        const diaSemana = new Date(dataISO + 'T12:00:00').getDay(); // evita bug de fuso
+        const key = diasKey[diaSemana];
+        const grade = academia.getGrade();
+        return (grade[key] || grade[String(diaSemana)] || [])
+            .filter(t => t && !t.includes('Sem treino'));
+    },
+
+    _atualizarTurmasConv(dataISO) {
+        const sel = document.getElementById('conv-turma');
+        if (!sel) return;
+        const turmasDia = this._turmasDoDia(dataISO);
+        // Filtra pelas turmas do professor se for titular
+        const lista = this._turmasProf.length > 0
+            ? turmasDia.filter(t => this._turmasProf.some(tp => t.includes(tp.replace(/\s*\d+$/, '').trim()) || tp === t))
+            : turmasDia;
+        const opts = lista.length > 0
+            ? lista.map(t => `<option value="${t}">${t}</option>`).join('')
+            : '<option value="">Nenhuma turma neste dia</option>';
+        sel.innerHTML = opts + '<option value="__custom">Outra turma...</option>';
+        document.getElementById('conv-turma-custom').style.display = 'none';
+    },
+
     abrirConvocacao(profId, profNome, turmasStr) {
+        this._turmasProf = turmasStr && turmasStr !== '—' ? turmasStr.split(', ') : [];
         let modal = document.getElementById('modal-convocacao-prof');
         if (!modal) { modal = document.createElement('div'); modal.id = 'modal-convocacao-prof'; document.body.appendChild(modal); }
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
         const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;';
-        // Turmas do professor para selecionar
-        const turmas = turmasStr && turmasStr !== '—' ? turmasStr.split(', ') : [];
-        // Se professor não tem turmas fixas (reserva), usa todas as turmas da grade
-        const todasTurmas = [...new Set(
-            Object.values(academia.getGrade())
-                .filter(v => Array.isArray(v)).flat()
-                .filter(t => t && !t.includes('Sem treino'))
-        )].sort();
-        const listaTurmas = turmas.length > 0 ? turmas : todasTurmas;
-        const turmaOpts = listaTurmas.map(t => `<option value="${t}">${t}</option>`).join('');
+        const hoje = new Date().toISOString().slice(0, 10);
         modal.innerHTML = `
             <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                     <span style="font-size:0.9rem;font-weight:800;color:white;">📋 Convocar ${profNome}</span>
                     <button onclick="document.getElementById('modal-convocacao-prof').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
                 </div>
-                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">TURMA</small>
-                <select id="conv-turma" style="${inp}">
-                    ${turmaOpts || '<option value="">Selecione a turma...</option>'}
-                    <option value="__custom">Outra turma...</option>
-                </select>
-                <input type="text" id="conv-turma-custom" placeholder="Nome da turma..." style="${inp}display:none;" />
                 <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DATA</small>
-                <input type="date" id="conv-data" style="${inp}" value="${new Date().toISOString().slice(0,10)}"/>
+                <input type="date" id="conv-data" style="${inp}" value="${hoje}" oninput="profComms._atualizarTurmasConv(this.value)"/>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">TURMA</small>
+                <select id="conv-turma" style="${inp}" onchange="document.getElementById('conv-turma-custom').style.display=this.value==='__custom'?'block':'none'">
+                    <option value="">Selecione a data primeiro...</option>
+                </select>
+                <input type="text" id="conv-turma-custom" placeholder="Nome da turma..." style="${inp}display:none;"/>
                 <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">HORÁRIO</small>
                 <input type="time" id="conv-hora" style="${inp}"/>
                 <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">MENSAGEM (opcional)</small>
                 <textarea id="conv-msg" rows="2" placeholder="Ex: Estarei viajando, preciso de você nessa aula." style="${inp}resize:none;"></textarea>
                 <button onclick="profComms._enviarConvocacao('${profId}','${profNome.replace(/'/g,"\\'")}','professores')" style="width:100%;padding:13px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;">📋 ENVIAR CONVOCAÇÃO</button>
             </div>`;
-        document.getElementById('conv-turma').addEventListener('change', function() {
-            document.getElementById('conv-turma-custom').style.display = this.value === '__custom' ? 'block' : 'none';
-        });
+        // Popula turmas para a data de hoje imediatamente
+        this._atualizarTurmasConv(hoje);
     },
 
     async _enviarConvocacao(profId, profNome, colecao) {

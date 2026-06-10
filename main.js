@@ -1239,27 +1239,34 @@ const academia = {
     },
 
     async salvarEventoAdmin() {
-        const id = document.getElementById('edit-evento-id').value;
-        const t = document.getElementById('input-evento-titulo').value.trim();
-        const d = document.getElementById('input-evento-data').value.trim();
-        const v = parseInt(document.getElementById('input-evento-vagas').value) || 0;
-        const p = document.getElementById('input-evento-pagamento').value.trim();
-        const de = document.getElementById('input-evento-desc').value.trim();
-        if(!t || !d || !v) return alert("Preencha título, data e total de vagas.");
+        const id  = document.getElementById('edit-evento-id').value;
+        const t   = document.getElementById('input-evento-titulo').value.trim();
+        const iso = document.getElementById('input-evento-data-iso').value; // YYYY-MM-DD
+        const hr  = document.getElementById('input-evento-hora').value;     // HH:MM
+        const v   = parseInt(document.getElementById('input-evento-vagas').value) || 0;
+        const p   = document.getElementById('input-evento-pagamento').value.trim();
+        const de  = document.getElementById('input-evento-desc').value.trim();
+        if (!t || !iso || !v) return alert("Preencha título, data e total de vagas.");
+
+        // Texto de exibição: "12/06/2026 às 19:00" ou só "12/06/2026"
+        const [ay, am, ad] = iso.split('-');
+        const dataExibicao = `${ad}/${am}/${ay}${hr ? ' às ' + hr : ''}`;
 
         const btn = document.getElementById('btn-salvar-evento');
-        if(btn) { btn.disabled = true; btn.innerText = 'Salvando...'; }
+        if (btn) { btn.disabled = true; btn.innerText = 'Salvando...'; }
 
-        const imagemUrl = (document.getElementById('input-evento-imagemUrl') || {}).value || '';
+        const imagemUrl = document.getElementById('input-evento-imagemUrl')?.value || '';
+        const dados = { titulo: t, dataEvento: dataExibicao, dataEventoISO: iso, vagasMax: v, linkPay: p, descricao: de, imagemUrl };
 
-        const dados = { titulo: t, dataEvento: d, vagasMax: v, linkPay: p, descricao: de, imagemUrl };
-        if(id) {
-            await db.collection("eventos_oficiais").doc(id).update(dados);
-            alert("✅ Evento atualizado!");
-        } else {
-            await db.collection("eventos_oficiais").add({ ...dados, inscritos: [], dataCriacao: new Date().getTime() });
-            alert("✅ Evento criado!");
-        }
+        try {
+            if (id) {
+                await db.collection("eventos_oficiais").doc(id).update(dados);
+                alert("✅ Evento atualizado!");
+            } else {
+                await db.collection("eventos_oficiais").add({ ...dados, inscritos: [], dataCriacao: new Date().getTime() });
+                alert("✅ Evento criado!");
+            }
+        } catch(e) { alert("Erro: " + e.message); }
         this.limparFormEvento();
         this.carregarEventosAbas();
     },
@@ -1315,7 +1322,10 @@ const academia = {
         const ev = doc.data();
         document.getElementById('edit-evento-id').value = id;
         document.getElementById('input-evento-titulo').value = ev.titulo;
-        document.getElementById('input-evento-data').value = ev.dataEvento;
+        document.getElementById('input-evento-data-iso').value = ev.dataEventoISO || '';
+        // Extrai hora do texto de exibição se não tiver ISO
+        const horaMatch = (ev.dataEvento || '').match(/(\d{2}:\d{2})/);
+        document.getElementById('input-evento-hora').value = horaMatch ? horaMatch[1] : '';
         document.getElementById('input-evento-vagas').value = ev.vagasMax;
         document.getElementById('input-evento-pagamento').value = ev.linkPay || "";
         document.getElementById('input-evento-desc').value = ev.descricao || "";
@@ -1342,7 +1352,8 @@ const academia = {
     limparFormEvento() {
         document.getElementById('edit-evento-id').value = "";
         document.getElementById('input-evento-titulo').value = "";
-        document.getElementById('input-evento-data').value = "";
+        document.getElementById('input-evento-data-iso').value = "";
+        document.getElementById('input-evento-hora').value = "";
         document.getElementById('input-evento-vagas').value = "";
         document.getElementById('input-evento-pagamento').value = "";
         document.getElementById('input-evento-desc').value = "";
@@ -5866,6 +5877,7 @@ const ui = {
     _calMes: new Date().getMonth(),
     _calAno: new Date().getFullYear(),
     _calHistorico: [],
+    _calEventos: [],
     _calDia: null,
     _calVista: 'calendario',
 
@@ -6206,6 +6218,14 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             this._calHistorico = listaHistorico;
             if (this._calMes == null) this._calMes = new Date().getMonth();
             if (this._calAno == null) this._calAno = new Date().getFullYear();
+            // Carrega eventos oficiais para o calendário
+            db.collection('eventos_oficiais').get().then(snap => {
+                this._calEventos = [];
+                snap.forEach(doc => {
+                    const ev = doc.data();
+                    if (ev.dataEventoISO) this._calEventos.push({ iso: ev.dataEventoISO, titulo: ev.titulo, dataEvento: ev.dataEvento });
+                });
+            }).catch(() => {});
             // ── Blocos condicionais por modalidade ────────────────
             const modPerfil = d.modalidade || 'jiujitsu';
             const corJJ = this.getCorFaixa(d.faixa);
@@ -6370,7 +6390,8 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
     },
 
     _buildCalendario() {
-        const hist  = this._calHistorico || [];
+        const hist   = this._calHistorico || [];
+        const eventos = this._calEventos || [];
         const mes   = this._calMes;
         const ano   = this._calAno;
         const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -6383,6 +6404,13 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             if (!key) return;
             if (!mapaD[key]) mapaD[key] = [];
             mapaD[key].push(t);
+        });
+
+        // Mapa de eventos YYYY-MM-DD → [eventos]
+        const mapaEv = {};
+        eventos.forEach(ev => {
+            if (!mapaEv[ev.iso]) mapaEv[ev.iso] = [];
+            mapaEv[ev.iso].push(ev);
         });
 
         const primeiroDia = new Date(ano, mes, 1).getDay();
@@ -6402,22 +6430,25 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         for (let d = 1; d <= ultimoDia; d++) {
             const key      = `${ano}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const treinos  = mapaD[key] || [];
+            const evsDia   = mapaEv[key] || [];
             const isHoje   = ano === hoje.getFullYear() && mes === hoje.getMonth() && d === hoje.getDate();
             const isSel    = this._calDia === key;
 
-            if (treinos.length > 0) {
-                // Determina a cor dominante do dia
+            if (treinos.length > 0 || evsDia.length > 0) {
                 const hasMT   = treinos.some(t => academia._isTurmaMT(t.turma));
                 const hasKids = treinos.some(t => academia._isTurmaKids(t.turma));
-                const cor     = hasMT ? '#ef4444' : hasKids ? '#f59e0b' : '#3b82f6';
-                const label   = treinos.length > 1 ? treinos.length : '●';
+                const corTreino = hasMT ? '#ef4444' : hasKids ? '#f59e0b' : '#3b82f6';
+                const cor = treinos.length > 0 ? corTreino : '#a855f7';
+                const label = treinos.length > 1 ? treinos.length : (treinos.length === 1 ? '●' : '');
+                const evBadge = evsDia.length > 0 ? `<div style="font-size:0.55rem; line-height:1;">🏆</div>` : '';
 
                 cells += `<div onclick="ui.selecionarDiaCal('${key}')"
                     style="text-align:center; cursor:pointer; border-radius:7px; padding:4px 2px;
                            background:${isSel ? cor + '33' : cor + '18'};
                            border:1px solid ${isSel ? cor : cor + '44'};">
                     <div style="font-size:0.55rem; color:#94a3b8; font-weight:600; line-height:1.2;">${d}</div>
-                    <div style="font-size:${treinos.length > 1 ? '0.6rem' : '0.72rem'}; color:${cor}; font-weight:800; line-height:1.2;">${label}</div>
+                    ${label ? `<div style="font-size:${treinos.length > 1 ? '0.6rem' : '0.72rem'}; color:${corTreino}; font-weight:800; line-height:1.2;">${label}</div>` : ''}
+                    ${evBadge}
                 </div>`;
             } else {
                 cells += `<div style="text-align:center; padding:4px 2px;
@@ -6430,18 +6461,28 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
 
         // Detalhe do dia selecionado
         let detalhe = '';
-        if (this._calDia && mapaD[this._calDia]) {
+        if (this._calDia && (mapaD[this._calDia] || mapaEv[this._calDia])) {
             const [ay, am, ad] = this._calDia.split('-');
+            const treinosDia = mapaD[this._calDia] || [];
+            const eventosDia = mapaEv[this._calDia] || [];
             detalhe = `
                 <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px; margin-top:10px;">
                     <div style="font-size:0.6rem; color:#64748b; font-weight:700; margin-bottom:6px;">📅 ${ad}/${am}/${ay}</div>
-                    ${mapaD[this._calDia].map(t => {
+                    ${treinosDia.map(t => {
                         const cor = this._corTurma(t.turma);
                         return `<div style="font-size:0.72rem; color:#e2e8f0; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
                             <span style="color:${cor}; font-size:0.65rem;">●</span>
                             <span>${t.turma}</span>
                         </div>`;
                     }).join('')}
+                    ${eventosDia.map(ev => `
+                        <div style="font-size:0.72rem; color:#e2e8f0; margin-bottom:4px; display:flex; align-items:center; gap:6px; border-top:1px solid #1e293b; padding-top:4px;">
+                            <span style="font-size:0.7rem;">🏆</span>
+                            <div>
+                                <div style="font-weight:700; color:#a855f7;">${ev.titulo}</div>
+                                <div style="font-size:0.6rem; color:#64748b;">${ev.dataEvento}</div>
+                            </div>
+                        </div>`).join('')}
                 </div>`;
         }
 

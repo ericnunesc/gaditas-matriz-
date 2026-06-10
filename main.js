@@ -6765,9 +6765,9 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
-        if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'professor') { profComms.renderPainelDispensas(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
+        if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
         if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
-        if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
+        if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); if(auth.role === 'professor') profComms.renderPainelDispensas(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }
     },
     getCorFaixa(f) {

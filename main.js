@@ -4070,6 +4070,96 @@ Ele voltará a ser aluno normal.`)) return;
     // ══════════════════════════════════════════════════════════
     // ── 11. DASHBOARD VISUAL ADMIN ────────────────────────────
     // ══════════════════════════════════════════════════════════
+    async renderDashboardGrid() {
+        if (auth.role !== 'admin') return;
+        const el = document.getElementById('dashboard-grid-admin');
+        if (!el) return;
+        el.style.display = 'block';
+
+        // Resumo do dia
+        let checkinsHoje = 0, aulasHoje = 0, totalAlunos = 0;
+        try {
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
+            const [ciSnap, alSnap] = await Promise.all([
+                db.collection('checkins').get(),
+                db.collection('alunos').get()
+            ]);
+            checkinsHoje = ciSnap.docs.filter(d => d.data().data >= hoje.getTime()).length;
+            totalAlunos  = alSnap.docs.filter(d => d.data().status !== 'trancado').length;
+
+            // Aulas no histórico hoje
+            const hojeStr = hoje.toLocaleDateString('pt-BR');
+            const setAlunos = new Set();
+            alSnap.docs.forEach(doc => {
+                (doc.data().historico || []).forEach(h => {
+                    if (h.data && h.data.startsWith(hojeStr)) setAlunos.add(doc.id);
+                });
+            });
+            aulasHoje = setAlunos.size;
+        } catch(e) {}
+
+        const cards = [
+            { icon:'fa-qrcode',        label:'Check-in',     cor:'#10b981', fn:`document.getElementById('area-aluno-checkin').scrollIntoView({behavior:'smooth'})` },
+            { icon:'fa-users',         label:'Alunos',       cor:'#3b82f6', fn:`ui.showTab('tab-alunos')` },
+            { icon:'fa-clock',         label:'Horários',     cor:'#8b5cf6', fn:`ui.showTab('tab-horarios')` },
+            { icon:'fa-dollar-sign',   label:'Financeiro',   cor:'#22c55e', fn:`ui.showTab('tab-financeiro')` },
+            { icon:'fa-medal',         label:'Exame',        cor:'#f59e0b', fn:`ui.showTab('tab-exame'); exame.carregarExameAluno()` },
+            { icon:'fa-chart-bar',     label:'Relatórios',   cor:'#06b6d4', fn:`ui.showTab('tab-relatorios')` },
+            { icon:'fa-shopping-bag',  label:'Loja',         cor:'#ec4899', fn:`ui.showTab('tab-loja')` },
+            { icon:'fa-calendar-alt',  label:'Eventos',      cor:'#f97316', fn:`ui.showTab('tab-eventos')` },
+            { icon:'fa-clipboard-list',label:'Chamada',      cor:'#84cc16', fn:`academia.renderChamadaProf()` },
+            { icon:'fa-satellite-dish',label:'Sumidos',      cor:'#ef4444', fn:`ui.showTab('tab-relatorios'); setTimeout(()=>treinoPost.renderRadarSumidos(),300)` },
+            { icon:'fa-star',          label:'Avaliações',   cor:'#facc15', fn:`ui.showTab('tab-relatorios'); setTimeout(()=>treinoPost.renderAvaliacoesPainel(),300)` },
+            { icon:'fa-birthday-cake', label:'Aniversários', cor:'#a78bfa', fn:`ui.showTab('tab-relatorios'); setTimeout(()=>aniversario.renderAdminAniversariantes(),300)` },
+        ];
+
+        const cardsHtml = cards.map(c => `
+            <button onclick="${c.fn}"
+                style="background:#1e293b;border:1px solid ${c.cor}22;border-radius:16px;padding:18px 8px 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:transform 0.1s;active:scale(0.95);"
+                onmousedown="this.style.transform='scale(0.94)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.94)'" ontouchend="this.style.transform='scale(1)'">
+                <div style="width:48px;height:48px;background:${c.cor}18;border-radius:14px;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas ${c.icon}" style="font-size:1.3rem;color:${c.cor};"></i>
+                </div>
+                <span style="font-size:0.6rem;font-weight:800;color:#cbd5e1;letter-spacing:0.3px;text-align:center;line-height:1.2;">${c.label.toUpperCase()}</span>
+            </button>`).join('');
+
+        el.innerHTML = `
+            <div style="margin-bottom:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;">Gaditas Academy</div>
+                    <div style="font-size:0.6rem;color:#475569;">${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</div>
+                </div>
+                <div style="font-size:1.1rem;font-weight:900;color:white;">Dashboard Admin 👋</div>
+            </div>
+
+            <!-- Grid 3 colunas -->
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+                ${cardsHtml}
+            </div>
+
+            <!-- Resumo do dia -->
+            <div style="background:#1e293b;border:1px solid #f59e0b22;border-radius:16px;padding:14px;margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <div style="font-size:0.62rem;font-weight:800;color:#f59e0b;letter-spacing:0.5px;">📋 RESUMO DO DIA</div>
+                    <div style="font-size:0.55rem;color:#475569;">${new Date().toLocaleDateString('pt-BR')}</div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+                    <div style="background:#0f172a;border-radius:10px;padding:10px;text-align:center;border:1px solid #10b98122;">
+                        <div style="font-size:1.6rem;font-weight:900;color:#10b981;">${checkinsHoje}</div>
+                        <div style="font-size:0.52rem;color:#64748b;font-weight:700;margin-top:2px;">CHECK-INS</div>
+                    </div>
+                    <div style="background:#0f172a;border-radius:10px;padding:10px;text-align:center;border:1px solid #3b82f622;">
+                        <div style="font-size:1.6rem;font-weight:900;color:#3b82f6;">${aulasHoje}</div>
+                        <div style="font-size:0.52rem;color:#64748b;font-weight:700;margin-top:2px;">PRESENTES</div>
+                    </div>
+                    <div style="background:#0f172a;border-radius:10px;padding:10px;text-align:center;border:1px solid #f59e0b22;">
+                        <div style="font-size:1.6rem;font-weight:900;color:#f59e0b;">${totalAlunos}</div>
+                        <div style="font-size:0.52rem;color:#64748b;font-weight:700;margin-top:2px;">ALUNOS ATIVOS</div>
+                    </div>
+                </div>
+            </div>`;
+    },
+
     async renderDashboardAdmin() {
         if (auth.role !== 'admin') return;
         const container = document.getElementById('dashboard-admin-container');
@@ -5489,7 +5579,7 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
-        if(id === 'tab-checkin') { academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
+        if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
         if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }

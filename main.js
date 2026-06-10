@@ -90,6 +90,7 @@ const auth = {
                 if (d.grau  != null) this.adminCreds.grau   = d.grau;
                 if (d.modalidade) this.adminCreds.modalidade = d.modalidade;
                 if (d.permitirKidsComAdultos != null) this.adminCreds.permitirKidsComAdultos = d.permitirKidsComAdultos;
+                if (d.nascimentoMestre) this.adminCreds.nascimentoMestre = d.nascimentoMestre;
             }
         } catch(e) { console.warn('carregarCredenciaisAdmin:', e.message); }
     },
@@ -228,6 +229,7 @@ const auth = {
         if (this.role === 'aluno' || this.role === 'professor') {
             setTimeout(() => aniversario.verificarAniversario(), 800);
             setTimeout(() => aniversario.verificarAniversarioColegas(), 1000);
+            setTimeout(() => aniversario.verificarAniversarioMestre(), 1800);
             setTimeout(() => aniversario.verificarParabensRecebidos(), 2200);
             setTimeout(() => aniversario.verificarConvocacao(), 1200);
             setTimeout(() => aniversario.verificarGraduacao(), 1500);
@@ -5110,6 +5112,13 @@ Ele voltará a ser aluno normal.`)) return;
                         </select>
                     </div>
                 </div>
+                <!-- ANIVERSÁRIO DO MESTRE -->
+                <div style="margin-top:12px;">
+                    <small style="color:#f59e0b;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">🎂 DATA DE NASCIMENTO DO MESTRE</small>
+                    <input type="date" id="cfg-admin-nascimento" value="${auth.adminCreds.nascimentoMestre||''}"
+                        style="${inp} margin-bottom:0;"/>
+                    <div style="font-size:0.58rem;color:#64748b;margin-top:3px;">Alunos recebem popup 1 dia antes e no dia do seu aniversário.</div>
+                </div>
                 <!-- KIDS COM ADULTOS -->
                 <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:14px; margin-top:12px; margin-bottom:4px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -5230,7 +5239,8 @@ Ele voltará a ser aluno normal.`)) return;
         const faixa = document.getElementById('cfg-admin-faixa')?.value || 'Preta';
         const grau  = parseInt(document.getElementById('cfg-admin-grau')?.value ?? 3);
         const permitirKids = document.getElementById('cfg-kids-toggle')?.dataset.on === 'true';
-        const dados = { nome, user, faixa, grau, permitirKidsComAdultos: permitirKids };
+        const nascimentoMestre = document.getElementById('cfg-admin-nascimento')?.value || '';
+        const dados = { nome, user, faixa, grau, permitirKidsComAdultos: permitirKids, nascimentoMestre };
         if (pass1) dados.pass = pass1;
         try {
             await db.collection('configuracoes').doc('admin_config').set(dados, { merge: true });
@@ -5241,6 +5251,7 @@ Ele voltará a ser aluno normal.`)) return;
             auth.adminCreds.grau  = grau;
             if (pass1) auth.adminCreds.pass = pass1;
             auth.adminCreds.permitirKidsComAdultos = permitirKids;
+            auth.adminCreds.nascimentoMestre = nascimentoMestre;
             if (auth.currentUser?.id === 'admin') {
                 auth.currentUser.nome  = nome;
                 auth.currentUser.faixa = faixa;
@@ -8056,6 +8067,77 @@ const aniversario = {
             btnEl.textContent = '🎉 Enviar Parabéns';
             alert('Erro: ' + e.message);
         }
+    },
+
+    // ── ANIVERSÁRIO DO MESTRE ─────────────────────────────
+    async verificarAniversarioMestre() {
+        if (auth.role !== 'aluno') return;
+        try {
+            const adminDoc = await db.collection('configuracoes').doc('admin_config').get();
+            if (!adminDoc.exists) return;
+            const nascimento = adminDoc.data().nascimentoMestre;
+            if (!nascimento) return;
+
+            const parts = nascimento.split('-');
+            if (parts.length < 3) return;
+            const diaNasc = parseInt(parts[2], 10);
+            const mesNasc = parseInt(parts[1], 10) - 1;
+
+            const hoje = new Date();
+            const amanha = new Date(hoje); amanha.setDate(hoje.getDate() + 1);
+
+            const ehHoje   = hoje.getDate()   === diaNasc && hoje.getMonth()   === mesNasc;
+            const ehAmanha = amanha.getDate() === diaNasc && amanha.getMonth() === mesNasc;
+            if (!ehHoje && !ehAmanha) return;
+
+            const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+            const chave = `gaditas_mestre_aniv_${hojeStr}`;
+            if (localStorage.getItem(chave)) return;
+            localStorage.setItem(chave, '1');
+
+            const nomeMestre = adminDoc.data().nome || 'Mestre';
+            this._mostrarPopupMestre(nomeMestre, ehHoje);
+        } catch(e) { console.warn('Aniversário mestre:', e.message); }
+    },
+
+    _mostrarPopupMestre(nomeMestre, ehHoje) {
+        document.getElementById('modal-aniv-mestre')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-aniv-mestre';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        const primeiroNome = nomeMestre.split(' ')[0];
+
+        modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#1a0a00,#1e293b);border:2px solid #f59e0b;border-radius:24px;padding:36px 28px;max-width:400px;width:100%;text-align:center;box-shadow:0 0 80px rgba(245,158,11,0.4);position:relative;overflow:hidden;">
+                <div style="position:absolute;top:-10px;left:0;right:0;font-size:1.4rem;opacity:0.12;user-select:none;line-height:1.8;pointer-events:none;">
+                    🏆🥋🎖️🏆🥋🎖️🏆🥋🎖️🏆🥋🎖️🏆🥋🎖️🏆🥋🎖️🏆🥋🎖️
+                </div>
+                <div style="font-size:3.5rem;margin-bottom:8px;animation:bounce 0.8s infinite alternate;">${ehHoje ? '🎂' : '🎉'}</div>
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:2px;margin-bottom:10px;">GADITAS ACADEMY</div>
+                ${ehHoje ? `
+                    <div style="font-size:1.4rem;font-weight:900;color:white;line-height:1.3;margin-bottom:12px;">
+                        🎂 Hoje é Aniversário<br>do <span style="color:#f59e0b;">Mestre ${primeiroNome}!</span>
+                    </div>
+                    <div style="font-size:0.82rem;color:#94a3b8;line-height:1.7;margin:0 0 24px;">
+                        A família Gaditas celebra este dia especial com nosso <strong style="color:white;">Mestre</strong>!<br><br>
+                        Obrigado por tudo que você constrói no tatame todos os dias. 🙏<br><br>
+                        <span style="font-size:1rem;font-weight:800;color:#f59e0b;">OSS! 🥋💪</span>
+                    </div>` : `
+                    <div style="font-size:1.4rem;font-weight:900;color:white;line-height:1.3;margin-bottom:12px;">
+                        Amanhã é Aniversário<br>do <span style="color:#f59e0b;">Mestre ${primeiroNome}!</span>
+                    </div>
+                    <div style="font-size:0.82rem;color:#94a3b8;line-height:1.7;margin:0 0 24px;">
+                        Que tal já ir se preparando para parabenizá-lo? 🎉<br><br>
+                        Seu aniversário é <strong style="color:white;">amanhã!</strong> 🥋<br><br>
+                        <span style="font-size:1rem;font-weight:800;color:#f59e0b;">OSS! 🙏</span>
+                    </div>`}
+                <button onclick="document.getElementById('modal-aniv-mestre').remove()"
+                    style="width:100%;padding:16px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:12px;font-weight:800;font-size:0.9rem;cursor:pointer;letter-spacing:0.5px;">
+                    ${ehHoje ? '🎂 FELIZ ANIVERSÁRIO, MESTRE!' : '🙏 OSS!'}
+                </button>
+            </div>
+            <style>@keyframes bounce { from { transform:translateY(0); } to { transform:translateY(-10px); } }</style>`;
+        document.body.appendChild(modal);
     },
 
     // Verifica se há parabéns recebidos nos últimos 5 dias

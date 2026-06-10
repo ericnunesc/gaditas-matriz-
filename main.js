@@ -297,6 +297,22 @@ const auth = {
             } else {
                 log('currentUser.id não disponível', true);
             }
+
+            // Handler para notificações com o app em primeiro plano (foreground)
+            messaging.onMessage(payload => {
+                const n = payload.notification || {};
+                if (!n.title) return;
+                if (Notification.permission === 'granted') {
+                    swReg.showNotification(n.title, {
+                        body: n.body || '',
+                        icon: n.icon || '/gaditasstore.png',
+                        badge: '/gaditasstore.png',
+                        vibrate: [200, 100, 200],
+                        data: payload.data
+                    });
+                }
+            });
+            log('onMessage (foreground) registrado ✅');
         } catch(e) {
             console.error('[FCM] Erro:', e.message, e);
         }

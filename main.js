@@ -283,14 +283,28 @@ const auth = {
             log('SW pronto');
 
             // FCM v9 compat exige usuário autenticado no Firebase Auth para registrar o token
-            if (!firebase.auth().currentUser) {
-                log('Fazendo signInAnonymously para FCM...');
+            const curUser = firebase.auth().currentUser;
+            log('Firebase Auth currentUser: ' + (curUser ? curUser.uid : 'null'));
+            if (!curUser) {
+                log('Fazendo signInAnonymously...');
                 try {
-                    await firebase.auth().signInAnonymously();
-                    log('Auth anônimo OK');
+                    const cred = await firebase.auth().signInAnonymously();
+                    log('Auth anônimo OK: ' + cred.user.uid);
                 } catch(e) {
-                    log('signInAnonymously falhou — habilite "Anonymous" em Firebase Console → Authentication: ' + e.message, true);
+                    log('signInAnonymously falhou: ' + e.message, true);
                     return;
+                }
+            } else {
+                // Força refresh do ID token para garantir que não está expirado
+                try {
+                    await curUser.getIdToken(true);
+                    log('ID token refreshed');
+                } catch(e) {
+                    log('Refresh falhou, tentando signInAnonymously...', true);
+                    try {
+                        await firebase.auth().signInAnonymously();
+                        log('Auth anônimo OK (fallback)');
+                    } catch(e2) { log('signInAnonymously falhou: ' + e2.message, true); return; }
                 }
             }
 

@@ -6,6 +6,12 @@
     <title>Gaditas Academy — Arte Marcial de Alto Nível</title>
     <meta name="description" content="Gaditas Academy — Jiu-Jitsu, Muay Thai e Kids em Sergipe. Treine com os melhores. Venha fazer parte da família."/>
     <link rel="icon" href="gaditasstore.png"/>
+    <script>
+        // Se aberto como PWA instalado, redireciona para o app
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+            window.location.replace('./app.html');
+        }
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

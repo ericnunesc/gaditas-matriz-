@@ -438,6 +438,35 @@ const academia = {
         } catch (e) { alert("Erro ao lançar."); }
     },
 
+    async removerPresencaAdmin(alunoId, alunoNome) {
+        const ref = db.collection('alunos').doc(alunoId);
+        const doc = await ref.get();
+        if (!doc.exists) return;
+        const d = doc.data();
+        const hist = d.historico || [];
+        if (!hist.length) return alert('Nenhuma presença registrada.');
+
+        // Monta lista das últimas 10 presenças
+        const ultimas = hist.slice(0, 10);
+        let menu = `Remover presença de ${alunoNome.toUpperCase()}\nEscolha o número:\n\n`;
+        ultimas.forEach((h, i) => { menu += `${i+1}. ${h.data} — ${h.turma || ''}${h.tipo ? ' ('+h.tipo+')' : ''}\n`; });
+        const escolha = prompt(menu);
+        if (!escolha) return;
+        const idx = parseInt(escolha) - 1;
+        if (isNaN(idx) || idx < 0 || idx >= ultimas.length) return alert('Opção inválida.');
+        if (!confirm(`Remover presença do dia ${ultimas[idx].data} (${ultimas[idx].turma})?`)) return;
+
+        const isMT = this._isTurmaMT(ultimas[idx].turma || '');
+        hist.splice(idx, 1);
+        const upd = { historico: hist };
+        if (isMT) upd.aulasMT = Math.max((d.aulasMT || 0) - 1, 0);
+        else       upd.aulas   = Math.max((d.aulas   || 0) - 1, 0);
+        await ref.update(upd);
+        alert('✅ Presença removida!');
+        this.renderAlunos();
+        this.renderRanking();
+    },
+
     filtrarCategoriaAlunos(tipo) {
         this.categoriaFiltroAtual = tipo;
         const botoes = { all: "filter-btn-all", adult: "filter-btn-adult", kids: "filter-btn-kids" };
@@ -1652,6 +1681,7 @@ const academia = {
                     ${isAdmin ? `<button onclick="academia.reenviarContrato('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Contrato" style="background:#1c1000;border:1px solid #92400e;color:#f59e0b;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-file-contract"></i></button>` : ''}
                     ${isAdmin ? `<button onclick="academia.excluirAluno('${doc.id}')" title="Excluir" style="background:#2a0808;border:none;color:#ef4444;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-trash"></i></button>` : ''}
                     <button onclick="academia.lancarPresencaManualAdmin('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#1e3a8a;border:none;color:#60a5fa;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;"><i class="fas fa-plus"></i> Presença</button>
+                    <button onclick="academia.removerPresencaAdmin('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Remover presença" style="background:#2a0808;border:1px solid #ef4444;color:#ef4444;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;"><i class="fas fa-minus"></i> Presença</button>
                 </div>
             </div>`;
         });

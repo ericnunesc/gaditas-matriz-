@@ -228,6 +228,7 @@ const auth = {
         if (this.role === 'aluno' || this.role === 'professor') {
             setTimeout(() => aniversario.verificarAniversario(), 800);
             setTimeout(() => aniversario.verificarAniversarioColegas(), 1000);
+            setTimeout(() => aniversario.verificarParabensRecebidos(), 2200);
             setTimeout(() => aniversario.verificarConvocacao(), 1200);
             setTimeout(() => aniversario.verificarGraduacao(), 1500);
         }
@@ -7723,13 +7724,16 @@ const aniversario = {
                 .onSnapshot(snap => {
                     const el = document.getElementById('parabens-recebidos-aniv');
                     if (!el) return;
-                    if (!snap.exists || !(snap.data().desejos || []).length) { el.innerHTML = ''; return; }
-                    const nomes = snap.data().desejos.map(d => d.deNome.split(' ')[0]).join(', ');
-                    const qtd = snap.data().desejos.length;
-                    el.innerHTML = `<div style="background:#1e293b;border:1px solid #f59e0b44;border-radius:10px;padding:10px 14px;font-size:0.75rem;color:#f59e0b;font-weight:700;">
-                        🎉 ${qtd} ${qtd===1?'colega desejou':'colegas desejaram'} parabéns!<br>
-                        <span style="color:#94a3b8;font-weight:400;font-size:0.68rem;">${nomes}</span>
-                    </div>`;
+                    const desejos = snap.exists ? (snap.data().desejos || []) : [];
+                    if (!desejos.length) { el.innerHTML = ''; return; }
+                    const itens = desejos.map(d => `
+                        <div style="background:#0f172a;border-left:3px solid #f59e0b;border-radius:8px;padding:9px 12px;margin-bottom:6px;text-align:left;">
+                            <div style="font-size:0.68rem;font-weight:800;color:#f59e0b;">🎉 ${d.deNome.split(' ')[0]}</div>
+                            <div style="font-size:0.75rem;color:#e2e8f0;margin-top:3px;line-height:1.4;">"${d.mensagem || ''}"</div>
+                        </div>`).join('');
+                    el.innerHTML = `<div style="margin-bottom:4px;font-size:0.62rem;font-weight:800;color:#f59e0b;letter-spacing:1px;text-align:left;">
+                        💌 ${desejos.length} ${desejos.length===1?'MENSAGEM RECEBIDA':'MENSAGENS RECEBIDAS'}
+                    </div>${itens}`;
                 });
         }
     },
@@ -7976,44 +7980,57 @@ const aniversario = {
 
         const cards = colegas.map(c => {
             const primeiroNome = c.nome.split(' ')[0];
-            return `<div style="background:#0f172a;border:1px solid #f59e0b44;border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
-                <div>
-                    <div style="font-size:0.9rem;font-weight:800;color:white;">${primeiroNome}</div>
-                    <div style="font-size:0.62rem;color:#94a3b8;margin-top:2px;">${c.nome}</div>
+            const safeId = c.id.replace(/[^a-zA-Z0-9]/g, '_');
+            return `<div style="background:#0f172a;border:1px solid #f59e0b44;border-radius:12px;padding:12px 14px;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <div style="font-size:1.5rem;">🎂</div>
+                    <div>
+                        <div style="font-size:0.88rem;font-weight:800;color:white;">${primeiroNome}</div>
+                        <div style="font-size:0.6rem;color:#64748b;">${c.nome}</div>
+                    </div>
                 </div>
-                <button id="btn-parabens-${c.id}"
-                    onclick="aniversario.darParabens('${c.id}','${c.nome.replace(/'/g,"\\'")}','${meuId}','${hojeStr}',this)"
-                    style="padding:8px 14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:10px;font-weight:800;font-size:0.7rem;cursor:pointer;white-space:nowrap;flex-shrink:0;">
-                    🎉 Dar Parabéns
+                <textarea id="msg-parabens-${safeId}" placeholder="Escreva sua mensagem de parabéns... 🎉"
+                    style="width:100%;padding:9px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.78rem;resize:none;box-sizing:border-box;font-family:inherit;"
+                    rows="2" maxlength="200"></textarea>
+                <button id="btn-parabens-${safeId}"
+                    onclick="aniversario.darParabens('${c.id}','${c.nome.replace(/'/g,"\\'")}','${meuId}','${hojeStr}','${safeId}',this)"
+                    style="margin-top:6px;width:100%;padding:9px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:8px;font-weight:800;font-size:0.72rem;cursor:pointer;">
+                    🎉 Enviar Parabéns
                 </button>
             </div>`;
         }).join('');
 
         modal.innerHTML = `
-            <div style="background:linear-gradient(145deg,#1e1040,#1e293b);border:2px solid #f59e0b;border-radius:24px;padding:28px 24px;max-width:400px;width:100%;text-align:center;box-shadow:0 0 60px rgba(245,158,11,0.25);max-height:85vh;overflow-y:auto;">
+            <div style="background:linear-gradient(145deg,#1e1040,#1e293b);border:2px solid #f59e0b;border-radius:24px;padding:28px 24px;max-width:400px;width:100%;text-align:center;box-shadow:0 0 60px rgba(245,158,11,0.25);max-height:88vh;overflow-y:auto;">
                 <div style="font-size:3rem;margin-bottom:6px;">🎂</div>
                 <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:2px;margin-bottom:8px;">ANIVERSARIANTES DE HOJE</div>
                 <div style="font-size:1.1rem;font-weight:800;color:white;margin-bottom:20px;">
                     ${colegas.length === 1 ? 'Um colega faz aniversário hoje!' : `${colegas.length} colegas fazem aniversário hoje!`}
                 </div>
-                ${cards}
+                <div style="text-align:left;">${cards}</div>
                 <button onclick="document.getElementById('modal-aniv-colegas').remove()"
-                    style="margin-top:12px;width:100%;padding:14px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:12px;font-weight:800;font-size:0.85rem;cursor:pointer;">
+                    style="margin-top:8px;width:100%;padding:14px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:12px;font-weight:800;font-size:0.85rem;cursor:pointer;">
                     Fechar
                 </button>
             </div>`;
         document.body.appendChild(modal);
     },
 
-    async darParabens(alunoId, alunoNome, meuId, hojeStr, btnEl) {
+    async darParabens(alunoId, alunoNome, meuId, hojeStr, safeId, btnEl) {
+        const textarea = document.getElementById(`msg-parabens-${safeId}`);
+        const mensagem = (textarea?.value || '').trim();
+        if (!mensagem) { textarea?.focus(); textarea?.setAttribute('style', textarea.getAttribute('style') + ';border-color:#f59e0b;'); return; }
         try {
             btnEl.disabled = true;
+            if (textarea) textarea.disabled = true;
             btnEl.textContent = '⏳';
             const eu = auth.currentUser;
             const ref = db.collection('parabens').doc(`${alunoId}_${hojeStr}`);
             await ref.set({
-                alunoId, alunoNome,
-                desejos: firebase.firestore.FieldValue.arrayUnion({ deId: meuId, deNome: eu.nome || '', at: new Date().toISOString() })
+                alunoId, alunoNome, data: hojeStr,
+                desejos: firebase.firestore.FieldValue.arrayUnion({
+                    deId: meuId, deNome: eu.nome || '', mensagem, at: new Date().toISOString()
+                })
             }, { merge: true });
             btnEl.textContent = '✅ Enviado!';
             btnEl.style.background = 'linear-gradient(135deg,#10b981,#059669)';
@@ -8028,16 +8045,73 @@ const aniversario = {
                         body: JSON.stringify({
                             token,
                             title: `🎉 Parabéns, ${alunoNome.split(' ')[0]}!`,
-                            body: `${eu.nome?.split(' ')[0] || 'Um colega'} te desejou feliz aniversário! 🎂`
+                            body: `${eu.nome?.split(' ')[0] || 'Um colega'} te desejou: "${mensagem.slice(0,60)}"`
                         })
                     });
                 }
             } catch(e) { /* push opcional */ }
         } catch(e) {
             btnEl.disabled = false;
-            btnEl.textContent = '🎉 Dar Parabéns';
-            alert('Erro ao enviar parabéns: ' + e.message);
+            if (textarea) textarea.disabled = false;
+            btnEl.textContent = '🎉 Enviar Parabéns';
+            alert('Erro: ' + e.message);
         }
+    },
+
+    // Verifica se há parabéns recebidos nos últimos 5 dias
+    async verificarParabensRecebidos() {
+        if (auth.role !== 'aluno') return;
+        const eu = auth.currentUser;
+        if (!eu) return;
+        const hoje = new Date();
+        // Checa os últimos 5 dias
+        for (let i = 0; i < 5; i++) {
+            const d = new Date(hoje);
+            d.setDate(d.getDate() - i);
+            const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            const chave = `gaditas_parabens_visto_${eu.id}_${ds}`;
+            if (localStorage.getItem(chave)) continue;
+            try {
+                const snap = await db.collection('parabens').doc(`${eu.id}_${ds}`).get();
+                if (!snap.exists) continue;
+                const desejos = snap.data().desejos || [];
+                if (!desejos.length) continue;
+                localStorage.setItem(chave, '1');
+                this._mostrarPopupParabensRecebidos(desejos, ds, i === 0);
+                return; // mostra só o mais recente
+            } catch(e) { /* ignora */ }
+        }
+    },
+
+    _mostrarPopupParabensRecebidos(desejos, dataStr, ehHoje) {
+        document.getElementById('modal-parabens-recebidos')?.remove();
+        const [ano, mes, dia] = dataStr.split('-');
+        const dataFmt = `${dia}/${mes}/${ano}`;
+        const label = ehHoje ? 'Hoje' : dataFmt;
+
+        const itens = desejos.map(d => `
+            <div style="background:#0f172a;border-left:3px solid #f59e0b;border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+                <div style="font-size:0.72rem;font-weight:800;color:#f59e0b;margin-bottom:4px;">🎉 ${d.deNome.split(' ')[0]}</div>
+                <div style="font-size:0.8rem;color:#e2e8f0;line-height:1.5;">"${d.mensagem}"</div>
+            </div>`).join('');
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-parabens-recebidos';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.96);z-index:99996;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#1e1040,#1e293b);border:2px solid #f59e0b;border-radius:24px;padding:28px 24px;max-width:400px;width:100%;text-align:center;box-shadow:0 0 60px rgba(245,158,11,0.2);max-height:85vh;overflow-y:auto;">
+                <div style="font-size:3rem;margin-bottom:6px;">💌</div>
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:2px;margin-bottom:4px;">PARABÉNS RECEBIDOS — ${label.toUpperCase()}</div>
+                <div style="font-size:1rem;font-weight:800;color:white;margin-bottom:20px;">
+                    ${desejos.length} ${desejos.length===1?'colega te desejou':'colegas te desejaram'} parabéns 🎂
+                </div>
+                <div style="text-align:left;">${itens}</div>
+                <button onclick="document.getElementById('modal-parabens-recebidos').remove()"
+                    style="margin-top:12px;width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:12px;font-weight:800;font-size:0.85rem;cursor:pointer;">
+                    🙏 Muito Obrigado!
+                </button>
+            </div>`;
+        document.body.appendChild(modal);
     },
 
     // ── CARD ADMIN — HOJE E ESTA SEMANA ───────────────────

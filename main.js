@@ -1543,18 +1543,11 @@ const academia = {
         // Turmas e categorias do professor
         const turmasProf = (auth.role === 'professor' && auth.currentUser?.turmasAcesso) ? auth.currentUser.turmasAcesso : [];
         const profTemKids = turmasProf.some(t => t.toLowerCase().includes('kids'));
-        const profTemAdulto = turmasProf.some(t => t.includes('BJJ') || t.includes('Submission'));
-
-        // Alunos que fizeram check-in hoje (para professor adulto)
-        let idsCheckinHoje = new Set();
-        if (auth.role === 'professor' && profTemAdulto) {
-            const inicioHoje = new Date(); inicioHoje.setHours(0,0,0,0);
-            const snapCI = await db.collection("checkins").get();
-            snapCI.docs.forEach(d => {
-                const c = d.data();
-                const turmaProf = turmasProf.some(t => c.turma && c.turma.includes(t.replace(/\s*\d+$/, '').trim()));
-                if (turmaProf && c.data >= inicioHoje.getTime()) idsCheckinHoje.add(c.alunoId);
-            });
+        const profTemMT   = turmasProf.some(t => t.toLowerCase().includes('muay') || t.toLowerCase().includes('thai') || t.toLowerCase().includes('mt'));
+        // Professor reserva (sem turmas) ou adulto BJJ não vê lista de alunos
+        if (auth.role === 'professor' && !profTemKids && !profTemMT) {
+            l.innerHTML = '<p style="color:#64748b;text-align:center;font-size:0.8rem;padding:20px;">Acesso restrito ao painel de alunos.</p>';
+            return;
         }
 
         snap.forEach(doc => {
@@ -1575,11 +1568,19 @@ const academia = {
             if (this.modalidadeFiltroAtual === 'jiujitsu' && alunoMod === 'muaythai') return;
             if (this.modalidadeFiltroAtual === 'muaythai' && alunoMod !== 'muaythai' && alunoMod !== 'ambos') return;
 
-            // Filtro do professor
+            // Filtro do professor — só Kids e MT podem ver alunos
             if (auth.role === 'professor') {
-                if (isKids && !profTemKids) return; // Não tem turma kids
-                if (!isKids && !profTemAdulto) return; // Não tem turma adulto
-                if (!isKids && profTemAdulto && !idsCheckinHoje.has(doc.id)) return; // Adulto sem check-in hoje
+                const alunoIsMT = alunoMod === 'muaythai' || alunoMod === 'ambos';
+                if (profTemKids && !profTemMT) {
+                    // Só Kids: vê apenas alunos kids
+                    if (!isKids) return;
+                } else if (profTemMT && !profTemKids) {
+                    // Só MT: vê apenas alunos MT
+                    if (!alunoIsMT) return;
+                } else if (profTemKids && profTemMT) {
+                    // Tem os dois: vê kids e MT
+                    if (!isKids && !alunoIsMT) return;
+                }
             }
             let tagsLeoes = "";
             if (isKids) {

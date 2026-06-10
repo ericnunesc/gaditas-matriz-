@@ -6525,13 +6525,41 @@ const profComms = {
     },
 
     async _responderConvocacao(convId, status) {
-        const msg = status === 'recusado' ? prompt('Motivo (opcional):') || '' : '';
-        await db.collection('convocacoes_prof').doc(convId).update({ status, respostaMsg: msg, respondidoEm: Date.now() });
-        const conv = (await db.collection('convocacoes_prof').doc(convId).get()).data();
-        const emoji = status === 'confirmado' ? '✅' : '❌';
-        // Notifica admin
-        if (auth.currentUser) push._enviarAdminPush && push._enviarAdminPush(`${emoji} ${auth.currentUser.nome}`, `${status === 'confirmado' ? 'Confirmou' : 'Recusou'} a convocação — ${conv?.turma || ''}`);
-        document.getElementById('painel-convocacoes-recebidas').innerHTML = '';
+        let motivo = '';
+        if (status === 'recusado') {
+            motivo = prompt('Por que não pode? (opcional):') || '';
+        }
+        try {
+            await db.collection('convocacoes_prof').doc(convId).update({
+                status,
+                respostaMsg: motivo,
+                respondidoEm: Date.now()
+            });
+            // Feedback visual imediato
+            const emoji = status === 'confirmado' ? '✅' : '❌';
+            const txt   = status === 'confirmado' ? 'Presença confirmada!' : 'Resposta enviada.';
+            alert(`${emoji} ${txt}`);
+            // Limpa os painéis
+            const p1 = document.getElementById('painel-convocacoes-recebidas');
+            const p2 = document.getElementById('dash-convocacoes-prof');
+            if (p1) p1.innerHTML = '';
+            if (p2) p2.innerHTML = '';
+            // Notifica admin via push (sem quebrar se falhar)
+            try {
+                const conv = (await db.collection('convocacoes_prof').doc(convId).get()).data();
+                const adminDoc = await db.collection('configuracoes').doc('admin_config').get();
+                const adminToken = adminDoc.exists ? adminDoc.data().fcmToken : null;
+                if (adminToken) {
+                    await fetch('/api/push-comunicado', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tokens: [adminToken], title: `${emoji} ${auth.currentUser?.nome || 'Professor'}`, body: `${status === 'confirmado' ? 'Confirmou' : 'Recusou'} — ${conv?.turma || ''}${motivo ? ': ' + motivo : ''}` })
+                    });
+                }
+            } catch(_) { /* push falhou silenciosamente */ }
+        } catch(e) {
+            alert('Erro ao responder: ' + e.message);
+        }
     },
 
     _mostrarRecadosPendentes(docs) {

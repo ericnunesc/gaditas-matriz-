@@ -259,7 +259,7 @@ const auth = {
             }, 600);
         }
     },
-    _VAPID_KEY: 'BGIOHx28eOp4-uzKBtZoVHAQ2cYdC_aZfgRBZTXKWgBN9P5ZyBfctn744lw3Ves-zOvpcqDBrZVMrD87Xl3sf_0',
+    _VAPID_KEY: 'BCtvNDMaM5KiOT70UmBxguiQc7YnSeCdpfS5YXIQwl89SGtueD-kqxdseexAr_jU2rCEefC-jBtWXGhbr85MIv8',
 
     async _registrarFcmToken() {
         const log = (msg, err) => console[err ? 'error' : 'log']('[FCM] ' + msg);

@@ -6268,8 +6268,17 @@ const profComms = {
                     <span style="font-size:0.9rem;font-weight:800;color:white;">🗓️ Pedir Dispensa</span>
                     <button onclick="document.getElementById('modal-dispensa-prof').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
                 </div>
-                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DATA</small>
-                <input type="date" id="disp-data" style="${inp}" value="${hoje}" min="${hoje}"/>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                    <div>
+                        <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DE *</small>
+                        <input type="date" id="disp-data-ini" style="${inp}margin-bottom:0;" value="${hoje}" min="${hoje}"/>
+                    </div>
+                    <div>
+                        <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">ATÉ *</small>
+                        <input type="date" id="disp-data-fim" style="${inp}margin-bottom:0;" value="${hoje}" min="${hoje}"/>
+                    </div>
+                </div>
+                <div style="height:10px;"></div>
                 <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">TURMA</small>
                 <select id="disp-turma" style="${inp}">${turmaOpts}</select>
                 <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">MOTIVO *</small>
@@ -6279,17 +6288,21 @@ const profComms = {
     },
 
     async _salvarDispensa() {
-        const data   = document.getElementById('disp-data')?.value;
-        const turma  = document.getElementById('disp-turma')?.value;
-        const motivo = document.getElementById('disp-motivo')?.value.trim();
-        if (!data || !motivo) return alert('Preencha a data e o motivo.');
+        const dataIni = document.getElementById('disp-data-ini')?.value;
+        const dataFim = document.getElementById('disp-data-fim')?.value;
+        const turma   = document.getElementById('disp-turma')?.value;
+        const motivo  = document.getElementById('disp-motivo')?.value.trim();
+        if (!dataIni || !dataFim || !motivo) return alert('Preencha as datas e o motivo.');
+        if (dataFim < dataIni) return alert('A data fim não pode ser anterior à data início.');
         const profId   = auth.currentUser?.id;
         const profNome = auth.currentUser?.nome || '';
-        const colecao  = auth.role === 'professor' ? (auth.currentUser?.turmasAcesso ? 'alunos' : 'professores') : 'professores';
-        const [ay,am,ad] = data.split('-');
+        const colecao  = auth.currentUser?.turmasAcesso ? 'alunos' : 'professores';
+        const fmt = iso => { const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; };
+        const dataExib = dataIni === dataFim ? fmt(dataIni) : `${fmt(dataIni)} até ${fmt(dataFim)}`;
         await db.collection('dispensas_prof').add({
-            profId, profNome, colecao, data, turma, motivo,
-            dataExib: `${ad}/${am}/${ay}`, criadoEm: Date.now()
+            profId, profNome, colecao,
+            data: dataIni, dataFim, turma, motivo,
+            dataExib, criadoEm: Date.now()
         });
         document.getElementById('modal-dispensa-prof')?.remove();
         alert('✅ Dispensa solicitada!');
@@ -6305,7 +6318,7 @@ const profComms = {
                     body: JSON.stringify({
                         tokens: [adminToken],
                         title: `🗓️ Dispensa — ${profNome}`,
-                        body: `${turma === 'todas' ? 'Todas as turmas' : turma} · ${ad}/${am}/${ay} · "${motivo}"`
+                        body: `${turma === 'todas' ? 'Todas as turmas' : turma} · ${dataExib} · "${motivo}"`
                     })
                 });
             }
@@ -6324,7 +6337,7 @@ const profComms = {
             .get();
         const hoje = new Date().toISOString().slice(0,10);
         const docs = snap.docs
-            .filter(d => d.data().data >= hoje)
+            .filter(d => (d.data().dataFim || d.data().data) >= hoje)
             .sort((a,b) => a.data().data.localeCompare(b.data().data));
         let html = `<div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:10px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -6356,13 +6369,17 @@ const profComms = {
         this.renderPainelDispensas();
     },
 
-    // Verifica dispensas para uma data e lista de profs — retorna mapa profId → motivo
+    // Verifica dispensas para uma data — retorna mapa profId → {motivo, turma}
     async _dispensasNaData(dataISO) {
-        const snap = await db.collection('dispensas_prof').where('data','==', dataISO).get();
+        // Busca dispensas onde dataIni <= dataISO e (dataFim >= dataISO ou não tem dataFim)
+        const snap = await db.collection('dispensas_prof').where('data','<=', dataISO).get();
         const mapa = {};
         snap.forEach(doc => {
             const d = doc.data();
-            mapa[d.profId] = { motivo: d.motivo, turma: d.turma };
+            const fim = d.dataFim || d.data;
+            if (fim >= dataISO) {
+                mapa[d.profId] = { motivo: d.motivo, turma: d.turma, dataExib: d.dataExib };
+            }
         });
         return mapa;
     },

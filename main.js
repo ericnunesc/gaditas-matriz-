@@ -628,9 +628,14 @@ const academia = {
                                     style="width:100%; padding:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.85rem; font-weight:700;"/>
                             </div>`).join('')}
                     </div>
-                    <button onclick="academia.salvarConfiguracaoPlanos()" style="width:100%; margin-top:12px; padding:12px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;">
-                        <i class="fas fa-save"></i> SALVAR VALORES
-                    </button>
+                    <div style="display:flex; gap:8px; margin-top:12px;">
+                        <button onclick="academia.salvarConfiguracaoPlanos()" style="flex:1; padding:12px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;">
+                            <i class="fas fa-save"></i> SALVAR VALORES
+                        </button>
+                        <button onclick="window.open('index.html','_blank')" style="padding:12px 14px; background:#1e293b; border:1px solid #334155; color:#e2e8f0; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; white-space:nowrap;">
+                            <i class="fas fa-external-link-alt"></i> VER SITE
+                        </button>
+                    </div>
                 </div>
             </div>`;
     },

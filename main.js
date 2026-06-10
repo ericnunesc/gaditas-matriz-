@@ -1263,7 +1263,20 @@ const academia = {
         try {
             if (id) {
                 await db.collection("eventos_oficiais").doc(id).update(dados);
-                alert("✅ Evento atualizado!");
+                if (publicarStory) {
+                    if (!imagemUrl) {
+                        alert("✅ Evento atualizado!\n\n⚠️ Story NÃO publicado — adicione um cartaz para publicar como story.");
+                    } else {
+                        try {
+                            if (!firebase.auth().currentUser) await firebase.auth().signInAnonymously().catch(() => {});
+                            await db.collection('stories').add({ imageUrl: imagemUrl, titulo: t, link: '#tab-eventos', duracaoDias: 7, criadoEm: Date.now() });
+                            academia.renderStoriesBar();
+                            alert("✅ Evento atualizado e Story publicado!");
+                        } catch(se) { alert("✅ Evento atualizado!\n\n⚠️ Story falhou: " + se.message); }
+                    }
+                } else {
+                    alert("✅ Evento atualizado!");
+                }
             } else {
                 const ref = await db.collection("eventos_oficiais").add({ ...dados, inscritos: [], dataCriacao: new Date().getTime() });
                 // Publica story se toggle ativado

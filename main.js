@@ -1764,7 +1764,7 @@ const academia = {
             }
         }
         const grade = this.getGrade();
-        const todasTurmas = [...new Set(Object.values(grade).flat())].filter(t => !t.includes('Sem treinos'));
+        const todasTurmas = [...new Set(Object.values(grade).filter(v => Array.isArray(v)).flat())].filter(t => typeof t === 'string' && !t.includes('Sem treinos'));
         const opts = todasTurmas.map(t => `<option value="${t}">${t}</option>`).join('');
         card.innerHTML = `
             <div style="font-size:0.75rem; font-weight:800; color:#0ea5e9; margin-bottom:12px; letter-spacing:0.3px;">

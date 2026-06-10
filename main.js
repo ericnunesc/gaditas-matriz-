@@ -6296,13 +6296,15 @@ const profComms = {
         if (!container || auth.role !== 'professor') return;
         const profId = auth.currentUser?.id;
         if (!profId) return;
+        try {
+        // Sem orderBy para não exigir índice — ordena no JS
         const snap = await db.collection('dispensas_prof')
             .where('profId','==', profId)
-            .orderBy('data','asc')
             .get();
-        // Filtra só futuras
         const hoje = new Date().toISOString().slice(0,10);
-        const docs = snap.docs.filter(d => d.data().data >= hoje);
+        const docs = snap.docs
+            .filter(d => d.data().data >= hoje)
+            .sort((a,b) => a.data().data.localeCompare(b.data().data));
         let html = `<div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:10px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <div style="font-size:0.65rem;font-weight:800;color:#f59e0b;">🗓️ MINHAS DISPENSAS</div>
@@ -6324,6 +6326,7 @@ const profComms = {
         }
         html += '</div>';
         container.innerHTML = html;
+        } catch(e) { console.warn('renderPainelDispensas:', e.message); }
     },
 
     async _cancelarDispensa(id) {
@@ -6762,7 +6765,7 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
-        if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
+        if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'professor') { profComms.renderPainelDispensas(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
         if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }

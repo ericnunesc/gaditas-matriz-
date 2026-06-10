@@ -6508,6 +6508,81 @@ const profComms = {
         this.renderPainelConvocacoes();
     },
 
+    // ── DISPENSAS (VISÃO ADMIN) ────────────────────────────
+    async abrirDispensasAdmin() {
+        let modal = document.getElementById('modal-dispensas-admin');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-dispensas-admin'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
+        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:420px;margin-top:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <span style="font-size:0.95rem;font-weight:800;color:white;">🗓️ Dispensas dos Professores</span>
+                <button onclick="document.getElementById('modal-dispensas-admin').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:12px;">
+                <button onclick="profComms._carregarDispensasAdmin('futuras',this)" style="flex:1;padding:7px;background:#f59e0b;border:none;color:#000;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Próximas</button>
+                <button onclick="profComms._carregarDispensasAdmin('hoje',this)" style="flex:1;padding:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Hoje</button>
+                <button onclick="profComms._carregarDispensasAdmin('todas',this)" style="flex:1;padding:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Todas</button>
+            </div>
+            <div id="dispensas-admin-lista"><div style="text-align:center;padding:20px;color:#64748b;font-size:0.8rem;">⏳ Carregando...</div></div>
+        </div>`;
+        this._carregarDispensasAdmin('futuras', modal.querySelector('button'));
+    },
+
+    async _carregarDispensasAdmin(filtro, btnEl) {
+        btnEl?.closest('div')?.querySelectorAll('button').forEach(b => { b.style.background='#1e293b'; b.style.color='#94a3b8'; b.style.border='1px solid #334155'; });
+        if (btnEl) { btnEl.style.background='#f59e0b'; btnEl.style.color='#000'; btnEl.style.border='none'; }
+
+        const lista = document.getElementById('dispensas-admin-lista');
+        if (!lista) return;
+        lista.innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;font-size:0.8rem;">⏳ Buscando...</div>';
+
+        const snap = await db.collection('dispensas_prof').get();
+        const hoje = new Date().toISOString().slice(0,10);
+
+        let docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        if (filtro === 'futuras') {
+            docs = docs.filter(d => (d.dataFim || d.data) >= hoje);
+        } else if (filtro === 'hoje') {
+            docs = docs.filter(d => d.data <= hoje && (d.dataFim || d.data) >= hoje);
+        }
+        docs.sort((a,b) => a.data.localeCompare(b.data));
+
+        if (!docs.length) {
+            lista.innerHTML = '<p style="color:#64748b;text-align:center;font-size:0.78rem;padding:16px;">Nenhuma dispensa encontrada.</p>';
+            return;
+        }
+
+        let html = '';
+        docs.forEach(d => {
+            const isAtiva = d.data <= hoje && (d.dataFim || d.data) >= hoje;
+            const isFutura = d.data > hoje;
+            const cor = isAtiva ? '#10b981' : isFutura ? '#f59e0b' : '#475569';
+            const status = isAtiva ? '🟢 ATIVA' : isFutura ? '🟡 FUTURA' : '⚫ PASSADA';
+            html += `<div style="background:#0f172a;border:1px solid #334155;border-left:3px solid ${cor};border-radius:8px;padding:12px;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                    <div style="flex:1;">
+                        <div style="font-size:0.78rem;font-weight:800;color:#e2e8f0;">${d.profNome}</div>
+                        <div style="font-size:0.68rem;color:#94a3b8;margin-top:2px;">📅 ${d.dataExib}</div>
+                        <div style="font-size:0.65rem;color:#64748b;margin-top:2px;">🏫 ${d.turma === 'todas' ? 'Todas as turmas' : d.turma}</div>
+                        <div style="font-size:0.68rem;color:#e2e8f0;margin-top:4px;font-style:italic;">"${d.motivo}"</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                        <span style="font-size:0.55rem;font-weight:800;color:${cor};">${status}</span>
+                        <button onclick="profComms._excluirDispensaAdmin('${d.id}')" style="background:none;border:none;color:#475569;cursor:pointer;font-size:0.75rem;"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            </div>`;
+        });
+        lista.innerHTML = html;
+    },
+
+    async _excluirDispensaAdmin(id) {
+        if (!confirm('Remover esta dispensa?')) return;
+        await db.collection('dispensas_prof').doc(id).delete();
+        this._carregarDispensasAdmin('futuras', document.querySelector('#modal-dispensas-admin button'));
+    },
+
     // ── RANKING DE PROFESSORES ─────────────────────────────
     async abrirRankingProfs() {
         let modal = document.getElementById('modal-ranking-profs');

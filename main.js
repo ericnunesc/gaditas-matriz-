@@ -214,6 +214,8 @@ const auth = {
         // ── LISTENERS RELATOS DE SAÚDE ────────────────────
         if (this.role === 'aluno') academia.iniciarListenerRelatoAluno();
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerRelatosProf();
+        if (this.role === 'professor') profComms.iniciarListenerRecadosProf();
+        if (this.role === 'admin') setTimeout(() => profComms.renderPainelConvocacoes(), 1500);
         // Badge de depoimentos aprovados (carrega em background)
         academia._carregarBadgeDepoimentos();
         // Badge e painel de solicitações de avaliação física (admin/professor)
@@ -2704,19 +2706,28 @@ Turmas: ${turmas.join(', ')}`);
             </div>`;
         });
 
-        // Professores da coleção antiga
+        // Professores da coleção
         const snapProfs = await db.collection("professores").get();
         snapProfs.docs.forEach(doc => {
             const p = doc.data();
-            const turmas = (p.turmasAcesso || []).join(', ') || 'Todas';
-            html += `<div class="item-card" style="padding:15px; border-left:4px solid #3b82f6;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="color:#e2e8f0; font-size:0.85rem; font-weight:700;">👤 ${p.nome.toUpperCase()}</div>
-                        <div style="color:var(--text-muted); font-size:0.7rem; margin-top:2px;">📧 ${p.email}</div>
-                        <div style="color:#3b82f6; font-size:0.65rem; font-weight:700; margin-top:4px;">Turmas: ${turmas}</div>
+            const turmas = (p.turmasAcesso || []).join(', ') || '—';
+            const isReserva = p.tipo === 'reserva';
+            const badge = isReserva
+                ? `<span style="background:#7c3aed;color:white;font-size:0.48rem;padding:2px 7px;border-radius:4px;font-weight:800;">RESERVA</span>`
+                : `<span style="background:#3b82f6;color:white;font-size:0.48rem;padding:2px 7px;border-radius:4px;font-weight:800;">TITULAR</span>`;
+            html += `<div class="item-card" style="padding:12px; border-left:4px solid ${isReserva ? '#7c3aed' : '#3b82f6'};">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                    <div style="flex:1;">
+                        <div style="margin-bottom:4px;">${badge}</div>
+                        <div style="color:#e2e8f0;font-size:0.82rem;font-weight:700;">👤 ${p.nome.toUpperCase()}</div>
+                        <div style="color:var(--text-muted);font-size:0.65rem;margin-top:2px;">📧 ${p.email}</div>
+                        ${!isReserva ? `<div style="color:#3b82f6;font-size:0.6rem;font-weight:700;margin-top:3px;">Turmas: ${turmas}</div>` : ''}
                     </div>
-                    <button onclick="academia.excluirProf('${doc.id}')" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                    <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">
+                        <button onclick="profComms.abrirConvocacao('${doc.id}','${p.nome.replace(/'/g,"\\'")}','${turmas}')" style="background:#10b981;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">📋 Convocar</button>
+                        <button onclick="profComms.abrirRecado('${doc.id}','${p.nome.replace(/'/g,"\\'")}','professores')" style="background:#3b82f6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">💬 Recado</button>
+                        <button onclick="academia.excluirProf('${doc.id}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.8rem;"><i class="fas fa-trash"></i></button>
+                    </div>
                 </div>
             </div>`;
         });
@@ -2754,7 +2765,19 @@ Ele voltará a ser aluno normal.`)) return;
         this.selecionarModalidade('jiujitsu');
     },
 
-    limparPr() { document.getElementById('nome-prof').value = ""; document.getElementById('email-prof').value = ""; document.querySelectorAll('.check-turma').forEach(c => c.checked = false); },
+    _selecionarTipoProf(tipo) {
+        document.getElementById('tipo-prof').value = tipo;
+        document.getElementById('tipo-titular-label').style.borderColor = tipo === 'titular' ? '#3b82f6' : '#334155';
+        document.getElementById('tipo-reserva-label').style.borderColor = tipo === 'reserva' ? '#a855f7' : '#334155';
+        const sec = document.getElementById('section-turmas-prof');
+        if (sec) sec.style.display = tipo === 'reserva' ? 'none' : 'block';
+    },
+    limparPr() {
+        document.getElementById('nome-prof').value = "";
+        document.getElementById('email-prof').value = "";
+        document.querySelectorAll('.check-turma').forEach(c => c.checked = false);
+        this._selecionarTipoProf('titular');
+    },
     async excluirAluno(id) { if(confirm("Remover atleta?")) { await db.collection("alunos").doc(id).delete(); this.renderAlunos(); } },
     async verFinanceiroAluno(id, nome) {
         const doc = await db.collection("alunos").doc(id).get();
@@ -2873,10 +2896,13 @@ Ele voltará a ser aluno normal.`)) return;
     async excluirProf(id) { if(confirm("Remover professor?")) { await db.collection("professores").doc(id).delete(); this.renderProfessores(); } },
 
     async salvarProfessor() {
-        const n = document.getElementById('nome-prof').value.trim(); const e = document.getElementById('email-prof').value.trim().toLowerCase();
-        const t = Array.from(document.querySelectorAll('.check-turma:checked')).map(cb => cb.value); if(!n || !e) return alert("Campos vazios.");
-        await db.collection("professores").add({ nome: n, email: e, senha: "1234", turmasAcesso: t });
-        alert("Sucesso!"); this.limparPr(); this.renderProfessores();
+        const n = document.getElementById('nome-prof').value.trim();
+        const e = document.getElementById('email-prof').value.trim().toLowerCase();
+        const tipo = document.getElementById('tipo-prof')?.value || 'titular';
+        const t = tipo === 'reserva' ? [] : Array.from(document.querySelectorAll('.check-turma:checked')).map(cb => cb.value);
+        if (!n || !e) return alert("Campos vazios.");
+        await db.collection("professores").add({ nome: n, email: e, senha: "1234", turmasAcesso: t, tipo });
+        alert("✅ Professor cadastrado!"); this.limparPr(); this.renderProfessores();
     },
 
     async salvarAluno() {
@@ -5999,6 +6025,217 @@ Ele voltará a ser aluno normal.`)) return;
         if (!confirm('Excluir este registro experimental?')) return;
         await db.collection('experimentais').doc(id).delete();
         this.renderPainelExperimentais();
+    }
+};
+
+// ══════════════════════════════════════════════════════════
+// COMUNICAÇÃO COM PROFESSORES — Convocação + Recados
+// ══════════════════════════════════════════════════════════
+const profComms = {
+
+    // ── CONVOCAÇÃO ─────────────────────────────────────────
+    abrirConvocacao(profId, profNome, turmasStr) {
+        let modal = document.getElementById('modal-convocacao-prof');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-convocacao-prof'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;';
+        // Turmas do professor para selecionar
+        const turmas = turmasStr && turmasStr !== '—' ? turmasStr.split(', ') : [];
+        const turmaOpts = turmas.length > 0
+            ? turmas.map(t => `<option value="${t}">${t}</option>`).join('')
+            : ui._turmasDinamicas?.map(t => `<option value="${t}">${t}</option>`).join('') || '';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.9rem;font-weight:800;color:white;">📋 Convocar ${profNome}</span>
+                    <button onclick="document.getElementById('modal-convocacao-prof').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">TURMA</small>
+                <select id="conv-turma" style="${inp}">
+                    ${turmaOpts || '<option value="">Selecione a turma...</option>'}
+                    <option value="__custom">Outra turma...</option>
+                </select>
+                <input type="text" id="conv-turma-custom" placeholder="Nome da turma..." style="${inp}display:none;" />
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DATA</small>
+                <input type="date" id="conv-data" style="${inp}" value="${new Date().toISOString().slice(0,10)}"/>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">HORÁRIO</small>
+                <input type="time" id="conv-hora" style="${inp}"/>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">MENSAGEM (opcional)</small>
+                <textarea id="conv-msg" rows="2" placeholder="Ex: Estarei viajando, preciso de você nessa aula." style="${inp}resize:none;"></textarea>
+                <button onclick="profComms._enviarConvocacao('${profId}','${profNome.replace(/'/g,"\\'")}','professores')" style="width:100%;padding:13px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;">📋 ENVIAR CONVOCAÇÃO</button>
+            </div>`;
+        document.getElementById('conv-turma').addEventListener('change', function() {
+            document.getElementById('conv-turma-custom').style.display = this.value === '__custom' ? 'block' : 'none';
+        });
+    },
+
+    async _enviarConvocacao(profId, profNome, colecao) {
+        const turmaEl = document.getElementById('conv-turma');
+        const turma = turmaEl?.value === '__custom'
+            ? document.getElementById('conv-turma-custom')?.value.trim()
+            : turmaEl?.value;
+        const data = document.getElementById('conv-data')?.value;
+        const hora = document.getElementById('conv-hora')?.value;
+        const msg  = document.getElementById('conv-msg')?.value.trim();
+        if (!turma || !data) return alert('Preencha a turma e a data.');
+        const [ay, am, ad] = data.split('-');
+        const dataExib = `${ad}/${am}/${ay}${hora ? ' às ' + hora : ''}`;
+        await db.collection('convocacoes_prof').add({
+            profId, profNome, colecao,
+            turma, data, hora, dataExib,
+            mensagem: msg || '',
+            status: 'pendente',
+            criadoEm: Date.now()
+        });
+        // Push para o professor
+        const profDoc = await db.collection(colecao).doc(profId).get();
+        if (profDoc.exists && profDoc.data().fcmToken) {
+            push.paraAluno(profId, '📋 Convocação de aula!', `${turma} — ${dataExib}${msg ? ': ' + msg : ''}`);
+        }
+        document.getElementById('modal-convocacao-prof')?.remove();
+        alert(`✅ Convocação enviada para ${profNome}!`);
+        this.renderPainelConvocacoes();
+    },
+
+    async renderPainelConvocacoes() {
+        const container = document.getElementById('painel-convocacoes-prof');
+        if (!container) return;
+        const snap = await db.collection('convocacoes_prof').orderBy('criadoEm','desc').limit(30).get();
+        if (snap.empty) { container.innerHTML = '<p style="color:#64748b;font-size:0.72rem;text-align:center;padding:10px;">Nenhuma convocação ainda.</p>'; return; }
+        const cores = { pendente:'#f59e0b', confirmado:'#10b981', recusado:'#ef4444' };
+        const icons = { pendente:'⏳', confirmado:'✅', recusado:'❌' };
+        let html = '';
+        snap.forEach(doc => {
+            const c = doc.data();
+            const cor = cores[c.status] || '#64748b';
+            html += `<div style="background:#0f172a;border:1px solid #1e293b;border-left:3px solid ${cor};border-radius:8px;padding:10px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div>
+                        <div style="font-size:0.75rem;font-weight:700;color:#e2e8f0;">${c.profNome} — ${c.turma}</div>
+                        <div style="font-size:0.62rem;color:#64748b;margin-top:2px;">📅 ${c.dataExib}</div>
+                        ${c.mensagem ? `<div style="font-size:0.6rem;color:#94a3b8;margin-top:2px;">"${c.mensagem}"</div>` : ''}
+                        ${c.respostaMsg ? `<div style="font-size:0.62rem;color:#a78bfa;margin-top:3px;">💬 "${c.respostaMsg}"</div>` : ''}
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+                        <span style="font-size:0.6rem;font-weight:800;color:${cor};">${icons[c.status]} ${c.status.toUpperCase()}</span>
+                        <button onclick="profComms._excluirConvocacao('${doc.id}')" style="background:none;border:none;color:#475569;cursor:pointer;font-size:0.7rem;"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    },
+
+    async _excluirConvocacao(id) {
+        if (!confirm('Remover convocação?')) return;
+        await db.collection('convocacoes_prof').doc(id).delete();
+        this.renderPainelConvocacoes();
+    },
+
+    // ── RECADOS ────────────────────────────────────────────
+    abrirRecado(profId, profNome, colecao) {
+        let modal = document.getElementById('modal-recado-prof');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-recado-prof'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.9rem;font-weight:800;color:white;">💬 Recado para ${profNome}</span>
+                    <button onclick="document.getElementById('modal-recado-prof').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <textarea id="recado-texto" rows="4" placeholder="Escreva seu recado aqui..." style="${inp}resize:none;"></textarea>
+                <button onclick="profComms._enviarRecado('${profId}','${profNome.replace(/'/g,"\\'")}','${colecao}')" style="width:100%;padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;">💬 ENVIAR RECADO</button>
+            </div>`;
+    },
+
+    async _enviarRecado(profId, profNome, colecao) {
+        const texto = document.getElementById('recado-texto')?.value.trim();
+        if (!texto) return alert('Escreva o recado.');
+        await db.collection('recados_prof').add({
+            profId, profNome, colecao,
+            texto, lido: false,
+            criadoEm: Date.now()
+        });
+        push._enviarPush && push.paraAluno(profId, '💬 Recado do professor', texto.substring(0, 80));
+        document.getElementById('modal-recado-prof')?.remove();
+        alert(`✅ Recado enviado para ${profNome}!`);
+    },
+
+    // Carrega recados pendentes para o professor logado
+    async iniciarListenerRecadosProf() {
+        if (auth.role !== 'professor') return;
+        const profId = auth.currentUser?.id;
+        if (!profId) return;
+        const colecao = auth.role === 'professor' ? 'professores' : 'alunos';
+        db.collection('recados_prof')
+            .where('profId', '==', profId)
+            .where('lido', '==', false)
+            .onSnapshot(snap => {
+                const badge = document.getElementById('badge-recados-prof');
+                if (badge) badge.style.display = snap.size > 0 ? 'inline-block' : 'none';
+                if (snap.size > 0) this._mostrarRecadosPendentes(snap.docs);
+            });
+        // Carrega convocações pendentes
+        db.collection('convocacoes_prof')
+            .where('profId', '==', profId)
+            .where('status', '==', 'pendente')
+            .onSnapshot(snap => {
+                if (snap.size > 0) this._mostrarConvocacoesPendentes(snap.docs);
+            });
+    },
+
+    _mostrarConvocacoesPendentes(docs) {
+        const container = document.getElementById('painel-convocacoes-recebidas');
+        if (!container) return;
+        let html = `<div style="background:#1e3a1a;border:1px solid #10b981;border-radius:10px;padding:12px;margin-bottom:10px;">
+            <div style="font-size:0.72rem;font-weight:800;color:#10b981;margin-bottom:8px;">📋 CONVOCAÇÕES PENDENTES</div>`;
+        docs.forEach(doc => {
+            const c = doc.data();
+            html += `<div style="background:#0f172a;border-radius:8px;padding:10px;margin-bottom:6px;">
+                <div style="font-size:0.78rem;font-weight:700;color:#e2e8f0;">${c.turma} — ${c.dataExib}</div>
+                ${c.mensagem ? `<div style="font-size:0.65rem;color:#94a3b8;margin:3px 0;">"${c.mensagem}"</div>` : ''}
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                    <button onclick="profComms._responderConvocacao('${doc.id}','confirmado')" style="flex:1;padding:8px;background:#10b981;border:none;color:white;border-radius:6px;font-weight:800;cursor:pointer;font-size:0.72rem;">✅ CONFIRMAR</button>
+                    <button onclick="profComms._responderConvocacao('${doc.id}','recusado')" style="flex:1;padding:8px;background:#1e293b;border:1px solid #ef4444;color:#ef4444;border-radius:6px;font-weight:800;cursor:pointer;font-size:0.72rem;">❌ NÃO POSSO</button>
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+        container.style.display = 'block';
+    },
+
+    async _responderConvocacao(convId, status) {
+        const msg = status === 'recusado' ? prompt('Motivo (opcional):') || '' : '';
+        await db.collection('convocacoes_prof').doc(convId).update({ status, respostaMsg: msg, respondidoEm: Date.now() });
+        const conv = (await db.collection('convocacoes_prof').doc(convId).get()).data();
+        const emoji = status === 'confirmado' ? '✅' : '❌';
+        // Notifica admin
+        if (auth.currentUser) push._enviarAdminPush && push._enviarAdminPush(`${emoji} ${auth.currentUser.nome}`, `${status === 'confirmado' ? 'Confirmou' : 'Recusou'} a convocação — ${conv?.turma || ''}`);
+        document.getElementById('painel-convocacoes-recebidas').innerHTML = '';
+    },
+
+    _mostrarRecadosPendentes(docs) {
+        const container = document.getElementById('painel-recados-prof');
+        if (!container) return;
+        let html = `<div style="background:#1a1e3a;border:1px solid #3b82f6;border-radius:10px;padding:12px;margin-bottom:10px;">
+            <div style="font-size:0.72rem;font-weight:800;color:#3b82f6;margin-bottom:8px;">💬 RECADOS</div>`;
+        docs.forEach(doc => {
+            const r = doc.data();
+            html += `<div style="background:#0f172a;border-radius:8px;padding:10px;margin-bottom:6px;">
+                <div style="font-size:0.78rem;color:#e2e8f0;">${r.texto}</div>
+                <button onclick="profComms._marcarRecadoLido('${doc.id}',this)" style="margin-top:6px;background:#3b82f6;border:none;color:white;padding:5px 12px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;">✓ Li o recado</button>
+            </div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+        container.style.display = 'block';
+    },
+
+    async _marcarRecadoLido(id, btn) {
+        await db.collection('recados_prof').doc(id).update({ lido: true });
+        btn.closest('div[style]').remove();
     }
 };
 

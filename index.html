@@ -256,6 +256,10 @@
                     <div id="lista-turmas-presenca-admin" style="display:flex; flex-direction:column; gap:8px;"></div>
                 </div>
 
+                <!-- Convocações e Recados para o Professor -->
+                <div id="painel-convocacoes-recebidas" style="display:none;margin-top:12px;"></div>
+                <div id="painel-recados-prof" style="display:none;margin-top:8px;"></div>
+
                 <div id="area-professor-checkin" class="card hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-top:15px;">
                     <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-user-check"></i> Check-ins Pendentes no Tatame</div>
                     <div id="list-checkins" class="list-container"></div>
@@ -656,7 +660,21 @@
                     <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-user-shield"></i> Cadastrar Novo Professor da Equipe</div>
                     <input type="text" id="nome-prof" placeholder="Nome do Professor" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <input type="email" id="email-prof" placeholder="E-mail (Login)" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <div style="margin: 10px 0 15px 2px;"><small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">VÍNCULO E ACESSO ÀS TURMAS:</small><div id="grid-turmas-prof" class="checkbox-grid"></div></div>
+                    <div style="margin:8px 0 12px;">
+                        <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:6px;letter-spacing:0.5px;">TIPO DE PROFESSOR:</small>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <label id="tipo-titular-label" onclick="academia._selecionarTipoProf('titular')" style="display:flex;align-items:center;gap:8px;background:#0f172a;border:2px solid #3b82f6;border-radius:8px;padding:10px;cursor:pointer;">
+                                <span style="font-size:1rem;">🧑‍🏫</span>
+                                <div><div style="color:#e2e8f0;font-size:0.72rem;font-weight:700;">Titular</div><div style="color:#64748b;font-size:0.55rem;">Tem turmas fixas</div></div>
+                            </label>
+                            <label id="tipo-reserva-label" onclick="academia._selecionarTipoProf('reserva')" style="display:flex;align-items:center;gap:8px;background:#0f172a;border:2px solid #334155;border-radius:8px;padding:10px;cursor:pointer;">
+                                <span style="font-size:1rem;">🔄</span>
+                                <div><div style="color:#e2e8f0;font-size:0.72rem;font-weight:700;">Reserva</div><div style="color:#64748b;font-size:0.55rem;">Convocado quando precisar</div></div>
+                            </label>
+                        </div>
+                        <input type="hidden" id="tipo-prof" value="titular"/>
+                    </div>
+                    <div id="section-turmas-prof" style="margin:0 0 15px 2px;"><small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">TURMAS (acesso ao check-in):</small><div id="grid-turmas-prof" class="checkbox-grid"></div></div>
                     <button onclick="academia.salvarProfessor()" style="width:100%; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">CADASTRAR PROFESSOR</button>
                     <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
                         <div style="flex:1; height:1px; background:#334155;"></div>
@@ -669,6 +687,8 @@
                 </div>
                 <h4 id="title-professores" style="color: #94a3b8; font-size: 0.7rem; margin: 20px 0 8px 4px; font-weight: 800;" class="hidden">PROFESSORES ATIVOS</h4>
                 <div id="list-professores" class="list-container hidden"></div>
+                <!-- Painel de convocações -->
+                <div id="painel-convocacoes-prof" style="margin-top:12px;"></div>
                 </div><!-- /gestao-prof-body -->
 
                 <!-- ═══ SEÇÃO: ALUNO ═══ -->

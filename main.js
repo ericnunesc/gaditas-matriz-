@@ -214,7 +214,7 @@ const auth = {
         // ── LISTENERS RELATOS DE SAÚDE ────────────────────
         if (this.role === 'aluno') academia.iniciarListenerRelatoAluno();
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerRelatosProf();
-        if (this.role === 'professor') profComms.iniciarListenerRecadosProf();
+        if (this.role === 'professor') { profComms.iniciarListenerRecadosProf(); setTimeout(() => profComms.renderPainelDispensas(), 1000); }
         if (this.role === 'admin') setTimeout(() => profComms.renderPainelConvocacoes(), 1500);
         // Badge de depoimentos aprovados (carrega em background)
         academia._carregarBadgeDepoimentos();
@@ -6110,7 +6110,6 @@ const profComms = {
         const sel = document.getElementById('conv-turma');
         if (!sel) return;
         const turmasDia = this._turmasDoDia(dataISO);
-        // Filtra pelas turmas do professor se for titular
         const lista = this._turmasProf.length > 0
             ? turmasDia.filter(t => this._turmasProf.some(tp => t.includes(tp.replace(/\s*\d+$/, '').trim()) || tp === t))
             : turmasDia;
@@ -6119,6 +6118,35 @@ const profComms = {
             : '<option value="">Nenhuma turma neste dia</option>';
         sel.innerHTML = opts + '<option value="__custom">Outra turma...</option>';
         document.getElementById('conv-turma-custom').style.display = 'none';
+        // Verifica dispensas para essa data
+        this._mostrarDispensasNaData(dataISO);
+    },
+
+    async _mostrarDispensasNaData(dataISO) {
+        const aviso = document.getElementById('conv-dispensas-aviso');
+        if (!aviso) return;
+        aviso.innerHTML = '';
+        const mapa = await this._dispensasNaData(dataISO);
+        if (!Object.keys(mapa).length) return;
+        // Busca nomes dos professores com dispensa
+        const [snapP, snapA] = await Promise.all([
+            db.collection('professores').get(),
+            db.collection('alunos').where('role','==','professor').get()
+        ]);
+        const todos = [
+            ...snapP.docs.map(d => ({ id: d.id, nome: d.data().nome })),
+            ...snapA.docs.map(d => ({ id: d.id, nome: d.data().nome }))
+        ];
+        let html = '';
+        todos.forEach(p => {
+            if (!mapa[p.id]) return;
+            const d = mapa[p.id];
+            html += `<div style="background:#3a1a00;border-left:3px solid #f59e0b;border-radius:6px;padding:7px 10px;margin-bottom:4px;">
+                <div style="font-size:0.7rem;font-weight:700;color:#f59e0b;">⚠️ ${p.nome} — com dispensa</div>
+                <div style="font-size:0.62rem;color:#94a3b8;margin-top:2px;">${d.turma === 'todas' ? 'Todas as turmas' : d.turma} · "${d.motivo}"</div>
+            </div>`;
+        });
+        if (html) aviso.innerHTML = `<div style="margin-bottom:10px;">${html}</div>`;
     },
 
     abrirConvocacao(profId, profNome, turmasStr) {
@@ -6136,6 +6164,7 @@ const profComms = {
                 </div>
                 <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DATA</small>
                 <input type="date" id="conv-data" style="${inp}" value="${hoje}" oninput="profComms._atualizarTurmasConv(this.value)"/>
+                <div id="conv-dispensas-aviso"></div>
                 <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">TURMA</small>
                 <select id="conv-turma" style="${inp}" onchange="document.getElementById('conv-turma-custom').style.display=this.value==='__custom'?'block':'none'">
                     <option value="">Selecione a data primeiro...</option>
@@ -6212,6 +6241,106 @@ const profComms = {
         if (!confirm('Remover convocação?')) return;
         await db.collection('convocacoes_prof').doc(id).delete();
         this.renderPainelConvocacoes();
+    },
+
+    // ── DISPENSAS ──────────────────────────────────────────
+    abrirPedidoDispensa() {
+        let modal = document.getElementById('modal-dispensa-prof');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-dispensa-prof'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;';
+        const hoje = new Date().toISOString().slice(0,10);
+
+        // Turmas do professor
+        const turmasProf = auth.currentUser?.turmasAcesso || [];
+        const turmaOpts = turmasProf.length > 0
+            ? `<option value="todas">Todas as minhas turmas</option>` + turmasProf.map(t => `<option value="${t}">${t}</option>`).join('')
+            : `<option value="todas">Todas as turmas</option>`;
+
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.9rem;font-weight:800;color:white;">🗓️ Pedir Dispensa</span>
+                    <button onclick="document.getElementById('modal-dispensa-prof').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DATA</small>
+                <input type="date" id="disp-data" style="${inp}" value="${hoje}" min="${hoje}"/>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">TURMA</small>
+                <select id="disp-turma" style="${inp}">${turmaOpts}</select>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">MOTIVO *</small>
+                <textarea id="disp-motivo" rows="3" placeholder="Ex: Consulta médica, viagem, compromisso pessoal..." style="${inp}resize:none;"></textarea>
+                <button onclick="profComms._salvarDispensa()" style="width:100%;padding:13px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;">🗓️ SOLICITAR DISPENSA</button>
+            </div>`;
+    },
+
+    async _salvarDispensa() {
+        const data   = document.getElementById('disp-data')?.value;
+        const turma  = document.getElementById('disp-turma')?.value;
+        const motivo = document.getElementById('disp-motivo')?.value.trim();
+        if (!data || !motivo) return alert('Preencha a data e o motivo.');
+        const profId   = auth.currentUser?.id;
+        const profNome = auth.currentUser?.nome || '';
+        const colecao  = auth.role === 'professor' ? (auth.currentUser?.turmasAcesso ? 'alunos' : 'professores') : 'professores';
+        const [ay,am,ad] = data.split('-');
+        await db.collection('dispensas_prof').add({
+            profId, profNome, colecao, data, turma, motivo,
+            dataExib: `${ad}/${am}/${ay}`, criadoEm: Date.now()
+        });
+        document.getElementById('modal-dispensa-prof')?.remove();
+        alert('✅ Dispensa solicitada!');
+        this.renderPainelDispensas();
+    },
+
+    async renderPainelDispensas() {
+        const container = document.getElementById('painel-dispensas-prof');
+        if (!container || auth.role !== 'professor') return;
+        const profId = auth.currentUser?.id;
+        if (!profId) return;
+        const snap = await db.collection('dispensas_prof')
+            .where('profId','==', profId)
+            .orderBy('data','asc')
+            .get();
+        // Filtra só futuras
+        const hoje = new Date().toISOString().slice(0,10);
+        const docs = snap.docs.filter(d => d.data().data >= hoje);
+        let html = `<div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div style="font-size:0.65rem;font-weight:800;color:#f59e0b;">🗓️ MINHAS DISPENSAS</div>
+                <button onclick="profComms.abrirPedidoDispensa()" style="background:#f59e0b;border:none;color:#000;padding:5px 10px;border-radius:6px;font-size:0.62rem;font-weight:800;cursor:pointer;">+ Nova</button>
+            </div>`;
+        if (!docs.length) {
+            html += `<p style="color:#64748b;font-size:0.72rem;text-align:center;padding:6px 0;">Nenhuma dispensa agendada.</p>`;
+        } else {
+            docs.forEach(doc => {
+                const d = doc.data();
+                html += `<div style="background:#0f172a;border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <div style="font-size:0.72rem;font-weight:700;color:#e2e8f0;">📅 ${d.dataExib} — ${d.turma === 'todas' ? 'Todas as turmas' : d.turma}</div>
+                        <div style="font-size:0.62rem;color:#94a3b8;margin-top:2px;">${d.motivo}</div>
+                    </div>
+                    <button onclick="profComms._cancelarDispensa('${doc.id}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.75rem;padding:4px;"><i class="fas fa-trash"></i></button>
+                </div>`;
+            });
+        }
+        html += '</div>';
+        container.innerHTML = html;
+    },
+
+    async _cancelarDispensa(id) {
+        if (!confirm('Cancelar esta dispensa?')) return;
+        await db.collection('dispensas_prof').doc(id).delete();
+        this.renderPainelDispensas();
+    },
+
+    // Verifica dispensas para uma data e lista de profs — retorna mapa profId → motivo
+    async _dispensasNaData(dataISO) {
+        const snap = await db.collection('dispensas_prof').where('data','==', dataISO).get();
+        const mapa = {};
+        snap.forEach(doc => {
+            const d = doc.data();
+            mapa[d.profId] = { motivo: d.motivo, turma: d.turma };
+        });
+        return mapa;
     },
 
     // ── AGENDA DE PROFESSORES ──────────────────────────────

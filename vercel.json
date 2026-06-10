@@ -9,6 +9,10 @@
     {
       "path": "/api/notificacoes-cobranca",
       "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/notificacoes-dispensas",
+      "schedule": "0 7 * * *"
     }
   ]
 }

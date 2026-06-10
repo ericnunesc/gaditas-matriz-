@@ -298,9 +298,14 @@ const auth = {
             if (!token) { log('Token vazio — verifique VAPID key no Firebase Console', true); return; }
             log('Token obtido: ' + token.substring(0, 20) + '...');
 
-            const colecao = this.role === 'professor' ? 'professores' : 'alunos';
             if (this.currentUser?.id) {
-                await db.collection(colecao).doc(this.currentUser.id).update({ fcmToken: token });
+                if (this.role === 'admin') {
+                    // Admin salva em configuracoes/admin_config
+                    await db.collection('configuracoes').doc('admin_config').set({ fcmToken: token }, { merge: true });
+                } else {
+                    const colecao = this.role === 'professor' ? 'professores' : 'alunos';
+                    await db.collection(colecao).doc(this.currentUser.id).update({ fcmToken: token });
+                }
                 log('Token salvo no Firestore ✅');
             }
 
@@ -6289,6 +6294,22 @@ const profComms = {
         document.getElementById('modal-dispensa-prof')?.remove();
         alert('✅ Dispensa solicitada!');
         this.renderPainelDispensas();
+        // Push imediato para o admin
+        try {
+            const adminDoc = await db.collection('configuracoes').doc('admin_config').get();
+            const adminToken = adminDoc.exists ? adminDoc.data().fcmToken : null;
+            if (adminToken) {
+                await fetch('/api/push-comunicado', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tokens: [adminToken],
+                        title: `🗓️ Dispensa — ${profNome}`,
+                        body: `${turma === 'todas' ? 'Todas as turmas' : turma} · ${ad}/${am}/${ay} · "${motivo}"`
+                    })
+                });
+            }
+        } catch(_) {}
     },
 
     async renderPainelDispensas() {

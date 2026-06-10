@@ -1266,17 +1266,28 @@ const academia = {
                 alert("✅ Evento atualizado!");
             } else {
                 const ref = await db.collection("eventos_oficiais").add({ ...dados, inscritos: [], dataCriacao: new Date().getTime() });
-                // Publica story se toggle ativado e tiver imagem
-                if (publicarStory && imagemUrl) {
-                    await db.collection('stories').add({
-                        imageUrl: imagemUrl,
-                        titulo: t,
-                        link: '#tab-eventos',
-                        duracaoDias: 7,
-                        criadoEm: Date.now()
-                    });
-                    academia.renderStoriesBar();
-                    alert("✅ Evento criado e Story publicado!");
+                // Publica story se toggle ativado
+                if (publicarStory) {
+                    if (!imagemUrl) {
+                        alert("✅ Evento criado!\n\n⚠️ Story NÃO publicado — adicione um cartaz antes de salvar para publicar como story.");
+                    } else {
+                        try {
+                            if (!firebase.auth().currentUser) {
+                                await firebase.auth().signInAnonymously().catch(() => {});
+                            }
+                            await db.collection('stories').add({
+                                imageUrl: imagemUrl,
+                                titulo: t,
+                                link: '#tab-eventos',
+                                duracaoDias: 7,
+                                criadoEm: Date.now()
+                            });
+                            academia.renderStoriesBar();
+                            alert("✅ Evento criado e Story publicado!");
+                        } catch(se) {
+                            alert("✅ Evento criado!\n\n⚠️ Story falhou: " + se.message);
+                        }
+                    }
                 } else {
                     alert("✅ Evento criado!");
                 }

@@ -4595,13 +4595,17 @@ Ele voltará a ser aluno normal.`)) return;
     _irParaCheckin() {
         ui.showTab('tab-checkin');
         setTimeout(() => {
-            // Admin vê a fila de check-ins pendentes
-            const profArea = document.getElementById('area-professor-checkin');
-            if (profArea) {
-                profArea.classList.remove('hidden');
-                profArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (auth.role === 'aluno') {
+                const alunoArea = document.getElementById('area-aluno-checkin');
+                if (alunoArea) alunoArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                const profArea = document.getElementById('area-professor-checkin');
+                if (profArea) {
+                    profArea.classList.remove('hidden');
+                    profArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                academia.renderPresencaAdmin();
             }
-            academia.renderPresencaAdmin();
         }, 200);
     },
 

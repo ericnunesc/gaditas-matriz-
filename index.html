@@ -661,10 +661,10 @@ async function carregarLandingConfig() {
 
 // ── PLANOS ──────────────────────────────────────────────────
 const PLANOS_CONFIG = {
-    mensal:     { icone: '📅', destaque: false, desc: 'Renovação mensal, sem fidelidade.' },
-    trimestral: { icone: '📆', destaque: false, desc: 'Pague 3 meses e economize.' },
-    semestral:  { icone: '🏅', destaque: true,  desc: 'Melhor custo-benefício do ano.' },
-    anual:      { icone: '🏆', destaque: false, desc: 'Comprometimento total com sua evolução.' },
+    mensal:     { icone: '📅', desc: 'Renovação mensal, sem fidelidade.' },
+    trimestral: { icone: '📆', desc: 'Pague 3 meses e economize.' },
+    semestral:  { icone: '🏅', desc: 'Melhor custo-benefício do ano.' },
+    anual:      { icone: '🏆', desc: 'Comprometimento total com sua evolução.' },
 };
 const PLANOS_ITENS = [
     'Aulas ilimitadas (BJJ, MT e Kids)',
@@ -675,18 +675,19 @@ const PLANOS_ITENS = [
 
 function renderPlanos(precos, landing) {
     const container = document.getElementById('planos-grid');
-    container.innerHTML = '';
+    const maisPopular = landing?.mais_popular || 'semestral';
     const ordem = ['mensal','trimestral','semestral','anual'];
     container.innerHTML = ordem.map(key => {
-        const cfg   = PLANOS_CONFIG[key];
-        const valor = precos[key]?.valor ?? '--';
-        const label = precos[key]?.label ?? key;
-        const desc  = landing?.planos_desc?.[key] || cfg.desc;
+        const cfg      = PLANOS_CONFIG[key];
+        const destaque = key === maisPopular;
+        const valor    = precos[key]?.valor ?? '--';
+        const label    = precos[key]?.label ?? key;
+        const desc     = landing?.planos_desc?.[key] || cfg.desc;
         const itensRaw = landing?.planos_itens?.[key] || PLANOS_ITENS.join('\n');
-        const itens = itensRaw.split('\n').filter(i => i.trim());
+        const itens    = itensRaw.split('\n').filter(i => i.trim());
         return `
-        <div class="plano-card${cfg.destaque ? ' destaque' : ''}">
-            ${cfg.destaque ? '<div class="plano-badge-top">Mais popular</div>' : ''}
+        <div class="plano-card${destaque ? ' destaque' : ''}">
+            ${destaque ? '<div class="plano-badge-top">Mais popular</div>' : ''}
             <div class="plano-icon">${cfg.icone}</div>
             <div class="plano-nome">${label}</div>
             <div class="plano-desc">${desc}</div>
@@ -698,7 +699,7 @@ function renderPlanos(precos, landing) {
             <div class="plano-itens">
                 ${itens.map(i=>`<div class="plano-item"><i class="fas fa-check-circle"></i> ${i}</div>`).join('')}
             </div>
-            <a href="cadastro.html" class="plano-cta ${cfg.destaque ? 'filled' : 'outline'}">Quero me matricular</a>
+            <a href="cadastro.html" class="plano-cta ${destaque ? 'filled' : 'outline'}">Quero me matricular</a>
         </div>`;
     }).join('');
 }

@@ -652,6 +652,7 @@ const academia = {
                 semestral: 'Melhor custo-benefício do ano.',
                 anual: 'Comprometimento total com sua evolução.'
             },
+            mais_popular: 'semestral',
             planos_itens: {
                 mensal:     'Aulas ilimitadas (BJJ, MT e Kids)\nSistema de graduação\nAcesso ao app exclusivo\nParticipação em eventos',
                 trimestral: 'Aulas ilimitadas (BJJ, MT e Kids)\nSistema de graduação\nAcesso ao app exclusivo\nParticipação em eventos',
@@ -667,6 +668,7 @@ const academia = {
             endereco:       document.getElementById('lnd-endereco').value.trim(),
             instagram:      document.getElementById('lnd-instagram').value.trim(),
             hero_descricao: document.getElementById('lnd-hero-desc').value.trim(),
+            mais_popular: document.getElementById('lnd-mais-popular').value,
             planos_desc: {
                 mensal:     document.getElementById('lnd-desc-mensal').value.trim(),
                 trimestral: document.getElementById('lnd-desc-trimestral').value.trim(),
@@ -729,6 +731,12 @@ const academia = {
 
                 <!-- PLANOS -->
                 <div style="font-size:0.65rem;font-weight:900;color:#10b981;letter-spacing:1px;margin-top:16px;">PLANOS — DESCRIÇÃO E ITENS</div>
+                ${label('PLANO DESTAQUE (MAIS POPULAR)')}
+                <select id="lnd-mais-popular" style="${inputStyle}">
+                    ${['mensal','trimestral','semestral','anual'].map(k =>
+                        `<option value="${k}" ${(cfg.mais_popular||'semestral')===k?'selected':''}>${k.charAt(0).toUpperCase()+k.slice(1)}</option>`
+                    ).join('')}
+                </select>
                 ${planoRow('mensal','Mensal')}
                 ${planoRow('trimestral','Trimestral')}
                 ${planoRow('semestral','Semestral')}

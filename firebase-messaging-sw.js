@@ -1,19 +1,14 @@
 // firebase-messaging-sw.js — também serve como SW do PWA
 
-const CACHE = 'gaditas-v11';
+const CACHE = 'gaditas-v12';
+// Apenas assets estáticos que não mudam com frequência
 const PRECACHE = [
-    './',
-    './index.html',
-    './app.html',
-    './main.js',
-    './style.css',
-    './manifest.json',
     './gaditasstore.png',
-    './filtros-academia.js',
-    './gaditas-modal-financeiro.js',
-    './gaditas-painel-adm.js',
-    './gaditas-contrato.js',
+    './manifest.json',
+    './style.css',
 ];
+// Arquivos JS/HTML — sempre busca da rede primeiro
+const NETWORK_FIRST = ['.html', '.js'];
 
 self.addEventListener('install', e => {
     e.waitUntil(
@@ -38,18 +33,32 @@ self.addEventListener('fetch', e => {
         url.includes('googleapis.com') ||
         url.includes('gstatic.com')) return;
 
-    e.respondWith(
-        caches.match(e.request).then(cached => {
-            const network = fetch(e.request).then(res => {
+    const isAppFile = NETWORK_FIRST.some(ext => url.split('?')[0].endsWith(ext));
+
+    if (isAppFile) {
+        // Network-first: busca sempre da rede, usa cache só se offline
+        e.respondWith(
+            fetch(e.request).then(res => {
                 if (res && res.status === 200 && res.type === 'basic') {
-                    const clone = res.clone();
-                    caches.open(CACHE).then(c => c.put(e.request, clone));
+                    caches.open(CACHE).then(c => c.put(e.request, res.clone()));
                 }
                 return res;
-            }).catch(() => cached);
-            return cached || network;
-        })
-    );
+            }).catch(() => caches.match(e.request))
+        );
+    } else {
+        // Cache-first para assets estáticos
+        e.respondWith(
+            caches.match(e.request).then(cached => {
+                const network = fetch(e.request).then(res => {
+                    if (res && res.status === 200 && res.type === 'basic') {
+                        caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+                    }
+                    return res;
+                }).catch(() => cached);
+                return cached || network;
+            })
+        );
+    }
 });
 
 // ── Firebase Messaging ──────────────────────────────────────

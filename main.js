@@ -327,8 +327,10 @@ const auth = {
             if (typeof firebase.messaging !== 'function') { log('firebase.messaging não carregado'); return; }
 
             if (Notification.permission === 'denied') {
-                // Não dá para re-solicitar programaticamente — mostra banner in-app
-                this._mostrarBannerNotificacao();
+                // Só mostra banner se ainda não registrou token neste dispositivo
+                if (!localStorage.getItem('gaditas_fcm_ok')) {
+                    this._mostrarBannerNotificacao();
+                }
                 return;
             }
 
@@ -383,6 +385,7 @@ const auth = {
                     const colecao = this.role === 'professor' ? 'professores' : 'alunos';
                     await db.collection(colecao).doc(this.currentUser.id).update({ fcmToken: token });
                 }
+                localStorage.setItem('gaditas_fcm_ok', '1');
                 log('Token salvo no Firestore ✅');
             }
 

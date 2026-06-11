@@ -5584,6 +5584,10 @@ Ele voltará a ser aluno normal.`)) return;
                 snapCI.docs.forEach(doc => { if (doc.data().turma === turmaQR) batch.delete(doc.ref); });
                 await batch.commit();
 
+                // Atualiza a lista de checkins pendentes do professor/admin
+                this.renderCheckins();
+                this.renderRanking();
+
                 alert("✅ Presença computada automaticamente! Turma: " + turmaQR + " OSS! 🥋");
                 push.paraAluno(alunoId, '✅ Presença confirmada!', `Sua presença na turma ${turmaQR} foi registrada. OSS! 🥋`);
             } else {

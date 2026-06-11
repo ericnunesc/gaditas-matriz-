@@ -7489,24 +7489,42 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
     },
 
     _selecionarTurmaCheckin(turma, btnEl) {
-        // Desmarca todos
+        // Destaca o clicado
         document.querySelectorAll('#turmas-checkin-btns button').forEach(b => {
             b.style.opacity = '0.5'; b.style.transform = 'scale(1)';
         });
-        // Destaca o clicado
         btnEl.style.opacity = '1'; btnEl.style.transform = 'scale(1.02)';
 
-        // Confirma com o aluno
-        if (!confirm(`✅ Fazer check-in em:\n\n"${turma}"\n\nConfirmar?`)) {
-            btnEl.style.opacity = '0.5'; btnEl.style.transform = 'scale(1)';
-            this._turmaSelecionada = null;
-            return;
-        }
+        // Modal de confirmação inline (sem confirm() nativo)
+        const existente = document.getElementById('modal-confirm-checkin');
+        if (existente) existente.remove();
 
-        this._turmaSelecionada = turma;
-        // Sincroniza hidden select
+        const modal = document.createElement('div');
+        modal.id = 'modal-confirm-checkin';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #3b82f6;border-radius:16px;padding:24px 20px;max-width:320px;width:100%;text-align:center;">
+                <div style="font-size:2rem;margin-bottom:10px;">🥋</div>
+                <div style="font-size:0.9rem;font-weight:800;color:white;margin-bottom:6px;">Confirmar Check-in</div>
+                <div style="font-size:0.85rem;color:#93c5fd;font-weight:700;margin-bottom:20px;">${turma}</div>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="document.getElementById('modal-confirm-checkin').remove();document.querySelectorAll('#turmas-checkin-btns button').forEach(b=>{b.style.opacity='1';b.style.transform='scale(1)'});"
+                        style="flex:1;padding:12px;background:#334155;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;">
+                        Cancelar
+                    </button>
+                    <button onclick="document.getElementById('modal-confirm-checkin').remove();academia._confirmarCheckinTurma('${turma.replace(/'/g,"\\'")}');"
+                        style="flex:1;padding:12px;background:#10b981;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;">
+                        ✅ Confirmar
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    _confirmarCheckinTurma(turma) {
+        academia._turmaSelecionada = turma;
         const s = document.getElementById('select-turma-aluno');
-        if (s) { s.value = turma; }
+        if (s) s.value = turma;
 
         // Mostra quem já confirmou
         const qt = document.getElementById('area-quem-treina');

@@ -512,9 +512,8 @@
     <p class="section-label">Invista em você</p>
     <h2 class="section-title">Nossos <span>Planos</span></h2>
     <p class="section-sub">Sem taxa de matrícula. Cancele quando quiser.</p>
-    <div class="planos-grid">
-
-        <div id="planos-loading" style="text-align:center;padding:30px;color:#64748b;font-size:0.82rem;">
+    <div id="planos-grid" class="planos-grid">
+        <div id="planos-loading" style="grid-column:1/-1;text-align:center;padding:30px;color:#64748b;font-size:0.82rem;">
             <i class="fas fa-spinner fa-spin" style="color:#3b82f6;font-size:1.5rem;"></i><br/>Carregando planos...
         </div>
     </div>
@@ -676,6 +675,7 @@ const PLANOS_ITENS = [
 
 function renderPlanos(precos, landing) {
     const container = document.getElementById('planos-grid');
+    container.innerHTML = '';
     const ordem = ['mensal','trimestral','semestral','anual'];
     container.innerHTML = ordem.map(key => {
         const cfg   = PLANOS_CONFIG[key];
@@ -704,7 +704,7 @@ function renderPlanos(precos, landing) {
 }
 
 async function carregarPlanos() {
-    const loading = document.getElementById('planos-loading');
+    const grid = document.getElementById('planos-grid');
     try {
         const [docPlanos, docLanding] = await Promise.all([
             db.collection('configuracoes').doc('planos').get(),
@@ -717,13 +717,9 @@ async function carregarPlanos() {
             anual:      { valor: 90,  label: 'Anual' }
         };
         const landing = docLanding.exists ? docLanding.data() : {};
-        const grid = document.createElement('div');
-        grid.id = 'planos-grid';
-        grid.className = 'planos-grid';
-        loading.replaceWith(grid);
         renderPlanos(precos, landing);
     } catch(e) {
-        loading.innerHTML = '<p style="color:#64748b;font-size:0.82rem;">Planos em breve.</p>';
+        grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#64748b;font-size:0.82rem;">Planos em breve.</p>';
     }
 }
 

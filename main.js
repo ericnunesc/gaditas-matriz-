@@ -7438,20 +7438,19 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         const ehJJ       = modAluno === 'jiujitsu'  || modAluno === 'ambos';
 
         // Filtra turmas visíveis para este aluno
-        const visiveis = todas.filter(t => {
-            if (!t || t.toLowerCase().includes('sem treino')) return false;
-            const kids = this._isTurmaKids(t);
-            const mt   = this._isTurmaMT(t);
+        const visiveis = todas.filter(turma => {
+            if (!turma || turma.toLowerCase().includes('sem treino')) return false;
+            const ehKids = academia._isTurmaKids(turma);
+            const ehMTt  = academia._isTurmaMT(turma);
             if (isInter) return true; // 14-15 vê tudo
             if (isKids) {
-                if (kids) return true;                          // sempre vê kids
-                if (mt && ehMT && comAdultos) return true;     // kids MT liberado
-                if (!mt && !kids && comAdultos && ehJJ) return true; // kids BJJ adulto liberado
+                if (ehKids) return true;
+                if (ehMTt && ehMT && comAdultos) return true;
+                if (!ehMTt && !ehKids && comAdultos) return true;
                 return false;
             }
             // Adulto: não vê kids
-            if (kids) return false;
-            if (mt && !ehMT) return false; // adulto não-MT não precisa ver MT (opcional — remova se quiser mostrar)
+            if (ehKids) return false;
             return true;
         });
 
@@ -7464,10 +7463,10 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         // Sincroniza hidden select (para funções que ainda lêem dele)
         if (hiddenSel) hiddenSel.innerHTML = visiveis.map(t => `<option value="${t}">${t}</option>`).join('');
 
-        this._turmaSelecionada = null;
+        academia._turmaSelecionada = null;
         container.innerHTML = visiveis.map(t => {
-            const isMT   = this._isTurmaMT(t);
-            const isKids = this._isTurmaKids(t);
+            const isMT   = academia._isTurmaMT(t);
+            const isKids = academia._isTurmaKids(t);
             const cor    = isMT ? '#7f1d1d' : isKids ? '#312e81' : '#0c4a6e';
             const borda  = isMT ? '#ef4444' : isKids ? '#818cf8' : '#3b82f6';
             const emoji  = isMT ? '🥊' : isKids ? '⭐' : '🥋';

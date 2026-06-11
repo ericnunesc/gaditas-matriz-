@@ -40,7 +40,8 @@ self.addEventListener('fetch', e => {
         e.respondWith(
             fetch(e.request).then(res => {
                 if (res && res.status === 200 && res.type === 'basic') {
-                    caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+                    const clone = res.clone();
+                    caches.open(CACHE).then(c => c.put(e.request, clone));
                 }
                 return res;
             }).catch(() => caches.match(e.request))
@@ -51,7 +52,8 @@ self.addEventListener('fetch', e => {
             caches.match(e.request).then(cached => {
                 const network = fetch(e.request).then(res => {
                     if (res && res.status === 200 && res.type === 'basic') {
-                        caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+                        const clone = res.clone();
+                        caches.open(CACHE).then(c => c.put(e.request, clone));
                     }
                     return res;
                 }).catch(() => cached);

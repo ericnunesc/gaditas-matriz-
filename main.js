@@ -7474,7 +7474,7 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             const cor    = isMT ? '#7f1d1d' : isKids ? '#312e81' : '#0c4a6e';
             const borda  = isMT ? '#ef4444' : isKids ? '#818cf8' : '#3b82f6';
             const emoji  = isMT ? '🥊' : isKids ? '⭐' : '🥋';
-            return `<button onclick="academia._selecionarTurmaCheckin('${t.replace(/'/g,"\\'")}', this)"
+            return `<button onclick="ui._selecionarTurmaCheckin('${t.replace(/'/g,"\\'")}', this)"
                 style="width:100%;padding:14px 16px;background:${cor};border:2px solid ${borda};color:white;
                 border-radius:12px;font-weight:800;cursor:pointer;font-size:0.88rem;text-align:left;
                 display:flex;align-items:center;gap:10px;transition:all 0.15s;">
@@ -7512,7 +7512,7 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                         style="flex:1;padding:12px;background:#334155;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;">
                         Cancelar
                     </button>
-                    <button onclick="document.getElementById('modal-confirm-checkin').remove();academia._confirmarCheckinTurma('${turma.replace(/'/g,"\\'")}');"
+                    <button onclick="document.getElementById('modal-confirm-checkin').remove();ui._confirmarCheckinTurma('${turma.replace(/'/g,"\\'")}');"
                         style="flex:1;padding:12px;background:#10b981;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;">
                         ✅ Confirmar
                     </button>
@@ -7529,10 +7529,10 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         // Mostra quem já confirmou
         const qt = document.getElementById('area-quem-treina');
         if (qt) qt.style.display = 'block';
-        this.atualizarPresencaAntecipada();
+        academia.atualizarPresencaAntecipada();
 
         // Dispara check-in automaticamente
-        this.alunoEnviaCheckin();
+        academia.alunoEnviaCheckin();
     },
     atualizarFaixas() {
         // Se modalidade for Muay Thai puro, não precisa popular faixas JJ

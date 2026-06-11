@@ -270,6 +270,7 @@ const auth = {
         // ── ENQUETE ATIVA (aparece como popup bloqueante) ─
         if (this.role === 'aluno') {
             setTimeout(() => enquetes.verificarEnqueteAtiva(), 2000);
+            setTimeout(() => academia.verificarDisparoEvento(), 3500);
         }
 
         // ── CHECK-IN AUTOMÁTICO VIA QR CODE ──────────────
@@ -1635,6 +1636,7 @@ const academia = {
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid var(--border-light); padding-bottom:5px;">
                         <b style="color:white; font-size:0.8rem;">🏆 ${ev.titulo}</b>
                         <div style="display:flex; gap:6px;">
+                            <button onclick="academia.dispararEvento('${evId}','${ev.titulo.replace(/'/g,"\\'")}','${(ev.imagemUrl||'').replace(/'/g,"\\'")}' )" style="background:#064e3b; border:1px solid #10b981; color:#34d399; padding:4px 8px; border-radius:6px; cursor:pointer; font-size:0.65rem; font-weight:800;" title="Disparar para alunos">📢</button>
                             <button onclick="academia.editarEventoAdmin('${evId}')" style="background:#1e3a8a; border:1px solid #2d2d34; color:#60a5fa; padding:4px 8px; border-radius:6px; cursor:pointer;" title="Editar evento"><i class="fas fa-edit"></i></button>
                             <button onclick="academia.excluirEventoAdmin('${evId}')" style="background:none; border:none; color:var(--accent-red); cursor:pointer;"><i class="fas fa-trash"></i></button>
                         </div>
@@ -1695,6 +1697,176 @@ const academia = {
                 alert("Atleta removido.");
             } catch (err) { }
         }
+    },
+
+    // ── DISPARAR EVENTO PARA ALUNOS ──────────────────────────
+    dispararEvento(evId, titulo, imagemUrl) {
+        const existente = document.getElementById('modal-disparar-evento');
+        if (existente) existente.remove();
+
+        const grupos = [
+            { val: 'todos',           label: '👥 Todos os Alunos' },
+            { val: 'adulto',          label: '🥋 Adulto (JJ)' },
+            { val: 'kids',            label: '⭐ Kids' },
+            { val: 'muaythai',        label: '🥊 Muay Thai' },
+            { val: 'branca',          label: '⬜ Faixa Branca' },
+            { val: 'azul-roxa-marrom',label: '🟦 Azul / Roxa / Marrom' },
+            { val: 'marrom-preta',    label: '🟫 Marrom / Preta' },
+            { val: 'preta',           label: '⬛ Faixa Preta' },
+        ];
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-disparar-evento';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #3b82f6;border-radius:16px;padding:22px 20px;max-width:360px;width:100%;">
+                <div style="font-size:0.75rem;font-weight:800;color:#3b82f6;margin-bottom:4px;letter-spacing:0.5px;">📢 DISPARAR EVENTO</div>
+                <div style="font-size:0.88rem;font-weight:700;color:white;margin-bottom:16px;">${titulo}</div>
+                <div style="font-size:0.65rem;font-weight:800;color:#94a3b8;margin-bottom:8px;letter-spacing:0.5px;">ENVIAR PARA:</div>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px;">
+                    ${grupos.map(g => `
+                    <label style="display:flex;align-items:center;gap:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 12px;cursor:pointer;">
+                        <input type="radio" name="grupo-disparo" value="${g.val}" ${g.val === 'todos' ? 'checked' : ''} style="accent-color:#3b82f6;width:16px;height:16px;flex-shrink:0;">
+                        <span style="color:#e2e8f0;font-size:0.8rem;font-weight:600;">${g.label}</span>
+                    </label>`).join('')}
+                </div>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="document.getElementById('modal-disparar-evento').remove()"
+                        style="flex:1;padding:12px;background:#334155;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;">
+                        Cancelar
+                    </button>
+                    <button onclick="academia._confirmarDisparoEvento('${evId}','${titulo.replace(/'/g,"\\'")}','${(imagemUrl||'').replace(/'/g,"\\'")}',document.querySelector('input[name=grupo-disparo]:checked')?.value)"
+                        style="flex:2;padding:12px;background:#3b82f6;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;">
+                        📢 Disparar
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async _confirmarDisparoEvento(evId, titulo, imagemUrl, grupo) {
+        if (!grupo) return alert('Selecione o grupo.');
+        document.getElementById('modal-disparar-evento')?.remove();
+
+        const labelMap = { todos:'Todos', adulto:'Adulto', kids:'Kids', muaythai:'Muay Thai',
+            branca:'Faixa Branca', 'azul-roxa-marrom':'Azul/Roxa/Marrom', 'marrom-preta':'Marrom/Preta', preta:'Faixa Preta' };
+
+        try {
+            // Salva disparo no Firestore (alunos lerão ao abrir a aba)
+            await db.collection('disparos_evento').add({
+                eventoId: evId,
+                titulo,
+                imagemUrl: imagemUrl || '',
+                grupo,
+                criadoEm: Date.now(),
+                expiraEm: Date.now() + 7 * 24 * 60 * 60 * 1000,
+                lidos: []
+            });
+
+            // Envia push para o grupo
+            const snap = await db.collection('alunos').get();
+            const anoAtual = new Date().getFullYear();
+            const tokens = [];
+            snap.forEach(doc => {
+                const a = doc.data();
+                if (!a.fcmToken) return;
+                const idade = a.nascimento ? (anoAtual - new Date(a.nascimento).getFullYear()) : 99;
+                const isKids = idade <= 15;
+                const faixa  = a.faixa || '';
+                const mod    = a.modalidade || 'jiujitsu';
+                if (grupo === 'todos')            { tokens.push(a.fcmToken); return; }
+                if (grupo === 'adulto'            && !isKids)                                        tokens.push(a.fcmToken);
+                if (grupo === 'kids'              && isKids)                                         tokens.push(a.fcmToken);
+                if (grupo === 'branca'            && faixa === 'Branca')                             tokens.push(a.fcmToken);
+                if (grupo === 'azul-roxa-marrom'  && ['Azul','Roxa','Marrom'].includes(faixa))       tokens.push(a.fcmToken);
+                if (grupo === 'marrom-preta'      && ['Marrom','Preta'].includes(faixa))             tokens.push(a.fcmToken);
+                if (grupo === 'preta'             && faixa === 'Preta')                              tokens.push(a.fcmToken);
+                if (grupo === 'muaythai'          && ['muaythai','ambos'].includes(mod))             tokens.push(a.fcmToken);
+            });
+            if (tokens.length > 0) {
+                fetch('/api/push-comunicado', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tokens, title: '🏆 Novo Evento — Gaditas!', body: `${titulo} — Veja na aba Eventos do app!` })
+                }).catch(() => {});
+            }
+            alert(`✅ Evento disparado para: ${labelMap[grupo] || grupo}!\n📲 ${tokens.length} aluno(s) receberão a notificação.`);
+        } catch(e) { alert('Erro ao disparar: ' + e.message); }
+    },
+
+    async verificarDisparoEvento() {
+        if (!auth.currentUser || auth.role !== 'aluno') return;
+        try {
+            const agora = Date.now();
+            const aluno = auth.currentUser;
+            const anoAtual = new Date().getFullYear();
+            const idade   = aluno.nascimento ? (anoAtual - new Date(aluno.nascimento).getFullYear()) : 99;
+            const isKids  = idade <= 15;
+            const faixa   = aluno.faixa || '';
+            const mod     = aluno.modalidade || 'jiujitsu';
+
+            const snap = await db.collection('disparos_evento')
+                .where('expiraEm', '>', agora)
+                .orderBy('expiraEm', 'desc')
+                .limit(5).get();
+
+            for (const doc of snap.docs) {
+                const d = doc.data();
+                if ((d.lidos || []).includes(aluno.id)) continue;
+
+                // Verifica se este aluno pertence ao grupo
+                const g = d.grupo;
+                let pertence = false;
+                if (g === 'todos')            pertence = true;
+                else if (g === 'adulto')      pertence = !isKids;
+                else if (g === 'kids')        pertence = isKids;
+                else if (g === 'branca')      pertence = faixa === 'Branca';
+                else if (g === 'azul-roxa-marrom') pertence = ['Azul','Roxa','Marrom'].includes(faixa);
+                else if (g === 'marrom-preta') pertence = ['Marrom','Preta'].includes(faixa);
+                else if (g === 'preta')       pertence = faixa === 'Preta';
+                else if (g === 'muaythai')    pertence = ['muaythai','ambos'].includes(mod);
+                if (!pertence) continue;
+
+                // Mostra popup
+                this._mostrarPopupEvento(doc.id, d);
+                break; // mostra 1 por vez
+            }
+        } catch(e) { /* silencioso */ }
+    },
+
+    _mostrarPopupEvento(disparoId, d) {
+        const existente = document.getElementById('modal-popup-evento');
+        if (existente) return; // já mostrando
+
+        const cartaz = d.imagemUrl
+            ? `<img src="${d.imagemUrl}" style="width:100%;border-radius:10px;margin-bottom:12px;max-height:200px;object-fit:cover;">`
+            : '';
+
+        const fechar = `
+            document.getElementById('modal-popup-evento').remove();
+            db.collection('disparos_evento').doc('${disparoId}').update({ lidos: firebase.firestore.FieldValue.arrayUnion('${auth.currentUser.id}') });
+        `;
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-popup-evento';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #3b82f6;border-radius:16px;padding:20px;max-width:360px;width:100%;position:relative;">
+                <button onclick="${fechar}" style="position:absolute;top:10px;right:10px;background:none;border:none;color:#64748b;font-size:1.2rem;cursor:pointer;line-height:1;">✕</button>
+                <div style="font-size:0.6rem;font-weight:800;color:#3b82f6;margin-bottom:8px;letter-spacing:0.5px;">🏆 NOVO EVENTO — GADITAS</div>
+                ${cartaz}
+                <div style="font-size:0.95rem;font-weight:800;color:white;margin-bottom:18px;">${d.titulo}</div>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="${fechar}" style="flex:1;padding:12px;background:#334155;border:none;color:white;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.8rem;">
+                        Fechar
+                    </button>
+                    <button onclick="${fechar} ui.showTab('tab-eventos');"
+                        style="flex:2;padding:12px;background:#3b82f6;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;">
+                        👉 Ver o Evento
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
     },
 
     async excluirEventoAdmin(eventoId) {
@@ -7191,7 +7363,7 @@ const ui = {
                 if (profSenha) profSenha.classList.remove('hidden');
             }
         }
-        if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); }
+        if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); if(auth.role === 'aluno') setTimeout(() => academia.verificarDisparoEvento(), 600); }
         if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
         if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); if(auth.role === 'professor') profComms.renderPainelDispensas(); }

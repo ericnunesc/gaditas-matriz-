@@ -1445,24 +1445,29 @@ const academia = {
     },
 
     async salvarEventoAdmin() {
-        const id  = document.getElementById('edit-evento-id').value;
-        const t   = document.getElementById('input-evento-titulo').value.trim();
-        const iso = document.getElementById('input-evento-data-iso').value; // YYYY-MM-DD
-        const hr  = document.getElementById('input-evento-hora').value;     // HH:MM
-        const v   = parseInt(document.getElementById('input-evento-vagas').value) || 0;
-        const p   = document.getElementById('input-evento-pagamento').value.trim();
-        const de  = document.getElementById('input-evento-desc').value.trim();
-        if (!t || !iso || !v) return alert("Preencha título, data e total de vagas.");
+        const id     = document.getElementById('edit-evento-id').value;
+        const t      = document.getElementById('input-evento-titulo').value.trim();
+        const iso    = document.getElementById('input-evento-data-iso').value;
+        const isoFim = document.getElementById('input-evento-data-fim-iso').value;
+        const hr     = document.getElementById('input-evento-hora').value;
+        const v      = parseInt(document.getElementById('input-evento-vagas').value) || 0;
+        const p      = document.getElementById('input-evento-pagamento').value.trim();
+        const de     = document.getElementById('input-evento-desc').value.trim();
+        if (!t || !iso || !v) return alert("Preencha título, data de início e total de vagas.");
 
-        // Texto de exibição: "12/06/2026 às 19:00" ou só "12/06/2026"
+        // Texto de exibição: "29/06 a 03/07/2026 às 08:00" ou "29/06/2026 às 08:00"
         const [ay, am, ad] = iso.split('-');
-        const dataExibicao = `${ad}/${am}/${ay}${hr ? ' às ' + hr : ''}`;
+        let dataExibicao = `${ad}/${am}/${ay}${hr ? ' às ' + hr : ''}`;
+        if (isoFim && isoFim !== iso) {
+            const [fy, fm, fd] = isoFim.split('-');
+            dataExibicao = `${ad}/${am} a ${fd}/${fm}/${fy}${hr ? ' às ' + hr : ''}`;
+        }
 
         const btn = document.getElementById('btn-salvar-evento');
         if (btn) { btn.disabled = true; btn.innerText = 'Salvando...'; }
 
         const imagemUrl = document.getElementById('input-evento-imagemUrl')?.value || '';
-        const dados = { titulo: t, dataEvento: dataExibicao, dataEventoISO: iso, vagasMax: v, linkPay: p, descricao: de, imagemUrl };
+        const dados = { titulo: t, dataEvento: dataExibicao, dataEventoISO: iso, dataFimISO: isoFim || '', vagasMax: v, linkPay: p, descricao: de, imagemUrl };
 
         const publicarStory = document.getElementById('toggle-story-evento')?.dataset.on === 'true';
 
@@ -1568,7 +1573,7 @@ const academia = {
         document.getElementById('edit-evento-id').value = id;
         document.getElementById('input-evento-titulo').value = ev.titulo;
         document.getElementById('input-evento-data-iso').value = ev.dataEventoISO || '';
-        // Extrai hora do texto de exibição se não tiver ISO
+        document.getElementById('input-evento-data-fim-iso').value = ev.dataFimISO || '';
         const horaMatch = (ev.dataEvento || '').match(/(\d{2}:\d{2})/);
         document.getElementById('input-evento-hora').value = horaMatch ? horaMatch[1] : '';
         document.getElementById('input-evento-vagas').value = ev.vagasMax;
@@ -1598,6 +1603,7 @@ const academia = {
         document.getElementById('edit-evento-id').value = "";
         document.getElementById('input-evento-titulo').value = "";
         document.getElementById('input-evento-data-iso').value = "";
+        document.getElementById('input-evento-data-fim-iso').value = "";
         document.getElementById('input-evento-hora').value = "";
         document.getElementById('input-evento-vagas').value = "";
         document.getElementById('input-evento-pagamento').value = "";
@@ -1622,7 +1628,8 @@ const academia = {
                 let botaoAcao = jaInscrito ? `<button onclick="academia.cancelarInscricaoEvento('${evId}')" class="btn-save" style="background: linear-gradient(135deg, #059669, #047857); color: white; border: 1px solid #10b981;">Inscrito com Sucesso! ✅ (Sair)</button>` : (totalInscritos >= ev.vagasMax ? `<button class="btn-save btn-dark" style='cursor:not-allowed; background:#334155;' disabled>Vagas Esgotadas ❌</button>` : `<button onclick="academia.inscreverEmEvento('${evId}')" class="btn-save btn-tecnica">Garantir Minha Vaga</button>`);
                 let botaoPagamentoAluno = (jaInscrito && ev.linkPay) ? `<button onclick="window.open('${ev.linkPay}', '_blank')" class="btn-infinitepay"><i class="fas fa-credit-card"></i> PAGAR INSCRIÇÃO AGORA 💳</button>` : '';
                 const cartaz = ev.imagemUrl ? `<img src="${ev.imagemUrl}" style="width:100%; border-radius:10px; margin-bottom:10px; max-height:220px; object-fit:cover;" loading="lazy"/>` : '';
-                htmlAluno += `<div class="card-evento">${cartaz}<div class="evento-header"><h4 class="evento-titulo">${ev.titulo.toUpperCase()}</h4><span class="evento-vagas-badge">${totalInscritos} / ${ev.vagasMax} VAGAS</span></div><div class="evento-data"><i class="fas fa-clock"></i> ${ev.dataEvento}</div><div class="evento-desc">${ev.descricao || "Sem descrição."}</div>${botaoAcao}${botaoPagamentoAluno}</div>`;
+                const descHtml = (ev.descricao || "Sem descrição.").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+                htmlAluno += `<div class="card-evento">${cartaz}<div class="evento-header"><h4 class="evento-titulo">${ev.titulo.toUpperCase()}</h4><span class="evento-vagas-badge">${totalInscritos} / ${ev.vagasMax} VAGAS</span></div><div class="evento-data"><i class="fas fa-clock"></i> ${ev.dataEvento}</div><div class="evento-desc">${descHtml}</div>${botaoAcao}${botaoPagamentoAluno}</div>`;
                 const nomesInscritos = listaInscritos.map((n, idx) => `<div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #ccc; padding: 6px 0; border-bottom: 1px solid #1e293b;"><span>${idx+1}. ${n.nome.toUpperCase()}</span><button onclick="academia.removerAlunoDeEventoAdmin('${evId}', '${n.id}', '${n.nome.replace(/'/g, "\\'")}')" style="background: none; border: none; color: #f43f5e; cursor: pointer; padding: 2px 6px;"><i class="fas fa-user-minus"></i></button></div>`).join('') || "<small style='color:var(--text-muted);'>Ninguém inscrito ainda.</small>";
                 htmlAdmin += `<div style="background:#0f172a; border:1px solid var(--border-light); padding:12px; border-radius:10px; margin-bottom:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid var(--border-light); padding-bottom:5px;">

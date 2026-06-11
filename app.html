@@ -487,10 +487,13 @@
                     <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-calendar-plus"></i> Publicar/Editar Evento Oficial</div>
                     <input type="hidden" id="edit-evento-id"/>
                     <input type="text" id="input-evento-titulo" placeholder="Título do Evento" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <small style="color:#94a3b8;font-size:0.65rem;font-weight:700;display:block;margin-bottom:4px;">DATA DE INÍCIO</small>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
                         <input type="date" id="input-evento-data-iso" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;"/>
                         <input type="time" id="input-evento-hora" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;"/>
                     </div>
+                    <small style="color:#94a3b8;font-size:0.65rem;font-weight:700;display:block;margin-bottom:4px;">DATA DE FIM <span style="color:#475569;font-weight:400;">(opcional — deixe vazio se for 1 dia só)</span></small>
+                    <input type="date" id="input-evento-data-fim-iso" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;margin-bottom:8px;"/>
                     <input type="hidden" id="input-evento-data"/>
                     <input type="number" id="input-evento-vagas" placeholder="Limite Máximo de Vagas" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <input type="text" id="input-evento-pagamento" placeholder="Link de Pagamento InfinitePay (Opcional)" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
@@ -992,7 +995,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-    <script src="main.js?v=20260610e"></script>
+    <script src="main.js?v=20260611a"></script>
     <script src="filtros-academia.js?v=20260602v"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>

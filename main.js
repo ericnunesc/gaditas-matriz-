@@ -2346,7 +2346,8 @@ const academia = {
     },
 
     async alunoEnviaCheckin() {
-        const t = document.getElementById('select-turma-aluno').value; if(t.includes("Sem treinos")) return;
+        const t = this._turmaSelecionada || document.getElementById('select-turma-aluno')?.value || '';
+        if (!t || t.includes("Sem treinos")) return;
 
         // Bloqueia adulto em turma kids e vice-versa
         const anoAtual = new Date().getFullYear();
@@ -7418,10 +7419,99 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         }
     },
 
+    _turmaSelecionada: null,
+
     atualizarTurmasDinamicas() {
-        const s = document.getElementById('select-turma-aluno'); if (!s) return;
-        const t = academia.getGrade()[new Date().getDay()] || academia.getGrade()[String(new Date().getDay())] || ["Sem treinos hoje"];
-        s.innerHTML = t.map(i => `<option value="${i}">${i}</option>`).join(''); academia.atualizarPresencaAntecipada();
+        const container = document.getElementById('turmas-checkin-btns'); if (!container) return;
+        const hiddenSel = document.getElementById('select-turma-aluno');
+        const todas = academia.getGrade()[new Date().getDay()] || academia.getGrade()[String(new Date().getDay())] || [];
+
+        // Perfil do aluno logado
+        const aluno      = auth.currentUser || {};
+        const anoAtual   = new Date().getFullYear();
+        const idade      = aluno.nascimento ? anoAtual - new Date(aluno.nascimento).getFullYear() : 99;
+        const isKids     = idade <= 13;
+        const isInter    = idade === 14 || idade === 15;
+        const comAdultos = aluno.treinaComAdultos === true;
+        const modAluno   = aluno.modalidade || 'jiujitsu';
+        const ehMT       = modAluno === 'muaythai' || modAluno === 'ambos';
+        const ehJJ       = modAluno === 'jiujitsu'  || modAluno === 'ambos';
+
+        // Filtra turmas visíveis para este aluno
+        const visiveis = todas.filter(t => {
+            if (!t || t.toLowerCase().includes('sem treino')) return false;
+            const kids = this._isTurmaKids(t);
+            const mt   = this._isTurmaMT(t);
+            if (isInter) return true; // 14-15 vê tudo
+            if (isKids) {
+                if (kids) return true;                          // sempre vê kids
+                if (mt && ehMT && comAdultos) return true;     // kids MT liberado
+                if (!mt && !kids && comAdultos && ehJJ) return true; // kids BJJ adulto liberado
+                return false;
+            }
+            // Adulto: não vê kids
+            if (kids) return false;
+            if (mt && !ehMT) return false; // adulto não-MT não precisa ver MT (opcional — remova se quiser mostrar)
+            return true;
+        });
+
+        if (visiveis.length === 0) {
+            container.innerHTML = '<p style="color:#64748b;font-size:0.75rem;text-align:center;padding:8px 0;">Sem turmas disponíveis hoje.</p>';
+            this._turmaSelecionada = null;
+            return;
+        }
+
+        // Sincroniza hidden select (para funções que ainda lêem dele)
+        if (hiddenSel) hiddenSel.innerHTML = visiveis.map(t => `<option value="${t}">${t}</option>`).join('');
+
+        this._turmaSelecionada = null;
+        container.innerHTML = visiveis.map(t => {
+            const isMT   = this._isTurmaMT(t);
+            const isKids = this._isTurmaKids(t);
+            const cor    = isMT ? '#7f1d1d' : isKids ? '#312e81' : '#0c4a6e';
+            const borda  = isMT ? '#ef4444' : isKids ? '#818cf8' : '#3b82f6';
+            const emoji  = isMT ? '🥊' : isKids ? '⭐' : '🥋';
+            return `<button onclick="academia._selecionarTurmaCheckin('${t.replace(/'/g,"\\'")}', this)"
+                style="width:100%;padding:14px 16px;background:${cor};border:2px solid ${borda};color:white;
+                border-radius:12px;font-weight:800;cursor:pointer;font-size:0.88rem;text-align:left;
+                display:flex;align-items:center;gap:10px;transition:all 0.15s;">
+                <span style="font-size:1.3rem;">${emoji}</span>
+                <span>${t}</span>
+            </button>`;
+        }).join('');
+
+        // Oculta "quem treina" até selecionar turma
+        const qt = document.getElementById('area-quem-treina');
+        if (qt) qt.style.display = 'none';
+    },
+
+    _selecionarTurmaCheckin(turma, btnEl) {
+        // Desmarca todos
+        document.querySelectorAll('#turmas-checkin-btns button').forEach(b => {
+            b.style.opacity = '0.5'; b.style.transform = 'scale(1)';
+        });
+        // Destaca o clicado
+        btnEl.style.opacity = '1'; btnEl.style.transform = 'scale(1.02)';
+
+        // Confirma com o aluno
+        if (!confirm(`✅ Fazer check-in em:\n\n"${turma}"\n\nConfirmar?`)) {
+            btnEl.style.opacity = '0.5'; btnEl.style.transform = 'scale(1)';
+            this._turmaSelecionada = null;
+            return;
+        }
+
+        this._turmaSelecionada = turma;
+        // Sincroniza hidden select
+        const s = document.getElementById('select-turma-aluno');
+        if (s) { s.value = turma; }
+
+        // Mostra quem já confirmou
+        const qt = document.getElementById('area-quem-treina');
+        if (qt) qt.style.display = 'block';
+        this.atualizarPresencaAntecipada();
+
+        // Dispara check-in automaticamente
+        this.alunoEnviaCheckin();
     },
     atualizarFaixas() {
         // Se modalidade for Muay Thai puro, não precisa popular faixas JJ

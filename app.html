@@ -202,22 +202,19 @@
 
                 <div id="area-aluno-checkin" class="card hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-top:15px;">
                     <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-qrcode"></i> Confirmar Presença no Treino</div>
-                    <select id="select-turma-aluno" onchange="academia.atualizarPresencaAntecipada()" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"></select>
+                    <small style="color:#64748b; font-size:0.6rem; font-weight:700; display:block; margin-bottom:8px; letter-spacing:0.5px;">SELECIONE SUA TURMA DE HOJE:</small>
+                    <div id="turmas-checkin-btns" style="display:flex; flex-direction:column; gap:8px;"></div>
+                    <!-- hidden select mantido para compatibilidade com funções existentes -->
+                    <select id="select-turma-aluno" style="display:none;"></select>
                     <div id="preview-plano-aula"></div>
-                    <div style="background:#0f172a; padding:12px; border-radius:10px; margin:12px 0; border:1px solid #334155;">
+                    <div id="area-quem-treina" style="display:none; background:#0f172a; padding:12px; border-radius:10px; margin:12px 0; border:1px solid #334155;">
                         <small style="font-size:0.55rem; color:#64748b; display:block; font-weight:800; margin-bottom:6px;">QUEM JÁ CONFIRMOU NESSA TURMA:</small>
                         <div id="quem-treina-hoje"></div>
                     </div>
                     <!-- Botão scanner QR in-app -->
-                    <button onclick="academia.abrirScannerQR()" style="width:100%; padding:12px; background:#1e3a8a; color:#93c5fd; border:1px solid #3b82f6; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                    <button onclick="academia.abrirScannerQR()" style="width:100%; padding:12px; background:#1e3a8a; color:#93c5fd; border:1px solid #3b82f6; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; margin-top:4px; display:flex; align-items:center; justify-content:center; gap:8px;">
                         <span style="font-size:1.1rem;">📷</span> ESCANEAR QR CODE DA TURMA
                     </button>
-                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                        <div style="flex:1; height:1px; background:#334155;"></div>
-                        <small style="color:#475569; font-size:0.6rem; font-weight:700;">OU SELECIONE A TURMA ACIMA</small>
-                        <div style="flex:1; height:1px; background:#334155;"></div>
-                    </div>
-                    <button onclick="academia.alunoEnviaCheckin()" style="width:100%; padding:12px; background:#10b981; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer;">ENVIAR CHECK-IN AGORA</button>
                     <div id="meus-checkins-pendentes" style="margin-top:10px;"></div>
                 </div>
 

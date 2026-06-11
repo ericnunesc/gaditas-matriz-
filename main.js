@@ -1790,7 +1790,7 @@ const academia = {
                     body: JSON.stringify({ tokens, title: '🏆 Novo Evento — Gaditas!', body: `${titulo} — Veja na aba Eventos do app!` })
                 }).catch(() => {});
             }
-            alert(`✅ Evento disparado para: ${labelMap[grupo] || grupo}!\n📲 ${tokens.length} aluno(s) receberão a notificação.`);
+            alert(`✅ Evento disparado para: ${labelMap[grupo] || grupo}!\n\n📲 ${tokens.length} aluno(s) receberão notificação no celular agora.\n\n🔔 Todos os demais verão o popup ao abrir o app (mesmo sem notificação ativada).`);
         } catch(e) { alert('Erro ao disparar: ' + e.message); }
     },
 

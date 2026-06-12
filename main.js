@@ -12924,8 +12924,8 @@ const boletim = {
             '✅  Cadastre as notas logo após receber o boletim',
             '📎  Envie a foto do boletim para confirmação',
             '📊  Acompanhe a evolução por semestre no app',
-            '🥋  Alunos com Selo Ouro ganham reconhecimento',
-            '     especial nas aulas de Jiu-Jitsu!',
+            '🏆  Quem terminar o semestre com Selo Ouro',
+            '     concorrerá a prêmios especiais!',
         ];
         ctx.fillStyle = '#94a3b8'; ctx.font = '17px Arial';
         dicas.forEach((d, i) => ctx.fillText(d, 50, 682 + i*28));

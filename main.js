@@ -12807,6 +12807,186 @@ const boletim = {
         }
     },
 
+    gerarCardExplicativo() {
+        const W = 800, H = 960;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+
+        // fundo escuro degradê
+        const bg = ctx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, '#0f172a'); bg.addColorStop(1, '#1e1040');
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+        // borda roxa
+        ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 4;
+        ctx.strokeRect(12, 12, W-24, H-24);
+
+        // faixa topo
+        const top = ctx.createLinearGradient(0,0,W,0);
+        top.addColorStop(0,'#7c3aed'); top.addColorStop(1,'#4f46e5');
+        ctx.fillStyle = top; ctx.fillRect(12, 12, W-24, 80);
+
+        // título
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🎓 BOLETIM ESCOLAR', W/2, 62);
+
+        // subtítulo academia
+        ctx.fillStyle = '#c4b5fd'; ctx.font = '18px Arial';
+        ctx.fillText('Sistema de Acompanhamento Escolar', W/2, 115);
+
+        // linha divisória
+        ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(40, 135); ctx.lineTo(W-40, 135); ctx.stroke();
+
+        // COMO FUNCIONA
+        ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 22px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText('📚 Como funciona?', 50, 172);
+
+        const linhas = [
+            'Os pais cadastram as notas do filho no app,',
+            'por semestre e por avaliação (Av1, Av2...).',
+            'O sistema calcula a média geral automática',
+            'e exibe um SELO no perfil do aluno.'
+        ];
+        ctx.fillStyle = '#94a3b8'; ctx.font = '18px Arial';
+        linhas.forEach((l, i) => ctx.fillText(l, 50, 202 + i*26));
+
+        // linha divisória
+        ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(40, 318); ctx.lineTo(W-40, 318); ctx.stroke();
+
+        // SELOS
+        ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 22px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🏅 SELOS DE DESEMPENHO', W/2, 354);
+
+        const selos = [
+            { label:'OURO',   media:'Média ≥ 8,0', desc:'Excelente desempenho!', bg:'#EF9F27', ring:'#BA7517', text:'#412402', emoji:'🌟' },
+            { label:'PRATA',  media:'Média ≥ 6,0', desc:'Bom desempenho.',        bg:'#B4B2A9', ring:'#5F5E5A', text:'#2C2C2A', emoji:'⭐' },
+            { label:'BRONZE', media:'Média ≥ 4,0', desc:'Continue melhorando!',  bg:'#D85A30', ring:'#993C1D', text:'#4A1B0C', emoji:'💪' },
+        ];
+
+        selos.forEach((s, i) => {
+            const cx = 160 + i * 240;
+            const cy = 480;
+
+            // serrilhado
+            ctx.save();
+            ctx.beginPath();
+            for (let p = 0; p < 24; p++) {
+                const ang = (p * Math.PI / 12) - Math.PI / 2;
+                const r = p % 2 === 0 ? 72 : 52;
+                const x = cx + r * Math.cos(ang);
+                const y = cy + r * Math.sin(ang);
+                p === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fillStyle = s.bg;
+            ctx.fill();
+            ctx.strokeStyle = s.ring; ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.restore();
+
+            // emoji chapéu
+            ctx.font = '38px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('🎓', cx, cy + 14);
+
+            // nome do selo
+            ctx.fillStyle = s.text; ctx.font = 'bold 15px Arial';
+            ctx.fillText(s.label, cx, cy + 44);
+
+            // caixa info abaixo
+            ctx.fillStyle = '#1e293b';
+            roundRect(ctx, cx-90, cy+72, 180, 80, 12);
+            ctx.fill();
+            ctx.strokeStyle = s.ring; ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = s.bg; ctx.font = 'bold 18px Arial';
+            ctx.fillText(s.emoji + ' ' + s.media, cx, cy+104);
+            ctx.fillStyle = '#94a3b8'; ctx.font = '14px Arial';
+            ctx.fillText(s.desc, cx, cy+126);
+        });
+
+        // linha divisória
+        ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(40, 618); ctx.lineTo(W-40, 618); ctx.stroke();
+
+        // DICAS
+        ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText('💡 Dicas para os pais', 50, 652);
+
+        const dicas = [
+            '✅  Cadastre as notas logo após receber o boletim',
+            '📎  Envie a foto do boletim para confirmação',
+            '📊  Acompanhe a evolução por semestre no app',
+            '🥋  Alunos com Selo Ouro ganham reconhecimento',
+            '     especial nas aulas de Jiu-Jitsu!',
+        ];
+        ctx.fillStyle = '#94a3b8'; ctx.font = '17px Arial';
+        dicas.forEach((d, i) => ctx.fillText(d, 50, 682 + i*28));
+
+        // rodapé
+        const rod = ctx.createLinearGradient(0, H-70, W, H-70);
+        rod.addColorStop(0,'#7c3aed22'); rod.addColorStop(1,'#4f46e522');
+        ctx.fillStyle = rod; ctx.fillRect(12, H-68, W-24, 56);
+        ctx.fillStyle = '#7c3aed'; ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Gaditas Academy — Jiu-Jitsu para Crianças 🤙', W/2, H-38);
+        ctx.fillStyle = '#475569'; ctx.font = '13px Arial';
+        ctx.fillText('gaditas-matriz.vercel.app', W/2, H-18);
+
+        // helper roundRect
+        function roundRect(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x+r, y);
+            ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+            ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+            ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+            ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+            ctx.closePath();
+        }
+
+        // Modal de preview + botões
+        const dataUrl = canvas.toDataURL('image/png');
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:#000000dd;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px;overflow-y:auto;';
+        overlay.innerHTML = `
+            <img src="${dataUrl}" style="max-width:100%;max-height:70vh;border-radius:12px;box-shadow:0 0 40px #7c3aed55;"/>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+                <a href="${dataUrl}" download="gaditas-boletim-selos.png"
+                   style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;padding:12px 22px;border-radius:10px;font-size:0.8rem;font-weight:800;text-decoration:none;">
+                   💾 BAIXAR IMAGEM
+                </a>
+                <button onclick="boletim._compartilharCard('${dataUrl}')"
+                   style="background:#064e3b;border:1px solid #10b981;color:#10b981;padding:12px 22px;border-radius:10px;font-size:0.8rem;font-weight:800;cursor:pointer;">
+                   📤 COMPARTILHAR
+                </button>
+                <button onclick="this.closest('div[style*=fixed]').remove()"
+                   style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:12px 22px;border-radius:10px;font-size:0.8rem;font-weight:800;cursor:pointer;">
+                   ✕ FECHAR
+                </button>
+            </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    },
+
+    async _compartilharCard(dataUrl) {
+        try {
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], 'gaditas-boletim-selos.png', { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: 'Gaditas Academy — Boletim Escolar', text: 'Veja como funciona o sistema de selos do boletim escolar!' });
+            } else {
+                alert('Compartilhamento não suportado neste dispositivo. Use o botão Baixar Imagem.');
+            }
+        } catch(e) { console.warn('Share:', e); }
+    },
+
     _ampliarComprovante(src) {
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -12991,12 +13171,17 @@ const boletim = {
         let html = `
         <div style="background:#1e293b;border:1px solid #7c3aed33;border-radius:12px;padding:14px;margin-bottom:12px;">
             <!-- Cabeçalho -->
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
                 <small style="color:#a78bfa;font-size:0.68rem;font-weight:800;letter-spacing:0.5px;">📚 BOLETIM ESCOLAR — KIDS</small>
-                <select onchange="boletim.renderPainelAdmin(parseInt(this.value))"
-                    style="padding:4px 8px;background:#0f172a;border:1px solid #334155;color:#a78bfa;border-radius:6px;font-size:0.68rem;outline:none;">
-                    ${anosDisp.map(a=>`<option value="${a}"${a===anoSel?' selected':''}>${a}</option>`).join('')}
-                </select>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <button onclick="boletim.gerarCardExplicativo()" style="background:#1e1040;border:1px solid #7c3aed;color:#c4b5fd;padding:5px 10px;border-radius:8px;font-size:0.62rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+                        🖼️ Card para Pais
+                    </button>
+                    <select onchange="boletim.renderPainelAdmin(parseInt(this.value))"
+                        style="padding:4px 8px;background:#0f172a;border:1px solid #334155;color:#a78bfa;border-radius:6px;font-size:0.68rem;outline:none;">
+                        ${anosDisp.map(a=>`<option value="${a}"${a===anoSel?' selected':''}>${a}</option>`).join('')}
+                    </select>
+                </div>
             </div>
             <!-- Cards resumo -->
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">

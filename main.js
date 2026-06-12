@@ -12906,12 +12906,14 @@ const boletim = {
             </div>`;
         }
 
-        // ── Por aluno ─────────────────────────────────────────────
-        kids.forEach(k => {
+        // ── Por aluno (colapsável) ────────────────────────────────
+        html += `<div style="margin-top:10px;display:flex;flex-direction:column;gap:4px;">`;
+        kids.forEach((k, kidIdx) => {
             const { materias, notas } = k.boletim;
             const avs = this._getSistemaAdmin(k.boletim, anoSel);
             const avLabels = { av1:'Av1', av2:'Av2', av3:'Av3' };
             const notasAno = notas?.[anoSel];
+            const comp = k.boletim?.comprovantes?.[anoSel];
 
             // Calcula média do aluno no ano
             let somaA = 0, totalA = 0;
@@ -12927,52 +12929,56 @@ const boletim = {
             }
             const mediaAluno = totalA ? (somaA/totalA).toFixed(1) : null;
             const corAluno = mediaAluno ? (parseFloat(mediaAluno) >= 7 ? '#10b981' : parseFloat(mediaAluno) >= 5 ? '#f59e0b' : '#ef4444') : '#475569';
-
-            // Frequência × escola: correlação
-            const freqMsg = k.aulasAno >= 30 ? '🟢 Alta frequência' : k.aulasAno >= 15 ? '🟡 Frequência média' : k.aulasAno > 0 ? '🔴 Baixa frequência' : '';
+            const freqMsg = k.aulasAno >= 30 ? '🟢' : k.aulasAno >= 15 ? '🟡' : k.aulasAno > 0 ? '🔴' : '⚪';
+            const temComp = !!comp;
+            const detailId = `boletim-detail-${kidIdx}`;
 
             html += `
-            <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:8px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                    <span style="color:#e2e8f0;font-size:0.8rem;font-weight:700;">${k.nome}${k.idade ? ` <span style="color:#475569;font-size:0.6rem;">${k.idade}a</span>` : ''}</span>
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        ${freqMsg ? `<span style="font-size:0.58rem;color:#64748b;">${freqMsg} (${k.aulasAno} aulas)</span>` : ''}
-                        ${mediaAluno ? `<span style="color:${corAluno};font-size:0.85rem;font-weight:800;">${mediaAluno}</span>` : ''}
+            <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;overflow:hidden;">
+                <div onclick="const d=document.getElementById('${detailId}');const open=d.style.display!=='none';d.style.display=open?'none':'block';this.querySelector('.chev').style.transform=open?'rotate(0deg)':'rotate(180deg)';"
+                     style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;cursor:pointer;user-select:none;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <span style="font-size:0.75rem;color:#64748b;">${freqMsg}</span>
+                        <span style="color:#e2e8f0;font-size:0.8rem;font-weight:700;">${k.nome}</span>
+                        ${k.idade ? `<span style="color:#475569;font-size:0.6rem;">${k.idade}a</span>` : ''}
+                        ${temComp ? `<span style="font-size:0.6rem;color:#a78bfa;" title="Comprovante enviado">📎</span>` : ''}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        ${mediaAluno ? `<span style="color:${corAluno};font-size:0.85rem;font-weight:800;">${mediaAluno}</span>` : `<span style="color:#475569;font-size:0.72rem;">—</span>`}
+                        <i class="fas fa-chevron-down chev" style="color:#475569;font-size:0.6rem;transition:transform 0.2s;"></i>
                     </div>
                 </div>
-                ${notasAno ? `
-                <div style="overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;font-size:0.62rem;">
-                    <thead><tr>
-                        <th style="text-align:left;color:#475569;padding:3px 4px;">Matéria</th>
-                        ${[1,2].map(sem => avs.map(av =>
-                            `<th style="text-align:center;color:#475569;padding:3px 2px;">S${sem}<br>${avLabels[av]}</th>`
-                        ).join('')).join('')}
-                        <th style="text-align:center;color:#475569;padding:3px 4px;">Média</th>
-                    </tr></thead>
-                    <tbody>
-                    ${(materias||[]).map(m => {
-                        const allVals = [];
-                        const cells = [1,2].map(sem => avs.map(av => {
-                            const v = notasAno['sem'+sem]?.[av]?.[m];
-                            if (v !== null && v !== undefined) allVals.push(v);
-                            const c = (v !== null && v !== undefined && v < 5) ? '#ef4444' : '#94a3b8';
-                            return `<td style="text-align:center;color:${c};padding:3px 2px;font-weight:700;">${v !== null && v !== undefined ? v : '<span style="color:#334155;">—</span>'}</td>`;
-                        }).join('')).join('');
-                        const med = allVals.length ? (allVals.reduce((a,b)=>a+b,0)/allVals.length).toFixed(1) : '—';
-                        const corM = parseFloat(med) < 5 ? '#ef4444' : parseFloat(med) >= 7 ? '#10b981' : '#f59e0b';
-                        return `<tr>
-                            <td style="color:#94a3b8;padding:3px 4px;">${m}</td>
-                            ${cells}
-                            <td style="text-align:center;color:${med==='—'?'#334155':corM};padding:3px 4px;font-weight:800;">${med}</td>
-                        </tr>`;
-                    }).join('')}
-                    </tbody>
-                </table></div>` : `<p style="color:#334155;font-size:0.68rem;margin:4px 0 0;text-align:center;">Sem notas em ${anoSel}</p>`}
-                ${(() => {
-                    const comp = k.boletim?.comprovantes?.[anoSel];
-                    if (!comp) return `<div style="margin-top:8px;padding:7px 10px;background:#1e293b;border:1px dashed #334155;border-radius:8px;text-align:center;"><span style="color:#475569;font-size:0.65rem;">📎 Sem comprovante enviado</span></div>`;
-                    return `<div style="margin-top:8px;">
+                <div id="${detailId}" style="display:none;padding:0 10px 10px;">
+                    ${notasAno ? `
+                    <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.62rem;">
+                        <thead><tr>
+                            <th style="text-align:left;color:#475569;padding:3px 4px;">Matéria</th>
+                            ${[1,2].map(sem => avs.map(av =>
+                                `<th style="text-align:center;color:#475569;padding:3px 2px;">S${sem}<br>${avLabels[av]}</th>`
+                            ).join('')).join('')}
+                            <th style="text-align:center;color:#475569;padding:3px 4px;">Média</th>
+                        </tr></thead>
+                        <tbody>
+                        ${(materias||[]).map(m => {
+                            const allVals = [];
+                            const cells = [1,2].map(sem => avs.map(av => {
+                                const v = notasAno['sem'+sem]?.[av]?.[m];
+                                if (v !== null && v !== undefined) allVals.push(v);
+                                const c = (v !== null && v !== undefined && v < 5) ? '#ef4444' : '#94a3b8';
+                                return `<td style="text-align:center;color:${c};padding:3px 2px;font-weight:700;">${v !== null && v !== undefined ? v : '<span style="color:#334155;">—</span>'}</td>`;
+                            }).join('')).join('');
+                            const med = allVals.length ? (allVals.reduce((a,b)=>a+b,0)/allVals.length).toFixed(1) : '—';
+                            const corM = parseFloat(med) < 5 ? '#ef4444' : parseFloat(med) >= 7 ? '#10b981' : '#f59e0b';
+                            return `<tr>
+                                <td style="color:#94a3b8;padding:3px 4px;">${m}</td>
+                                ${cells}
+                                <td style="text-align:center;color:${med==='—'?'#334155':corM};padding:3px 4px;font-weight:800;">${med}</td>
+                            </tr>`;
+                        }).join('')}
+                        </tbody>
+                    </table></div>` : `<p style="color:#334155;font-size:0.68rem;margin:4px 0;text-align:center;">Sem notas em ${anoSel}</p>`}
+                    ${comp ? `<div style="margin-top:8px;">
                         <small style="color:#64748b;font-size:0.62rem;font-weight:700;display:block;margin-bottom:4px;">📎 COMPROVANTE — toque na imagem para ampliar</small>
                         <div style="position:relative;">
                             <img src="${comp.url}" style="width:100%;border-radius:8px;max-height:240px;object-fit:contain;background:#0f172a;cursor:zoom-in;" onclick="boletim._ampliarComprovante(this.src)" />
@@ -12982,10 +12988,11 @@ const boletim = {
                             </button>
                             ${comp.data ? `<div style="position:absolute;bottom:6px;left:6px;background:#00000088;border-radius:4px;padding:2px 6px;"><span style="color:#94a3b8;font-size:0.6rem;">Enviado em ${comp.data}</span></div>` : ''}
                         </div>
-                    </div>`;
-                })()}
+                    </div>` : `<div style="margin-top:8px;padding:7px 10px;background:#1e293b;border:1px dashed #334155;border-radius:8px;text-align:center;"><span style="color:#475569;font-size:0.65rem;">📎 Sem comprovante enviado</span></div>`}
+                </div>
             </div>`;
         });
+        html += `</div>`;
 
         html += `</div>`;
         cont.innerHTML = html;

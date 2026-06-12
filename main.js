@@ -2024,8 +2024,8 @@ const academia = {
                 ? ui.getCorFaixaMT(a.faixaMT)
                 : ui.getCorFaixa(a.faixa);
             const fotoMini = fotoSrc
-                ? `<img src="${fotoSrc}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid ${corBorda}; margin-right:10px; flex-shrink:0;"/>`
-                : `<div style="width:36px; height:36px; border-radius:50%; background:#1e293b; border:2px solid #334155; display:inline-flex; align-items:center; justify-content:center; margin-right:10px; flex-shrink:0; font-size:0.85rem; font-weight:800; color:#94a3b8;">${a.nome.charAt(0).toUpperCase()}</div>`;
+                ? `<img src="${fotoSrc}" onclick="academia.abrirModalFotoAluno('${doc.id}','${a.nome.replace(/'/g,"\\'")}',this.src)" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid ${corBorda}; margin-right:10px; flex-shrink:0; cursor:pointer;" title="Clique para ver ou trocar foto"/>`
+                : `<div onclick="academia.abrirModalFotoAluno('${doc.id}','${a.nome.replace(/'/g,"\\'")}',null)" style="width:36px; height:36px; border-radius:50%; background:#1e293b; border:2px solid #334155; display:inline-flex; align-items:center; justify-content:center; margin-right:10px; flex-shrink:0; font-size:0.85rem; font-weight:800; color:#94a3b8; cursor:pointer;" title="Clique para adicionar foto">${a.nome.charAt(0).toUpperCase()}</div>`;
 
             const telLimpo = (a.telefone || '').replace(/\D/g, '');
             cardsHtml += `<div class="item-card" style="border-left: 4px solid ${trancado ? '#64748b' : corBorda}; flex-direction:column; align-items:stretch; gap:8px; ${trancado ? 'opacity:0.7;' : ''}">
@@ -5704,6 +5704,136 @@ Ele voltará a ser aluno normal.`)) return;
         } catch(e) {
             alert('❌ Erro ao cancelar assinatura: ' + e.message);
         }
+    },
+
+    // ── FOTO DO ALUNO ─────────────────────────────────────────
+    abrirModalFotoAluno(alunoId, nome, fotoAtual) {
+        // Remove modal anterior se existir
+        document.getElementById('modal-foto-aluno')?.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-foto-aluno';
+        modal.style.cssText = 'position:fixed;inset:0;background:#000000dd;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+        modal.innerHTML = `
+            <div style="background:#0f172a;border:1px solid #334155;border-radius:16px;width:100%;max-width:360px;overflow:hidden;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #1e293b;">
+                    <span style="color:#e2e8f0;font-size:0.8rem;font-weight:800;">📷 FOTO — ${nome}</span>
+                    <button onclick="document.getElementById('modal-foto-aluno').remove()" style="background:none;border:none;color:#64748b;font-size:1.1rem;cursor:pointer;">✕</button>
+                </div>
+                <div style="padding:16px;display:flex;flex-direction:column;align-items:center;gap:14px;">
+                    <div id="mfa-preview" style="width:120px;height:120px;border-radius:50%;overflow:hidden;border:3px solid #334155;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:#475569;">
+                        ${fotoAtual ? `<img id="mfa-img" src="${fotoAtual}" style="width:100%;height:100%;object-fit:cover;"/>` : nome.charAt(0).toUpperCase()}
+                    </div>
+                    <div style="display:flex;gap:8px;width:100%;">
+                        <button onclick="document.getElementById('mfa-file').click()" style="flex:1;background:#1e3a5f;border:1px solid #3b82f6;color:#93c5fd;padding:10px;border-radius:10px;cursor:pointer;font-size:0.72rem;font-weight:700;">
+                            <i class="fas fa-image" style="margin-right:5px;"></i>GALERIA
+                        </button>
+                        <button onclick="academia._abrirCameraFoto('${alunoId}')" style="flex:1;background:#064e3b;border:1px solid #10b981;color:#10b981;padding:10px;border-radius:10px;cursor:pointer;font-size:0.72rem;font-weight:700;">
+                            <i class="fas fa-camera" style="margin-right:5px;"></i>CÂMERA
+                        </button>
+                    </div>
+                    <input type="file" id="mfa-file" accept="image/*" style="display:none;" onchange="academia._processarFotoAluno('${alunoId}',this)"/>
+                    <button id="mfa-btn-salvar" style="display:none;width:100%;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;padding:12px;border-radius:10px;cursor:pointer;font-size:0.8rem;font-weight:800;" onclick="academia._salvarFotoAluno('${alunoId}')">
+                        💾 SALVAR FOTO
+                    </button>
+                    ${fotoAtual ? `<button onclick="academia._removerFotoAluno('${alunoId}')" style="background:none;border:none;color:#ef4444;font-size:0.65rem;cursor:pointer;text-decoration:underline;">Remover foto</button>` : ''}
+                </div>
+                <!-- câmera inline -->
+                <div id="mfa-camera-area" style="display:none;padding:0 16px 16px;flex-direction:column;align-items:center;gap:10px;">
+                    <video id="mfa-video" autoplay playsinline style="width:100%;border-radius:10px;background:#000;"></video>
+                    <button onclick="academia._capturarFoto('${alunoId}')" style="background:#10b981;border:none;color:white;padding:12px 24px;border-radius:10px;cursor:pointer;font-size:0.8rem;font-weight:800;">
+                        <i class="fas fa-camera"></i> TIRAR FOTO
+                    </button>
+                    <button onclick="academia._fecharCamera()" style="background:none;border:none;color:#64748b;font-size:0.65rem;cursor:pointer;">Cancelar câmera</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        // Fecha ao clicar fora
+        modal.addEventListener('click', e => { if (e.target === modal) { academia._fecharCamera(); modal.remove(); } });
+    },
+
+    _fotoNovaBase64: null,
+
+    async _processarFotoAluno(alunoId, input) {
+        const file = input.files[0];
+        if (!file) return;
+        const base64 = await new Promise((res, rej) => {
+            const img = new Image();
+            const reader = new FileReader();
+            reader.onload = e => { img.src = e.target.result; };
+            img.onload = () => {
+                const maxL = 600;
+                let w = img.width, h = img.height;
+                if (w > maxL || h > maxL) { if (w > h) { h = Math.round(h*maxL/w); w=maxL; } else { w=Math.round(w*maxL/h); h=maxL; } }
+                const c = document.createElement('canvas'); c.width=w; c.height=h;
+                c.getContext('2d').drawImage(img,0,0,w,h);
+                res(c.toDataURL('image/jpeg',0.80));
+            };
+            img.onerror = rej; reader.onerror = rej;
+            reader.readAsDataURL(file);
+        });
+        this._fotoNovaBase64 = base64;
+        const preview = document.getElementById('mfa-preview');
+        if (preview) preview.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;"/>`;
+        const btn = document.getElementById('mfa-btn-salvar');
+        if (btn) btn.style.display = 'block';
+    },
+
+    async _abrirCameraFoto(alunoId) {
+        const area = document.getElementById('mfa-camera-area');
+        if (!area) return;
+        area.style.display = 'flex';
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            const video = document.getElementById('mfa-video');
+            video.srcObject = stream;
+            this._cameraStream = stream;
+        } catch(e) {
+            area.style.display = 'none';
+            alert('Câmera não disponível: ' + e.message);
+        }
+    },
+
+    _fecharCamera() {
+        if (this._cameraStream) { this._cameraStream.getTracks().forEach(t => t.stop()); this._cameraStream = null; }
+        const area = document.getElementById('mfa-camera-area');
+        if (area) area.style.display = 'none';
+    },
+
+    _capturarFoto(alunoId) {
+        const video = document.getElementById('mfa-video');
+        if (!video) return;
+        const c = document.createElement('canvas'); c.width=video.videoWidth; c.height=video.videoHeight;
+        c.getContext('2d').drawImage(video,0,0);
+        const base64 = c.toDataURL('image/jpeg',0.85);
+        this._fotoNovaBase64 = base64;
+        this._fecharCamera();
+        const preview = document.getElementById('mfa-preview');
+        if (preview) preview.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;"/>`;
+        const btn = document.getElementById('mfa-btn-salvar');
+        if (btn) btn.style.display = 'block';
+    },
+
+    async _salvarFotoAluno(alunoId) {
+        if (!this._fotoNovaBase64) return;
+        const btn = document.getElementById('mfa-btn-salvar');
+        if (btn) { btn.innerHTML = '⏳ Salvando...'; btn.disabled = true; }
+        try {
+            await db.collection('alunos').doc(alunoId).update({ fotoPerfil: this._fotoNovaBase64 });
+            this._fotoNovaBase64 = null;
+            document.getElementById('modal-foto-aluno')?.remove();
+            // Recarrega lista
+            academia.buscarAlunos();
+        } catch(e) {
+            if (btn) { btn.innerHTML = '❌ Erro. Tente novamente.'; btn.disabled = false; }
+        }
+    },
+
+    async _removerFotoAluno(alunoId) {
+        if (!confirm('Remover a foto deste aluno?')) return;
+        await db.collection('alunos').doc(alunoId).update({ fotoPerfil: firebase.firestore.FieldValue.delete() });
+        document.getElementById('modal-foto-aluno')?.remove();
+        academia.buscarAlunos();
     },
 
     // ── WHATSAPP BUSINESS ─────────────────────────────────────

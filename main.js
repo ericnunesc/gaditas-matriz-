@@ -12808,7 +12808,7 @@ const boletim = {
     },
 
     gerarCardExplicativo() {
-        const W = 800, H = 960;
+        const W = 800, H = 1200;
         const canvas = document.createElement('canvas');
         canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext('2d');
@@ -12930,6 +12930,92 @@ const boletim = {
         ctx.fillStyle = '#94a3b8'; ctx.font = '17px Arial';
         dicas.forEach((d, i) => ctx.fillText(d, 50, 682 + i*28));
 
+        // ── ONDE APARECE O SELO ──────────────────────────────────
+        ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(40, 840); ctx.lineTo(W-40, 840); ctx.stroke();
+
+        ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText('📍 Onde aparece o Selo?', 50, 872);
+
+        ctx.fillStyle = '#64748b'; ctx.font = '15px Arial';
+        ctx.fillText('No topo do perfil do seu filho no app:', 50, 896);
+
+        // mockup do cabeçalho do app
+        const mx = 80, my = 912, mw = W - 160, mh = 180;
+        roundRect(ctx, mx, my, mw, mh, 16);
+        ctx.fillStyle = '#1e293b'; ctx.fill();
+        ctx.strokeStyle = '#334155'; ctx.lineWidth = 2; ctx.stroke();
+
+        // faixa topo do mockup
+        const mTop = ctx.createLinearGradient(mx, my, mx+mw, my);
+        mTop.addColorStop(0,'#0f172a'); mTop.addColorStop(1,'#1e1040');
+        ctx.fillStyle = mTop;
+        roundRect(ctx, mx, my, mw, 44, { tl:16, tr:16, bl:0, br:0 });
+        ctx.fill();
+
+        // barra de status simulada
+        ctx.fillStyle = '#334155'; ctx.font = '11px Arial'; ctx.textAlign = 'left';
+        ctx.fillText('OSS, BEM-VINDO!', mx+16, my+16);
+        ctx.fillStyle = '#475569'; ctx.font = '10px Arial';
+        ctx.fillText('Gaditas Academy', mx+16, my+30);
+
+        // logo simulada (círculo)
+        ctx.fillStyle = '#7c3aed33';
+        ctx.beginPath(); ctx.arc(mx+mw-30, my+22, 18, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = '#a78bfa'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center';
+        ctx.fillText('G', mx+mw-30, my+27);
+
+        // avatar do aluno
+        const ax = mx+26, ay = my+70;
+        ctx.fillStyle = '#1e3a5f';
+        ctx.beginPath(); ctx.arc(ax, ay, 28, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 3; ctx.stroke(); // faixa amarela
+        ctx.fillStyle = '#93c5fd'; ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center';
+        ctx.fillText('L', ax, ay+8);
+
+        // nome e faixa
+        ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'left';
+        ctx.fillText('LEÃO KIDS', mx+66, my+62);
+        ctx.fillStyle = '#f59e0b'; ctx.font = '12px Arial';
+        ctx.fillText('Amarela • 3ºG', mx+66, my+80);
+
+        // barra de progresso simulada
+        ctx.fillStyle = '#0f172a';
+        roundRect(ctx, mx+66, my+88, 220, 8, 4); ctx.fill();
+        ctx.fillStyle = '#f59e0b';
+        roundRect(ctx, mx+66, my+88, 140, 8, 4); ctx.fill();
+
+        // ── SELO OURO no canto direito ──
+        const sx = mx + mw - 76, sy = my + 58;
+        ctx.save();
+        ctx.beginPath();
+        for (let p = 0; p < 24; p++) {
+            const ang = (p * Math.PI / 12) - Math.PI / 2;
+            const r = p % 2 === 0 ? 30 : 22;
+            const px2 = sx + r * Math.cos(ang);
+            const py2 = sy + r * Math.sin(ang);
+            p === 0 ? ctx.moveTo(px2, py2) : ctx.lineTo(px2, py2);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#EF9F27'; ctx.fill();
+        ctx.strokeStyle = '#BA7517'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.restore();
+        ctx.font = '16px Arial'; ctx.textAlign = 'center';
+        ctx.fillText('🎓', sx, sy+6);
+
+        // seta apontando para o selo
+        ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 2;
+        ctx.setLineDash([5,4]);
+        ctx.beginPath(); ctx.moveTo(sx-50, sy+50); ctx.lineTo(sx-8, sy+14); ctx.stroke();
+        ctx.setLineDash([]);
+        // ponta da seta
+        ctx.fillStyle = '#a78bfa';
+        ctx.beginPath(); ctx.moveTo(sx-8, sy+14); ctx.lineTo(sx-18, sy+20); ctx.lineTo(sx-14, sy+26); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#c4b5fd'; ctx.font = 'italic 13px Arial'; ctx.textAlign = 'left';
+        ctx.fillText('← Selo aparece aqui', mx+66, my+155);
+
         // rodapé
         const rod = ctx.createLinearGradient(0, H-70, W, H-70);
         rod.addColorStop(0,'#7c3aed22'); rod.addColorStop(1,'#4f46e522');
@@ -12940,14 +13026,18 @@ const boletim = {
         ctx.fillStyle = '#475569'; ctx.font = '13px Arial';
         ctx.fillText('gaditas-matriz.vercel.app', W/2, H-18);
 
-        // helper roundRect
+        // helper roundRect (r pode ser número ou {tl,tr,bl,br})
         function roundRect(ctx, x, y, w, h, r) {
+            const tl = typeof r === 'object' ? r.tl : r;
+            const tr = typeof r === 'object' ? r.tr : r;
+            const br = typeof r === 'object' ? r.br : r;
+            const bl = typeof r === 'object' ? r.bl : r;
             ctx.beginPath();
-            ctx.moveTo(x+r, y);
-            ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-            ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-            ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-            ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+            ctx.moveTo(x+tl, y);
+            ctx.lineTo(x+w-tr, y); ctx.quadraticCurveTo(x+w, y, x+w, y+tr);
+            ctx.lineTo(x+w, y+h-br); ctx.quadraticCurveTo(x+w, y+h, x+w-br, y+h);
+            ctx.lineTo(x+bl, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-bl);
+            ctx.lineTo(x, y+tl); ctx.quadraticCurveTo(x, y, x+tl, y);
             ctx.closePath();
         }
 

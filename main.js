@@ -234,6 +234,17 @@ const auth = {
             const wp = document.getElementById('wrapper-perfil-proprio');
             if (wp) wp.classList.remove('hidden');
         }
+        // Boletim escolar: visível para kids (por idade ou por turma kids)
+        if (this.role === 'aluno') {
+            const _nasc = this.currentUser?.nascimento;
+            const _idadeBoletim = _nasc ? new Date().getFullYear() - new Date(_nasc).getFullYear() : 99;
+            const _turmasKids = (this.currentUser?.turmas || []).some(t => /kids/i.test(t));
+            const _nomeKids = /kids/i.test(this.currentUser?.nome || '');
+            if (_idadeBoletim <= 15 || _turmasKids || _nomeKids) {
+                const wb = document.getElementById('wrapper-boletim-escolar');
+                if (wb) wb.classList.remove('hidden');
+            }
+        }
 
         // ── TAB DE EXAME + BANNER TREINO ──────────────────────
         // Garante escondida antes de verificar (usa classe por causa do !important no CSS)
@@ -4688,6 +4699,7 @@ Ele voltará a ser aluno normal.`)) return;
             const pct  = Math.min(Math.round((aulas / meta) * 100), 100);
             const primeiroNome = nome.split(' ')[0];
 
+            const _isKidsGrid = /kids/i.test(nome) || (auth.currentUser?.turmas || []).some(t => /kids/i.test(t));
             const cards = [
                 { icon:'fa-qrcode',       label:'Check-in',   cor:'#10b981', fn:`academia._irParaCheckin()` },
                 { icon:'fa-camera',       label:'QR Code',    cor:'#3b82f6', fn:`academia.abrirScannerQR()` },
@@ -4696,7 +4708,9 @@ Ele voltará a ser aluno normal.`)) return;
                 { icon:'fa-shopping-bag', label:'Loja',       cor:'#ec4899', fn:`ui.showTab('tab-loja')` },
                 { icon:'fa-calendar-alt', label:'Eventos',    cor:'#f97316', fn:`ui.showTab('tab-eventos')` },
                 { icon:'fa-video',        label:'Técnica',    cor:'#f43f5e', fn:`document.getElementById('card-tecnica-semana').scrollIntoView({behavior:'smooth'})` },
-                { icon:'fa-book',         label:'Diário',     cor:'#a78bfa', fn:`treinoPost.abrirDiario()` },
+                _isKidsGrid
+                    ? { icon:'fa-book-open', label:'Boletim',  cor:'#a78bfa', fn:`boletim.abrir(auth.currentUser.id)` }
+                    : { icon:'fa-book',      label:'Diário',   cor:'#a78bfa', fn:`treinoPost.abrirDiario()` },
                 { icon:'fa-medal',        label:'Conquistas', cor:'#f59e0b', fn:`document.getElementById('mural-conquistas').scrollIntoView({behavior:'smooth'})` },
             ];
 
@@ -7393,7 +7407,7 @@ const ui = {
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); if(auth.role === 'aluno') setTimeout(() => academia.verificarDisparoEvento(), 600); }
         if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
-        if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
+        if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); boletim.renderPainelAdmin(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); if(auth.role === 'professor') profComms.renderPainelDispensas(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }
     },
@@ -7767,6 +7781,10 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             const s = academia.verificarMeta(d); const eng = academia.calcularEngajamento(d.historico); const f = Math.max(s.meta - (d.aulas || 0), 0);
             const anoAtual = new Date().getFullYear();
             const idadeAtleta = d.nascimento ? (anoAtual - new Date(d.nascimento).getFullYear()) : 99;
+            // Boletim escolar: mostra para kids (por idade, turma ou nome)
+            const _isKidsBoletim = idadeAtleta <= 15 || /kids/i.test(d.nome || '') || (d.turmas || []).some(t => /kids/i.test(t));
+            const _wb = document.getElementById('wrapper-boletim-escolar');
+            if (_wb && _isKidsBoletim) _wb.classList.remove('hidden');
             const cardLeoes = document.getElementById('card-leoes-kids');
             if (idadeAtleta <= 15) {
                 cardLeoes.classList.remove('hidden');
@@ -12288,6 +12306,404 @@ const avaliacaoFisica = {
         win.document.write(`<div class="rodape">Gaditas Matriz · Documento gerado pelo sistema · ${new Date().toLocaleDateString('pt-BR')}</div></body></html>`);
         win.document.close();
         setTimeout(() => win.print(), 600);
+    }
+};
+
+// ── BOLETIM ESCOLAR ──────────────────────────────────────────────────────────
+const boletim = {
+    _alunoId: null,
+    _dados: null,
+    _sistemaSel: '2x',
+    _avSel: 'av1',
+    _anoSel: new Date().getFullYear(),
+    _semSel: new Date().getMonth() < 6 ? 1 : 2,
+
+    async abrir(alunoId) {
+        this._alunoId = alunoId;
+        let overlay = document.getElementById('boletim-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'boletim-overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#0f172a;z-index:9999;overflow-y:auto;padding:15px;box-sizing:border-box;';
+            document.body.appendChild(overlay);
+        }
+        overlay.innerHTML = `<div style="text-align:center;color:#a78bfa;padding:60px 20px;font-size:0.85rem;">Carregando boletim...</div>`;
+        const snap = await db.collection('alunos').doc(alunoId).get();
+        this._dados = snap.data()?.boletim || null;
+        if (!this._dados || !this._dados.sistema) {
+            this._renderConfig();
+        } else {
+            this._renderFormNotas();
+        }
+    },
+
+    fechar() {
+        const el = document.getElementById('boletim-overlay');
+        if (el) el.remove();
+    },
+
+    _overlay() { return document.getElementById('boletim-overlay'); },
+
+    // ── SETUP ──────────────────────────────────────────────────
+    _renderConfig() {
+        const overlay = this._overlay();
+        if (!overlay) return;
+        const materiasPadrao = ['Português','Matemática','Ciências','História','Geografia','Inglês','Ed. Física','Artes'];
+        this._sistemaSel = this._dados?.sistema || '2x';
+        const sel = this._sistemaSel;
+        overlay.innerHTML = `
+        <div style="max-width:460px;margin:0 auto;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-top:8px;">
+                <h2 style="color:#a78bfa;font-size:1.05rem;font-weight:800;margin:0;">📚 BOLETIM ESCOLAR</h2>
+                <button onclick="boletim.fechar()" style="background:none;border:none;color:#64748b;font-size:1.4rem;cursor:pointer;line-height:1;">✕</button>
+            </div>
+            <p style="color:#94a3b8;font-size:0.78rem;margin:0 0 16px 0;line-height:1.6;">Configure como funciona o sistema de avaliação da escola do aluno.</p>
+            <div style="background:#1e293b;border:1px solid #7c3aed33;border-radius:12px;padding:16px;margin-bottom:12px;">
+                <small style="color:#a78bfa;font-size:0.68rem;font-weight:800;display:block;margin-bottom:10px;letter-spacing:0.5px;">AVALIAÇÕES POR SEMESTRE</small>
+                <div style="display:flex;gap:10px;margin-bottom:18px;">
+                    <div id="btn-2x" onclick="boletim._selecionarSistema('2x')"
+                        style="flex:1;text-align:center;padding:14px 8px;border-radius:10px;cursor:pointer;font-size:0.8rem;font-weight:800;
+                        background:${sel==='2x'?'#4c1d95':'#0f172a'};border:2px solid ${sel==='2x'?'#7c3aed':'#334155'};color:${sel==='2x'?'#a78bfa':'#64748b'};">
+                        2 Avaliações<br><span style="font-size:0.62rem;font-weight:400;">Av1 + Av2</span>
+                    </div>
+                    <div id="btn-3x" onclick="boletim._selecionarSistema('3x')"
+                        style="flex:1;text-align:center;padding:14px 8px;border-radius:10px;cursor:pointer;font-size:0.8rem;font-weight:800;
+                        background:${sel==='3x'?'#4c1d95':'#0f172a'};border:2px solid ${sel==='3x'?'#7c3aed':'#334155'};color:${sel==='3x'?'#a78bfa':'#64748b'};">
+                        3 Avaliações<br><span style="font-size:0.62rem;font-weight:400;">Av1 + Av2 + Av3</span>
+                    </div>
+                </div>
+                <small style="color:#a78bfa;font-size:0.68rem;font-weight:800;display:block;margin-bottom:8px;letter-spacing:0.5px;">MATÉRIAS</small>
+                <div id="lista-materias-config" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+                    ${(this._dados?.materias || materiasPadrao).map(m => `
+                        <div onclick="boletim._toggleMateria(this)" data-materia="${m}" data-ativo="1"
+                            style="padding:5px 11px;background:#4c1d95;border:1px solid #7c3aed;border-radius:20px;color:#a78bfa;font-size:0.7rem;font-weight:700;cursor:pointer;transition:all 0.15s;">${m}</div>
+                    `).join('')}
+                    ${this._dados?.materias ? '' : ''}
+                </div>
+                <div style="display:flex;gap:6px;margin-bottom:16px;">
+                    <input type="text" id="input-nova-materia" placeholder="Adicionar matéria..." onkeydown="if(event.key==='Enter')boletim._adicionarMateria()"
+                        style="flex:1;padding:8px 10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;outline:none;">
+                    <button onclick="boletim._adicionarMateria()" style="padding:8px 14px;background:#4c1d95;border:1px solid #7c3aed;color:#a78bfa;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:800;">+</button>
+                </div>
+                <button onclick="boletim.salvarConfig()"
+                    style="width:100%;padding:13px;background:linear-gradient(135deg,#4c1d95,#5b21b6);border:1px solid #7c3aed;color:#a78bfa;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;">
+                    ✅ SALVAR CONFIGURAÇÃO
+                </button>
+            </div>
+        </div>`;
+    },
+
+    _selecionarSistema(v) {
+        this._sistemaSel = v;
+        const b2 = document.getElementById('btn-2x');
+        const b3 = document.getElementById('btn-3x');
+        if (!b2 || !b3) return;
+        const ativo   = 'background:#4c1d95;border:2px solid #7c3aed;color:#a78bfa;';
+        const inativo = 'background:#0f172a;border:2px solid #334155;color:#64748b;';
+        b2.style.cssText = b2.style.cssText.replace(/background:[^;]+;border:[^;]+;color:[^;]+;/, v==='2x' ? ativo : inativo);
+        b3.style.cssText = b3.style.cssText.replace(/background:[^;]+;border:[^;]+;color:[^;]+;/, v==='3x' ? ativo : inativo);
+    },
+
+    _toggleMateria(el) {
+        const ativo = el.dataset.ativo === '1';
+        el.dataset.ativo = ativo ? '0' : '1';
+        el.style.background   = ativo ? '#1e293b' : '#4c1d95';
+        el.style.borderColor  = ativo ? '#334155' : '#7c3aed';
+        el.style.color        = ativo ? '#475569' : '#a78bfa';
+    },
+
+    _adicionarMateria() {
+        const inp = document.getElementById('input-nova-materia');
+        const nome = inp?.value.trim();
+        if (!nome) return;
+        const lista = document.getElementById('lista-materias-config');
+        if (!lista) return;
+        const div = document.createElement('div');
+        div.onclick = () => this._toggleMateria(div);
+        div.dataset.materia = nome;
+        div.dataset.ativo = '1';
+        div.style.cssText = 'padding:5px 11px;background:#4c1d95;border:1px solid #7c3aed;border-radius:20px;color:#a78bfa;font-size:0.7rem;font-weight:700;cursor:pointer;';
+        div.textContent = nome;
+        lista.appendChild(div);
+        if (inp) inp.value = '';
+    },
+
+    async salvarConfig() {
+        const materias = Array.from(document.querySelectorAll('#lista-materias-config [data-ativo="1"]')).map(el => el.dataset.materia);
+        if (!materias.length) { alert('Selecione ao menos 1 matéria.'); return; }
+        const dados = { sistema: this._sistemaSel, materias, notas: this._dados?.notas || {} };
+        await db.collection('alunos').doc(this._alunoId).update({ boletim: dados });
+        this._dados = dados;
+        this._renderFormNotas();
+    },
+
+    // ── CADASTRO DE NOTAS ──────────────────────────────────────
+    _renderFormNotas() {
+        const overlay = this._overlay();
+        if (!overlay) return;
+        const { sistema, materias, notas } = this._dados;
+        const avs = sistema === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
+        const avLabels = { av1:'1ª Avaliação', av2:'2ª Avaliação', av3:'3ª Avaliação' };
+        const anoSel = this._anoSel;
+        const semSel = this._semSel;
+        const avSel  = this._avSel;
+        const notasAtuais = notas?.[anoSel]?.['sem'+semSel]?.[avSel] || {};
+        const anos = Array.from(new Set([anoSel, anoSel-1, ...Object.keys(notas||{})])).sort((a,b)=>b-a).slice(0,3);
+
+        const mediaGeral = () => {
+            const vals = materias.map(m => notasAtuais[m]).filter(v => v !== null && v !== undefined);
+            return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
+        };
+
+        overlay.innerHTML = `
+        <div style="max-width:460px;margin:0 auto;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-top:8px;">
+                <h2 style="color:#a78bfa;font-size:1.05rem;font-weight:800;margin:0;">📚 BOLETIM</h2>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button onclick="boletim._renderHistorico()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:5px 10px;border-radius:8px;cursor:pointer;font-size:0.7rem;font-weight:700;">📊 Histórico</button>
+                    <button onclick="boletim.fechar()" style="background:none;border:none;color:#64748b;font-size:1.4rem;cursor:pointer;line-height:1;">✕</button>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <select onchange="boletim._anoSel=parseInt(this.value);boletim._renderFormNotas()"
+                    style="flex:1;padding:8px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;outline:none;">
+                    ${anos.map(a=>`<option value="${a}"${a==anoSel?' selected':''}>${a}</option>`).join('')}
+                </select>
+                <select onchange="boletim._semSel=parseInt(this.value);boletim._renderFormNotas()"
+                    style="flex:1;padding:8px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;outline:none;">
+                    <option value="1"${semSel===1?' selected':''}>1º Semestre</option>
+                    <option value="2"${semSel===2?' selected':''}>2º Semestre</option>
+                </select>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:14px;">
+                ${avs.map(av=>`
+                    <button onclick="boletim._avSel='${av}';boletim._renderFormNotas()"
+                        style="flex:1;padding:9px 6px;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;
+                        border:1px solid ${av===avSel?'#7c3aed':'#334155'};
+                        background:${av===avSel?'#4c1d95':'#1e293b'};
+                        color:${av===avSel?'#a78bfa':'#64748b'};">
+                        ${avLabels[av]}
+                    </button>
+                `).join('')}
+            </div>
+            <div style="background:#1e293b;border:1px solid #7c3aed33;border-radius:12px;padding:14px;margin-bottom:12px;">
+                ${materias.map(m => {
+                    const v = notasAtuais[m] ?? '';
+                    const cor = v !== '' && parseFloat(v) < 5 ? '#ef4444' : '#a78bfa';
+                    return `
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                        <span style="color:#e2e8f0;font-size:0.8rem;font-weight:600;">${m}</span>
+                        <input type="number" min="0" max="10" step="0.1" value="${v}"
+                            id="nota-${m.replace(/[^a-zA-Z0-9]/g,'_')}"
+                            oninput="this.style.color=this.value!==''&&parseFloat(this.value)<5?'#ef4444':'#a78bfa'"
+                            style="width:72px;padding:6px;background:#0f172a;border:1px solid #334155;color:${cor};border-radius:8px;font-size:0.85rem;font-weight:700;text-align:center;outline:none;">
+                    </div>`;
+                }).join('')}
+                <div style="border-top:1px solid #334155;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+                    <span style="color:#64748b;font-size:0.75rem;">Média geral</span>
+                    <span style="color:#a78bfa;font-weight:800;font-size:1rem;">${mediaGeral()}</span>
+                </div>
+            </div>
+            <button onclick="boletim.salvarNotas()"
+                style="width:100%;padding:13px;background:linear-gradient(135deg,#4c1d95,#5b21b6);border:1px solid #7c3aed;color:#a78bfa;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;margin-bottom:8px;">
+                💾 SALVAR NOTAS
+            </button>
+            <button onclick="boletim._renderConfig()"
+                style="width:100%;padding:8px;background:none;border:1px solid #334155;color:#64748b;border-radius:8px;cursor:pointer;font-size:0.7rem;">
+                ⚙️ Alterar configuração (matérias / sistema)
+            </button>
+        </div>`;
+    },
+
+    async salvarNotas() {
+        const { materias } = this._dados;
+        const notas = {};
+        materias.forEach(m => {
+            const el = document.getElementById('nota-' + m.replace(/[^a-zA-Z0-9]/g,'_'));
+            notas[m] = (el && el.value !== '') ? parseFloat(el.value) : null;
+        });
+        const path = `boletim.notas.${this._anoSel}.sem${this._semSel}.${this._avSel}`;
+        const upd = {};
+        upd[path] = notas;
+        await db.collection('alunos').doc(this._alunoId).update(upd);
+        // Atualiza local e re-renderiza
+        if (!this._dados.notas) this._dados.notas = {};
+        if (!this._dados.notas[this._anoSel]) this._dados.notas[this._anoSel] = {};
+        if (!this._dados.notas[this._anoSel]['sem'+this._semSel]) this._dados.notas[this._anoSel]['sem'+this._semSel] = {};
+        this._dados.notas[this._anoSel]['sem'+this._semSel][this._avSel] = notas;
+        this._renderFormNotas();
+        const btn = document.querySelector('#boletim-overlay button[onclick="boletim.salvarNotas()"]');
+        if (btn) { btn.textContent = '✅ Notas salvas!'; setTimeout(() => { if(btn) btn.textContent = '💾 SALVAR NOTAS'; }, 2000); }
+    },
+
+    // ── HISTÓRICO ─────────────────────────────────────────────
+    _renderHistorico() {
+        const overlay = this._overlay();
+        if (!overlay) return;
+        const { sistema, materias, notas } = this._dados;
+        const avs = sistema === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
+        const avL = { av1:'Av1', av2:'Av2', av3:'Av3' };
+        const anos = Object.keys(notas||{}).sort((a,b)=>b-a);
+
+        let blocos = '';
+        if (!anos.length) {
+            blocos = `<p style="color:#64748b;text-align:center;font-size:0.8rem;padding:20px 0;">Nenhuma nota cadastrada ainda.</p>`;
+        } else {
+            anos.forEach(ano => {
+                [1,2].forEach(sem => {
+                    const semData = notas[ano]?.['sem'+sem];
+                    if (!semData) return;
+                    blocos += `
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:10px;">
+                        <h3 style="color:#a78bfa;font-size:0.82rem;font-weight:800;margin:0 0 10px 0;">${ano} — ${sem}º Semestre</h3>
+                        <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.68rem;">
+                            <thead><tr>
+                                <th style="text-align:left;color:#64748b;padding:4px 5px;border-bottom:1px solid #1e293b;">Matéria</th>
+                                ${avs.map(av=>`<th style="text-align:center;color:#64748b;padding:4px 5px;border-bottom:1px solid #1e293b;">${avL[av]}</th>`).join('')}
+                                <th style="text-align:center;color:#64748b;padding:4px 5px;border-bottom:1px solid #1e293b;">Média</th>
+                            </tr></thead>
+                            <tbody>
+                            ${materias.map(m => {
+                                const vals = avs.map(av => semData[av]?.[m]).filter(v=>v!==null&&v!==undefined);
+                                const media = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
+                                return `<tr>
+                                    <td style="color:#94a3b8;padding:4px 5px;border-bottom:1px solid #1e293b11;">${m}</td>
+                                    ${avs.map(av=>{
+                                        const v = semData[av]?.[m];
+                                        const c = (v!==null&&v!==undefined&&v<5)?'#ef4444':'#e2e8f0';
+                                        return `<td style="text-align:center;color:${c};padding:4px 5px;border-bottom:1px solid #1e293b11;font-weight:700;">${v!==null&&v!==undefined?v:'—'}</td>`;
+                                    }).join('')}
+                                    <td style="text-align:center;color:${parseFloat(media)<5?'#ef4444':'#a78bfa'};padding:4px 5px;font-weight:800;">${media}</td>
+                                </tr>`;
+                            }).join('')}
+                            </tbody>
+                        </table>
+                        </div>
+                    </div>`;
+                });
+            });
+        }
+
+        overlay.innerHTML = `
+        <div style="max-width:460px;margin:0 auto;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-top:8px;">
+                <h2 style="color:#a78bfa;font-size:1.05rem;font-weight:800;margin:0;">📊 HISTÓRICO DE NOTAS</h2>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button onclick="boletim._renderFormNotas()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:5px 10px;border-radius:8px;cursor:pointer;font-size:0.7rem;font-weight:700;">← Voltar</button>
+                    <button onclick="boletim.fechar()" style="background:none;border:none;color:#64748b;font-size:1.4rem;cursor:pointer;line-height:1;">✕</button>
+                </div>
+            </div>
+            ${blocos}
+        </div>`;
+    },
+
+    // ── PAINEL ADMIN ───────────────────────────────────────────
+    async renderPainelAdmin() {
+        const cont = document.getElementById('painel-boletim-admin');
+        if (!cont) return;
+        cont.innerHTML = `<div style="color:#a78bfa;font-size:0.75rem;padding:10px 0;">Carregando boletins...</div>`;
+        const anoAtual = new Date().getFullYear();
+        const snap = await db.collection('alunos').get();
+        const kids = [];
+        snap.forEach(doc => {
+            const a = doc.data();
+            if (!a.nascimento || !a.boletim?.notas) return;
+            const idade = anoAtual - new Date(a.nascimento).getFullYear();
+            if (idade > 15) return;
+            kids.push({ id: doc.id, nome: a.nome, idade, boletim: a.boletim });
+        });
+
+        if (!kids.length) {
+            cont.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #7c3aed33;border-radius:12px;padding:14px;margin-bottom:12px;">
+                <small style="color:#a78bfa;font-size:0.68rem;font-weight:800;letter-spacing:0.5px;">📚 BOLETIM ESCOLAR — KIDS</small>
+                <p style="color:#64748b;font-size:0.78rem;margin-top:8px;text-align:center;">Nenhum aluno kids com notas cadastradas.</p>
+            </div>`;
+            return;
+        }
+
+        const alertas = [];
+        const semAtual = new Date().getMonth() < 6 ? 1 : 2;
+        kids.forEach(k => {
+            const { sistema, materias, notas } = k.boletim;
+            const avs = sistema === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
+            Object.keys(notas).forEach(ano => {
+                [1,2].forEach(sem => {
+                    const semData = notas[ano]?.['sem'+sem];
+                    if (!semData) return;
+                    avs.forEach(av => {
+                        const avData = semData[av];
+                        if (!avData) return;
+                        (materias||[]).forEach(m => {
+                            if (avData[m]!==null && avData[m]!==undefined && avData[m]<5)
+                                alertas.push({ nome: k.nome, materia: m, nota: avData[m], periodo: `${ano} Sem${sem} ${av.toUpperCase()}` });
+                        });
+                    });
+                });
+            });
+        });
+
+        let html = `
+        <div style="background:#1e293b;border:1px solid #7c3aed33;border-radius:12px;padding:14px;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <small style="color:#a78bfa;font-size:0.68rem;font-weight:800;letter-spacing:0.5px;">📚 BOLETIM ESCOLAR — KIDS</small>
+                <span style="background:#7c3aed22;color:#a78bfa;font-size:0.62rem;font-weight:700;padding:3px 8px;border-radius:10px;">${kids.length} aluno${kids.length!==1?'s':''}</span>
+            </div>`;
+
+        if (alertas.length) {
+            html += `
+            <div style="background:#450a0a;border:1px solid #ef444455;border-radius:10px;padding:10px;margin-bottom:12px;">
+                <small style="color:#ef4444;font-weight:700;font-size:0.68rem;display:block;margin-bottom:6px;">⚠️ NOTAS ABAIXO DE 5</small>
+                ${alertas.map(a=>`
+                <div style="color:#fca5a5;font-size:0.7rem;padding:3px 0;border-bottom:1px solid #ef444422;">
+                    <b>${a.nome}</b> — ${a.materia}: <b style="color:#ef4444;">${a.nota}</b>
+                    <span style="color:#64748b;font-size:0.62rem;"> (${a.periodo})</span>
+                </div>`).join('')}
+            </div>`;
+        }
+
+        kids.forEach(k => {
+            const { sistema, materias, notas } = k.boletim;
+            const avs = sistema === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
+            const semData = notas[anoAtual]?.['sem'+semAtual];
+            html += `
+            <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <span style="color:#e2e8f0;font-size:0.8rem;font-weight:700;">${k.nome}</span>
+                    <span style="color:#64748b;font-size:0.65rem;">${k.idade} anos</span>
+                </div>`;
+            if (semData) {
+                html += `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.65rem;">
+                    <thead><tr>
+                        <th style="text-align:left;color:#64748b;padding:3px 4px;">Matéria</th>
+                        ${avs.map(av=>`<th style="text-align:center;color:#64748b;padding:3px 4px;">${av.toUpperCase()}</th>`).join('')}
+                        <th style="text-align:center;color:#64748b;padding:3px 4px;">Média</th>
+                    </tr></thead>
+                    <tbody>
+                    ${(materias||[]).map(m=>{
+                        const vals = avs.map(av=>semData[av]?.[m]).filter(v=>v!==null&&v!==undefined);
+                        const media = vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):'—';
+                        return `<tr>
+                            <td style="color:#94a3b8;padding:3px 4px;">${m}</td>
+                            ${avs.map(av=>{
+                                const v=semData[av]?.[m];
+                                const c=(v!==null&&v!==undefined&&v<5)?'#ef4444':'#e2e8f0';
+                                return `<td style="text-align:center;color:${c};padding:3px 4px;font-weight:700;">${v!==null&&v!==undefined?v:'—'}</td>`;
+                            }).join('')}
+                            <td style="text-align:center;color:${parseFloat(media)<5?'#ef4444':'#a78bfa'};padding:3px 4px;font-weight:800;">${media}</td>
+                        </tr>`;
+                    }).join('')}
+                    </tbody>
+                </table></div>`;
+            } else {
+                html += `<p style="color:#475569;font-size:0.7rem;margin:0;text-align:center;">Sem notas no ${semAtual}º semestre de ${anoAtual}</p>`;
+            }
+            html += `</div>`;
+        });
+
+        html += `</div>`;
+        cont.innerHTML = html;
     }
 };
 

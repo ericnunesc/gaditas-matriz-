@@ -478,6 +478,23 @@
                         </button>
                     </div>
 
+                    <!-- ── BOLETIM ESCOLAR ── -->
+                    <div id="wrapper-boletim-escolar" class="hidden">
+                        <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.fa-chevron-down').style.transform = this.nextElementSibling.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'"
+                            style="width:100%; display:flex; justify-content:space-between; align-items:center; background:#1e293b; border:1px solid #7c3aed33; padding:14px 16px; border-radius:12px; color:white; cursor:pointer; font-size:0.8rem; font-weight:700; margin-bottom:8px;">
+                            <span><i class="fas fa-book-open" style="color:#a78bfa; margin-right:8px; font-size:1.1rem;"></i> BOLETIM ESCOLAR</span>
+                            <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem; transition:transform 0.2s;"></i>
+                        </button>
+                        <div class="hidden" style="background:#1e293b; border:1px solid #7c3aed33; padding:15px; border-radius:12px; margin-bottom:8px;">
+                            <small style="color:#a78bfa; font-size:0.6rem; font-weight:800; display:block; margin-bottom:14px; letter-spacing:0.5px; text-align:center;">📚 BOLETIM ESCOLAR</small>
+                            <p style="color:#94a3b8; font-size:0.75rem; text-align:center; margin-bottom:14px; line-height:1.6;">Cadastre as notas escolares e acompanhe<br>a evolução acadêmica do aluno.</p>
+                            <button onclick="boletim.abrir(auth.currentUser.id)"
+                                style="width:100%; padding:13px; background:linear-gradient(135deg,#4c1d95,#5b21b6); border:1px solid #7c3aed; color:#a78bfa; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.85rem;">
+                                📚 ABRIR BOLETIM ESCOLAR
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
 
             </div>
@@ -854,6 +871,7 @@
 
             <div id="tab-relatorios" class="tab-content hidden" style="padding:15px;">
                 <div id="dashboard-admin-container"></div>
+                <div id="painel-boletim-admin"></div>
                 <div id="radar-sumidos-container" style="margin-bottom:12px;"></div>
                 <div id="avaliacoes-painel" style="margin-bottom:12px;"></div>
                 <div class="card" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px;">
@@ -995,7 +1013,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-    <script src="main.js?v=20260611d"></script>
+    <script src="main.js?v=20260611h"></script>
     <script src="filtros-academia.js?v=20260602v"></script>
     <script src="gaditas-modal-financeiro.js"></script>
     <script src="gaditas-painel-adm.js"></script>

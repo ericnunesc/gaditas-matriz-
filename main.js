@@ -7820,10 +7820,10 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                             _seloEl.style.display = 'flex';
                             _seloEl.innerHTML = `
                                 <div title="Selo Escolar ${_selo.label} — Média ${_media.toFixed(1)}" style="position:relative;width:40px;height:40px;cursor:pointer;" onclick="boletim.abrir('${auth.currentUser.id}')">
-                                    <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                                    <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;">
                                         <polygon points="${_pts}" fill="${_selo.bg}" stroke="${_selo.ring}" stroke-width="1.5"/>
-                                        <text x="20" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="${_selo.text}" font-family="sans-serif">&#xf19d;</text>
                                     </svg>
+                                    <i class="fas fa-graduation-cap" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);font-size:15px;color:${_selo.text};"></i>
                                     <div style="position:absolute;bottom:-3px;right:-3px;background:${_selo.bg};border:1.5px solid ${_selo.ring};border-radius:50%;width:15px;height:15px;display:flex;align-items:center;justify-content:center;">
                                         <i class="fas fa-star" style="font-size:7px;color:${_selo.star};"></i>
                                     </div>

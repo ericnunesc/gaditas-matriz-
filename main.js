@@ -12578,11 +12578,63 @@ const boletim = {
                 style="width:100%;padding:13px;background:linear-gradient(135deg,#4c1d95,#5b21b6);border:1px solid #7c3aed;color:#a78bfa;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;margin-bottom:8px;">
                 💾 SALVAR NOTAS
             </button>
+            <!-- Comprovante do boletim -->
+            <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:8px;">
+                <small style="color:#64748b;font-size:0.68rem;font-weight:700;display:block;margin-bottom:8px;">📎 FOTO DO BOLETIM — ${anoSel}</small>
+                ${(this._dados?.comprovantes?.[anoSel])
+                    ? `<div style="position:relative;display:inline-block;">
+                           <img src="${this._dados.comprovantes[anoSel].url}" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;" />
+                           <div style="margin-top:6px;display:flex;align-items:center;gap:6px;">
+                               <i class="fas fa-check-circle" style="color:#10b981;font-size:0.8rem;"></i>
+                               <span style="color:#10b981;font-size:0.7rem;font-weight:700;">Comprovante enviado</span>
+                           </div>
+                       </div>`
+                    : `<label style="display:block;cursor:pointer;">
+                           <div id="btn-upload-comprovante" style="width:100%;padding:10px;background:#1e293b;border:1px dashed #334155;border-radius:8px;text-align:center;color:#64748b;font-size:0.75rem;">
+                               📷 Toque para enviar foto do boletim
+                           </div>
+                           <input type="file" accept="image/*" style="display:none;" onchange="boletim._uploadComprovante(this, '${this._alunoId}')">
+                       </label>`
+                }
+            </div>
             <button onclick="boletim._renderConfig()"
                 style="width:100%;padding:8px;background:none;border:1px solid #334155;color:#64748b;border-radius:8px;cursor:pointer;font-size:0.7rem;">
                 ⚙️ Alterar configuração (matérias / sistema)
             </button>
         </div>`;
+    },
+
+    async _uploadComprovante(input, alunoId) {
+        const file = input.files[0];
+        if (!file) return;
+        const btn = document.getElementById('btn-upload-comprovante');
+        if (btn) btn.innerHTML = '⏳ Enviando...';
+        try {
+            const path = `boletim_comprovantes/${alunoId}_${this._anoSel}`;
+            const snap = await getStorage().ref(path).put(file);
+            const url  = await snap.ref.getDownloadURL();
+            const upd  = {};
+            upd[`boletim.comprovantes.${this._anoSel}`] = { url, path, data: new Date().toLocaleDateString('pt-BR') };
+            await db.collection('alunos').doc(alunoId).update(upd);
+            if (!this._dados.comprovantes) this._dados.comprovantes = {};
+            this._dados.comprovantes[this._anoSel] = { url, path };
+            this._renderFormNotas();
+        } catch(e) {
+            if (btn) btn.innerHTML = '❌ Erro ao enviar. Tente novamente.';
+            console.error('Upload comprovante:', e);
+        }
+    },
+
+    async _deletarComprovante(alunoId, ano, storagePath) {
+        if (!confirm('Deletar comprovante? A imagem será removida do servidor.')) return;
+        try {
+            await getStorage().ref(storagePath).delete();
+        } catch(e) { console.warn('Storage delete:', e.message); }
+        const upd = {};
+        upd[`boletim.comprovantes.${ano}`] = firebase.firestore.FieldValue.delete();
+        await db.collection('alunos').doc(alunoId).update(upd);
+        // Re-renderiza painel
+        boletim.renderPainelAdmin();
     },
 
     async salvarNotas() {
@@ -12872,6 +12924,21 @@ const boletim = {
                     }).join('')}
                     </tbody>
                 </table></div>` : `<p style="color:#334155;font-size:0.68rem;margin:4px 0 0;text-align:center;">Sem notas em ${anoSel}</p>`}
+                ${(() => {
+                    const comp = k.boletim?.comprovantes?.[anoSel];
+                    if (!comp) return `<div style="margin-top:8px;padding:7px 10px;background:#1e293b;border:1px dashed #334155;border-radius:8px;text-align:center;"><span style="color:#475569;font-size:0.65rem;">📎 Sem comprovante enviado</span></div>`;
+                    return `<div style="margin-top:8px;">
+                        <small style="color:#64748b;font-size:0.62rem;font-weight:700;display:block;margin-bottom:4px;">📎 COMPROVANTE — clique para verificar e deletar</small>
+                        <div style="position:relative;cursor:pointer;" onclick="boletim._deletarComprovante('${k.id}','${anoSel}','${comp.path}')">
+                            <img src="${comp.url}" style="width:100%;border-radius:8px;max-height:200px;object-fit:cover;" />
+                            <div style="position:absolute;top:6px;right:6px;background:#ef444488;border:1px solid #ef4444;border-radius:6px;padding:3px 8px;display:flex;align-items:center;gap:4px;">
+                                <i class="fas fa-trash-alt" style="font-size:0.65rem;color:white;"></i>
+                                <span style="color:white;font-size:0.65rem;font-weight:700;">Deletar</span>
+                            </div>
+                            ${comp.data ? `<div style="position:absolute;bottom:6px;left:6px;background:#00000088;border-radius:4px;padding:2px 6px;"><span style="color:#94a3b8;font-size:0.6rem;">Enviado em ${comp.data}</span></div>` : ''}
+                        </div>
+                    </div>`;
+                })()}
             </div>`;
         });
 

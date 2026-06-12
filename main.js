@@ -12610,6 +12610,10 @@ const boletim = {
         const btn = document.getElementById('btn-upload-comprovante');
         if (btn) btn.innerHTML = '⏳ Enviando...';
         try {
+            // Garante auth anônimo para o Storage aceitar o upload
+            if (!firebase.auth().currentUser) {
+                await firebase.auth().signInAnonymously();
+            }
             const path = `boletim_comprovantes/${alunoId}_${this._anoSel}`;
             const snap = await getStorage().ref(path).put(file);
             const url  = await snap.ref.getDownloadURL();

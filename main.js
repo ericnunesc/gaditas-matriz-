@@ -12398,10 +12398,12 @@ const boletim = {
         const b2 = document.getElementById('btn-2x');
         const b3 = document.getElementById('btn-3x');
         if (!b2 || !b3) return;
-        const ativo   = 'background:#4c1d95;border:2px solid #7c3aed;color:#a78bfa;';
-        const inativo = 'background:#0f172a;border:2px solid #334155;color:#64748b;';
-        b2.style.cssText = b2.style.cssText.replace(/background:[^;]+;border:[^;]+;color:[^;]+;/, v==='2x' ? ativo : inativo);
-        b3.style.cssText = b3.style.cssText.replace(/background:[^;]+;border:[^;]+;color:[^;]+;/, v==='3x' ? ativo : inativo);
+        b2.style.background   = v === '2x' ? '#4c1d95' : '#0f172a';
+        b2.style.borderColor  = v === '2x' ? '#7c3aed' : '#334155';
+        b2.style.color        = v === '2x' ? '#a78bfa' : '#64748b';
+        b3.style.background   = v === '3x' ? '#4c1d95' : '#0f172a';
+        b3.style.borderColor  = v === '3x' ? '#7c3aed' : '#334155';
+        b3.style.color        = v === '3x' ? '#a78bfa' : '#64748b';
     },
 
     _toggleMateria(el) {

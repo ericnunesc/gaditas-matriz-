@@ -7790,15 +7790,13 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                 const _notas = d.boletim.notas;
                 const _avs = boletim._getSistema(anoAtual) === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
                 let _soma = 0, _total = 0;
-                Object.keys(_notas).forEach(ano => {
-                    [1,2].forEach(sem => {
-                        _avs.forEach(av => {
-                            const avData = _notas[ano]?.['sem'+sem]?.[av];
-                            if (!avData) return;
-                            (d.boletim.materias||[]).forEach(m => {
-                                const v = avData[m];
-                                if (v !== null && v !== undefined) { _soma += v; _total++; }
-                            });
+                [1,2].forEach(sem => {
+                    _avs.forEach(av => {
+                        const avData = _notas[anoAtual]?.['sem'+sem]?.[av];
+                        if (!avData) return;
+                        (d.boletim.materias||[]).forEach(m => {
+                            const v = avData[m];
+                            if (v !== null && v !== undefined) { _soma += v; _total++; }
                         });
                     });
                 });

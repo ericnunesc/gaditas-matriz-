@@ -12345,21 +12345,32 @@ const boletim = {
     _overlay() { return document.getElementById('boletim-overlay'); },
 
     // ── SETUP ──────────────────────────────────────────────────
+    // Retorna o sistema (2x/3x) para um ano — por ano primeiro, fallback global
+    _getSistema(ano) {
+        return this._dados?.sistemaPorAno?.[ano] || this._dados?.sistema || '2x';
+    },
+
     _renderConfig() {
         const overlay = this._overlay();
         if (!overlay) return;
         const materiasPadrao = ['Português','Matemática','Ciências','História','Geografia','Inglês','Ed. Física','Artes'];
-        this._sistemaSel = this._dados?.sistema || '2x';
+        const anoSel = this._anoSel;
+        this._sistemaSel = this._getSistema(anoSel);
         const sel = this._sistemaSel;
+        const temDados = !!(this._dados?.sistema || this._dados?.sistemaPorAno);
         overlay.innerHTML = `
         <div style="max-width:460px;margin:0 auto;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-top:8px;">
                 <h2 style="color:#a78bfa;font-size:1.05rem;font-weight:800;margin:0;">📚 BOLETIM ESCOLAR</h2>
                 <button onclick="boletim.fechar()" style="background:none;border:none;color:#64748b;font-size:1.4rem;cursor:pointer;line-height:1;">✕</button>
             </div>
-            <p style="color:#94a3b8;font-size:0.78rem;margin:0 0 16px 0;line-height:1.6;">Configure como funciona o sistema de avaliação da escola do aluno.</p>
+            <div style="background:#7c3aed22;border:1px solid #7c3aed44;border-radius:8px;padding:8px 12px;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+                <span style="color:#a78bfa;font-size:0.7rem;font-weight:700;">📅 Configurando para:</span>
+                <span style="color:white;font-size:0.8rem;font-weight:800;">${anoSel}</span>
+                ${temDados ? `<span style="color:#64748b;font-size:0.65rem;margin-left:auto;">Anos anteriores não são afetados</span>` : ''}
+            </div>
             <div style="background:#1e293b;border:1px solid #7c3aed33;border-radius:12px;padding:16px;margin-bottom:12px;">
-                <small style="color:#a78bfa;font-size:0.68rem;font-weight:800;display:block;margin-bottom:10px;letter-spacing:0.5px;">AVALIAÇÕES POR SEMESTRE</small>
+                <small style="color:#a78bfa;font-size:0.68rem;font-weight:800;display:block;margin-bottom:10px;letter-spacing:0.5px;">AVALIAÇÕES POR SEMESTRE — ${anoSel}</small>
                 <div style="display:flex;gap:10px;margin-bottom:18px;">
                     <div id="btn-2x" onclick="boletim._selecionarSistema('2x')"
                         style="flex:1;text-align:center;padding:14px 8px;border-radius:10px;cursor:pointer;font-size:0.8rem;font-weight:800;
@@ -12378,7 +12389,6 @@ const boletim = {
                         <div onclick="boletim._toggleMateria(this)" data-materia="${m}" data-ativo="1"
                             style="padding:5px 11px;background:#4c1d95;border:1px solid #7c3aed;border-radius:20px;color:#a78bfa;font-size:0.7rem;font-weight:700;cursor:pointer;transition:all 0.15s;">${m}</div>
                     `).join('')}
-                    ${this._dados?.materias ? '' : ''}
                 </div>
                 <div style="display:flex;gap:6px;margin-bottom:16px;">
                     <input type="text" id="input-nova-materia" placeholder="Adicionar matéria..." onkeydown="if(event.key==='Enter')boletim._adicionarMateria()"
@@ -12387,8 +12397,9 @@ const boletim = {
                 </div>
                 <button onclick="boletim.salvarConfig()"
                     style="width:100%;padding:13px;background:linear-gradient(135deg,#4c1d95,#5b21b6);border:1px solid #7c3aed;color:#a78bfa;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;">
-                    ✅ SALVAR CONFIGURAÇÃO
+                    ✅ SALVAR PARA ${anoSel}
                 </button>
+                ${temDados ? `<button onclick="boletim._renderFormNotas()" style="width:100%;padding:8px;background:none;border:1px solid #334155;color:#64748b;border-radius:8px;cursor:pointer;font-size:0.7rem;margin-top:8px;">← Voltar sem salvar</button>` : ''}
             </div>
         </div>`;
     },
@@ -12433,9 +12444,19 @@ const boletim = {
     async salvarConfig() {
         const materias = Array.from(document.querySelectorAll('#lista-materias-config [data-ativo="1"]')).map(el => el.dataset.materia);
         if (!materias.length) { alert('Selecione ao menos 1 matéria.'); return; }
-        const dados = { sistema: this._sistemaSel, materias, notas: this._dados?.notas || {} };
-        await db.collection('alunos').doc(this._alunoId).update({ boletim: dados });
-        this._dados = dados;
+        // Sistema salvo por ano — preserva anos anteriores com configuração diferente
+        const anoSel = this._anoSel;
+        const sistemaPorAno = { ...(this._dados?.sistemaPorAno || {}), [anoSel]: this._sistemaSel };
+        const upd = {
+            'boletim.materias': materias,
+            [`boletim.sistemaPorAno.${anoSel}`]: this._sistemaSel,
+        };
+        // Primeira vez: também salva sistema global como fallback e inicializa notas
+        if (!this._dados) upd['boletim.notas'] = {};
+        if (!this._dados?.sistema) upd['boletim.sistema'] = this._sistemaSel;
+        await db.collection('alunos').doc(this._alunoId).update(upd);
+        if (!this._dados) this._dados = { sistema: this._sistemaSel, materias, notas: {}, sistemaPorAno };
+        else { this._dados.materias = materias; this._dados.sistemaPorAno = sistemaPorAno; }
         this._renderFormNotas();
     },
 
@@ -12443,7 +12464,8 @@ const boletim = {
     _renderFormNotas() {
         const overlay = this._overlay();
         if (!overlay) return;
-        const { sistema, materias, notas } = this._dados;
+        const { materias, notas } = this._dados;
+        const sistema = this._getSistema(this._anoSel);
         const avs = sistema === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
         const avLabels = { av1:'1ª Avaliação', av2:'2ª Avaliação', av3:'3ª Avaliação' };
         const anoSel = this._anoSel;
@@ -12542,8 +12564,7 @@ const boletim = {
     _renderHistorico() {
         const overlay = this._overlay();
         if (!overlay) return;
-        const { sistema, materias, notas } = this._dados;
-        const avs = sistema === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
+        const { materias, notas } = this._dados;
         const avL = { av1:'Av1', av2:'Av2', av3:'Av3' };
         const anos = Object.keys(notas||{}).sort((a,b)=>b-a);
 
@@ -12552,6 +12573,7 @@ const boletim = {
             blocos = `<p style="color:#64748b;text-align:center;font-size:0.8rem;padding:20px 0;">Nenhuma nota cadastrada ainda.</p>`;
         } else {
             anos.forEach(ano => {
+                const avs = this._getSistema(ano) === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
                 [1,2].forEach(sem => {
                     const semData = notas[ano]?.['sem'+sem];
                     if (!semData) return;

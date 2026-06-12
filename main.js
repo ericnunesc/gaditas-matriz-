@@ -12623,111 +12623,220 @@ const boletim = {
     },
 
     // ── PAINEL ADMIN ───────────────────────────────────────────
-    async renderPainelAdmin() {
+    _painelAnoSel: new Date().getFullYear(),
+
+    async renderPainelAdmin(anoFiltro) {
         const cont = document.getElementById('painel-boletim-admin');
         if (!cont) return;
-        cont.innerHTML = `<div style="color:#a78bfa;font-size:0.75rem;padding:10px 0;">Carregando boletins...</div>`;
+        if (anoFiltro !== undefined) this._painelAnoSel = anoFiltro;
+        const anoSel = this._painelAnoSel;
         const anoAtual = new Date().getFullYear();
+        const semAtual = new Date().getMonth() < 6 ? 1 : 2;
+
+        cont.innerHTML = `<div style="color:#a78bfa;font-size:0.75rem;padding:10px 0;">Carregando boletins...</div>`;
         const snap = await db.collection('alunos').get();
         const kids = [];
         snap.forEach(doc => {
             const a = doc.data();
-            if (!a.nascimento || !a.boletim?.notas) return;
-            const idade = anoAtual - new Date(a.nascimento).getFullYear();
-            if (idade > 15) return;
-            kids.push({ id: doc.id, nome: a.nome, idade, boletim: a.boletim });
+            const isKids = /kids/i.test(a.nome||'') || (a.nascimento && (anoAtual - new Date(a.nascimento).getFullYear()) <= 15) || (a.turmas||[]).some(t=>/kids/i.test(t));
+            if (!isKids || !a.boletim) return;
+            const idade = a.nascimento ? anoAtual - new Date(a.nascimento).getFullYear() : null;
+            // Frequência do aluno no ano selecionado (aulas no historico)
+            const aulasAno = (a.historico||[]).filter(h => {
+                if (!h.data) return false;
+                const p = h.data.split(',')[0].split('/');
+                return p.length >= 3 && p[2].trim() === String(anoSel);
+            }).length;
+            kids.push({ id: doc.id, nome: a.nome, idade, boletim: a.boletim, aulasAno });
         });
+
+        // Anos disponíveis para filtro
+        const todosAnos = new Set([anoAtual]);
+        kids.forEach(k => Object.keys(k.boletim.notas||{}).forEach(a => todosAnos.add(parseInt(a))));
+        const anosDisp = Array.from(todosAnos).sort((a,b)=>b-a);
 
         if (!kids.length) {
             cont.innerHTML = `
             <div style="background:#1e293b;border:1px solid #7c3aed33;border-radius:12px;padding:14px;margin-bottom:12px;">
                 <small style="color:#a78bfa;font-size:0.68rem;font-weight:800;letter-spacing:0.5px;">📚 BOLETIM ESCOLAR — KIDS</small>
-                <p style="color:#64748b;font-size:0.78rem;margin-top:8px;text-align:center;">Nenhum aluno kids com notas cadastradas.</p>
+                <p style="color:#64748b;font-size:0.78rem;margin-top:8px;text-align:center;">Nenhum aluno kids com boletim cadastrado.</p>
             </div>`;
             return;
         }
 
+        // ── Coleta alertas e médias globais ──────────────────────
         const alertas = [];
-        const semAtual = new Date().getMonth() < 6 ? 1 : 2;
+        const mediasPorMateria = {}; // { materia: [notas] }
+        let totalNotas = 0, somaNotas = 0;
+
         kids.forEach(k => {
-            const { sistema, materias, notas } = k.boletim;
-            const avs = sistema === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
-            Object.keys(notas).forEach(ano => {
-                [1,2].forEach(sem => {
-                    const semData = notas[ano]?.['sem'+sem];
-                    if (!semData) return;
-                    avs.forEach(av => {
-                        const avData = semData[av];
-                        if (!avData) return;
-                        (materias||[]).forEach(m => {
-                            if (avData[m]!==null && avData[m]!==undefined && avData[m]<5)
-                                alertas.push({ nome: k.nome, materia: m, nota: avData[m], periodo: `${ano} Sem${sem} ${av.toUpperCase()}` });
-                        });
+            const { materias, notas } = k.boletim;
+            const avs = this._getSistemaAdmin(k.boletim, anoSel);
+            const notasAno = notas?.[anoSel];
+            if (!notasAno) return;
+            [1,2].forEach(sem => {
+                const semData = notasAno['sem'+sem];
+                if (!semData) return;
+                avs.forEach(av => {
+                    const avData = semData[av];
+                    if (!avData) return;
+                    (materias||[]).forEach(m => {
+                        const v = avData[m];
+                        if (v === null || v === undefined) return;
+                        totalNotas++; somaNotas += v;
+                        if (!mediasPorMateria[m]) mediasPorMateria[m] = [];
+                        mediasPorMateria[m].push(v);
+                        if (v < 5) alertas.push({ nome: k.nome, materia: m, nota: v, periodo: `${anoSel} Sem${sem} ${av.toUpperCase()}` });
                     });
                 });
             });
         });
 
+        const mediaGeral = totalNotas ? (somaNotas / totalNotas).toFixed(1) : '—';
+        const kidsComNota = kids.filter(k => k.boletim.notas?.[anoSel]).length;
+        const corMedia = parseFloat(mediaGeral) >= 7 ? '#10b981' : parseFloat(mediaGeral) >= 5 ? '#f59e0b' : '#ef4444';
+
+        // ── HTML ──────────────────────────────────────────────────
         let html = `
         <div style="background:#1e293b;border:1px solid #7c3aed33;border-radius:12px;padding:14px;margin-bottom:12px;">
+            <!-- Cabeçalho -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                 <small style="color:#a78bfa;font-size:0.68rem;font-weight:800;letter-spacing:0.5px;">📚 BOLETIM ESCOLAR — KIDS</small>
-                <span style="background:#7c3aed22;color:#a78bfa;font-size:0.62rem;font-weight:700;padding:3px 8px;border-radius:10px;">${kids.length} aluno${kids.length!==1?'s':''}</span>
+                <select onchange="boletim.renderPainelAdmin(parseInt(this.value))"
+                    style="padding:4px 8px;background:#0f172a;border:1px solid #334155;color:#a78bfa;border-radius:6px;font-size:0.68rem;outline:none;">
+                    ${anosDisp.map(a=>`<option value="${a}"${a===anoSel?' selected':''}>${a}</option>`).join('')}
+                </select>
+            </div>
+            <!-- Cards resumo -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px;text-align:center;">
+                    <div style="color:#a78bfa;font-size:1.1rem;font-weight:800;">${kids.length}</div>
+                    <div style="color:#64748b;font-size:0.58rem;font-weight:700;margin-top:2px;">KIDS</div>
+                </div>
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px;text-align:center;">
+                    <div style="color:${corMedia};font-size:1.1rem;font-weight:800;">${mediaGeral}</div>
+                    <div style="color:#64748b;font-size:0.58rem;font-weight:700;margin-top:2px;">MÉDIA GERAL</div>
+                </div>
+                <div style="background:#0f172a;border:1px solid ${alertas.length?'#ef444455':'#334155'};border-radius:10px;padding:10px;text-align:center;">
+                    <div style="color:${alertas.length?'#ef4444':'#10b981'};font-size:1.1rem;font-weight:800;">${alertas.length}</div>
+                    <div style="color:#64748b;font-size:0.58rem;font-weight:700;margin-top:2px;">ABAIXO DE 5</div>
+                </div>
             </div>`;
 
+        // Alertas
         if (alertas.length) {
             html += `
             <div style="background:#450a0a;border:1px solid #ef444455;border-radius:10px;padding:10px;margin-bottom:12px;">
-                <small style="color:#ef4444;font-weight:700;font-size:0.68rem;display:block;margin-bottom:6px;">⚠️ NOTAS ABAIXO DE 5</small>
+                <small style="color:#ef4444;font-weight:700;font-size:0.68rem;display:block;margin-bottom:6px;">⚠️ NOTAS ABAIXO DE 5 — ${anoSel}</small>
                 ${alertas.map(a=>`
-                <div style="color:#fca5a5;font-size:0.7rem;padding:3px 0;border-bottom:1px solid #ef444422;">
-                    <b>${a.nome}</b> — ${a.materia}: <b style="color:#ef4444;">${a.nota}</b>
-                    <span style="color:#64748b;font-size:0.62rem;"> (${a.periodo})</span>
+                <div style="display:flex;justify-content:space-between;align-items:center;color:#fca5a5;font-size:0.7rem;padding:4px 0;border-bottom:1px solid #ef444422;">
+                    <span><b>${a.nome}</b> — ${a.materia}</span>
+                    <span><b style="color:#ef4444;font-size:0.85rem;">${a.nota}</b> <span style="color:#64748b;font-size:0.6rem;">${a.periodo}</span></span>
                 </div>`).join('')}
             </div>`;
         }
 
+        // Médias por matéria (se tiver dados)
+        const matComDados = Object.entries(mediasPorMateria);
+        if (matComDados.length) {
+            html += `
+            <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:12px;">
+                <small style="color:#64748b;font-size:0.65rem;font-weight:700;display:block;margin-bottom:8px;">📊 MÉDIA POR MATÉRIA — ${anoSel}</small>
+                ${matComDados.sort((a,b)=>{
+                    const ma = a[1].reduce((s,v)=>s+v,0)/a[1].length;
+                    const mb = b[1].reduce((s,v)=>s+v,0)/b[1].length;
+                    return ma-mb; // pior primeiro
+                }).map(([mat, vals])=>{
+                    const med = (vals.reduce((s,v)=>s+v,0)/vals.length);
+                    const cor = med >= 7 ? '#10b981' : med >= 5 ? '#f59e0b' : '#ef4444';
+                    const pct = Math.min(med*10, 100);
+                    return `<div style="margin-bottom:6px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                            <span style="color:#94a3b8;font-size:0.68rem;">${mat}</span>
+                            <span style="color:${cor};font-size:0.68rem;font-weight:800;">${med.toFixed(1)}</span>
+                        </div>
+                        <div style="background:#1e293b;border-radius:4px;height:5px;">
+                            <div style="background:${cor};width:${pct}%;height:5px;border-radius:4px;transition:width 0.3s;"></div>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>`;
+        }
+
+        // ── Por aluno ─────────────────────────────────────────────
         kids.forEach(k => {
-            const { sistema, materias, notas } = k.boletim;
-            const avs = sistema === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
-            const semData = notas[anoAtual]?.['sem'+semAtual];
+            const { materias, notas } = k.boletim;
+            const avs = this._getSistemaAdmin(k.boletim, anoSel);
+            const avLabels = { av1:'Av1', av2:'Av2', av3:'Av3' };
+            const notasAno = notas?.[anoSel];
+
+            // Calcula média do aluno no ano
+            let somaA = 0, totalA = 0;
+            if (notasAno) {
+                [1,2].forEach(sem => {
+                    avs.forEach(av => {
+                        (materias||[]).forEach(m => {
+                            const v = notasAno['sem'+sem]?.[av]?.[m];
+                            if (v !== null && v !== undefined) { somaA += v; totalA++; }
+                        });
+                    });
+                });
+            }
+            const mediaAluno = totalA ? (somaA/totalA).toFixed(1) : null;
+            const corAluno = mediaAluno ? (parseFloat(mediaAluno) >= 7 ? '#10b981' : parseFloat(mediaAluno) >= 5 ? '#f59e0b' : '#ef4444') : '#475569';
+
+            // Frequência × escola: correlação
+            const freqMsg = k.aulasAno >= 30 ? '🟢 Alta frequência' : k.aulasAno >= 15 ? '🟡 Frequência média' : k.aulasAno > 0 ? '🔴 Baixa frequência' : '';
+
             html += `
             <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:8px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                    <span style="color:#e2e8f0;font-size:0.8rem;font-weight:700;">${k.nome}</span>
-                    <span style="color:#64748b;font-size:0.65rem;">${k.idade} anos</span>
-                </div>`;
-            if (semData) {
-                html += `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.65rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="color:#e2e8f0;font-size:0.8rem;font-weight:700;">${k.nome}${k.idade ? ` <span style="color:#475569;font-size:0.6rem;">${k.idade}a</span>` : ''}</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        ${freqMsg ? `<span style="font-size:0.58rem;color:#64748b;">${freqMsg} (${k.aulasAno} aulas)</span>` : ''}
+                        ${mediaAluno ? `<span style="color:${corAluno};font-size:0.85rem;font-weight:800;">${mediaAluno}</span>` : ''}
+                    </div>
+                </div>
+                ${notasAno ? `
+                <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.62rem;">
                     <thead><tr>
-                        <th style="text-align:left;color:#64748b;padding:3px 4px;">Matéria</th>
-                        ${avs.map(av=>`<th style="text-align:center;color:#64748b;padding:3px 4px;">${av.toUpperCase()}</th>`).join('')}
-                        <th style="text-align:center;color:#64748b;padding:3px 4px;">Média</th>
+                        <th style="text-align:left;color:#475569;padding:3px 4px;">Matéria</th>
+                        ${[1,2].map(sem => avs.map(av =>
+                            `<th style="text-align:center;color:#475569;padding:3px 2px;">S${sem}<br>${avLabels[av]}</th>`
+                        ).join('')).join('')}
+                        <th style="text-align:center;color:#475569;padding:3px 4px;">Média</th>
                     </tr></thead>
                     <tbody>
-                    ${(materias||[]).map(m=>{
-                        const vals = avs.map(av=>semData[av]?.[m]).filter(v=>v!==null&&v!==undefined);
-                        const media = vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):'—';
+                    ${(materias||[]).map(m => {
+                        const allVals = [];
+                        const cells = [1,2].map(sem => avs.map(av => {
+                            const v = notasAno['sem'+sem]?.[av]?.[m];
+                            if (v !== null && v !== undefined) allVals.push(v);
+                            const c = (v !== null && v !== undefined && v < 5) ? '#ef4444' : '#94a3b8';
+                            return `<td style="text-align:center;color:${c};padding:3px 2px;font-weight:700;">${v !== null && v !== undefined ? v : '<span style="color:#334155;">—</span>'}</td>`;
+                        }).join('')).join('');
+                        const med = allVals.length ? (allVals.reduce((a,b)=>a+b,0)/allVals.length).toFixed(1) : '—';
+                        const corM = parseFloat(med) < 5 ? '#ef4444' : parseFloat(med) >= 7 ? '#10b981' : '#f59e0b';
                         return `<tr>
                             <td style="color:#94a3b8;padding:3px 4px;">${m}</td>
-                            ${avs.map(av=>{
-                                const v=semData[av]?.[m];
-                                const c=(v!==null&&v!==undefined&&v<5)?'#ef4444':'#e2e8f0';
-                                return `<td style="text-align:center;color:${c};padding:3px 4px;font-weight:700;">${v!==null&&v!==undefined?v:'—'}</td>`;
-                            }).join('')}
-                            <td style="text-align:center;color:${parseFloat(media)<5?'#ef4444':'#a78bfa'};padding:3px 4px;font-weight:800;">${media}</td>
+                            ${cells}
+                            <td style="text-align:center;color:${med==='—'?'#334155':corM};padding:3px 4px;font-weight:800;">${med}</td>
                         </tr>`;
                     }).join('')}
                     </tbody>
-                </table></div>`;
-            } else {
-                html += `<p style="color:#475569;font-size:0.7rem;margin:0;text-align:center;">Sem notas no ${semAtual}º semestre de ${anoAtual}</p>`;
-            }
-            html += `</div>`;
+                </table></div>` : `<p style="color:#334155;font-size:0.68rem;margin:4px 0 0;text-align:center;">Sem notas em ${anoSel}</p>`}
+            </div>`;
         });
 
         html += `</div>`;
         cont.innerHTML = html;
+    },
+
+    // Helper para pegar avs no painel admin (não usa this._anoSel)
+    _getSistemaAdmin(boletimData, ano) {
+        const s = boletimData?.sistemaPorAno?.[ano] || boletimData?.sistema || '2x';
+        return s === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
     }
 };
 

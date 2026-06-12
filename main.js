@@ -12608,20 +12608,50 @@ const boletim = {
         const file = input.files[0];
         if (!file) return;
         const btn = document.getElementById('btn-upload-comprovante');
-        if (btn) btn.innerHTML = '⏳ Enviando...';
+        if (btn) btn.innerHTML = '⏳ Comprimindo imagem...';
         try {
-            // Garante auth anônimo para o Storage aceitar o upload
-            if (!firebase.auth().currentUser) {
-                await firebase.auth().signInAnonymously();
+            // Comprime imagem para reduzir tamanho
+            const base64 = await new Promise((res, rej) => {
+                const img = new Image();
+                const reader = new FileReader();
+                reader.onload = e => { img.src = e.target.result; };
+                img.onload = () => {
+                    const maxLado = 900;
+                    let w = img.width, h = img.height;
+                    if (w > maxLado || h > maxLado) {
+                        if (w > h) { h = Math.round(h * maxLado / w); w = maxLado; }
+                        else       { w = Math.round(w * maxLado / h); h = maxLado; }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    res(canvas.toDataURL('image/jpeg', 0.75));
+                };
+                img.onerror = rej;
+                reader.onerror = rej;
+                reader.readAsDataURL(file);
+            });
+
+            let url = null, path = null;
+
+            // 1. Tenta Firebase Storage
+            try {
+                if (btn) btn.innerHTML = '⏳ Enviando...';
+                if (!firebase.auth().currentUser) await firebase.auth().signInAnonymously();
+                path = `boletim_comprovantes/${alunoId}_${this._anoSel}`;
+                const snap = await getStorage().ref(path).put(file);
+                url = await snap.ref.getDownloadURL();
+            } catch(storageErr) {
+                console.warn('Storage falhou, usando base64:', storageErr.message);
+                url = base64; path = null; // fallback base64
             }
-            const path = `boletim_comprovantes/${alunoId}_${this._anoSel}`;
-            const snap = await getStorage().ref(path).put(file);
-            const url  = await snap.ref.getDownloadURL();
-            const upd  = {};
-            upd[`boletim.comprovantes.${this._anoSel}`] = { url, path, data: new Date().toLocaleDateString('pt-BR') };
+
+            const comp = { url, path, data: new Date().toLocaleDateString('pt-BR') };
+            const upd = {};
+            upd[`boletim.comprovantes.${this._anoSel}`] = comp;
             await db.collection('alunos').doc(alunoId).update(upd);
             if (!this._dados.comprovantes) this._dados.comprovantes = {};
-            this._dados.comprovantes[this._anoSel] = { url, path };
+            this._dados.comprovantes[this._anoSel] = comp;
             this._renderFormNotas();
         } catch(e) {
             if (btn) btn.innerHTML = '❌ Erro ao enviar. Tente novamente.';

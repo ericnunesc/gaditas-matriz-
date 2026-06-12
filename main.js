@@ -5741,9 +5741,14 @@ Ele voltará a ser aluno normal.`)) return;
                 <!-- câmera inline -->
                 <div id="mfa-camera-area" style="display:none;padding:0 16px 16px;flex-direction:column;align-items:center;gap:10px;">
                     <video id="mfa-video" autoplay playsinline style="width:100%;border-radius:10px;background:#000;"></video>
-                    <button onclick="academia._capturarFoto('${alunoId}')" style="background:#10b981;border:none;color:white;padding:12px 24px;border-radius:10px;cursor:pointer;font-size:0.8rem;font-weight:800;">
-                        <i class="fas fa-camera"></i> TIRAR FOTO
-                    </button>
+                    <div style="display:flex;gap:8px;width:100%;">
+                        <button onclick="academia._capturarFoto('${alunoId}')" style="flex:1;background:#10b981;border:none;color:white;padding:12px;border-radius:10px;cursor:pointer;font-size:0.8rem;font-weight:800;">
+                            <i class="fas fa-camera"></i> TIRAR FOTO
+                        </button>
+                        <button onclick="academia._girarCamera('${alunoId}')" title="Girar câmera" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:12px 14px;border-radius:10px;cursor:pointer;font-size:0.9rem;">
+                            🔄
+                        </button>
+                    </div>
                     <button onclick="academia._fecharCamera()" style="background:none;border:none;color:#64748b;font-size:0.65rem;cursor:pointer;">Cancelar câmera</button>
                 </div>
             </div>`;
@@ -5779,19 +5784,32 @@ Ele voltará a ser aluno normal.`)) return;
         if (btn) btn.style.display = 'block';
     },
 
+    _cameraFacing: 'user',
+
     async _abrirCameraFoto(alunoId) {
         const area = document.getElementById('mfa-camera-area');
         if (!area) return;
         area.style.display = 'flex';
+        this._cameraFacing = 'user';
+        await this._iniciarStream();
+    },
+
+    async _iniciarStream() {
+        if (this._cameraStream) { this._cameraStream.getTracks().forEach(t => t.stop()); this._cameraStream = null; }
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: this._cameraFacing } });
             const video = document.getElementById('mfa-video');
-            video.srcObject = stream;
+            if (video) { video.srcObject = stream; }
             this._cameraStream = stream;
         } catch(e) {
-            area.style.display = 'none';
+            document.getElementById('mfa-camera-area').style.display = 'none';
             alert('Câmera não disponível: ' + e.message);
         }
+    },
+
+    async _girarCamera(alunoId) {
+        this._cameraFacing = this._cameraFacing === 'user' ? 'environment' : 'user';
+        await this._iniciarStream();
     },
 
     _fecharCamera() {

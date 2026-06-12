@@ -7811,15 +7811,20 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                     if (_selo) {
                         const _seloEl = document.getElementById('selo-escola-header');
                         if (_seloEl) {
+                            // Gera polígono serrilhado (12 dentes, raio externo 19, interno 14)
+                            const _pts = Array.from({length:24}, (_,i) => {
+                                const ang = (i * Math.PI / 12) - Math.PI / 2;
+                                const r = i % 2 === 0 ? 19 : 14;
+                                return `${(20 + r * Math.cos(ang)).toFixed(2)},${(20 + r * Math.sin(ang)).toFixed(2)}`;
+                            }).join(' ');
                             _seloEl.style.display = 'flex';
                             _seloEl.innerHTML = `
                                 <div title="Selo Escolar ${_selo.label} — Média ${_media.toFixed(1)}" style="position:relative;width:40px;height:40px;cursor:pointer;" onclick="boletim.abrir('${auth.currentUser.id}')">
-                                    <div style="width:40px;height:40px;background:${_selo.ring};border-radius:50%;display:flex;align-items:center;justify-content:center;">
-                                        <div style="width:32px;height:32px;background:${_selo.bg};border-radius:50%;display:flex;align-items:center;justify-content:center;">
-                                            <i class="fas fa-graduation-cap" style="font-size:14px;color:${_selo.text};"></i>
-                                        </div>
-                                    </div>
-                                    <div style="position:absolute;bottom:-2px;right:-2px;background:${_selo.bg};border:1.5px solid ${_selo.ring};border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;">
+                                    <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                                        <polygon points="${_pts}" fill="${_selo.bg}" stroke="${_selo.ring}" stroke-width="1.5"/>
+                                        <text x="20" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="${_selo.text}" font-family="sans-serif">&#xf19d;</text>
+                                    </svg>
+                                    <div style="position:absolute;bottom:-3px;right:-3px;background:${_selo.bg};border:1.5px solid ${_selo.ring};border-radius:50%;width:15px;height:15px;display:flex;align-items:center;justify-content:center;">
                                         <i class="fas fa-star" style="font-size:7px;color:${_selo.star};"></i>
                                     </div>
                                 </div>

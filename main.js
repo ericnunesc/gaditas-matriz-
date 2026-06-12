@@ -7785,6 +7785,49 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             const _isKidsBoletim = idadeAtleta <= 15 || /kids/i.test(d.nome || '') || (d.turmas || []).some(t => /kids/i.test(t));
             const _wb = document.getElementById('wrapper-boletim-escolar');
             if (_wb && _isKidsBoletim) _wb.classList.remove('hidden');
+            // ── Selo escolar no header ────────────────────────────
+            if (_isKidsBoletim && d.boletim?.notas) {
+                const _notas = d.boletim.notas;
+                const _avs = boletim._getSistema(anoAtual) === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
+                let _soma = 0, _total = 0;
+                Object.keys(_notas).forEach(ano => {
+                    [1,2].forEach(sem => {
+                        _avs.forEach(av => {
+                            const avData = _notas[ano]?.['sem'+sem]?.[av];
+                            if (!avData) return;
+                            (d.boletim.materias||[]).forEach(m => {
+                                const v = avData[m];
+                                if (v !== null && v !== undefined) { _soma += v; _total++; }
+                            });
+                        });
+                    });
+                });
+                if (_total > 0) {
+                    const _media = _soma / _total;
+                    const _selo = _media >= 8.0 ? { label:'Ouro', bg:'#EF9F27', ring:'#BA7517', text:'#412402', star:'#412402' }
+                                : _media >= 6.0 ? { label:'Prata', bg:'#B4B2A9', ring:'#5F5E5A', text:'#2C2C2A', star:'#2C2C2A' }
+                                : _media >= 4.0 ? { label:'Bronze', bg:'#D85A30', ring:'#993C1D', text:'#4A1B0C', star:'#4A1B0C' }
+                                : null;
+                    if (_selo) {
+                        const _seloEl = document.getElementById('selo-escola-header');
+                        if (_seloEl) {
+                            _seloEl.style.display = 'flex';
+                            _seloEl.innerHTML = `
+                                <div title="Selo Escolar ${_selo.label} — Média ${_media.toFixed(1)}" style="position:relative;width:40px;height:40px;cursor:pointer;" onclick="boletim.abrir('${auth.currentUser.id}')">
+                                    <div style="width:40px;height:40px;background:${_selo.ring};border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                                        <div style="width:32px;height:32px;background:${_selo.bg};border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                                            <i class="fas fa-graduation-cap" style="font-size:14px;color:${_selo.text};"></i>
+                                        </div>
+                                    </div>
+                                    <div style="position:absolute;bottom:-2px;right:-2px;background:${_selo.bg};border:1.5px solid ${_selo.ring};border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;">
+                                        <i class="fas fa-star" style="font-size:7px;color:${_selo.star};"></i>
+                                    </div>
+                                </div>
+                                <span style="font-size:9px;font-weight:700;color:${_selo.bg};letter-spacing:0.3px;">${_media.toFixed(1)}</span>`;
+                        }
+                    }
+                }
+            }
             const cardLeoes = document.getElementById('card-leoes-kids');
             if (idadeAtleta <= 15) {
                 cardLeoes.classList.remove('hidden');

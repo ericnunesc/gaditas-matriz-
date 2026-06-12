@@ -12659,6 +12659,17 @@ const boletim = {
         }
     },
 
+    _ampliarComprovante(src) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+        overlay.onclick = () => overlay.remove();
+        const img = document.createElement('img');
+        img.src = src;
+        img.style.cssText = 'max-width:100%;max-height:90vh;border-radius:10px;object-fit:contain;box-shadow:0 0 40px #0008;';
+        overlay.appendChild(img);
+        document.body.appendChild(overlay);
+    },
+
     async _deletarComprovante(alunoId, ano, storagePath) {
         if (!confirm('Deletar comprovante? A imagem será removida do servidor.')) return;
         try {
@@ -12962,13 +12973,13 @@ const boletim = {
                     const comp = k.boletim?.comprovantes?.[anoSel];
                     if (!comp) return `<div style="margin-top:8px;padding:7px 10px;background:#1e293b;border:1px dashed #334155;border-radius:8px;text-align:center;"><span style="color:#475569;font-size:0.65rem;">📎 Sem comprovante enviado</span></div>`;
                     return `<div style="margin-top:8px;">
-                        <small style="color:#64748b;font-size:0.62rem;font-weight:700;display:block;margin-bottom:4px;">📎 COMPROVANTE — clique para verificar e deletar</small>
-                        <div style="position:relative;cursor:pointer;" onclick="boletim._deletarComprovante('${k.id}','${anoSel}','${comp.path}')">
-                            <img src="${comp.url}" style="width:100%;border-radius:8px;max-height:200px;object-fit:cover;" />
-                            <div style="position:absolute;top:6px;right:6px;background:#ef444488;border:1px solid #ef4444;border-radius:6px;padding:3px 8px;display:flex;align-items:center;gap:4px;">
+                        <small style="color:#64748b;font-size:0.62rem;font-weight:700;display:block;margin-bottom:4px;">📎 COMPROVANTE — toque na imagem para ampliar</small>
+                        <div style="position:relative;">
+                            <img src="${comp.url}" style="width:100%;border-radius:8px;max-height:240px;object-fit:contain;background:#0f172a;cursor:zoom-in;" onclick="boletim._ampliarComprovante(this.src)" />
+                            <button onclick="boletim._deletarComprovante('${k.id}','${anoSel}','${comp.path}')" style="position:absolute;top:6px;right:6px;background:#ef444499;border:1px solid #ef4444;border-radius:6px;padding:4px 10px;display:flex;align-items:center;gap:4px;cursor:pointer;">
                                 <i class="fas fa-trash-alt" style="font-size:0.65rem;color:white;"></i>
                                 <span style="color:white;font-size:0.65rem;font-weight:700;">Deletar</span>
-                            </div>
+                            </button>
                             ${comp.data ? `<div style="position:absolute;bottom:6px;left:6px;background:#00000088;border-radius:4px;padding:2px 6px;"><span style="color:#94a3b8;font-size:0.6rem;">Enviado em ${comp.data}</span></div>` : ''}
                         </div>
                     </div>`;

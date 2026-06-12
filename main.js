@@ -13014,7 +13014,7 @@ const boletim = {
         ctx.fillStyle = '#a78bfa';
         ctx.beginPath(); ctx.moveTo(sx-8, sy+14); ctx.lineTo(sx-18, sy+20); ctx.lineTo(sx-14, sy+26); ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#c4b5fd'; ctx.font = 'italic 13px Arial'; ctx.textAlign = 'left';
-        ctx.fillText('← Selo aparece aqui', mx+66, my+155);
+        ctx.fillText('← Selo aparece aqui após cadastrar as notas', mx+66, my+155);
 
         // rodapé
         const rod = ctx.createLinearGradient(0, H-70, W, H-70);

@@ -1380,17 +1380,21 @@ const academia = {
         if (snap.empty) return alert('Nenhum atleta convocado no momento.');
 
         const grupos = {};
+        const ano = new Date().getFullYear();
         snap.forEach(doc => {
             const a = doc.data();
             const faixa = a.faixa || 'Sem faixa';
-            if (!grupos[faixa]) grupos[faixa] = [];
-            grupos[faixa].push({ id: doc.id, nome: a.nome });
+            const idade = a.nascimento ? (ano - new Date(a.nascimento).getFullYear()) : 99;
+            const cat = idade < 16 ? 'Kids' : 'Adulto';
+            const chave = `${faixa} (${cat})`;
+            if (!grupos[chave]) grupos[chave] = [];
+            grupos[chave].push({ id: doc.id, nome: a.nome });
         });
 
         const opcoesGrupo = [
             `<option value="todos">👥 Todos os convocados (${snap.size})</option>`,
-            ...Object.entries(grupos).map(([f, lista]) =>
-                `<option value="${f}">🥋 Faixa ${f} (${lista.length})</option>`)
+            ...Object.entries(grupos).sort().map(([f, lista]) =>
+                `<option value="${f}">🥋 ${f} — ${lista.length} atleta${lista.length > 1 ? 's' : ''}</option>`)
         ].join('');
 
         let modal = document.getElementById('modal-msg-indicados');

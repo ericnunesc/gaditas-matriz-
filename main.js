@@ -9666,6 +9666,14 @@ const exame = {
         }
     },
 
+    // ── Salvar tamanho pelo admin diretamente no card ──
+    async salvarTamanhoAdmin(alunoId, tamanho) {
+        if (!tamanho) return;
+        try {
+            await db.collection('alunos').doc(alunoId).update({ tamanhoFaixa: tamanho });
+        } catch(e) { alert('Erro ao salvar: ' + e.message); }
+    },
+
     // ── Salvar tamanho da faixa ──
     async salvarTamanhoFaixa(alunoId) {
         const sel = document.getElementById('select-tamanho-faixa');
@@ -10030,6 +10038,19 @@ const exame = {
                                 </select>
                             </div>` : '';
                         const taxaPaga = a.taxaExamePaga === true;
+                        const tamanhoOpts = cat === 'kids'
+                            ? ['M00','M0','M1','M2','M3','M4','A0','A1','A2']
+                            : ['A0','A1','A2','A3','A4','A5'];
+                        const tamanhoSel = a.tamanhoFaixa || '';
+                        const seletorTamanho = `
+                            <div style="margin-top:5px;display:flex;gap:6px;align-items:center;">
+                                <small style="color:#94a3b8;font-size:0.55rem;font-weight:800;white-space:nowrap;">📏 Tamanho:</small>
+                                <select onchange="exame.salvarTamanhoAdmin('${id}',this.value)"
+                                    style="flex:1;padding:3px 6px;background:${tamanhoSel?'#1e293b':'#2d1a00'};border:1px solid ${tamanhoSel?'#334155':'#f59e0b'};color:${tamanhoSel?'white':'#f59e0b'};border-radius:6px;font-size:0.68rem;outline:none;">
+                                    <option value="">— tamanho —</option>
+                                    ${tamanhoOpts.map(t=>`<option value="${t}" ${tamanhoSel===t?'selected':''}>${t}</option>`).join('')}
+                                </select>
+                            </div>`;
                         return `<div id="card-conv-${id}" style="background:#0f172a;border:1px solid ${confirmou?'#10b98130':'#1e293b'};border-left:3px solid ${corNome};border-radius:8px;padding:10px 12px;margin-bottom:6px;">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <div style="flex:1;min-width:0;">
@@ -10039,6 +10060,7 @@ const exame = {
                                 <span style="font-size:0.58rem;font-weight:800;color:${confirmou?'#10b981':'#f59e0b'};white-space:nowrap;margin-left:8px;">${confirmou?'✅ CONF.':'⏳ PEND.'}</span>
                             </div>
                             ${seletorKids}
+                            ${seletorTamanho}
                             <div onclick="exame.toggleTaxaPaga('${id}', this)"
                                 style="margin-top:8px;display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 10px;background:${taxaPaga?'#05200f':'#1e293b'};border:1px solid ${taxaPaga?'#10b98155':'#334155'};border-radius:8px;transition:all 0.2s;">
                                 <div id="taxa-toggle-${id}" style="width:32px;height:18px;border-radius:9px;background:${taxaPaga?'#10b981':'#334155'};position:relative;transition:all 0.2s;flex-shrink:0;">

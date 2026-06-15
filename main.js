@@ -260,7 +260,7 @@ const auth = {
         }
 
         // ── LISTENERS RELATOS DE SAÚDE ────────────────────
-        if (this.role === 'aluno') academia.iniciarListenerRelatoAluno();
+        if (this.role === 'aluno') { academia.iniciarListenerRelatoAluno(); setTimeout(() => academia.iniciarListenerRecadosAluno(), 1500); }
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerRelatosProf();
         if (this.role === 'professor') { profComms.iniciarListenerRecadosProf(); setTimeout(() => profComms.renderPainelDispensas(), 1000); }
         if (this.role === 'admin') {
@@ -1499,8 +1499,15 @@ const academia = {
         if (btn) { btn.innerText = `⏳ Enviando para ${lista.length} atleta${lista.length>1?'s':''}...`; btn.disabled = true; }
 
         let enviados = 0;
+        const agora = Date.now();
         for (const a of lista) {
             await push.paraAluno(a.id, '🏆 Aviso — Exame de Faixa', texto);
+            await db.collection('recados_alunos').add({
+                alunoId: a.id,
+                texto,
+                lido: false,
+                criadoEm: agora
+            });
             enviados++;
         }
 
@@ -4160,6 +4167,52 @@ Ele voltará a ser aluno normal.`)) return;
             if (toast) toast.classList.add('hidden');
             this._marcarRespostaVista();
         }
+    },
+
+    iniciarListenerRecadosAluno() {
+        if (!auth.currentUser || auth.role !== 'aluno') return;
+        const alunoId = auth.currentUser.id;
+        db.collection('recados_alunos')
+            .where('alunoId', '==', alunoId)
+            .where('lido', '==', false)
+            .onSnapshot(snap => {
+                snap.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        setTimeout(() => this._mostrarPopupRecadoAluno(change.doc), 1000);
+                    }
+                });
+            });
+    },
+
+    _mostrarPopupRecadoAluno(doc) {
+        const r = doc.data();
+        const popupId = `popup-recado-aluno-${doc.id}`;
+        if (document.getElementById(popupId)) return;
+        const modal = document.createElement('div');
+        modal.id = popupId;
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        const hora = r.criadoEm ? new Date(r.criadoEm).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+        modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#0f172a,#1e293b);border:2px solid #f59e0b;border-radius:24px;padding:32px 24px;max-width:380px;width:100%;text-align:center;box-shadow:0 0 80px #f59e0b33;position:relative;">
+                <div style="font-size:3rem;margin-bottom:8px;">🏆</div>
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:2px;margin-bottom:8px;">GADITAS ACADEMY</div>
+                <div style="font-size:1.2rem;font-weight:800;color:white;margin-bottom:4px;">Aviso — Exame de Faixa</div>
+                ${hora ? `<div style="font-size:0.62rem;color:#64748b;margin-bottom:14px;">${hora}</div>` : ''}
+                <div style="background:#451a03;border:1px solid #f59e0b;border-radius:12px;padding:16px;margin:14px 0;text-align:left;">
+                    <div style="font-size:0.85rem;color:#e2e8f0;line-height:1.6;">${r.texto}</div>
+                </div>
+                <button onclick="academia._marcarRecadoAlunoLido('${doc.id}','${popupId}')" style="width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:12px;font-weight:800;cursor:pointer;font-size:0.9rem;">
+                    ✅ LI O RECADO
+                </button>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async _marcarRecadoAlunoLido(recadoId, popupId) {
+        try {
+            await db.collection('recados_alunos').doc(recadoId).update({ lido: true, lidoEm: Date.now() });
+        } catch(e) {}
+        document.getElementById(popupId)?.remove();
     },
 
     iniciarListenerRelatoAluno() {

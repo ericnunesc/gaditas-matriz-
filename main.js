@@ -9622,6 +9622,23 @@ const exame = {
                     ).join('')}
                 </div>
 
+                <!-- TAMANHO DA FAIXA -->
+                <div style="background:#0f172a; border:1px solid #f59e0b44; border-radius:12px; padding:14px; margin-bottom:14px;">
+                    <div style="font-size:0.6rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px; margin-bottom:8px;">📏 TAMANHO DA SUA FAIXA</div>
+                    <div style="font-size:0.7rem; color:#94a3b8; margin-bottom:8px;">Informe o tamanho para confecção da nova faixa.</div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <select id="select-tamanho-faixa" style="flex:1;padding:10px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.82rem;">
+                            <option value="">— Selecione —</option>
+                            ${isKids
+                                ? ['M00','M0','M1','M2','M3','M4','A0','A1','A2'].map(t => `<option value="${t}" ${aluno.tamanhoFaixa===t?'selected':''}>${t}</option>`).join('')
+                                : ['A0','A1','A2','A3','A4','A5'].map(t => `<option value="${t}" ${aluno.tamanhoFaixa===t?'selected':''}>${t}</option>`).join('')
+                            }
+                        </select>
+                        <button onclick="exame.salvarTamanhoFaixa('${alunoId}')" style="padding:10px 16px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.78rem;white-space:nowrap;">💾 Salvar</button>
+                    </div>
+                    ${aluno.tamanhoFaixa ? `<div style="margin-top:6px;font-size:0.65rem;color:#10b981;">✅ Tamanho registrado: <strong>${aluno.tamanhoFaixa}</strong></div>` : `<div style="margin-top:6px;font-size:0.65rem;color:#f59e0b;">⚠️ Tamanho não informado ainda.</div>`}
+                </div>
+
                 <!-- BOTÕES -->
                 <div style="display:flex; flex-direction:column; gap:10px;">
                     ${(() => {
@@ -9647,6 +9664,87 @@ const exame = {
         } catch(e) {
             if (container) container.innerHTML = `<p style="color:#f43f5e;text-align:center;padding:20px;font-size:0.8rem;">Erro: ${e.message}</p>`;
         }
+    },
+
+    // ── Salvar tamanho da faixa ──
+    async salvarTamanhoFaixa(alunoId) {
+        const sel = document.getElementById('select-tamanho-faixa');
+        if (!sel || !sel.value) return alert('Selecione um tamanho.');
+        try {
+            await db.collection('alunos').doc(alunoId).update({ tamanhoFaixa: sel.value });
+            alert(`✅ Tamanho ${sel.value} salvo!`);
+            exame.carregarExameAluno();
+        } catch(e) { alert('Erro ao salvar: ' + e.message); }
+    },
+
+    // ── Relatório costureira ──
+    async abrirRelatorioCostureira() {
+        const snap = await db.collection('alunos').where('aspiranteGraduacao','==',true).get();
+        if (snap.empty) return alert('Nenhum atleta convocado.');
+
+        const ano = new Date().getFullYear();
+        const linhas = [];
+        snap.forEach(doc => {
+            const a = doc.data();
+            const idade = a.nascimento ? (ano - new Date(a.nascimento).getFullYear()) : 99;
+            linhas.push({
+                nome:     a.nome || '—',
+                faixa:    a.faixaDestino || a.faixa || '—',
+                tamanho:  a.tamanhoFaixa || '—',
+                cat:      idade < 16 ? 'Kids' : 'Adulto'
+            });
+        });
+
+        // Agrupa por faixa destino + tamanho
+        const grupos = {};
+        linhas.forEach(l => {
+            const k = `${l.faixa}||${l.tamanho}`;
+            if (!grupos[k]) grupos[k] = { faixa: l.faixa, tamanho: l.tamanho, alunos: [] };
+            grupos[k].alunos.push(l);
+        });
+
+        const corFaixaCSS = f => ({
+            'Branca':'#e2e8f0','Cinza':'#94a3b8','Cinza/Branca':'#94a3b8','Amarela':'#fbbf24',
+            'Laranja':'#f97316','Verde':'#22c55e','Azul':'#3b82f6','Roxa':'#a855f7',
+            'Marrom':'#92400e','Preta':'#1e293b'
+        }[f] || '#64748b');
+
+        let rows = '';
+        Object.values(grupos).sort((a,b) => a.faixa.localeCompare(b.faixa) || a.tamanho.localeCompare(b.tamanho))
+            .forEach(g => {
+                const cor = corFaixaCSS(g.faixa);
+                rows += `<tr style="border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:6px 10px;font-weight:700;color:${cor};border-right:1px solid #e2e8f0;">${g.faixa}</td>
+                    <td style="padding:6px 10px;font-weight:800;text-align:center;border-right:1px solid #e2e8f0;">${g.tamanho}</td>
+                    <td style="padding:6px 10px;text-align:center;border-right:1px solid #e2e8f0;">${g.alunos.length}</td>
+                    <td style="padding:6px 10px;font-size:0.75rem;">${g.alunos.map(a=>a.nome).join(', ')}</td>
+                </tr>`;
+            });
+
+        // Linha de sem tamanho
+        const semTamanho = linhas.filter(l => l.tamanho === '—');
+
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pedido Costureira — Gaditas Academy</title>
+        <style>body{font-family:Arial,sans-serif;padding:24px;color:#1e293b;}h2{margin-bottom:4px;}p{color:#64748b;font-size:0.85rem;margin-bottom:16px;}
+        table{width:100%;border-collapse:collapse;border:1px solid #e2e8f0;}th{background:#1e293b;color:white;padding:8px 10px;text-align:left;font-size:0.8rem;}
+        @media print{button{display:none!important;}}
+        </style></head><body>
+        <h2>🧵 Pedido de Faixas — Gaditas Academy</h2>
+        <p>Gerado em: ${new Date().toLocaleString('pt-BR')} · Total: ${linhas.length} atletas</p>
+        <button onclick="window.print()" style="margin-bottom:16px;padding:10px 20px;background:#1e293b;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">🖨️ IMPRIMIR</button>
+        <table>
+            <thead><tr><th>Faixa</th><th style="text-align:center;">Tamanho</th><th style="text-align:center;">Qtd</th><th>Alunos</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+        ${semTamanho.length ? `<div style="margin-top:20px;padding:12px;background:#fef9c3;border:1px solid #f59e0b;border-radius:8px;">
+            <strong>⚠️ Sem tamanho informado (${semTamanho.length}):</strong><br>
+            <span style="font-size:0.82rem;">${semTamanho.map(a=>`${a.nome} (${a.faixa})`).join(' · ')}</span>
+        </div>` : ''}
+        </body></html>`;
+
+        const w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
     },
 
     // ── Confirmar presença do aluno ──
@@ -9784,12 +9882,14 @@ const exame = {
 
         // Accordion de convocados com botão notificar no header
         const convocadosAccordion = `
-            <div style="display:flex;gap:6px;margin-bottom:8px;">
+            <div style="display:flex;gap:6px;margin-bottom:6px;">
                 <button onclick="academia.abrirMensagemIndicados()"
                     style="flex:1;padding:9px;font-size:0.62rem;font-weight:800;background:#f59e0b;border:none;color:#000;border-radius:8px;cursor:pointer;">📢 Mensagem por Grupo</button>
                 <button onclick="exame.migrarConvocacoesPendentes()"
                     style="flex:1;padding:9px;font-size:0.62rem;font-weight:800;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;cursor:pointer;">📣 Notificar todos</button>
             </div>
+            <button onclick="exame.abrirRelatorioCostureira()"
+                style="width:100%;padding:9px;font-size:0.62rem;font-weight:800;background:#0f172a;border:1px solid #94a3b8;color:#94a3b8;border-radius:8px;cursor:pointer;margin-bottom:8px;">🧵 Relatório para Costureira</button>
             <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:12px;margin-bottom:10px;overflow:hidden;">
                 <div onclick="(()=>{const b=document.getElementById('acc-convocados');const c=document.getElementById('chev-convocados');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='block'?'rotate(180deg)':''})()"
                     style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer;user-select:none;">

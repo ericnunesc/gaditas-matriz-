@@ -9687,9 +9687,11 @@ const exame = {
         snap.forEach(doc => {
             const a = doc.data();
             const idade = a.nascimento ? (ano - new Date(a.nascimento).getFullYear()) : 99;
+            const cat = idade < 16 ? 'kids' : (a.faixa === 'Marrom' || a.faixa === 'Preta' ? 'preta' : 'adulto');
+            const proxFaixa = this._getProxFaixa(a, cat);
             linhas.push({
                 nome:     a.nome || '—',
-                faixa:    a.faixaDestino || a.faixa || '—',
+                faixa:    proxFaixa || '—',
                 tamanho:  a.tamanhoFaixa || '—',
                 cat:      idade < 16 ? 'Kids' : 'Adulto'
             });

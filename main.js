@@ -244,6 +244,10 @@ const auth = {
                 const wb = document.getElementById('wrapper-boletim-escolar');
                 if (wb) wb.classList.remove('hidden');
             }
+            // Verifica se professor enviou relatório novo
+            if (typeof boletim !== 'undefined') {
+                setTimeout(() => boletim.verificarRelatorioPais(this.currentUser.id), 2000);
+            }
         }
 
         // ── TAB DE EXAME + BANNER TREINO ──────────────────────
@@ -276,6 +280,7 @@ const auth = {
             setTimeout(() => aniversario.verificarParabensRecebidos(), 2200);
             setTimeout(() => aniversario.verificarConvocacao(), 1200);
             setTimeout(() => aniversario.verificarGraduacao(), 1500);
+            setTimeout(() => aniversario.verificarAulasCanceladas(), 2500);
         }
 
         // ── ENQUETE ATIVA (aparece como popup bloqueante) ─
@@ -1268,6 +1273,10 @@ const academia = {
         };
 
         let html = `
+            <!-- Botão mensagem em grupo -->
+            <div style="margin-bottom:12px;">
+                <button onclick="academia.abrirMensagemIndicados()" style="width:100%;padding:11px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#000;border-radius:10px;font-size:0.8rem;font-weight:800;cursor:pointer;">📢 Enviar Mensagem para Indicados</button>
+            </div>
             <!-- Filtros -->
             <div style="margin-bottom:14px;">
                 <div style="font-size:0.55rem; color:#64748b; font-weight:700; letter-spacing:0.8px; margin-bottom:6px;">CATEGORIA</div>
@@ -1292,7 +1301,7 @@ const academia = {
                 totalConvocados ? `${totalConvocados} convocado${totalConvocados > 1 ? 's' : ''}` : ''
             ].filter(Boolean).join(' · ');
             html += `<div style="background:#451a03; border:2px solid #f59e0b; border-radius:12px; padding:14px; margin-bottom:16px;">
-                <div style="color:#fbbf24; font-size:0.7rem; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">⭐ EM DESTAQUE — ${prontos.length} atleta${prontos.length > 1 ? 's' : ''}</div>
+                <div style="color:#fbbf24; font-size:0.7rem; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">⭐ EM DESTAQUE — ${prontos.length} atleta${prontos.length > 1 ? 's' : ''}</div>
                 <div style="color:#92400e; font-size:0.6rem; margin-bottom:10px;">${subtitulo}</div>`;
             prontos.forEach(({ id, a }) => {
                 const convocado = a.aspiranteGraduacao === true;
@@ -1363,6 +1372,82 @@ const academia = {
         if (!confirm(`Cancelar a convocação de ${nome}?`)) return;
         await db.collection('alunos').doc(id).update({ aspiranteGraduacao: false });
         this.generarRelatorioGraduacao();
+    },
+
+    async abrirMensagemIndicados() {
+        // Busca todos os indicados e agrupa por faixa
+        const snap = await db.collection('alunos').where('aspiranteGraduacao','==',true).orderBy('nome').get();
+        if (snap.empty) return alert('Nenhum atleta convocado no momento.');
+
+        const grupos = {};
+        snap.forEach(doc => {
+            const a = doc.data();
+            const faixa = a.faixa || 'Sem faixa';
+            if (!grupos[faixa]) grupos[faixa] = [];
+            grupos[faixa].push({ id: doc.id, nome: a.nome });
+        });
+
+        const opcoesGrupo = [
+            `<option value="todos">👥 Todos os convocados (${snap.size})</option>`,
+            ...Object.entries(grupos).map(([f, lista]) =>
+                `<option value="${f}">🥋 Faixa ${f} (${lista.length})</option>`)
+        ].join('');
+
+        let modal = document.getElementById('modal-msg-indicados');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-msg-indicados'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;';
+        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <span style="font-size:0.9rem;font-weight:800;color:white;">📢 Mensagem para Indicados</span>
+                <button onclick="document.getElementById('modal-msg-indicados').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+            </div>
+            <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DESTINATÁRIOS</small>
+            <select id="msg-indicados-grupo" style="${inp}" onchange="academia._atualizarPreviewIndicados(this.value)">
+                ${opcoesGrupo}
+            </select>
+            <div id="msg-indicados-preview" style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:8px;margin-bottom:10px;font-size:0.62rem;color:#64748b;min-height:32px;"></div>
+            <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">MENSAGEM</small>
+            <textarea id="msg-indicados-texto" rows="4" placeholder="Ex: A data do exame de faixa foi confirmada para o dia XX. Prepare-se! OSS!" style="${inp}resize:none;"></textarea>
+            <button onclick="academia._enviarMensagemIndicados()" style="width:100%;padding:13px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">📢 ENVIAR PARA O GRUPO</button>
+        </div>`;
+
+        this._gruposMsgIndicados = grupos;
+        this._snapMsgIndicados = snap;
+        this._atualizarPreviewIndicados('todos');
+    },
+
+    _atualizarPreviewIndicados(grupo) {
+        const el = document.getElementById('msg-indicados-preview');
+        if (!el || !this._gruposMsgIndicados) return;
+        const lista = grupo === 'todos'
+            ? Object.values(this._gruposMsgIndicados).flat()
+            : (this._gruposMsgIndicados[grupo] || []);
+        el.innerHTML = lista.length
+            ? lista.map(a => `<span style="display:inline-block;background:#1e293b;border:1px solid #334155;border-radius:4px;padding:2px 7px;margin:2px;font-size:0.6rem;color:#94a3b8;">${a.nome}</span>`).join('')
+            : '<span style="color:#475569;">Nenhum atleta neste grupo.</span>';
+    },
+
+    async _enviarMensagemIndicados() {
+        const grupo  = document.getElementById('msg-indicados-grupo')?.value;
+        const texto  = document.getElementById('msg-indicados-texto')?.value.trim();
+        if (!texto) return alert('Escreva a mensagem.');
+        const lista = grupo === 'todos'
+            ? Object.values(this._gruposMsgIndicados || {}).flat()
+            : (this._gruposMsgIndicados?.[grupo] || []);
+        if (!lista.length) return alert('Nenhum atleta neste grupo.');
+
+        const btn = document.querySelector('#modal-msg-indicados button:last-child');
+        if (btn) { btn.innerText = `⏳ Enviando para ${lista.length} atletas...`; btn.disabled = true; }
+
+        let enviados = 0;
+        for (const a of lista) {
+            await push.paraAluno(a.id, '🏆 Aviso — Exame de Faixa', texto);
+            enviados++;
+        }
+
+        document.getElementById('modal-msg-indicados')?.remove();
+        alert(`✅ Mensagem enviada para ${enviados} atleta${enviados > 1 ? 's' : ''}!`);
     },
 
     async exportarDadosBackup() {
@@ -2024,8 +2109,29 @@ const academia = {
                 ? ui.getCorFaixaMT(a.faixaMT)
                 : ui.getCorFaixa(a.faixa);
             const fotoMini = fotoSrc
-                ? `<img src="${fotoSrc}" onclick="academia.abrirModalFotoAluno('${doc.id}','${a.nome.replace(/'/g,"\\'")}',this.src)" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid ${corBorda}; margin-right:10px; flex-shrink:0; cursor:pointer;" title="Clique para ver ou trocar foto"/>`
-                : `<div onclick="academia.abrirModalFotoAluno('${doc.id}','${a.nome.replace(/'/g,"\\'")}',null)" style="width:36px; height:36px; border-radius:50%; background:#1e293b; border:2px solid #334155; display:inline-flex; align-items:center; justify-content:center; margin-right:10px; flex-shrink:0; font-size:0.85rem; font-weight:800; color:#94a3b8; cursor:pointer;" title="Clique para adicionar foto">${a.nome.charAt(0).toUpperCase()}</div>`;
+                ? `<img src="${fotoSrc}" onclick="academia.abrirModalFotoAluno('${doc.id}','${a.nome.replace(/'/g,"\\'")}')" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid ${corBorda}; margin-right:10px; flex-shrink:0; cursor:pointer;" title="Clique para ver ou trocar foto"/>`
+                : `<div onclick="academia.abrirModalFotoAluno('${doc.id}','${a.nome.replace(/'/g,"\\'")}')" style="width:36px; height:36px; border-radius:50%; background:#1e293b; border:2px solid #334155; display:inline-flex; align-items:center; justify-content:center; margin-right:10px; flex-shrink:0; font-size:0.85rem; font-weight:800; color:#94a3b8; cursor:pointer;" title="Clique para adicionar foto">${a.nome.charAt(0).toUpperCase()}</div>`;
+
+            // Selo escolar (só kids com boletim)
+            let seloBadge = '';
+            if (isKids && a.boletim?.notas) {
+                const _anoAtual = new Date().getFullYear();
+                const _avs = (a.boletim?.sistemaPorAno?.[_anoAtual] || a.boletim?.sistema || '2x') === '3x' ? ['av1','av2','av3'] : ['av1','av2'];
+                let _s = 0, _t = 0;
+                [1,2].forEach(sem => _avs.forEach(av => (a.boletim.materias||[]).forEach(m => {
+                    const v = a.boletim.notas[_anoAtual]?.['sem'+sem]?.[av]?.[m];
+                    if (v !== null && v !== undefined) { _s += v; _t++; }
+                })));
+                if (_t > 0) {
+                    const _med = _s / _t;
+                    const _selo = _med >= 8 ? { cor:'#f59e0b', label:'Ouro' } : _med >= 6 ? { cor:'#94a3b8', label:'Prata' } : _med >= 4 ? { cor:'#b45309', label:'Bronze' } : { cor:'#ef4444', label:'Baixo' };
+                    const _pts = Array.from({length:24},(_,i)=>{const ang=(i*Math.PI/12)-Math.PI/2;const r=i%2===0?9:6;return`${(10+r*Math.cos(ang)).toFixed(1)},${(10+r*Math.sin(ang)).toFixed(1)}`;}).join(' ');
+                    seloBadge = `<span title="Boletim ${_anoAtual}: Média ${_med.toFixed(1)} — ${_selo.label}" style="display:inline-flex;align-items:center;gap:3px;vertical-align:middle;margin-left:4px;">
+                        <svg width="20" height="20" viewBox="0 0 20 20" style="display:inline-block;vertical-align:middle;"><polygon points="${_pts}" fill="${_selo.cor}" stroke="${_med>=8?'#b45309':_med>=6?'#64748b':'#7c2d12'}" stroke-width="1"/></svg>
+                        <span style="font-size:0.55rem;color:${_selo.cor};font-weight:800;">${_med.toFixed(1)}</span>
+                    </span>`;
+                }
+            }
 
             const telLimpo = (a.telefone || '').replace(/\D/g, '');
             cardsHtml += `<div class="item-card" style="border-left: 4px solid ${trancado ? '#64748b' : corBorda}; flex-direction:column; align-items:stretch; gap:8px; ${trancado ? 'opacity:0.7;' : ''}">
@@ -2033,7 +2139,7 @@ const academia = {
                 <div style="display:flex; align-items:center; gap:10px;">
                     ${fotoMini}
                     <div style="color:#e2e8f0; flex:1; font-size:0.85rem; font-weight:600; min-width:0;">
-                        <div style="word-break:break-word; line-height:1.3;">${a.nome.toUpperCase()}${modBadge} ${eng.icon}${trancado ? ' <span style="background:#334155; color:#94a3b8; font-size:0.5rem; padding:2px 6px; border-radius:4px; font-weight:800; vertical-align:middle;">🔒 TRANCADO</span>' : ''}</div>
+                        <div style="word-break:break-word; line-height:1.3;">${a.nome.toUpperCase()}${modBadge} ${eng.icon}${seloBadge}${trancado ? ' <span style="background:#334155; color:#94a3b8; font-size:0.5rem; padding:2px 6px; border-radius:4px; font-weight:800; vertical-align:middle;">🔒 TRANCADO</span>' : ''}</div>
                         ${beltBarHtml}
                         ${gradInfo}
                         ${tagsLeoes}
@@ -3152,11 +3258,12 @@ const academia = {
                         </div>
                         <div style="color:#e2e8f0;font-size:0.82rem;font-weight:700;">🥋 ${p.nome.toUpperCase()}</div>
                         <div style="color:var(--text-muted);font-size:0.65rem;margin-top:2px;">📧 ${p.email} • ${p.faixa}</div>
-                        ${!isReserva ? `<div style="color:#8b5cf6;font-size:0.6rem;font-weight:700;margin-top:3px;">Turmas: ${turmas}</div>` : ''}
+                        ${turmas !== '—' ? `<div style="color:#8b5cf6;font-size:0.6rem;font-weight:700;margin-top:3px;">Turmas: ${turmas}</div>` : (isReserva ? `<div style="color:#64748b;font-size:0.6rem;margin-top:3px;">Sem turmas definidas</div>` : '')}
                     </div>
                     <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">
                         <button onclick="profComms.abrirConvocacao('${doc.id}','${p.nome.replace(/'/g,"\\'")}','${turmas}')" style="background:#10b981;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">📋 Convocar</button>
                         <button onclick="profComms.abrirRecado('${doc.id}','${p.nome.replace(/'/g,"\\'")}','alunos')" style="background:#3b82f6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">💬 Recado</button>
+                        <button onclick="academia.editarTurmasProf('${doc.id}','alunos')" style="background:#8b5cf6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">✏️ Turmas</button>
                         <button onclick="academia.removerPrivilegioProf('${doc.id}','${p.nome.replace(/'/g,"\\'")}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.8rem;" title="Remover privilégio"><i class="fas fa-user-minus"></i></button>
                     </div>
                 </div>
@@ -3178,11 +3285,12 @@ const academia = {
                         <div style="margin-bottom:4px;">${badge}</div>
                         <div style="color:#e2e8f0;font-size:0.82rem;font-weight:700;">👤 ${p.nome.toUpperCase()}</div>
                         <div style="color:var(--text-muted);font-size:0.65rem;margin-top:2px;">📧 ${p.email}</div>
-                        ${!isReserva ? `<div style="color:#3b82f6;font-size:0.6rem;font-weight:700;margin-top:3px;">Turmas: ${turmas}</div>` : ''}
+                        ${turmas !== '—' ? `<div style="color:#3b82f6;font-size:0.6rem;font-weight:700;margin-top:3px;">Turmas: ${turmas}</div>` : (isReserva ? `<div style="color:#64748b;font-size:0.6rem;margin-top:3px;">Sem turmas definidas</div>` : '')}
                     </div>
                     <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">
                         <button onclick="profComms.abrirConvocacao('${doc.id}','${p.nome.replace(/'/g,"\\'")}','${turmas}')" style="background:#10b981;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">📋 Convocar</button>
                         <button onclick="profComms.abrirRecado('${doc.id}','${p.nome.replace(/'/g,"\\'")}','professores')" style="background:#3b82f6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">💬 Recado</button>
+                        <button onclick="academia.editarTurmasProf('${doc.id}','professores')" style="background:#8b5cf6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">✏️ Turmas</button>
                         <button onclick="academia.excluirProf('${doc.id}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.8rem;"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
@@ -3198,6 +3306,44 @@ const academia = {
 Ele voltará a ser aluno normal.`)) return;
         await db.collection("alunos").doc(id).update({ role: firebase.firestore.FieldValue.delete(), turmasAcesso: firebase.firestore.FieldValue.delete() });
         alert(`${nome} voltou ao perfil de aluno.`);
+        this.renderProfessores();
+    },
+
+    async editarTurmasProf(id, colecao) {
+        const snap = await db.collection(colecao).doc(id).get();
+        if (!snap.exists) return alert('Professor não encontrado.');
+        const p = snap.data();
+        const turmasAtuais = p.turmasAcesso || [];
+        const gradeVals = Object.values(academia.getGrade() || {});
+        const todasTurmas = [...new Set(gradeVals.filter(v => Array.isArray(v)).flat())].filter(t => typeof t === 'string' && t.trim() && !t.includes('Sem treino')).sort();
+
+        let modal = document.getElementById('modal-editar-turmas-prof');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-editar-turmas-prof'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        const checks = todasTurmas.map(t => {
+            const checked = turmasAtuais.includes(t) ? 'checked' : '';
+            return `<label style="display:flex;align-items:center;gap:8px;font-size:0.72rem;color:#e2e8f0;padding:6px 0;border-bottom:1px solid #1e293b;cursor:pointer;">
+                <input type="checkbox" class="check-turma-edit" value="${t}" ${checked} style="width:16px;height:16px;accent-color:#8b5cf6;">
+                <span>${t}</span>
+            </label>`;
+        }).join('');
+        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;max-height:80vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <span style="font-size:0.9rem;font-weight:800;color:white;">✏️ Turmas de ${p.nome}</span>
+                <button onclick="document.getElementById('modal-editar-turmas-prof').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+            </div>
+            <div style="margin-bottom:14px;">${checks || '<p style="color:#64748b;font-size:0.75rem;">Nenhuma turma configurada na grade.</p>'}</div>
+            <button onclick="academia._salvarTurmasProf('${id}','${colecao}')" style="width:100%;padding:12px;background:#8b5cf6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;">💾 SALVAR TURMAS</button>
+        </div>`;
+    },
+
+    async _salvarTurmasProf(id, colecao) {
+        const selecionadas = Array.from(document.querySelectorAll('.check-turma-edit:checked')).map(c => c.value);
+        const update = { turmasAcesso: selecionadas };
+        if (selecionadas.length > 0) update.tipo = 'titular';
+        await db.collection(colecao).doc(id).update(update);
+        document.getElementById('modal-editar-turmas-prof')?.remove();
+        alert(`✅ Turmas atualizadas!${selecionadas.length ? '\n' + selecionadas.join(', ') : '\nNenhuma turma selecionada.'}`);
         this.renderProfessores();
     },
 
@@ -5707,144 +5853,76 @@ Ele voltará a ser aluno normal.`)) return;
     },
 
     // ── FOTO DO ALUNO ─────────────────────────────────────────
-    abrirModalFotoAluno(alunoId, nome, fotoAtual) {
-        // Remove modal anterior se existir
+    async abrirModalFotoAluno(alunoId, nome) {
         document.getElementById('modal-foto-aluno')?.remove();
+        const docSnap = await db.collection('alunos').doc(alunoId).get();
+        const fotoAtual = docSnap.exists ? (docSnap.data().fotoPerfil || '') : '';
 
         const modal = document.createElement('div');
         modal.id = 'modal-foto-aluno';
-        modal.style.cssText = 'position:fixed;inset:0;background:#000000dd;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(2,6,23,0.97);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
         modal.innerHTML = `
-            <div style="background:#0f172a;border:1px solid #334155;border-radius:16px;width:100%;max-width:360px;overflow:hidden;">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #1e293b;">
-                    <span style="color:#e2e8f0;font-size:0.8rem;font-weight:800;">📷 FOTO — ${nome}</span>
-                    <button onclick="document.getElementById('modal-foto-aluno').remove()" style="background:none;border:none;color:#64748b;font-size:1.1rem;cursor:pointer;">✕</button>
-                </div>
-                <div style="padding:16px;display:flex;flex-direction:column;align-items:center;gap:14px;">
-                    <div id="mfa-preview" style="width:120px;height:120px;border-radius:50%;overflow:hidden;border:3px solid #334155;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:#475569;">
-                        ${fotoAtual ? `<img id="mfa-img" src="${fotoAtual}" style="width:100%;height:100%;object-fit:cover;"/>` : nome.charAt(0).toUpperCase()}
-                    </div>
-                    <div style="display:flex;gap:8px;width:100%;">
-                        <button onclick="document.getElementById('mfa-file').click()" style="flex:1;background:#1e3a5f;border:1px solid #3b82f6;color:#93c5fd;padding:10px;border-radius:10px;cursor:pointer;font-size:0.72rem;font-weight:700;">
-                            <i class="fas fa-image" style="margin-right:5px;"></i>GALERIA
-                        </button>
-                        <button onclick="academia._abrirCameraFoto('${alunoId}')" style="flex:1;background:#064e3b;border:1px solid #10b981;color:#10b981;padding:10px;border-radius:10px;cursor:pointer;font-size:0.72rem;font-weight:700;">
-                            <i class="fas fa-camera" style="margin-right:5px;"></i>CÂMERA
-                        </button>
-                    </div>
-                    <input type="file" id="mfa-file" accept="image/*" style="display:none;" onchange="academia._processarFotoAluno('${alunoId}',this)"/>
-                    <button id="mfa-btn-salvar" style="display:none;width:100%;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;padding:12px;border-radius:10px;cursor:pointer;font-size:0.8rem;font-weight:800;" onclick="academia._salvarFotoAluno('${alunoId}')">
-                        💾 SALVAR FOTO
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:20px;padding:24px;max-width:380px;width:100%;text-align:center;">
+                <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:2px;margin-bottom:12px;">FOTO DO ALUNO</div>
+                <div style="font-size:1rem;font-weight:800;color:white;margin-bottom:16px;">${nome.toUpperCase()}</div>
+                <img id="mfa-preview-img" src="${fotoAtual || `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=1e3a8a&color=fff&size=200`}"
+                    style="width:140px;height:140px;border-radius:50%;object-fit:cover;border:3px solid #3b82f6;display:block;margin:0 auto 20px auto;"/>
+                <input type="file" id="mfa-galeria-input" accept="image/*" style="display:none;"/>
+                <input type="file" id="mfa-camera-input" accept="image/*" capture="environment" style="display:none;"/>
+                <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+                    <button id="mfa-btn-galeria" style="width:100%;padding:12px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;">
+                        <i class="fas fa-image"></i> ESCOLHER DA GALERIA
                     </button>
-                    ${fotoAtual ? `<button onclick="academia._removerFotoAluno('${alunoId}')" style="background:none;border:none;color:#ef4444;font-size:0.65rem;cursor:pointer;text-decoration:underline;">Remover foto</button>` : ''}
+                    <button id="mfa-btn-camera" style="width:100%;padding:12px;background:#064e3b;border:1px solid #10b981;color:#6ee7b7;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;">
+                        <i class="fas fa-camera"></i> TIRAR FOTO COM CÂMERA
+                    </button>
+                    <button id="mfa-btn-salvar" style="display:none;width:100%;padding:12px;background:#10b981;border:none;color:#000;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;">
+                        <i class="fas fa-save"></i> SALVAR FOTO
+                    </button>
+                    ${fotoAtual ? `<button onclick="academia._removerFotoAluno('${alunoId}')" style="width:100%;padding:10px;background:#2a0808;border:1px solid #ef444455;color:#ef4444;border-radius:10px;font-weight:800;font-size:0.75rem;cursor:pointer;">
+                        <i class="fas fa-trash"></i> REMOVER FOTO
+                    </button>` : ''}
                 </div>
-                <!-- câmera inline -->
-                <div id="mfa-camera-area" style="display:none;padding:0 16px 16px;flex-direction:column;align-items:center;gap:10px;">
-                    <video id="mfa-video" autoplay playsinline style="width:100%;border-radius:10px;background:#000;"></video>
-                    <div style="display:flex;gap:8px;width:100%;">
-                        <button onclick="academia._capturarFoto('${alunoId}')" style="flex:1;background:#10b981;border:none;color:white;padding:12px;border-radius:10px;cursor:pointer;font-size:0.8rem;font-weight:800;">
-                            <i class="fas fa-camera"></i> TIRAR FOTO
-                        </button>
-                        <button onclick="academia._girarCamera('${alunoId}')" title="Girar câmera" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:12px 14px;border-radius:10px;cursor:pointer;font-size:0.9rem;">
-                            🔄
-                        </button>
-                    </div>
-                    <button onclick="academia._fecharCamera()" style="background:none;border:none;color:#64748b;font-size:0.65rem;cursor:pointer;">Cancelar câmera</button>
-                </div>
+                <button onclick="document.getElementById('modal-foto-aluno').remove()" style="width:100%;padding:10px;background:none;border:1px solid #334155;color:#64748b;border-radius:10px;font-size:0.8rem;cursor:pointer;">FECHAR</button>
             </div>`;
         document.body.appendChild(modal);
-        // Fecha ao clicar fora
-        modal.addEventListener('click', e => { if (e.target === modal) { academia._fecharCamera(); modal.remove(); } });
-    },
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 
-    _fotoNovaBase64: null,
-
-    async _processarFotoAluno(alunoId, input) {
-        const file = input.files[0];
-        if (!file) return;
-        const base64 = await new Promise((res, rej) => {
-            const img = new Image();
+        let _novaFoto = null;
+        const processarArquivo = (file) => {
+            if (!file) return;
             const reader = new FileReader();
-            reader.onload = e => { img.src = e.target.result; };
-            img.onload = () => {
-                const maxL = 600;
-                let w = img.width, h = img.height;
-                if (w > maxL || h > maxL) { if (w > h) { h = Math.round(h*maxL/w); w=maxL; } else { w=Math.round(w*maxL/h); h=maxL; } }
-                const c = document.createElement('canvas'); c.width=w; c.height=h;
-                c.getContext('2d').drawImage(img,0,0,w,h);
-                res(c.toDataURL('image/jpeg',0.80));
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    const maxL = 600, c = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if (w > maxL || h > maxL) { if (w > h) { h = Math.round(h*maxL/w); w=maxL; } else { w=Math.round(w*maxL/h); h=maxL; } }
+                    c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+                    _novaFoto = c.toDataURL('image/jpeg', 0.82);
+                    document.getElementById('mfa-preview-img').src = _novaFoto;
+                    document.getElementById('mfa-btn-salvar').style.display = 'block';
+                };
+                img.src = e.target.result;
             };
-            img.onerror = rej; reader.onerror = rej;
             reader.readAsDataURL(file);
+        };
+        document.getElementById('mfa-btn-galeria').addEventListener('click', () => document.getElementById('mfa-galeria-input').click());
+        document.getElementById('mfa-btn-camera').addEventListener('click', () => document.getElementById('mfa-camera-input').click());
+        document.getElementById('mfa-galeria-input').addEventListener('change', e => processarArquivo(e.target.files[0]));
+        document.getElementById('mfa-camera-input').addEventListener('change', e => processarArquivo(e.target.files[0]));
+        document.getElementById('mfa-btn-salvar').addEventListener('click', async () => {
+            if (!_novaFoto) return;
+            const btn = document.getElementById('mfa-btn-salvar');
+            btn.innerText = '⏳ Salvando...'; btn.disabled = true;
+            try {
+                await db.collection('alunos').doc(alunoId).update({ fotoPerfil: _novaFoto });
+                document.getElementById('modal-foto-aluno').remove();
+                academia.buscarAlunos();
+            } catch(e) {
+                btn.innerText = '❌ Erro. Tente novamente.'; btn.disabled = false;
+            }
         });
-        this._fotoNovaBase64 = base64;
-        const preview = document.getElementById('mfa-preview');
-        if (preview) preview.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;"/>`;
-        const btn = document.getElementById('mfa-btn-salvar');
-        if (btn) btn.style.display = 'block';
-    },
-
-    _cameraFacing: 'user',
-
-    async _abrirCameraFoto(alunoId) {
-        const area = document.getElementById('mfa-camera-area');
-        if (!area) return;
-        area.style.display = 'flex';
-        this._cameraFacing = 'user';
-        await this._iniciarStream();
-    },
-
-    async _iniciarStream() {
-        if (this._cameraStream) { this._cameraStream.getTracks().forEach(t => t.stop()); this._cameraStream = null; }
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: this._cameraFacing } });
-            const video = document.getElementById('mfa-video');
-            if (video) { video.srcObject = stream; }
-            this._cameraStream = stream;
-        } catch(e) {
-            document.getElementById('mfa-camera-area').style.display = 'none';
-            alert('Câmera não disponível: ' + e.message);
-        }
-    },
-
-    async _girarCamera(alunoId) {
-        this._cameraFacing = this._cameraFacing === 'user' ? 'environment' : 'user';
-        await this._iniciarStream();
-    },
-
-    _fecharCamera() {
-        if (this._cameraStream) { this._cameraStream.getTracks().forEach(t => t.stop()); this._cameraStream = null; }
-        const area = document.getElementById('mfa-camera-area');
-        if (area) area.style.display = 'none';
-    },
-
-    _capturarFoto(alunoId) {
-        const video = document.getElementById('mfa-video');
-        if (!video) return;
-        const c = document.createElement('canvas'); c.width=video.videoWidth; c.height=video.videoHeight;
-        c.getContext('2d').drawImage(video,0,0);
-        const base64 = c.toDataURL('image/jpeg',0.85);
-        this._fotoNovaBase64 = base64;
-        this._fecharCamera();
-        const preview = document.getElementById('mfa-preview');
-        if (preview) preview.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;"/>`;
-        const btn = document.getElementById('mfa-btn-salvar');
-        if (btn) btn.style.display = 'block';
-    },
-
-    async _salvarFotoAluno(alunoId) {
-        if (!this._fotoNovaBase64) return;
-        const btn = document.getElementById('mfa-btn-salvar');
-        if (btn) { btn.innerHTML = '⏳ Salvando...'; btn.disabled = true; }
-        try {
-            await db.collection('alunos').doc(alunoId).update({ fotoPerfil: this._fotoNovaBase64 });
-            this._fotoNovaBase64 = null;
-            document.getElementById('modal-foto-aluno')?.remove();
-            // Recarrega lista
-            academia.buscarAlunos();
-        } catch(e) {
-            if (btn) { btn.innerHTML = '❌ Erro. Tente novamente.'; btn.disabled = false; }
-        }
     },
 
     async _removerFotoAluno(alunoId) {
@@ -6662,6 +6740,10 @@ Ele voltará a ser aluno normal.`)) return;
                                     style="background:#1e1040; border:1px solid #7c3aed44; color:#a78bfa; padding:5px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer; white-space:nowrap;">
                                     🔗 Gerar link matrícula
                                 </button>
+                                ${e.status === 'matriculado' ? `<button onclick="academia.reverterExperimentalPendente('${e.id}')"
+                                    style="background:#1a0a00; border:1px solid #f59e0b55; color:#f59e0b; padding:5px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer; white-space:nowrap;">
+                                    ↩️ Reverter para Pendente
+                                </button>` : ''}
                                 <button onclick="academia.excluirExperimental('${e.id}')"
                                     style="background:none; border:none; color:#475569; padding:4px; font-size:0.6rem; cursor:pointer;">
                                     🗑️ excluir
@@ -6699,6 +6781,12 @@ Ele voltará a ser aluno normal.`)) return;
             alert('✅ Link copiado!\n\nEnvie para o aluno pelo WhatsApp. Os dados dele já estarão pré-preenchidos, só precisará escolher o plano.');
             this.renderPainelExperimentais();
         } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async reverterExperimentalPendente(id) {
+        if (!confirm('Reverter para Pendente? O status "Matriculado" será desfeito.')) return;
+        await db.collection('experimentais').doc(id).update({ status: 'pendente' });
+        this.renderPainelExperimentais();
     },
 
     async excluirExperimental(id) {
@@ -6806,6 +6894,13 @@ const profComms = {
         const hora = document.getElementById('conv-hora')?.value;
         const msg  = document.getElementById('conv-msg')?.value.trim();
         if (!turma || !data) return alert('Preencha a turma e a data.');
+        const mapaDisp = await this._dispensasNaData(data);
+        if (mapaDisp[profId]) {
+            const d = mapaDisp[profId];
+            const turmaDisp = d.turma === 'todas' ? 'todas as turmas' : (d.turma || 'não especificada');
+            alert(`🚫 ${profNome} tem dispensa nesta data!\n\nTurma: ${turmaDisp}\nMotivo: "${d.motivo || 'não informado'}"\n\nConvocação bloqueada.`);
+            return;
+        }
         const [ay, am, ad] = data.split('-');
         const dataExib = `${ad}/${am}/${ay}${hora ? ' às ' + hora : ''}`;
         await db.collection('convocacoes_prof').add({
@@ -6828,13 +6923,16 @@ const profComms = {
     async renderPainelConvocacoes() {
         const container = document.getElementById('painel-convocacoes-prof');
         if (!container) return;
-        const snap = await db.collection('convocacoes_prof').orderBy('criadoEm','desc').limit(30).get();
+        const snap = await db.collection('convocacoes_prof').orderBy('criadoEm','desc').limit(50).get();
         if (snap.empty) { container.innerHTML = '<p style="color:#64748b;font-size:0.72rem;text-align:center;padding:10px;">Nenhuma convocação ainda.</p>'; return; }
+        const hoje = new Date().toISOString().slice(0,10);
         const cores = { pendente:'#f59e0b', confirmado:'#10b981', recusado:'#ef4444' };
         const icons = { pendente:'⏳', confirmado:'✅', recusado:'❌' };
         let html = '';
         snap.forEach(doc => {
             const c = doc.data();
+            // Confirmadas com data passada ficam só no histórico do calendário
+            if (c.status === 'confirmado' && c.data && c.data < hoje) return;
             const cor = cores[c.status] || '#64748b';
             html += `<div style="background:#0f172a;border:1px solid #1e293b;border-left:3px solid ${cor};border-radius:8px;padding:10px;margin-bottom:6px;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -6851,7 +6949,7 @@ const profComms = {
                 </div>
             </div>`;
         });
-        container.innerHTML = html;
+        container.innerHTML = html || '<p style="color:#64748b;font-size:0.72rem;text-align:center;padding:10px;">Nenhuma convocação ativa.</p>';
     },
 
     async _excluirConvocacao(id) {
@@ -7002,52 +7100,56 @@ const profComms = {
         if (!modal) { modal = document.createElement('div'); modal.id = 'modal-agenda-prof'; document.body.appendChild(modal); }
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
         modal.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:480px;margin-top:10px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
                 <span style="font-size:0.95rem;font-weight:800;color:white;">📅 Agenda de Professores</span>
                 <button onclick="document.getElementById('modal-agenda-prof').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:14px;">
+                <button id="tab-agenda-grade" onclick="profComms._mostrarAbaAgenda('grade')" style="flex:1;padding:8px;border-radius:8px;border:none;font-size:0.72rem;font-weight:800;cursor:pointer;background:#8b5cf6;color:white;">🗓️ Grade</button>
+                <button id="tab-agenda-cal" onclick="profComms._mostrarAbaAgenda('calendario')" style="flex:1;padding:8px;border-radius:8px;border:none;font-size:0.72rem;font-weight:800;cursor:pointer;background:#1e293b;color:#64748b;border:1px solid #334155;">📆 Calendário</button>
             </div>
             <div id="agenda-content"><div style="text-align:center;padding:20px;color:#64748b;font-size:0.8rem;">⏳ Carregando...</div></div>
         </div>`;
 
-        // Busca professores e grade de horários
         const [snapProfs, snapAlunos] = await Promise.all([
             db.collection('professores').get(),
             db.collection('alunos').where('role','==','professor').get()
         ]);
-        const profs = [];
-        snapProfs.forEach(d => profs.push({ id: d.id, col: 'professores', ...d.data() }));
-        snapAlunos.forEach(d => profs.push({ id: d.id, col: 'alunos', ...d.data() }));
+        this._agendaProfs = [];
+        snapProfs.forEach(d => this._agendaProfs.push({ id: d.id, col: 'professores', ...d.data() }));
+        snapAlunos.forEach(d => this._agendaProfs.push({ id: d.id, col: 'alunos', ...d.data() }));
+        this._agendaMesAtual = new Date();
+        this._mostrarAbaAgenda('grade');
+    },
 
+    _mostrarAbaAgenda(aba) {
+        document.getElementById('tab-agenda-grade').style.cssText = 'flex:1;padding:8px;border-radius:8px;border:none;font-size:0.72rem;font-weight:800;cursor:pointer;' + (aba==='grade' ? 'background:#8b5cf6;color:white;' : 'background:#1e293b;color:#64748b;border:1px solid #334155;');
+        document.getElementById('tab-agenda-cal').style.cssText   = 'flex:1;padding:8px;border-radius:8px;border:none;font-size:0.72rem;font-weight:800;cursor:pointer;' + (aba==='calendario' ? 'background:#3b82f6;color:white;' : 'background:#1e293b;color:#64748b;border:1px solid #334155;');
+        if (aba === 'grade') this._renderGradeAgenda();
+        else this._renderCalendarioAgenda(this._agendaMesAtual || new Date());
+    },
+
+    _renderGradeAgenda() {
+        const profs = this._agendaProfs || [];
         const grade = academia.getGrade ? academia.getGrade() : {};
-        // Grade usa chaves numéricas: 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
         const diasConfig = [
-            { label: 'Segunda-feira',  key: 1 },
-            { label: 'Terça-feira',    key: 2 },
-            { label: 'Quarta-feira',   key: 3 },
-            { label: 'Quinta-feira',   key: 4 },
-            { label: 'Sexta-feira',    key: 5 },
-            { label: 'Sábado',         key: 6 },
-            { label: 'Domingo',        key: 0 },
+            { label: 'Segunda-feira', key: 1 }, { label: 'Terça-feira', key: 2 },
+            { label: 'Quarta-feira',  key: 3 }, { label: 'Quinta-feira', key: 4 },
+            { label: 'Sexta-feira',   key: 5 }, { label: 'Sábado',       key: 6 },
+            { label: 'Domingo',       key: 0 },
         ];
-
         let html = '';
         diasConfig.forEach(({ label, key }) => {
-            const turmasDia = (grade[key] || grade[String(key)] || [])
-                .filter(t => t && !t.includes('Sem treino'));
+            const turmasDia = (grade[key] || grade[String(key)] || []).filter(t => t && !t.includes('Sem treino'));
             if (!turmasDia.length) return;
-            html += `<div style="margin-bottom:16px;">
-                <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;letter-spacing:1px;margin-bottom:6px;border-bottom:1px solid #1e293b;padding-bottom:4px;">${label.toUpperCase()}</div>`;
+            html += `<div style="margin-bottom:16px;"><div style="font-size:0.6rem;font-weight:800;color:#94a3b8;letter-spacing:1px;margin-bottom:6px;border-bottom:1px solid #1e293b;padding-bottom:4px;">${label.toUpperCase()}</div>`;
             turmasDia.forEach(turma => {
-                const profsNaTurma = profs.filter(p =>
-                    (p.turmasAcesso || []).some(t => t === turma || turma.startsWith(t.replace(/\s*\d+$/,'').trim()))
-                );
+                const profsNaTurma = profs.filter(p => (p.turmasAcesso||[]).some(t => t===turma || turma.startsWith(t.replace(/\s*\d+$/,'').trim())));
                 html += `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:5px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
                         <div style="flex:1;">
                             <div style="font-size:0.75rem;font-weight:700;color:#e2e8f0;">${turma}</div>
-                            ${profsNaTurma.length
-                                ? profsNaTurma.map(p => `<div style="font-size:0.62rem;color:#10b981;margin-top:3px;font-weight:700;">👤 ${p.nome}</div>`).join('')
-                                : `<div style="font-size:0.62rem;color:#f59e0b;margin-top:3px;font-weight:700;">⚠️ Sem professor alocado</div>`}
+                            ${profsNaTurma.length ? profsNaTurma.map(p=>`<div style="font-size:0.62rem;color:#10b981;margin-top:3px;font-weight:700;">👤 ${p.nome}</div>`).join('') : `<div style="font-size:0.62rem;color:#f59e0b;margin-top:3px;font-weight:700;">⚠️ Sem professor alocado</div>`}
                         </div>
                         <button onclick="profComms.abrirConvocacaoRapida('${turma.replace(/'/g,"\\'")}','${label}')" style="background:#10b981;border:none;color:white;padding:5px 10px;border-radius:6px;font-size:0.62rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📋 Convocar</button>
                     </div>
@@ -7055,8 +7157,108 @@ const profComms = {
             });
             html += '</div>';
         });
-
         document.getElementById('agenda-content').innerHTML = html || '<p style="color:#64748b;text-align:center;">Nenhuma turma configurada na grade.</p>';
+    },
+
+    async _renderCalendarioAgenda(ref) {
+        this._agendaMesAtual = ref;
+        const cont = document.getElementById('agenda-content');
+        cont.innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;font-size:0.8rem;">⏳ Carregando...</div>';
+
+        // Busca convocações do mês
+        const ano = ref.getFullYear(), mes = ref.getMonth();
+        const ini = `${ano}-${String(mes+1).padStart(2,'0')}-01`;
+        const fim = `${ano}-${String(mes+1).padStart(2,'0')}-${String(new Date(ano,mes+1,0).getDate()).padStart(2,'0')}`;
+        const snap = await db.collection('convocacoes_prof').where('data','>=',ini).where('data','<=',fim).get();
+
+        // Agrupa por data → lista de convocações
+        const porData = {};
+        snap.forEach(doc => {
+            const d = doc.data();
+            if (!porData[d.data]) porData[d.data] = [];
+            porData[d.data].push(d);
+        });
+
+        const nomesMes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        const diasSem  = ['D','S','T','Q','Q','S','S'];
+        const totalDias = new Date(ano, mes+1, 0).getDate();
+        const primeiroDS = new Date(ano, mes, 1).getDay(); // 0=Dom
+
+        let html = `<div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <button onclick="profComms._renderCalendarioAgenda(new Date(${ano},${mes-1},1))" style="background:#334155;border:none;color:white;padding:6px 10px;border-radius:8px;cursor:pointer;font-weight:700;">‹</button>
+                <span style="font-size:0.85rem;font-weight:800;color:white;">${nomesMes[mes]} ${ano}</span>
+                <button onclick="profComms._renderCalendarioAgenda(new Date(${ano},${mes+1},1))" style="background:#334155;border:none;color:white;padding:6px 10px;border-radius:8px;cursor:pointer;font-weight:700;">›</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:8px;">
+                ${diasSem.map(d=>`<div style="text-align:center;font-size:0.6rem;font-weight:800;color:#64748b;padding:4px 0;">${d}</div>`).join('')}
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">`;
+
+        // Células vazias antes do dia 1
+        for (let i = 0; i < primeiroDS; i++) html += `<div></div>`;
+
+        const hoje = new Date().toISOString().slice(0,10);
+        for (let dia = 1; dia <= totalDias; dia++) {
+            const iso = `${ano}-${String(mes+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+            const convs = porData[iso] || [];
+            const confirmadas = convs.filter(c => c.status === 'confirmado');
+            const pendentes   = convs.filter(c => c.status === 'pendente');
+            const isHoje = iso === hoje;
+            const temConv = convs.length > 0;
+            let bg = '#0f172a', border = '1px solid #1e293b', cor = '#64748b';
+            if (isHoje) { bg = '#1e3a5f'; border = '1px solid #3b82f6'; cor = '#93c5fd'; }
+            if (confirmadas.length) { bg = '#052e16'; border = '1px solid #10b981'; cor = '#34d399'; }
+            else if (pendentes.length) { bg = '#2d1b00'; border = '1px solid #f59e0b'; cor = '#fbbf24'; }
+            const dots = confirmadas.length ? `<div style="width:6px;height:6px;background:#10b981;border-radius:50%;margin:1px auto;"></div>` : (pendentes.length ? `<div style="width:6px;height:6px;background:#f59e0b;border-radius:50%;margin:1px auto;"></div>` : '');
+            const onclick = temConv ? `onclick="profComms._verDiaAgenda('${iso}')"` : '';
+            html += `<div ${onclick} style="background:${bg};border:${border};border-radius:6px;padding:4px 2px;text-align:center;min-height:38px;cursor:${temConv?'pointer':'default'};">
+                <div style="font-size:0.7rem;font-weight:700;color:${cor};">${dia}</div>
+                ${dots}
+            </div>`;
+        }
+        html += `</div>
+            <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+                <span style="font-size:0.6rem;color:#34d399;font-weight:700;">● Confirmado</span>
+                <span style="font-size:0.6rem;color:#fbbf24;font-weight:700;">● Pendente</span>
+                <span style="font-size:0.6rem;color:#93c5fd;font-weight:700;">● Hoje</span>
+            </div>
+            <div id="agenda-cal-detalhe" style="margin-top:14px;"></div>
+        </div>`;
+        cont.innerHTML = html;
+        // Se hoje tem convocações, já abre o detalhe
+        if (porData[hoje]) this._verDiaAgenda(hoje, porData[hoje]);
+    },
+
+    async _verDiaAgenda(iso, convsCached) {
+        const det = document.getElementById('agenda-cal-detalhe');
+        if (!det) return;
+        let convs = convsCached;
+        if (!convs) {
+            const snap = await db.collection('convocacoes_prof').where('data','==',iso).get();
+            convs = snap.docs.map(d => d.data());
+        }
+        const [d, m, a] = [iso.slice(8,10), iso.slice(5,7), iso.slice(0,4)];
+        const cores = { confirmado:'#10b981', pendente:'#f59e0b', recusado:'#ef4444' };
+        const icons = { confirmado:'✅', pendente:'⏳', recusado:'❌' };
+        let html = `<div style="border-top:1px solid #334155;padding-top:12px;">
+            <div style="font-size:0.72rem;font-weight:800;color:#e2e8f0;margin-bottom:8px;">📅 ${d}/${m}/${a}</div>`;
+        convs.sort((a,b) => (a.hora||'').localeCompare(b.hora||'')).forEach(c => {
+            const cor = cores[c.status]||'#64748b';
+            html += `<div style="background:#0f172a;border-left:3px solid ${cor};border-radius:6px;padding:8px 10px;margin-bottom:5px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div>
+                        <div style="font-size:0.72rem;font-weight:700;color:#e2e8f0;">${c.hora||'—'} · ${c.turma}</div>
+                        <div style="font-size:0.62rem;color:#94a3b8;margin-top:2px;">👤 ${c.profNome}</div>
+                        ${c.mensagem ? `<div style="font-size:0.58rem;color:#64748b;margin-top:2px;">"${c.mensagem}"</div>` : ''}
+                        ${c.respostaMsg ? `<div style="font-size:0.6rem;color:#a78bfa;margin-top:2px;">💬 "${c.respostaMsg}"</div>` : ''}
+                    </div>
+                    <span style="font-size:0.6rem;font-weight:800;color:${cor};white-space:nowrap;">${icons[c.status]||''} ${(c.status||'').toUpperCase()}</span>
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+        det.innerHTML = html;
     },
 
     abrirConvocacaoRapida(turma, dia) {
@@ -7101,6 +7303,13 @@ const profComms = {
         const hora = document.getElementById('conv-rapida-hora')?.value;
         const msg  = document.getElementById('conv-rapida-msg')?.value.trim();
         if (!data) return alert('Informe a data.');
+        const mapaDisp = await this._dispensasNaData(data);
+        if (mapaDisp[profId]) {
+            const d = mapaDisp[profId];
+            const turmaDisp = d.turma === 'todas' ? 'todas as turmas' : (d.turma || 'não especificada');
+            alert(`🚫 ${profNome} tem dispensa nesta data!\n\nTurma: ${turmaDisp}\nMotivo: "${d.motivo || 'não informado'}"\n\nConvocação bloqueada.`);
+            return;
+        }
         const [ay,am,ad] = data.split('-');
         const dataExib = `${ad}/${am}/${ay}${hora ? ' às ' + hora : ''}`;
         await db.collection('convocacoes_prof').add({ profId, profNome, colecao, turma, data, hora, dataExib, mensagem: msg||'', status:'pendente', criadoEm: Date.now() });
@@ -7412,6 +7621,12 @@ const profComms = {
                 const badge = document.getElementById('badge-recados-prof');
                 if (badge) badge.style.display = snap.size > 0 ? 'inline-block' : 'none';
                 if (snap.size > 0) this._mostrarRecadosPendentes(snap.docs);
+                // Popup para cada recado novo que chegar
+                snap.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        setTimeout(() => this._mostrarPopupRecado(change.doc), 1000);
+                    }
+                });
             });
         // Convocações pendentes com popup para novas
         db.collection('convocacoes_prof')
@@ -7505,8 +7720,33 @@ const profComms = {
     },
 
     async _marcarRecadoLido(id, btn) {
-        await db.collection('recados_prof').doc(id).update({ lido: true });
-        btn.closest('div[style]').remove();
+        await db.collection('recados_prof').doc(id).update({ lido: true, lidoEm: Date.now() });
+        document.getElementById(`popup-recado-${id}`)?.remove();
+        btn?.closest('div[style]')?.remove();
+    },
+
+    _mostrarPopupRecado(doc) {
+        const r = doc.data();
+        const popupId = `popup-recado-${doc.id}`;
+        if (document.getElementById(popupId)) return; // já aberto
+        const modal = document.createElement('div');
+        modal.id = popupId;
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        const hora = r.criadoEm ? new Date(r.criadoEm).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+        modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#0f172a,#1e293b);border:2px solid #3b82f6;border-radius:24px;padding:32px 24px;max-width:380px;width:100%;text-align:center;box-shadow:0 0 80px #3b82f633;position:relative;">
+                <div style="font-size:3rem;margin-bottom:8px;">💬</div>
+                <div style="font-size:0.6rem;color:#3b82f6;font-weight:800;letter-spacing:2px;margin-bottom:8px;">GADITAS ACADEMY</div>
+                <div style="font-size:1.2rem;font-weight:800;color:white;margin-bottom:4px;">Novo Recado!</div>
+                ${hora ? `<div style="font-size:0.62rem;color:#64748b;margin-bottom:14px;">${hora}</div>` : ''}
+                <div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:12px;padding:16px;margin:14px 0;text-align:left;">
+                    <div style="font-size:0.85rem;color:#e2e8f0;line-height:1.6;">${r.texto}</div>
+                </div>
+                <button onclick="profComms._marcarRecadoLido('${doc.id}', null)" style="width:100%;padding:14px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:12px;font-weight:800;cursor:pointer;font-size:0.9rem;">
+                    ✅ LI O RECADO
+                </button>
+            </div>`;
+        document.body.appendChild(modal);
     }
 };
 
@@ -8961,6 +9201,78 @@ const aniversario = {
         } catch(e) {
             container.innerHTML = `<small style="color:#ef4444;font-size:0.65rem;">Erro: ${e.message}</small>`;
         }
+    },
+
+    // ── POPUP AULA CANCELADA — aparece no login do aluno ──
+    async verificarAulasCanceladas() {
+        if (auth.role !== 'aluno') return;
+        const eu = auth.currentUser;
+        if (!eu) return;
+        try {
+            const hoje = new Date();
+            const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+            const doc = await db.collection('aulas_canceladas').doc(hojeStr).get();
+            if (!doc.exists) return;
+            const canceladas = doc.data(); // { "Kids 1": true, "BJJ Adulto": true, ... }
+
+            const turmasCanceladas = Object.keys(canceladas).filter(k => canceladas[k] === true);
+            if (!turmasCanceladas.length) return;
+
+            const turmasAluno = eu.turmas || [];
+            const modalidade  = eu.modalidade || 'jiujitsu';
+            const idade       = eu.nascimento ? (hoje.getFullYear() - parseInt(eu.nascimento.split('-')[0])) : 99;
+            const isKids      = idade <= 15;
+
+            const minhasTurmasCanceladas = turmasCanceladas.filter(t => {
+                // Correspondência direta pelo nome da turma
+                if (turmasAluno.some(ta => ta === t)) return true;
+                // Fallback por categoria/modalidade
+                const tl = t.toLowerCase();
+                if (isKids && tl.includes('kids')) return true;
+                if (!isKids && tl.includes('kids')) return false;
+                if (modalidade === 'muaythai' && (tl.includes('muay') || tl.includes('mt'))) return true;
+                if (modalidade === 'jiujitsu' && !tl.includes('muay') && !tl.includes('mt') && !tl.includes('kids')) return true;
+                return false;
+            });
+
+            if (!minhasTurmasCanceladas.length) return;
+
+            // Evita mostrar o mesmo popup duas vezes no mesmo dia
+            const chave = `gaditas_canc_${eu.id}_${hojeStr}_${minhasTurmasCanceladas.sort().join('_').replace(/\s/g,'_')}`;
+            if (localStorage.getItem(chave)) return;
+
+            this._mostrarPopupAulaCancelada(eu.nome, minhasTurmasCanceladas, chave);
+        } catch(e) { console.warn('verificarAulasCanceladas:', e.message); }
+    },
+
+    _mostrarPopupAulaCancelada(nomeCompleto, turmas, chaveLocalStorage) {
+        document.getElementById('modal-aula-cancelada')?.remove();
+        const primeiroNome = (nomeCompleto || '').split(' ')[0];
+        const listaTurmas = turmas.map(t => `<div style="background:#1a0404;border-left:3px solid #ef4444;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:0.85rem;font-weight:800;color:#fca5a5;">🚫 ${t.toUpperCase()}</div>`).join('');
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-aula-cancelada';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.96);z-index:99997;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#1a0404,#1e293b);border:2px solid #ef4444;border-radius:24px;padding:36px 28px;max-width:400px;width:100%;text-align:center;box-shadow:0 0 80px rgba(239,68,68,0.3);position:relative;overflow:hidden;">
+                <div style="font-size:3.5rem;margin-bottom:8px;">🚫</div>
+                <div style="font-size:0.6rem;color:#ef4444;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Gaditas Matriz</div>
+                <div style="font-size:1.4rem;font-weight:800;color:white;line-height:1.3;margin-bottom:6px;">
+                    Oi, <span style="color:#ef4444;">${primeiroNome}!</span>
+                </div>
+                <div style="font-size:0.85rem;color:#94a3b8;line-height:1.7;margin:12px 0 20px;">
+                    A${turmas.length > 1 ? 's' : ''} aula${turmas.length > 1 ? 's' : ''} abaixo ${turmas.length > 1 ? 'foram canceladas' : 'foi cancelada'} <strong style="color:white;">hoje</strong>:
+                </div>
+                <div style="text-align:left;margin-bottom:24px;">${listaTurmas}</div>
+                <div style="font-size:0.75rem;color:#64748b;margin-bottom:20px;line-height:1.6;">
+                    Qualquer dúvida, entre em contato com a academia. 💬
+                </div>
+                <button onclick="document.getElementById('modal-aula-cancelada').remove(); localStorage.setItem('${chaveLocalStorage}','1');"
+                    style="width:100%;padding:16px;background:linear-gradient(135deg,#ef4444,#b91c1c);color:white;border:none;border-radius:12px;font-weight:800;font-size:0.9rem;cursor:pointer;letter-spacing:0.5px;">
+                    ✓ ENTENDIDO
+                </button>
+            </div>`;
+        document.body.appendChild(modal);
     }
 };
 
@@ -13077,6 +13389,325 @@ const boletim = {
         } catch(e) { console.warn('Share:', e); }
     },
 
+    // ── Relatório para pais (Canvas) ─────────────────────────────────────────
+    async gerarRelatorioPais(kidIdx) {
+        try { await this._gerarRelatorioPaisImpl(kidIdx); }
+        catch(e) { alert('Erro ao gerar relatório: ' + (e.message || e)); console.error(e); }
+    },
+
+    async _gerarRelatorioPaisImpl(kidIdx) {
+        const k = this._painelKids?.[kidIdx];
+        if (!k) { alert('Dados não encontrados. Recarregue o painel.'); return; }
+        const anoSel = this._painelAnoSel;
+        const { materias, notas } = k.boletim;
+        const avs = this._getSistemaAdmin(k.boletim, anoSel);
+        const notasAno = notas?.[anoSel];
+
+        // Média do aluno
+        let somaA = 0, totalA = 0;
+        if (notasAno) {
+            [1,2].forEach(sem => avs.forEach(av => (materias||[]).forEach(m => {
+                const v = notasAno['sem'+sem]?.[av]?.[m];
+                if (v !== null && v !== undefined) { somaA += v; totalA++; }
+            })));
+        }
+        const mediaAluno = totalA ? somaA/totalA : null;
+        const mediaStr = mediaAluno !== null ? mediaAluno.toFixed(1) : '—';
+
+        // Selo
+        let seloLabel = 'SEM DADOS', seloColor = '#64748b';
+        if (mediaAluno !== null) {
+            if (mediaAluno >= 8) { seloLabel = 'OURO'; seloColor = '#f59e0b'; }
+            else if (mediaAluno >= 6) { seloLabel = 'PRATA'; seloColor = '#94a3b8'; }
+            else if (mediaAluno >= 4) { seloLabel = 'BRONZE'; seloColor = '#b45309'; }
+            else { seloLabel = 'ABAIXO DA MÉDIA'; seloColor = '#ef4444'; }
+        }
+
+        // Frequência últimos 3 meses
+        const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const hoje = new Date();
+        const treinos3meses = [2,1,0].map(offset => {
+            const d = new Date(hoje.getFullYear(), hoje.getMonth()-offset, 1);
+            const m = d.getMonth(), ano = d.getFullYear();
+            const count = (k.historico||[]).filter(h => {
+                if (!h.data) return false;
+                const p = h.data.split(',')[0].split('/');
+                return p.length >= 3 && parseInt(p[1])-1 === m && p[2].trim() === String(ano);
+            }).length;
+            return { mes: meses[m], count };
+        });
+
+        // Foto do aluno — usa proxy para URLs externas (evita CORS no canvas)
+        let fotoImg = null;
+        if (k.foto) {
+            const src = k.foto.startsWith('data:') ? k.foto : `/api/img-proxy?url=${encodeURIComponent(k.foto)}`;
+            fotoImg = await new Promise(res => {
+                const img = new Image();
+                img.onload = () => res(img);
+                img.onerror = () => res(null);
+                img.src = src;
+            });
+        }
+
+        const W = 800, H = 1050;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const c = canvas.getContext('2d');
+
+        // helper local
+        const rr = (ctx, x, y, w, h, r) => {
+            ctx.beginPath();
+            ctx.moveTo(x+r, y);
+            ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+            ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+            ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+            ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+            ctx.closePath();
+        };
+
+        // Fundo
+        c.fillStyle = '#0a0a1a';
+        c.fillRect(0, 0, W, H);
+        const gTop = c.createLinearGradient(0,0,W,200);
+        gTop.addColorStop(0,'#1e1040'); gTop.addColorStop(1,'#0f0a2e');
+        c.fillStyle = gTop; c.fillRect(0,0,W,180);
+
+        // Header
+        c.textAlign = 'center';
+        c.fillStyle = '#a78bfa'; c.font = 'bold 18px Arial';
+        c.fillText('GADITAS ACADEMY', W/2, 42);
+        c.fillStyle = '#ffffff'; c.font = 'bold 36px Arial';
+        c.fillText('RELATÓRIO PARA OS PAIS', W/2, 90);
+        c.fillStyle = '#7c3aed44';
+        c.fillRect(60, 110, W-120, 1);
+
+        // Avatar (foto ou iniciais)
+        const R = 72, cx = W/2, cy = 235;
+        c.save();
+        c.beginPath(); c.arc(cx, cy, R, 0, Math.PI*2); c.clip();
+        if (fotoImg) {
+            const s = R*2, sx = cx-R, sy = cy-R;
+            const ratio = Math.min(s/fotoImg.width, s/fotoImg.height);
+            const dw = fotoImg.width*ratio, dh = fotoImg.height*ratio;
+            c.fillStyle = '#1e1040'; c.fillRect(sx, sy, s, s);
+            c.drawImage(fotoImg, sx+(s-dw)/2, sy+(s-dh)/2, dw, dh);
+        } else {
+            c.fillStyle = '#1e1040'; c.fillRect(cx-R, cy-R, R*2, R*2);
+            const iniciais = k.nome.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
+            c.fillStyle = seloColor; c.font = `bold 52px Arial`;
+            c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.fillText(iniciais, cx, cy);
+        }
+        c.restore();
+        c.beginPath(); c.arc(cx, cy, R, 0, Math.PI*2);
+        c.strokeStyle = seloColor; c.lineWidth = 4; c.stroke();
+
+        c.textBaseline = 'alphabetic';
+        c.fillStyle = '#ffffff'; c.font = 'bold 30px Arial'; c.textAlign = 'center';
+        c.fillText(k.nome, W/2, 342);
+        if (k.idade) { c.fillStyle = '#64748b'; c.font = '17px Arial'; c.fillText(`${k.idade} anos`, W/2, 368); }
+
+        // Stats cards
+        const stats = [
+            { label: 'MÉDIA ESCOLAR', valor: mediaStr, cor: mediaAluno===null?'#64748b':mediaAluno>=7?'#10b981':mediaAluno>=5?'#f59e0b':'#ef4444', icone: '📚' },
+            { label: `TREINOS ${anoSel}`, valor: String(k.aulasAno), cor: k.aulasAno>=80?'#10b981':k.aulasAno>=40?'#f59e0b':'#94a3b8', icone: '🥋' },
+            { label: 'SELO ESCOLAR', valor: seloLabel, cor: seloColor, icone: '🏅' },
+        ];
+        const cW=220, cH=108, cY=400, gap=18;
+        const sX = (W - (stats.length*cW + (stats.length-1)*gap)) / 2;
+        stats.forEach((s, i) => {
+            const bx = sX + i*(cW+gap);
+            c.fillStyle = '#0f172a'; rr(c, bx, cY, cW, cH, 14); c.fill();
+            c.strokeStyle = s.cor+'55'; c.lineWidth=1; c.stroke();
+            c.font='26px Arial'; c.textAlign='center'; c.fillText(s.icone, bx+cW/2, cY+34);
+            c.fillStyle=s.cor; c.font=`bold ${s.valor.length>6?16:24}px Arial`;
+            c.fillText(s.valor, bx+cW/2, cY+70);
+            c.fillStyle='#64748b'; c.font='bold 10px Arial';
+            c.fillText(s.label, bx+cW/2, cY+93);
+        });
+
+        // Frequência — barras
+        c.fillStyle='#1e293b'; rr(c,60,548,W-120,165,14); c.fill();
+        c.strokeStyle='#33415566'; c.lineWidth=1; c.stroke();
+        c.fillStyle='#64748b'; c.font='bold 13px Arial'; c.textAlign='left';
+        c.fillText('📅  FREQUÊNCIA NOS ÚLTIMOS 3 MESES', 86, 578);
+        const barMaxH=76, barW=80, barY0=690;
+        const maxT = Math.max(...treinos3meses.map(t=>t.count), 1);
+        treinos3meses.forEach((t, i) => {
+            const bx = 160 + i*((W-320)/2);
+            const bH = t.count>0 ? Math.max(t.count/maxT*barMaxH,6) : 4;
+            const cor = t.count>=10?'#10b981':t.count>=5?'#f59e0b':'#ef444488';
+            c.fillStyle=cor; rr(c, bx-barW/2, barY0-bH, barW, bH, 5); c.fill();
+            c.fillStyle=cor; c.font='bold 20px Arial'; c.textAlign='center';
+            c.fillText(t.count, bx, barY0-bH-8);
+            c.fillStyle='#64748b'; c.font='14px Arial'; c.fillText(t.mes, bx, barY0+18);
+        });
+
+        // Tagline
+        const gLine = c.createLinearGradient(0,760,W,760);
+        gLine.addColorStop(0,'#7c3aed'); gLine.addColorStop(1,'#4f46e5');
+        c.fillStyle=gLine; rr(c,60,760,W-120,78,14); c.fill();
+        c.fillStyle='#ffffff'; c.font='bold 22px Arial'; c.textAlign='center';
+        c.fillText('O treino não atrapalha — ajuda! 🥋📚', W/2, 806);
+
+        // Footer
+        c.fillStyle='#334155'; c.font='13px Arial';
+        c.fillText(`gaditas-matriz.vercel.app  •  ${new Date().toLocaleDateString('pt-BR')}`, W/2, 880);
+
+        let dataUrl;
+        try {
+            dataUrl = canvas.toDataURL('image/png');
+        } catch(taintErr) {
+            // Foto causou CORS — regenera sem foto usando iniciais
+            fotoImg = null;
+            const c2 = canvas.getContext('2d');
+            c2.beginPath(); c2.arc(cx, cy, R, 0, Math.PI*2);
+            c2.fillStyle = '#1e1040'; c2.fill();
+            c2.strokeStyle = seloColor; c2.lineWidth = 4; c2.stroke();
+            const iniciais = k.nome.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
+            c2.fillStyle = seloColor; c2.font = `bold 52px Arial`;
+            c2.textAlign = 'center'; c2.textBaseline = 'middle';
+            c2.fillText(iniciais, cx, cy);
+            c2.textBaseline = 'alphabetic';
+            dataUrl = canvas.toDataURL('image/png');
+        }
+
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;';
+        modal.onclick = e => { if(e.target===modal) modal.remove(); };
+        const imgEl = document.createElement('img');
+        imgEl.src = dataUrl;
+        imgEl.style.cssText = 'max-width:100%;max-height:60vh;border-radius:10px;box-shadow:0 0 40px #0008;';
+        this._relatDataUrl = dataUrl;
+        this._relatKid = k;
+
+        const mkBtn = (bg, border, color, text) => {
+            const b = document.createElement('button');
+            b.style.cssText = `background:${bg};border:1px solid ${border};color:${color};padding:10px 16px;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;`;
+            b.textContent = text;
+            return b;
+        };
+
+        const btns = document.createElement('div');
+        btns.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:420px;';
+
+        const nomeArq = k.nome.replace(/\s+/g,'-');
+        const aDownload = document.createElement('a');
+        aDownload.href = dataUrl;
+        aDownload.download = `relatorio-${nomeArq}.png`;
+        aDownload.style.cssText = 'background:#1e1040;border:1px solid #7c3aed;color:#c4b5fd;padding:10px 16px;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;text-decoration:none;';
+        aDownload.textContent = '💾 BAIXAR';
+
+        const btnShare = mkBtn('#064e3b','#10b981','#10b981','📤 COMPARTILHAR');
+        btnShare.onclick = () => boletim._compartilharCard(boletim._relatDataUrl);
+
+        const btnEmail = mkBtn('#1e1040','#3b82f6','#93c5fd','✉️ E-MAIL');
+        btnEmail.onclick = () => boletim._enviarRelatEmail();
+
+        const btnPopup = mkBtn('#1e1040','#f59e0b','#fcd34d','🔔 ENVIAR AO ALUNO');
+        btnPopup.onclick = () => boletim._enviarRelatParaAluno();
+
+        const btnFechar = mkBtn('#1e293b','#334155','#64748b','✕ FECHAR');
+        btnFechar.onclick = () => modal.remove();
+
+        btns.appendChild(aDownload); btns.appendChild(btnShare);
+        btns.appendChild(btnEmail); btns.appendChild(btnPopup);
+        btns.appendChild(btnFechar);
+        modal.appendChild(imgEl);
+        modal.appendChild(btns);
+        document.body.appendChild(modal);
+    },
+
+    _enviarRelatEmail() {
+        const k = this._relatKid;
+        if (!k) return;
+        const email = k.email || '';
+        const anoSel = this._painelAnoSel;
+        const { materias, notas } = k.boletim;
+        const avs = this._getSistemaAdmin(k.boletim, anoSel);
+        const notasAno = notas?.[anoSel];
+        let s = 0, t = 0;
+        if (notasAno) [1,2].forEach(sem => avs.forEach(av => (materias||[]).forEach(m => {
+            const v = notasAno['sem'+sem]?.[av]?.[m];
+            if (v !== null && v !== undefined) { s += v; t++; }
+        })));
+        const media = t ? (s/t).toFixed(1) : '—';
+        const treinos = k.aulasAno || 0;
+        const assunto = encodeURIComponent(`Relatório Escolar — ${k.nome} — Gaditas Academy`);
+        const corpo = encodeURIComponent(
+`Olá! Segue o relatório do(a) ${k.nome} na Gaditas Academy.
+
+📚 BOLETIM ESCOLAR ${anoSel}
+• Média escolar: ${media}
+• Treinos realizados: ${treinos}
+
+O Jiu-Jitsu contribui para a disciplina e desempenho escolar das crianças.
+Para ver o relatório completo com imagem, acesse o app da Gaditas Academy.
+
+Gaditas Academy — gaditas-matriz.vercel.app`
+        );
+        window.open(`mailto:${email}?subject=${assunto}&body=${corpo}`, '_blank');
+    },
+
+    async _enviarRelatParaAluno() {
+        const k = this._relatKid;
+        const dataUrl = this._relatDataUrl;
+        if (!k || !dataUrl) return;
+        const btn = event?.currentTarget;
+        if (btn) { btn.textContent = '⏳ Enviando...'; btn.disabled = true; }
+        try {
+            // Salva imagem no Firestore do aluno
+            await db.collection('alunos').doc(k.id).update({
+                'boletim.relatorioParaPais': { img: dataUrl, data: new Date().toLocaleDateString('pt-BR'), lido: false }
+            });
+            // Push notification
+            await push.paraAluno(k.id, '📚 Relatório disponível!', `${k.nome}, seu relatório escolar está pronto. Abra o app para ver e baixar.`);
+            if (btn) { btn.textContent = '✅ Enviado!'; }
+            setTimeout(() => { if (btn) { btn.textContent = '🔔 ENVIAR AO ALUNO'; btn.disabled = false; } }, 3000);
+        } catch(e) {
+            if (btn) { btn.textContent = '❌ Erro'; btn.disabled = false; }
+            alert('Erro ao enviar: ' + (e.message || e));
+        }
+    },
+
+    // Verifica se há relatório novo e mostra popup para o aluno
+    async verificarRelatorioPais(alunoId) {
+        try {
+            const doc = await db.collection('alunos').doc(alunoId).get();
+            const rel = doc.data()?.boletim?.relatorioParaPais;
+            if (!rel || rel.lido) return;
+            // Marca como lido
+            await db.collection('alunos').doc(alunoId).update({ 'boletim.relatorioParaPais.lido': true });
+            // Mostra popup
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;background:#000000dd;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;';
+            modal.innerHTML = `
+                <div style="color:#a78bfa;font-size:0.7rem;font-weight:800;letter-spacing:1px;">📚 RELATÓRIO ESCOLAR</div>
+                <div style="color:#ffffff;font-size:1rem;font-weight:800;text-align:center;">Seu professor enviou um relatório!</div>`;
+            const img = document.createElement('img');
+            img.src = rel.img;
+            img.style.cssText = 'max-width:100%;max-height:55vh;border-radius:12px;box-shadow:0 0 40px #7c3aed88;';
+            const btns = document.createElement('div');
+            btns.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;justify-content:center;';
+            const aDown = document.createElement('a');
+            aDown.href = rel.img;
+            aDown.download = 'relatorio-escolar.png';
+            aDown.style.cssText = 'background:#1e1040;border:1px solid #7c3aed;color:#c4b5fd;padding:12px 20px;border-radius:10px;font-size:0.8rem;font-weight:800;cursor:pointer;text-decoration:none;';
+            aDown.textContent = '💾 SALVAR IMAGEM';
+            const bShare = document.createElement('button');
+            bShare.style.cssText = 'background:#064e3b;border:1px solid #10b981;color:#10b981;padding:12px 20px;border-radius:10px;font-size:0.8rem;font-weight:800;cursor:pointer;';
+            bShare.textContent = '📤 COMPARTILHAR';
+            bShare.onclick = () => boletim._compartilharCard(rel.img);
+            const bClose = document.createElement('button');
+            bClose.style.cssText = 'background:#1e293b;border:1px solid #334155;color:#64748b;padding:12px 20px;border-radius:10px;font-size:0.8rem;font-weight:800;cursor:pointer;';
+            bClose.textContent = '✕ FECHAR';
+            bClose.onclick = () => modal.remove();
+            btns.appendChild(aDown); btns.appendChild(bShare); btns.appendChild(bClose);
+            modal.appendChild(img); modal.appendChild(btns);
+            document.body.appendChild(modal);
+        } catch(e) { console.warn('verificarRelatorioPais:', e.message); }
+    },
+
     _ampliarComprovante(src) {
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -13208,7 +13839,7 @@ const boletim = {
                 const p = h.data.split(',')[0].split('/');
                 return p.length >= 3 && p[2].trim() === String(anoSel);
             }).length;
-            kids.push({ id: doc.id, nome: a.nome, idade, boletim: a.boletim, aulasAno });
+            kids.push({ id: doc.id, nome: a.nome, idade, boletim: a.boletim, aulasAno, historico: a.historico||[], foto: a.fotoPerfil||null });
         });
 
         // Anos disponíveis para filtro
@@ -13329,6 +13960,66 @@ const boletim = {
             </div>`;
         }
 
+        // ── Correlação frequência × nota ──────────────────────────
+        this._painelKids = kids;
+        const dadosCorr = kids.filter(k => k.boletim.notas?.[anoSel] && k.aulasAno > 0).map(k => {
+            const { materias, notas } = k.boletim;
+            const avs = this._getSistemaAdmin(k.boletim, anoSel);
+            const notasAno = notas[anoSel];
+            let s = 0, t = 0;
+            [1,2].forEach(sem => avs.forEach(av => (materias||[]).forEach(m => {
+                const v = notasAno['sem'+sem]?.[av]?.[m];
+                if (v !== null && v !== undefined) { s += v; t++; }
+            })));
+            const media = t ? s/t : null;
+            const treinosSemana = k.aulasAno / 48;
+            return { nome: k.nome, media, treinosSemana, aulasAno: k.aulasAno };
+        }).filter(d => d.media !== null);
+
+        if (dadosCorr.length >= 2) {
+            const alta = dadosCorr.filter(d => d.treinosSemana >= 3);
+            const baixa = dadosCorr.filter(d => d.treinosSemana < 3);
+            const mediaAlta = alta.length ? (alta.reduce((s,d)=>s+d.media,0)/alta.length).toFixed(1) : null;
+            const mediaBaixa = baixa.length ? (baixa.reduce((s,d)=>s+d.media,0)/baixa.length).toFixed(1) : null;
+            const diff = (mediaAlta && mediaBaixa) ? (parseFloat(mediaAlta)-parseFloat(mediaBaixa)).toFixed(1) : null;
+            html += `
+            <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:12px;">
+                <small style="color:#64748b;font-size:0.65rem;font-weight:700;display:block;margin-bottom:10px;">📈 FREQUÊNCIA × NOTA — ${anoSel}</small>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:${diff?'8px':'4px'};">
+                    <div style="background:#052e16;border:1px solid #10b98155;border-radius:8px;padding:10px;text-align:center;">
+                        <div style="color:#10b981;font-size:1.3rem;font-weight:800;">${mediaAlta||'—'}</div>
+                        <div style="color:#6ee7b7;font-size:0.6rem;margin-top:2px;">≥ 3 treinos/sem</div>
+                        <div style="color:#10b98166;font-size:0.58rem;">${alta.length} aluno${alta.length!==1?'s':''}</div>
+                    </div>
+                    <div style="background:#1c1917;border:1px solid #78716c55;border-radius:8px;padding:10px;text-align:center;">
+                        <div style="color:#a8a29e;font-size:1.3rem;font-weight:800;">${mediaBaixa||'—'}</div>
+                        <div style="color:#78716c;font-size:0.6rem;margin-top:2px;">< 3 treinos/sem</div>
+                        <div style="color:#78716c66;font-size:0.58rem;">${baixa.length} aluno${baixa.length!==1?'s':''}</div>
+                    </div>
+                </div>
+                ${diff ? `<div style="background:#1e293b;border-radius:8px;padding:7px;text-align:center;margin-bottom:8px;">
+                    <span style="color:#a78bfa;font-size:0.68rem;">Quem treina mais tem média </span>
+                    <span style="color:#10b981;font-size:0.9rem;font-weight:800;">${parseFloat(diff)>0?'+':''}${diff} pts</span>
+                    <span style="color:#a78bfa;font-size:0.68rem;"> acima</span>
+                </div>` : ''}
+                <div style="display:flex;flex-direction:column;gap:3px;">
+                    ${dadosCorr.sort((a,b)=>b.treinosSemana-a.treinosSemana).map(d => {
+                        const cor = d.media >= 7 ? '#10b981' : d.media >= 5 ? '#f59e0b' : '#ef4444';
+                        const freqCor = d.treinosSemana >= 3 ? '#10b981' : d.treinosSemana >= 1.5 ? '#f59e0b' : '#ef4444';
+                        const pct = Math.min(d.treinosSemana/5*100, 100);
+                        return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid #1e293b;">
+                            <span style="color:#94a3b8;font-size:0.65rem;min-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.nome.split(' ')[0]}</span>
+                            <div style="flex:1;background:#1e293b;border-radius:3px;height:5px;">
+                                <div style="background:${freqCor};width:${pct}%;height:5px;border-radius:3px;"></div>
+                            </div>
+                            <span style="color:${freqCor};font-size:0.58rem;width:24px;text-align:center;">${d.aulasAno}×</span>
+                            <span style="color:${cor};font-size:0.7rem;font-weight:800;width:22px;text-align:right;">${d.media.toFixed(1)}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>`;
+        }
+
         // ── Por aluno (colapsável) ────────────────────────────────
         html += `<div style="margin-top:10px;display:flex;flex-direction:column;gap:4px;">`;
         kids.forEach((k, kidIdx) => {
@@ -13372,6 +14063,10 @@ const boletim = {
                     </div>
                 </div>
                 <div id="${detailId}" style="display:none;padding:0 10px 10px;">
+                    <button onclick="boletim.gerarRelatorioPais(${kidIdx})"
+                        style="width:100%;background:#1e1040;border:1px solid #7c3aed;color:#c4b5fd;padding:8px;border-radius:8px;font-size:0.7rem;font-weight:700;cursor:pointer;margin-bottom:8px;">
+                        📤 Gerar Relatório para os Pais
+                    </button>
                     ${notasAno ? `
                     <div style="overflow-x:auto;">
                     <table style="width:100%;border-collapse:collapse;font-size:0.62rem;">

@@ -9677,7 +9677,9 @@ const exame = {
                 <div onclick="(()=>{const b=document.getElementById('acc-convocados');const c=document.getElementById('chev-convocados');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='block'?'rotate(180deg)':''})()"
                     style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer;user-select:none;">
                     <div style="font-size:0.62rem;font-weight:800;color:#64748b;letter-spacing:0.5px;">👥 CONVOCADOS — CONFIRMAÇÕES</div>
-                    <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <button onclick="event.stopPropagation();academia.abrirMensagemIndicados()"
+                            style="font-size:0.55rem;font-weight:800;background:#f59e0b;border:none;color:#000;padding:4px 8px;border-radius:6px;cursor:pointer;">📢 Mensagem</button>
                         <button onclick="event.stopPropagation();exame.migrarConvocacoesPendentes()"
                             style="font-size:0.55rem;font-weight:800;background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 8px;border-radius:6px;cursor:pointer;">📣 Notificar todos</button>
                         <span id="chev-convocados" style="color:#64748b;font-size:0.7rem;transition:transform 0.2s;">▼</span>

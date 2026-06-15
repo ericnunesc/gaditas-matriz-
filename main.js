@@ -1375,8 +1375,8 @@ const academia = {
     },
 
     async abrirMensagemIndicados() {
-        // Busca todos os indicados e agrupa por faixa
-        const snap = await db.collection('alunos').where('aspiranteGraduacao','==',true).orderBy('nome').get();
+        try {
+        const snap = await db.collection('alunos').where('aspiranteGraduacao','==',true).get();
         if (snap.empty) return alert('Nenhum atleta convocado no momento.');
 
         const grupos = {};
@@ -1415,6 +1415,7 @@ const academia = {
         this._gruposMsgIndicados = grupos;
         this._snapMsgIndicados = snap;
         this._atualizarPreviewIndicados('todos');
+        } catch(e) { alert('Erro ao buscar indicados: ' + e.message); }
     },
 
     _atualizarPreviewIndicados(grupo) {

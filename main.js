@@ -1379,71 +1379,124 @@ const academia = {
         const snap = await db.collection('alunos').where('aspiranteGraduacao','==',true).get();
         if (snap.empty) return alert('Nenhum atleta convocado no momento.');
 
-        const grupos = {};
+        const todos = [], kids = [], adulto = [];
         const ano = new Date().getFullYear();
         snap.forEach(doc => {
             const a = doc.data();
-            const faixa = a.faixa || 'Sem faixa';
             const idade = a.nascimento ? (ano - new Date(a.nascimento).getFullYear()) : 99;
-            const cat = idade < 16 ? 'Kids' : 'Adulto';
-            const chave = `${faixa} (${cat})`;
-            if (!grupos[chave]) grupos[chave] = [];
-            grupos[chave].push({ id: doc.id, nome: a.nome });
+            const item = { id: doc.id, nome: a.nome, faixa: a.faixa || '' };
+            todos.push(item);
+            if (idade < 16) kids.push(item); else adulto.push(item);
         });
-
-        const opcoesGrupo = [
-            `<option value="todos">👥 Todos os convocados (${snap.size})</option>`,
-            ...Object.entries(grupos).sort().map(([f, lista]) =>
-                `<option value="${f}">🥋 ${f} — ${lista.length} atleta${lista.length > 1 ? 's' : ''}</option>`)
-        ].join('');
 
         let modal = document.getElementById('modal-msg-indicados');
         if (!modal) { modal = document.createElement('div'); modal.id = 'modal-msg-indicados'; document.body.appendChild(modal); }
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:10000;display:flex;align-items:flex-end;justify-content:center;box-sizing:border-box;';
         const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;';
-        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;">
+        const btnGrupo = (label, val, cor='#1e293b', txt='#94a3b8', borda='#334155') =>
+            `<button onclick="academia._selecionarGrupoMsg('${val}')"
+                id="btn-grupo-${val}"
+                style="flex:1;padding:9px 4px;font-size:0.62rem;font-weight:800;background:${cor};border:2px solid ${borda};color:${txt};border-radius:8px;cursor:pointer;">${label}</button>`;
+
+        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px 16px 0 0;padding:18px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                <span style="font-size:0.85rem;font-weight:800;color:white;">📢 Mensagem para Indicados</span>
+                <span style="font-size:0.85rem;font-weight:800;color:white;">📢 Mensagem — Indicados</span>
                 <button onclick="document.getElementById('modal-msg-indicados').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
             </div>
-            <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">GRUPO</small>
-            <select id="msg-indicados-grupo" style="${inp}" onchange="academia._atualizarPreviewIndicados(this.value)">
-                ${opcoesGrupo}
-            </select>
-            <div id="msg-indicados-preview" style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:8px;margin-bottom:10px;font-size:0.62rem;color:#64748b;max-height:100px;overflow-y:auto;"></div>
+
+            <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:6px;">ENVIAR PARA O GRUPO</small>
+            <div style="display:flex;gap:6px;margin-bottom:10px;">
+                ${btnGrupo(`👥 Todos (${todos.length})`,'todos','#334155','#fff','#475569')}
+                ${btnGrupo(`🧒 Kids (${kids.length})`,'kids')}
+                ${btnGrupo(`🥋 Adulto (${adulto.length})`,'adulto')}
+            </div>
+
+            <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">🔍 OU PESQUISAR ALUNO ESPECÍFICO</small>
+            <input id="msg-busca-aluno" type="text" placeholder="Digite o nome do aluno..."
+                oninput="academia._filtrarBuscaIndicados(this.value)"
+                style="${inp}margin-bottom:6px;" />
+            <div id="msg-busca-resultado" style="display:none;background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:6px;margin-bottom:10px;max-height:120px;overflow-y:auto;"></div>
+
+            <div id="msg-indicados-preview" style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px;margin-bottom:10px;font-size:0.62rem;color:#64748b;min-height:28px;max-height:80px;overflow-y:auto;">
+                <span style="color:#475569;">Selecione um grupo acima.</span>
+            </div>
+
             <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">MENSAGEM</small>
-            <textarea id="msg-indicados-texto" rows="3" placeholder="Ex: A data do exame de faixa foi confirmada para o dia XX. Prepare-se! OSS!" style="${inp}resize:none;"></textarea>
-            <button onclick="academia._enviarMensagemIndicados()" style="width:100%;padding:13px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">📢 ENVIAR PARA O GRUPO</button>
+            <textarea id="msg-indicados-texto" rows="3" placeholder="Ex: A data do exame foi confirmada para o dia XX. Prepare-se! OSS!" style="${inp}resize:none;"></textarea>
+            <button id="btn-enviar-msg-indicados" onclick="academia._enviarMensagemIndicados()" style="width:100%;padding:13px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">📢 ENVIAR MENSAGEM</button>
         </div>`;
 
-        this._gruposMsgIndicados = grupos;
-        this._snapMsgIndicados = snap;
-        this._atualizarPreviewIndicados('todos');
+        this._todosIndicados = todos;
+        this._kidsIndicados  = kids;
+        this._adultoIndicados = adulto;
+        this._listaEnvioIndicados = [];
         } catch(e) { alert('Erro ao buscar indicados: ' + e.message); }
     },
 
-    _atualizarPreviewIndicados(grupo) {
+    _selecionarGrupoMsg(grupo) {
+        const lista = grupo === 'todos' ? this._todosIndicados
+                    : grupo === 'kids'  ? this._kidsIndicados
+                    :                    this._adultoIndicados;
+        this._listaEnvioIndicados = [...lista];
+        // destaca botão ativo
+        ['todos','kids','adulto'].forEach(g => {
+            const b = document.getElementById(`btn-grupo-${g}`);
+            if (!b) return;
+            b.style.background = g === grupo ? '#f59e0b' : '#1e293b';
+            b.style.color      = g === grupo ? '#000'    : '#94a3b8';
+            b.style.borderColor= g === grupo ? '#f59e0b' : '#334155';
+        });
+        // limpa busca individual
+        const busca = document.getElementById('msg-busca-aluno');
+        if (busca) busca.value = '';
+        document.getElementById('msg-busca-resultado').style.display = 'none';
+        this._renderPreviewIndicados();
+    },
+
+    _filtrarBuscaIndicados(termo) {
+        const res = document.getElementById('msg-busca-resultado');
+        if (!termo.trim()) { res.style.display = 'none'; return; }
+        const t = termo.toLowerCase();
+        const filtrados = this._todosIndicados.filter(a => a.nome.toLowerCase().includes(t));
+        if (!filtrados.length) { res.innerHTML = '<span style="color:#475569;font-size:0.65rem;">Nenhum encontrado.</span>'; res.style.display = 'block'; return; }
+        res.style.display = 'block';
+        res.innerHTML = filtrados.map(a =>
+            `<div onclick="academia._adicionarIndividualMsg('${a.id}','${a.nome.replace(/'/g,"\\'")}')"
+                style="padding:6px 8px;cursor:pointer;font-size:0.7rem;color:#e2e8f0;border-bottom:1px solid #1e293b;">${a.nome} <span style="color:#64748b;font-size:0.6rem;">${a.faixa}</span></div>`
+        ).join('');
+    },
+
+    _adicionarIndividualMsg(id, nome) {
+        // limpa seleção de grupo
+        ['todos','kids','adulto'].forEach(g => {
+            const b = document.getElementById(`btn-grupo-${g}`);
+            if (b) { b.style.background='#1e293b'; b.style.color='#94a3b8'; b.style.borderColor='#334155'; }
+        });
+        if (!this._listaEnvioIndicados.find(a => a.id === id)) {
+            this._listaEnvioIndicados = [{ id, nome }];
+        }
+        document.getElementById('msg-busca-aluno').value = nome;
+        document.getElementById('msg-busca-resultado').style.display = 'none';
+        this._renderPreviewIndicados();
+    },
+
+    _renderPreviewIndicados() {
         const el = document.getElementById('msg-indicados-preview');
-        if (!el || !this._gruposMsgIndicados) return;
-        const lista = grupo === 'todos'
-            ? Object.values(this._gruposMsgIndicados).flat()
-            : (this._gruposMsgIndicados[grupo] || []);
+        if (!el) return;
+        const lista = this._listaEnvioIndicados || [];
         el.innerHTML = lista.length
-            ? lista.map(a => `<span style="display:inline-block;background:#1e293b;border:1px solid #334155;border-radius:4px;padding:2px 7px;margin:2px;font-size:0.6rem;color:#94a3b8;">${a.nome}</span>`).join('')
-            : '<span style="color:#475569;">Nenhum atleta neste grupo.</span>';
+            ? lista.map(a => `<span style="display:inline-block;background:#0f172a;border:1px solid #334155;border-radius:4px;padding:2px 7px;margin:2px;font-size:0.6rem;color:#94a3b8;">${a.nome}</span>`).join('')
+            : '<span style="color:#475569;">Nenhum destinatário selecionado.</span>';
     },
 
     async _enviarMensagemIndicados() {
-        const grupo  = document.getElementById('msg-indicados-grupo')?.value;
-        const texto  = document.getElementById('msg-indicados-texto')?.value.trim();
+        const texto = document.getElementById('msg-indicados-texto')?.value.trim();
         if (!texto) return alert('Escreva a mensagem.');
-        const lista = grupo === 'todos'
-            ? Object.values(this._gruposMsgIndicados || {}).flat()
-            : (this._gruposMsgIndicados?.[grupo] || []);
-        if (!lista.length) return alert('Nenhum atleta neste grupo.');
+        const lista = this._listaEnvioIndicados || [];
+        if (!lista.length) return alert('Selecione um grupo ou aluno.');
 
-        const btn = document.querySelector('#modal-msg-indicados button:last-child');
-        if (btn) { btn.innerText = `⏳ Enviando para ${lista.length} atletas...`; btn.disabled = true; }
+        const btn = document.getElementById('btn-enviar-msg-indicados');
+        if (btn) { btn.innerText = `⏳ Enviando para ${lista.length} atleta${lista.length>1?'s':''}...`; btn.disabled = true; }
 
         let enviados = 0;
         for (const a of lista) {

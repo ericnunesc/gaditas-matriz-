@@ -1399,20 +1399,20 @@ const academia = {
 
         let modal = document.getElementById('modal-msg-indicados');
         if (!modal) { modal = document.createElement('div'); modal.id = 'modal-msg-indicados'; document.body.appendChild(modal); }
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:10000;display:flex;align-items:flex-end;justify-content:center;box-sizing:border-box;';
         const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:10px;box-sizing:border-box;';
-        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <span style="font-size:0.9rem;font-weight:800;color:white;">📢 Mensagem para Indicados</span>
+        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <span style="font-size:0.85rem;font-weight:800;color:white;">📢 Mensagem para Indicados</span>
                 <button onclick="document.getElementById('modal-msg-indicados').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
             </div>
-            <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DESTINATÁRIOS</small>
+            <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">GRUPO</small>
             <select id="msg-indicados-grupo" style="${inp}" onchange="academia._atualizarPreviewIndicados(this.value)">
                 ${opcoesGrupo}
             </select>
-            <div id="msg-indicados-preview" style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:8px;margin-bottom:10px;font-size:0.62rem;color:#64748b;min-height:32px;"></div>
+            <div id="msg-indicados-preview" style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:8px;margin-bottom:10px;font-size:0.62rem;color:#64748b;max-height:100px;overflow-y:auto;"></div>
             <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">MENSAGEM</small>
-            <textarea id="msg-indicados-texto" rows="4" placeholder="Ex: A data do exame de faixa foi confirmada para o dia XX. Prepare-se! OSS!" style="${inp}resize:none;"></textarea>
+            <textarea id="msg-indicados-texto" rows="3" placeholder="Ex: A data do exame de faixa foi confirmada para o dia XX. Prepare-se! OSS!" style="${inp}resize:none;"></textarea>
             <button onclick="academia._enviarMensagemIndicados()" style="width:100%;padding:13px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">📢 ENVIAR PARA O GRUPO</button>
         </div>`;
 

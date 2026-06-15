@@ -150,7 +150,7 @@ const auth = {
             if (!pS.empty) {
                 const d = pS.docs[0].data();
                 if (d.senha === p || p === "1234") {
-                    this.role = 'professor';
+                    this.role = d.role === 'financeiro' ? 'financeiro' : 'professor';
                     this.currentUser = { id: pS.docs[0].id, ...d };
                     return this.sucesso();
                 }
@@ -217,6 +217,11 @@ const auth = {
         // Exibe faixa/grau no cabeçalho (só para alunos)
         this._renderFaixaHeader();
         ui.configurarVisao();
+        if (auth.role === 'financeiro') {
+            ui.showTab('tab-financeiro');
+            setTimeout(() => { if (typeof financeiro !== 'undefined') financeiro.init(); }, 500);
+            return;
+        }
         ui.showTab('tab-checkin');
         ui.renderCardContrato();
         // Exibe popup de contrato para aluno que ainda não assinou
@@ -3362,8 +3367,48 @@ const academia = {
             </div>`;
         });
 
-        l.innerHTML = html || '<p style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:10px;">Nenhum professor cadastrado.</p>';
-        document.getElementById('btns-prof-admin')?.classList.toggle('hidden', !html);
+        // Usuários financeiros (role=financeiro na coleção professores)
+        const snapFin = await db.collection("professores").where("role","==","financeiro").get();
+        let htmlFin = '';
+        snapFin.docs.forEach(doc => {
+            const p = doc.data();
+            htmlFin += `<div class="item-card" style="padding:10px;border-left:4px solid #22c55e;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <span style="background:#22c55e;color:#000;font-size:0.48rem;padding:2px 7px;border-radius:4px;font-weight:800;">FINANCEIRO</span>
+                        <div style="color:#e2e8f0;font-size:0.82rem;font-weight:700;margin-top:3px;">💰 ${p.nome.toUpperCase()}</div>
+                        <div style="color:#94a3b8;font-size:0.65rem;">📧 ${p.email}</div>
+                    </div>
+                    <button onclick="academia.excluirUsuarioFinanceiro('${doc.id}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.8rem;"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>`;
+        });
+        if (htmlFin) {
+            l.innerHTML = (html || '') + `<div style="font-size:0.6rem;color:#22c55e;font-weight:800;margin:10px 0 4px;">💰 ACESSO FINANCEIRO</div>` + htmlFin;
+        } else {
+            l.innerHTML = html || '<p style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:10px;">Nenhum professor cadastrado.</p>';
+        }
+        document.getElementById('btns-prof-admin')?.classList.toggle('hidden', !html && !htmlFin);
+    },
+
+    async criarUsuarioFinanceiro() {
+        const nome  = prompt('Nome do usuário financeiro:');
+        if (!nome?.trim()) return;
+        const email = prompt('E-mail (login):');
+        if (!email?.trim()) return;
+        const senha = prompt('Senha:');
+        if (!senha?.trim()) return;
+        try {
+            await db.collection('professores').add({ nome: nome.trim(), email: email.trim().toLowerCase(), senha: senha.trim(), role: 'financeiro' });
+            alert(`✅ Usuário financeiro "${nome}" criado!`);
+            this.renderProfessores();
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async excluirUsuarioFinanceiro(id) {
+        if (!confirm('Excluir este acesso financeiro?')) return;
+        await db.collection('professores').doc(id).delete();
+        this.renderProfessores();
     },
 
     async removerPrivilegioProf(id, nome) {
@@ -8003,6 +8048,17 @@ const ui = {
     },
     configurarVisao() {
         const isAdmin = auth.role === 'admin'; const isProf = auth.role === 'professor';
+        const isFinanceiro = auth.role === 'financeiro';
+        if (isFinanceiro) {
+            // Oculta toda a nav exceto financeiro
+            document.querySelectorAll('.bottom-nav .nav-item').forEach(b => b.style.display = 'none');
+            const menuFin = document.getElementById('menu-financeiro');
+            if (menuFin) menuFin.style.display = 'flex';
+            // Oculta header de usuário e elementos desnecessários
+            const btnCfg = document.getElementById('btn-config-admin');
+            if (btnCfg) btnCfg.style.display = 'none';
+            return;
+        }
         document.body.classList.toggle('role-admin', isAdmin);
         document.body.classList.toggle('role-prof', isProf);
         document.getElementById('menu-alunos').style.display = (isAdmin || isProf) ? "flex" : "none";

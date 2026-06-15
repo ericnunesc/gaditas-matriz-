@@ -26,7 +26,7 @@ const GaditasFiltros = {
                         if(c.id !== 'screen-dashboard') c.classList.add('hidden');
                     });
 
-                    if (typeof auth !== 'undefined' && auth.role === 'admin' && typeof GaditasPainelAdm !== 'undefined') {
+                    if (typeof auth !== 'undefined' && (auth.role === 'admin' || auth.role === 'financeiro') && typeof GaditasPainelAdm !== 'undefined') {
                         // Admin vê painel de inadimplência
                         let tabFin = document.getElementById('tab-financeiro');
                         if (!tabFin) {
@@ -159,6 +159,19 @@ const GaditasFiltros = {
         if (document.getElementById('nav-financeiro')) return;
         // Professor não vê o financeiro
         if (typeof auth !== 'undefined' && auth.role === 'professor') return;
+        // Financeiro: só mostra o botão do financeiro
+        if (typeof auth !== 'undefined' && auth.role === 'financeiro') {
+            const nav = document.querySelector('.bottom-nav');
+            if (!nav) return;
+            const btn = document.createElement('button');
+            btn.id = 'nav-financeiro'; btn.className = 'nav-item active';
+            btn.style = 'background:transparent;border:none;color:#3b82f6;display:flex;flex-direction:column;align-items:center;font-size:0.65rem;cursor:pointer;flex:1;';
+            btn.setAttribute('onclick', "ui.showTab('tab-financeiro')");
+            btn.innerHTML = `<i class="fas fa-dollar-sign" style="font-size:1.2rem;margin-bottom:4px;"></i><span>FINANCEIRO</span>`;
+            nav.innerHTML = '';
+            nav.appendChild(btn);
+            return;
+        }
         const nav = document.querySelector('.bottom-nav');
         if (nav) {
             const btn = document.createElement('button');

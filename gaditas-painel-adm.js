@@ -309,11 +309,18 @@ const GaditasPainelAdm = {
         this.carregarResumoMensal();
         await this.buscarInadimplentes();
 
-        // Carrega os outros painéis após renderizar
-        if (typeof academia !== 'undefined') {
+        // Carrega os outros painéis após renderizar (apenas admin, não financeiro)
+        if (typeof academia !== 'undefined' && auth.role !== 'financeiro') {
             academia.carregarNovoCadastrosAlerta();
             academia.renderPainelPlanos();
             academia.renderPainelLanding();
+        }
+        // Oculta seções exclusivas do admin para role financeiro
+        if (typeof auth !== 'undefined' && auth.role === 'financeiro') {
+            ['painel-novos-cadastros','painel-config-planos','painel-config-landing'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
         }
 
         // Aplica acordeões nas seções recolhíveis

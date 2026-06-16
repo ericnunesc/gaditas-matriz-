@@ -1688,10 +1688,8 @@ const GaditasPainelAdm = {
                 headers: { 'Content-Type': 'application/json' }
             });
             const d = await r.json();
-            if (d.status === 'CANCELLED' || d.deleted === true) {
+            if (d.status === 'CANCELLED' || d.deleted === true || d.success === true || (d.id && d.status)) {
                 alert('✅ Fatura cancelada com sucesso!');
-            } else if (d.id && d.status) {
-                alert(`✅ Fatura atualizada. Status: ${d.status}`);
             } else {
                 throw new Error(d.errors?.[0]?.description || JSON.stringify(d));
             }

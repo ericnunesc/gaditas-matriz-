@@ -8254,36 +8254,45 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             const cor    = isMT ? '#7f1d1d' : isKids ? '#312e81' : '#0c4a6e';
             const borda  = isMT ? '#ef4444' : isKids ? '#818cf8' : '#3b82f6';
             const emoji  = isMT ? '🥊' : isKids ? '⭐' : '🥋';
-            return `<button onclick="ui._selecionarTurmaCheckin('${t.replace(/'/g,"\\'")}', this)"
-                style="width:100%;padding:14px 16px;background:${cor};border:2px solid ${borda};color:white;
-                border-radius:12px;font-weight:800;cursor:pointer;font-size:0.88rem;text-align:left;
-                display:flex;align-items:center;gap:10px;transition:all 0.15s;">
-                <span style="font-size:1.3rem;">${emoji}</span>
-                <span>${t}</span>
-            </button>`;
+            const tEsc   = t.replace(/'/g,"\\'");
+            return `<div style="display:flex;gap:6px;align-items:stretch;">
+                <button onclick="ui._selecionarTurmaCheckin('${tEsc}', this)"
+                    style="flex:1;padding:14px 16px;background:${cor};border:2px solid ${borda};color:white;
+                    border-radius:12px;font-weight:800;cursor:pointer;font-size:0.88rem;text-align:left;
+                    display:flex;align-items:center;gap:10px;transition:all 0.15s;">
+                    <span style="font-size:1.3rem;">${emoji}</span>
+                    <span>${t}</span>
+                </button>
+                <button onclick="ui._toggleVerTurma('${tEsc}',this)"
+                    style="padding:0 12px;background:#0f172a;border:2px solid ${borda}44;color:#94a3b8;
+                    border-radius:12px;font-size:0.75rem;cursor:pointer;white-space:nowrap;font-weight:700;min-width:40px;">
+                    👀
+                </button>
+            </div>`;
         }).join('');
 
-        // Oculta lista "quem treina" mas mostra o botão para ver
         const qt = document.getElementById('area-quem-treina');
         if (qt) qt.style.display = 'none';
-        // Pré-seleciona primeira turma para o botão "ver quem treina"
-        academia._turmaSelecionadaPreview = visiveis[0];
         const btnVer = document.getElementById('btn-ver-quem-treina');
-        if (btnVer) {
-            btnVer.style.display = 'block';
-            btnVer.textContent = `👀 Ver quem vai treinar hoje`;
-        }
+        if (btnVer) btnVer.style.display = 'none';
     },
 
-    _verQuemTreina() {
-        const turma = academia._turmaSelecionadaPreview;
-        if (!turma) return;
+    _toggleVerTurma(turma, btn) {
         const qt = document.getElementById('area-quem-treina');
-        if (qt) qt.style.display = qt.style.display === 'none' ? 'block' : 'none';
-        if (qt && qt.style.display === 'block') {
+        if (!qt) return;
+        const aberto = qt.style.display === 'block' && academia._turmaSelecionadaPreview === turma;
+        // Reseta todos os botões 👀
+        document.querySelectorAll('#turmas-checkin-btns button[data-ver]').forEach(b => b.style.color = '#94a3b8');
+        if (aberto) {
+            qt.style.display = 'none';
+            academia._turmaSelecionadaPreview = null;
+        } else {
+            academia._turmaSelecionadaPreview = turma;
             const s = document.getElementById('select-turma-aluno');
             if (s) s.value = turma;
+            qt.style.display = 'block';
             academia.atualizarPresencaAntecipada();
+            if (btn) btn.style.color = '#3b82f6';
         }
     },
 

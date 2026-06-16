@@ -3503,7 +3503,7 @@ Ele voltará a ser aluno normal.`)) return;
         modal.innerHTML = `
             <div style="background:#1e293b; border-radius:16px; padding:20px; max-width:480px; margin:0 auto; width:100%;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                    <div><div style="font-size:0.7rem; color:#64748b; font-weight:700;">FINANCEIRO DO ALUNO</div><div style="font-size:1rem; font-weight:800; color:white;">${nome.toUpperCase()}</div><div style="font-size:0.7rem; color:#64748b;">${email}</div></div>
+                    <div data-email="${email}" data-nome="${nome.replace(/"/g,'&quot;')}"><div style="font-size:0.7rem; color:#64748b; font-weight:700;">FINANCEIRO DO ALUNO</div><div style="font-size:1rem; font-weight:800; color:white;">${nome.toUpperCase()}</div><div style="font-size:0.7rem; color:#64748b;">${email}</div></div>
                     <button onclick="document.getElementById('modal-financeiro-admin').remove()" style="background:#334155; border:none; color:white; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700;">✕</button>
                 </div>
                 <div id="modal-fin-conteudo" style="color:#64748b; text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem; color:#3b82f6; display:block; margin-bottom:8px;"></i>Consultando Asaas...</div>
@@ -3580,6 +3580,7 @@ Ele voltará a ser aluno normal.`)) return;
                     const cor = vencida ? '#f43f5e' : hoje ? '#f59e0b' : '#10b981';
                     const tag = vencida ? `⚠️ ${dias}d DE ATRASO` : hoje ? 'Vence hoje' : 'A vencer';
                     const isPrimeira = idx === 0;
+                    const btnExcluir = `<button onclick="academia._excluirFaturaModal('${f.id}')" style="background:#2a0808;border:1px solid #7f1d1d;color:#f43f5e;padding:4px 8px;border-radius:6px;font-size:0.6rem;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Excluir fatura do Asaas">🗑️</button>`;
                     if (isPrimeira) {
                         // Fatura mais urgente — destaque total
                         const bgDestaque = vencida ? '#3b000e' : hoje ? '#2d1800' : '#052e16';
@@ -3587,16 +3588,19 @@ Ele voltará a ser aluno normal.`)) return;
                         html += `
                         <div style="background:${bgDestaque}; border:2px solid ${cor}; border-radius:12px; padding:14px; margin-bottom:10px;">
                             <div style="font-size:0.55rem; font-weight:900; color:${cor}; letter-spacing:1px; margin-bottom:8px; text-align:center;">${label}</div>
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
                                 <div>
                                     <div style="font-size:1.15rem; font-weight:900; color:${vencida ? '#f43f5e' : 'white'};">${valor}</div>
-                                    <div style="font-size:0.65rem; color:#94a3b8;">Venc: ${vencStr}</div>
+                                    <div style="font-size:0.65rem; color:#94a3b8;">Venc: ${vencStr} · ID: ${f.id.substring(0,14)}...</div>
                                 </div>
-                                <span style="font-size:0.65rem; font-weight:900; color:${cor}; background:${cor}33; padding:5px 10px; border-radius:8px; text-align:center;">${tag}</span>
+                                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+                                    <span style="font-size:0.65rem; font-weight:900; color:${cor}; background:${cor}33; padding:5px 10px; border-radius:8px; text-align:center;">${tag}</span>
+                                    ${btnExcluir}
+                                </div>
                             </div>
                         </div>`;
                     } else {
-                        html += `<div style="background:#0f172a; border:1px solid ${cor}44; border-left:3px solid ${cor}; border-radius:8px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; opacity:0.75;"><div><div style="font-size:0.85rem; font-weight:800; color:white;">${valor}</div><div style="font-size:0.65rem; color:#64748b;">Venc: ${vencStr}</div></div><span style="font-size:0.6rem; font-weight:800; color:${cor}; background:${cor}22; padding:3px 8px; border-radius:6px;">${tag}</span></div>`;
+                        html += `<div style="background:#0f172a; border:1px solid ${cor}44; border-left:3px solid ${cor}; border-radius:8px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:6px;"><div style="flex:1;min-width:0;"><div style="font-size:0.85rem; font-weight:800; color:white;">${valor}</div><div style="font-size:0.62rem; color:#64748b;">Venc: ${vencStr} · ID: ${f.id.substring(0,12)}...</div></div><span style="font-size:0.6rem; font-weight:800; color:${cor}; background:${cor}22; padding:3px 8px; border-radius:6px;">${tag}</span>${btnExcluir}</div>`;
                     }
                 });
             } else {
@@ -6015,6 +6019,30 @@ Ele voltará a ser aluno normal.`)) return;
         } catch(e) {
             alert('❌ Erro ao cancelar assinatura: ' + e.message);
         }
+    },
+
+    // ── EXCLUIR FATURA INDIVIDUAL NO MODAL FINANCEIRO DO ALUNO ──
+    async _excluirFaturaModal(faturaId) {
+        if (!confirm('Excluir esta fatura do Asaas?\n\nEssa ação não pode ser desfeita.')) return;
+        try {
+            const r = await fetch(`/api/asaas?endpoint=payments/${encodeURIComponent(faturaId)}`, { method: 'DELETE' });
+            const text = await r.text();
+            const d = text ? JSON.parse(text) : { deleted: true };
+            if (r.ok || d.deleted === true) {
+                alert('✅ Fatura excluída!');
+                // Recarrega o modal do mesmo aluno
+                const modal = document.getElementById('modal-financeiro-admin');
+                if (modal) {
+                    const emailEl = modal.querySelector('[data-email]');
+                    const email = emailEl?.dataset.email;
+                    const nome = emailEl?.dataset.nome;
+                    modal.remove();
+                    if (email && nome) setTimeout(() => academia.abrirModalFinanceiro(email, nome), 300);
+                }
+            } else {
+                throw new Error(d.errors?.[0]?.description || JSON.stringify(d));
+            }
+        } catch(e) { alert('❌ Erro ao excluir fatura: ' + e.message); }
     },
 
     // ── FOTO DO ALUNO ─────────────────────────────────────────

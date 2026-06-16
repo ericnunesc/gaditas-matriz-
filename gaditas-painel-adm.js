@@ -1681,21 +1681,20 @@ const GaditasPainelAdm = {
 
     // ── CANCELAR FATURA INDIVIDUAL NO ASAAS ─────────────────────
     async cancelarFatura(faturaId) {
-        if (!confirm('Cancelar esta fatura no Asaas?\n\nEsta ação não pode ser desfeita.')) return;
+        if (!confirm('Excluir esta fatura no Asaas?\n\nEsta ação não pode ser desfeita.')) return;
         try {
-            const r = await fetch(`/api/asaas?endpoint=payments/${encodeURIComponent(faturaId)}/cancel`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+            const r = await fetch(`/api/asaas?endpoint=payments/${encodeURIComponent(faturaId)}`, {
+                method: 'DELETE'
             });
             const d = await r.json();
-            if (d.status === 'CANCELLED' || d.deleted === true || d.success === true || (d.id && d.status)) {
-                alert('✅ Fatura cancelada com sucesso!');
+            if (d.deleted === true || d.success === true) {
+                alert('✅ Fatura excluída com sucesso!');
+                await this.buscarInadimplentes();
             } else {
                 throw new Error(d.errors?.[0]?.description || JSON.stringify(d));
             }
-            await this.buscarInadimplentes();
         } catch (e) {
-            alert('❌ Erro ao cancelar fatura: ' + e.message);
+            alert('❌ Erro ao excluir fatura: ' + e.message);
         }
     },
 

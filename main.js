@@ -8263,11 +8263,16 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             </button>`;
         }).join('');
 
-        // Oculta "quem treina" até selecionar turma
+        // Oculta lista "quem treina" mas mostra o botão para ver
         const qt = document.getElementById('area-quem-treina');
         if (qt) qt.style.display = 'none';
+        // Pré-seleciona primeira turma para o botão "ver quem treina"
+        academia._turmaSelecionadaPreview = visiveis[0];
         const btnVer = document.getElementById('btn-ver-quem-treina');
-        if (btnVer) btnVer.style.display = 'none';
+        if (btnVer) {
+            btnVer.style.display = 'block';
+            btnVer.textContent = `👀 Ver quem vai treinar hoje`;
+        }
     },
 
     _verQuemTreina() {

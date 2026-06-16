@@ -23,19 +23,28 @@ const GaditasModalFinanceiro = {
             if (!dadosCliente.data || dadosCliente.data.length === 0) return;
             
             const customerId = dadosCliente.data[0].id;
-            
-            // Busca faturas pendentes
-            const resCobrancas = await fetch(`/api/asaas?endpoint=payments&customer=${customerId}&status=PENDING&limit=20`);
+
+            // Busca faturas pendentes e já confirmadas (CONFIRMED = pago, aguardando liquidação)
+            const [resCobrancas, resConf] = await Promise.all([
+                fetch(`/api/asaas?endpoint=payments&customer=${customerId}&status=PENDING&limit=20`),
+                fetch(`/api/asaas?endpoint=payments&customer=${customerId}&status=CONFIRMED&limit=20`)
+            ]);
             const dadosCobrancas = await resCobrancas.json();
+            const dadosConf = await resConf.json();
             if (!dadosCobrancas.data || dadosCobrancas.data.length === 0) return;
-            
+
+            // IDs já confirmados não são inadimplência
+            const idsConfirmados = new Set((dadosConf.data||[]).map(p => p.id));
+            const faturasPendentes = dadosCobrancas.data.filter(p => !idsConfirmados.has(p.id));
+            if (!faturasPendentes.length) return;
+
             const dataHoje = new Date();
             dataHoje.setHours(0, 0, 0, 0);
-            
+
             let maiorAtraso = 0;
             let valorDevido = 0;
-            
-            dadosCobrancas.data.forEach(cobranca => {
+
+            faturasPendentes.forEach(cobranca => {
                 const dataFatura = new Date(cobranca.dueDate + 'T00:00:00');
                 dataFatura.setHours(0, 0, 0, 0);
                 const dias = Math.floor((dataHoje - dataFatura) / (1000 * 60 * 60 * 24));

@@ -3529,16 +3529,22 @@ Ele voltará a ser aluno normal.`)) return;
             const dadosCliente = await resCliente.json();
             if (!dadosCliente.data || dadosCliente.data.length === 0) { conteudo.innerHTML = `<p style="color:#f59e0b;">Aluno não localizado no Asaas.<br><small style="color:#64748b;">${email}</small></p>`; return; }
             const customerId = dadosCliente.data[0].id;
-            const [resPendente, resVencida, resPago, resSubs] = await Promise.all([
+            const [resPendente, resVencida, resPago, resConf, resSubs] = await Promise.all([
                 fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=PENDING&limit=10`),
                 fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=OVERDUE&limit=10`),
                 fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=RECEIVED&limit=5`),
+                fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=CONFIRMED&limit=5`),
                 fetch(`${asaasUrl}?endpoint=subscriptions&customer=${customerId}&status=ACTIVE&limit=5`)
             ]);
             const _pend = await resPendente.json(); const _venc = await resVencida.json();
-            const pagos = await resPago.json(); const subs = await resSubs.json();
-            // Combina PENDING + OVERDUE numa lista única de "em aberto"
-            const pendentes = { data: [...(_pend.data||[]), ...(_venc.data||[])] };
+            const _recv = await resPago.json(); const _conf = await resConf.json(); const subs = await resSubs.json();
+            // CONFIRMED = pago mas aguardando liquidação — não é inadimplente
+            const idsConfirmados = new Set((_conf.data||[]).map(p => p.id));
+            // Combina PENDING + OVERDUE mas remove os que já foram confirmados
+            const pendentes = { data: [...(_pend.data||[]), ...(_venc.data||[])].filter(p => !idsConfirmados.has(p.id)) };
+            // Últimos pagamentos: RECEIVED + CONFIRMED juntos
+            const pagosCombo = [...(_recv.data||[]), ...(_conf.data||[])].sort((a,b) => new Date(b.dueDate)-new Date(a.dueDate)).slice(0,5);
+            const pagos = { data: pagosCombo };
             const dataHoje = new Date(); dataHoje.setHours(0,0,0,0); let html = '';
 
             // Assinaturas ativas
@@ -3601,7 +3607,10 @@ Ele voltará a ser aluno normal.`)) return;
                 pagos.data.forEach(f => {
                     const valor = f.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                     const vencStr = f.dueDate.split('-').reverse().join('/');
-                    html += `<div style="background:#0f172a; border:1px solid #10b98144; border-left:3px solid #10b981; border-radius:8px; padding:10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;"><div><div style="font-size:0.85rem; font-weight:800; color:white;">${valor}</div><div style="font-size:0.65rem; color:#64748b;">Ref: ${vencStr}</div></div><span style="font-size:0.6rem; font-weight:800; color:#10b981; background:#10b98122; padding:3px 8px; border-radius:6px;">PAGO</span></div>`;
+                    const isConf = f.status === 'CONFIRMED';
+                    const tagLabel = isConf ? '⏳ PROCESSANDO' : 'PAGO';
+                    const tagCor = isConf ? '#f59e0b' : '#10b981';
+                    html += `<div style="background:#0f172a; border:1px solid ${tagCor}44; border-left:3px solid ${tagCor}; border-radius:8px; padding:10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;"><div><div style="font-size:0.85rem; font-weight:800; color:white;">${valor}</div><div style="font-size:0.65rem; color:#64748b;">Ref: ${vencStr}</div></div><span style="font-size:0.6rem; font-weight:800; color:${tagCor}; background:${tagCor}22; padding:3px 8px; border-radius:6px;">${tagLabel}</span></div>`;
                 });
             }
             conteudo.innerHTML = html || `<p style="color:#64748b;">Nenhuma fatura encontrada.</p>`;

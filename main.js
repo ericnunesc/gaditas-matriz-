@@ -8266,6 +8266,20 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         // Oculta "quem treina" até selecionar turma
         const qt = document.getElementById('area-quem-treina');
         if (qt) qt.style.display = 'none';
+        const btnVer = document.getElementById('btn-ver-quem-treina');
+        if (btnVer) btnVer.style.display = 'none';
+    },
+
+    _verQuemTreina() {
+        const turma = academia._turmaSelecionadaPreview;
+        if (!turma) return;
+        const qt = document.getElementById('area-quem-treina');
+        if (qt) qt.style.display = qt.style.display === 'none' ? 'block' : 'none';
+        if (qt && qt.style.display === 'block') {
+            const s = document.getElementById('select-turma-aluno');
+            if (s) s.value = turma;
+            academia.atualizarPresencaAntecipada();
+        }
     },
 
     _selecionarTurmaCheckin(turma, btnEl) {
@@ -8274,6 +8288,11 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             b.style.opacity = '0.5'; b.style.transform = 'scale(1)';
         });
         btnEl.style.opacity = '1'; btnEl.style.transform = 'scale(1.02)';
+
+        // Guarda turma selecionada para preview e mostra botão "ver quem treina"
+        academia._turmaSelecionadaPreview = turma;
+        const btnVer = document.getElementById('btn-ver-quem-treina');
+        if (btnVer) { btnVer.style.display = 'block'; btnVer.textContent = `👀 Ver quem vai treinar em ${turma}`; }
 
         // Modal de confirmação inline (sem confirm() nativo)
         const existente = document.getElementById('modal-confirm-checkin');

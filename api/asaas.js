@@ -49,9 +49,11 @@ export default async function handler(req, res) {
         }
 
         const respostaAsaas = await fetch(urlFinal, config);
-        const dados = await respostaAsaas.json();
 
-        // Repassa o status HTTP e os dados reais diretamente para sabermos o diagnóstico no app
+        // DELETE e alguns endpoints retornam 204 sem body — não tentar parsear JSON
+        const text = await respostaAsaas.text();
+        const dados = text ? JSON.parse(text) : { success: true };
+
         return res.status(respostaAsaas.status).json(dados);
 
     } catch (error) {

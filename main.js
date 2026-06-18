@@ -267,6 +267,7 @@ const auth = {
         // ── LISTENERS RELATOS DE SAÚDE ────────────────────
         if (this.role === 'aluno') { academia.iniciarListenerRelatoAluno(); setTimeout(() => academia.iniciarListenerRecadosAluno(), 1500); }
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerRelatosProf();
+        if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerCheckins();
         if (this.role === 'professor') { profComms.iniciarListenerRecadosProf(); setTimeout(() => profComms.renderPainelDispensas(), 1000); }
         if (this.role === 'admin') {
             setTimeout(() => profComms.renderPainelConvocacoes(), 1500);
@@ -4271,6 +4272,13 @@ Ele voltará a ser aluno normal.`)) return;
             await db.collection('recados_alunos').doc(recadoId).update({ lido: true, lidoEm: Date.now() });
         } catch(e) {}
         document.getElementById(popupId)?.remove();
+    },
+
+    iniciarListenerCheckins() {
+        if (this._checkinsListener) { this._checkinsListener(); this._checkinsListener = null; }
+        this._checkinsListener = db.collection('checkins').onSnapshot(() => {
+            this.renderCheckins();
+        }, () => {});
     },
 
     iniciarListenerRelatoAluno() {

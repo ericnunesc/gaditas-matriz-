@@ -6418,15 +6418,17 @@ Ele voltará a ser aluno normal.`)) return;
                             '<span style="color:#64748b; font-size:0.8rem; font-style:italic;">Sem treinos hoje</span></div>';
                         return;
                     }
+                    const desativ = this._aulaDesativada(d, slot);
                     const durSlot = duracoes[slot] || (grade.duracaoAula || 90);
                     const slotEsc = slot.replace(/'/g, "\\'");
-                    html += '<div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:8px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; gap:6px;">' +
-                        '<span style="color:#e2e8f0; font-size:0.83rem; font-weight:600; flex:1;">' + slot + '</span>' +
+                    html += '<div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:8px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; gap:6px; opacity:' + (desativ ? '0.45' : '1') + ';">' +
+                        '<span style="color:' + (desativ ? '#64748b' : '#e2e8f0') + '; font-size:0.83rem; font-weight:600; flex:1; text-decoration:' + (desativ ? 'line-through' : 'none') + ';">' + slot + '</span>' +
                         '<div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">' +
                         '<input type="number" value="' + durSlot + '" min="15" max="300" title="Duração desta turma em minutos" ' +
                         'onchange="academia.salvarDuracaoSlot(\'' + slotEsc + '\', this.value)" ' +
                         'style="width:48px; padding:4px 5px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:5px; font-size:0.7rem; text-align:center; outline:none;"/>' +
                         '<span style="color:#475569; font-size:0.55rem; font-weight:600;">min</span>' +
+                        '<button onclick="academia.toggleAulaAtiva(' + d + ', \'' + slotEsc + '\')" title="' + (desativ ? 'Reativar' : 'Desativar') + '" style="background:none; border:none; cursor:pointer; padding:4px 3px; font-size:0.9rem;">' + (desativ ? '🟢' : '🔴') + '</button>' +
                         '<button onclick="academia.removerHorarioAdmin(' + d + ', \'' + slotEsc + '\')" ' +
                         'style="background:none; border:none; color:#f43f5e; cursor:pointer; padding:4px 6px; font-size:0.9rem;"><i class="fas fa-times"></i></button>' +
                         '</div></div>';
@@ -6452,6 +6454,7 @@ Ele voltará a ser aluno normal.`)) return;
                         html += `<div style="background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:11px 14px; margin-bottom:6px; color:#475569; font-size:0.75rem; font-style:italic; text-align:center;">Sem treinos</div>`;
                         return;
                     }
+                    if (this._aulaDesativada(d, slot)) return;
                     const partes = slot.split(' - ');
                     const hora = partes[0] || slot;
                     const turma = partes.slice(1).join(' - ') || '';
@@ -6696,6 +6699,23 @@ Ele voltará a ser aluno normal.`)) return;
         try {
             await db.collection('configuracoes').doc('horarios').set(grade);
         } catch(e) { console.warn('Erro ao salvar horário:', e); }
+        this.renderHorarios();
+    },
+
+    _aulaDesativada(dia, nome) {
+        const d = this.gradeFirebase?.desativadas;
+        return !!(d && d[`${dia}_${nome}`]);
+    },
+
+    async toggleAulaAtiva(dia, nome) {
+        const grade = this.getGrade();
+        if (!grade.desativadas) grade.desativadas = {};
+        const key = `${dia}_${nome}`;
+        if (grade.desativadas[key]) delete grade.desativadas[key];
+        else grade.desativadas[key] = true;
+        this.gradeFirebase = grade;
+        try { await db.collection('configuracoes').doc('horarios').set({ desativadas: grade.desativadas }, { merge: true }); }
+        catch(e) { console.warn('Erro ao salvar toggle turma:', e); }
         this.renderHorarios();
     },
 

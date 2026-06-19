@@ -14810,10 +14810,9 @@ const certificado = {
             }
 
             const canvas = await this._montarCanvas(campos, templateUrl);
-            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-            const path = `certificados/${alunoId}/graduacao-${campos.faixaTexto.replace(/\s+/g,'-')}-${campos.dataStr}.png`;
-            const snap = await getStorage().ref(path).put(blob);
-            const url  = await snap.ref.getDownloadURL();
+            const b64   = canvas.toDataURL('image/png');
+            const path  = `certificados/${alunoId}/graduacao-${campos.faixaTexto.replace(/\s+/g,'-')}-${campos.dataStr}.png`;
+            const url   = await this._apiUpload(b64, path, 'image/png');
 
             const docRef   = db.collection('alunos').doc(alunoId);
             const alunoSnap = await docRef.get();
@@ -14989,20 +14988,41 @@ const certificado = {
             </div>`;
     },
 
+    async _toBase64(file) {
+        return new Promise((res, rej) => {
+            const r = new FileReader();
+            r.onload = () => res(r.result);
+            r.onerror = rej;
+            r.readAsDataURL(file);
+        });
+    },
+
+    async _apiUpload(base64, path, contentType) {
+        const r = await fetch('/api/upload-certificado', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageBase64: base64, path, contentType: contentType || 'image/png' })
+        });
+        const d = await r.json();
+        if (!r.ok || !d.url) throw new Error(d.error || 'Falha no upload');
+        return d.url;
+    },
+
     async _uploadTemplate(input, tipo) {
         const file = input.files?.[0];
         if (!file) return;
         const status = document.getElementById('cert-cfg-status');
         if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando template...</span>';
         try {
-            const path = `certificados/templates/template-${tipo}-${Date.now()}.${file.name.split('.').pop()}`;
-            const snap = await getStorage().ref(path).put(file);
-            const url  = await snap.ref.getDownloadURL();
+            const ext   = file.name.split('.').pop();
+            const path  = `certificados/templates/template-${tipo}-${Date.now()}.${ext}`;
+            const b64   = await this._toBase64(file);
+            const url   = await this._apiUpload(b64, path, file.type);
             const campo = tipo === 'preta' ? 'templatePretaUrl' : 'templateColoridoUrl';
             await db.collection('configuracoes').doc('certificados').set({ [campo]: url }, { merge: true });
             if (this._cfg) this._cfg[campo] = url;
             if (status) status.innerHTML = '<span style="color:#10b981;">✅ Template salvo!</span>';
-            await this.abrirConfig(); // Recarrega o modal
+            await this.abrirConfig();
         } catch(e) {
             if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ Erro: ${e.message}</span>`;
         }
@@ -15014,15 +15034,15 @@ const certificado = {
         const status = document.getElementById('cert-cfg-status');
         if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando assinatura...</span>';
         try {
-            const path = `certificados/assinaturas/ass-${tipo}-${Date.now()}.${file.name.split('.').pop()}`;
-            const snap = await getStorage().ref(path).put(file);
-            const url  = await snap.ref.getDownloadURL();
+            const ext  = file.name.split('.').pop();
+            const path = `certificados/assinaturas/ass-${tipo}-${Date.now()}.${ext}`;
+            const b64  = await this._toBase64(file);
+            const url  = await this._apiUpload(b64, path, file.type);
 
             if (tipo === 'principal') {
                 const nomeAss = document.getElementById('cert-ass-nome')?.value.trim() || auth.adminCreds.nome || '';
                 await db.collection('configuracoes').doc('certificados').set({
-                    assinaturaPrincipalUrl: url,
-                    assinaturaPrincipalNome: nomeAss
+                    assinaturaPrincipalUrl: url, assinaturaPrincipalNome: nomeAss
                 }, { merge: true });
                 if (this._cfg) { this._cfg.assinaturaPrincipalUrl = url; this._cfg.assinaturaPrincipalNome = nomeAss; }
             } else {
@@ -15034,7 +15054,6 @@ const certificado = {
                 await db.collection('configuracoes').doc('certificados').set({ professores: profs }, { merge: true });
                 if (this._cfg) this._cfg.professores = profs;
             }
-
             if (status) status.innerHTML = '<span style="color:#10b981;">✅ Assinatura salva!</span>';
             await this.abrirConfig();
         } catch(e) {
@@ -15080,12 +15099,8 @@ const certificado = {
             const assinaturaImg = snap.data()?.contrato?.assinaturaImg;
             if (!assinaturaImg) throw new Error('Assinatura não encontrada');
 
-            // Converte data URL para blob e faz upload
-            const res  = await fetch(assinaturaImg);
-            const blob = await res.blob();
             const path = `certificados/assinaturas/ass-${tipo}-${alunoId}.png`;
-            const uploadSnap = await getStorage().ref(path).put(blob);
-            const url = await uploadSnap.ref.getDownloadURL();
+            const url  = await this._apiUpload(assinaturaImg, path, 'image/png');
 
             if (tipo === 'principal') {
                 const nomeAss = document.getElementById('cert-ass-nome')?.value.trim() || nome;

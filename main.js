@@ -14722,9 +14722,9 @@ const certificado = {
         // faixa: no meio do espaço entre "graduando a" e "por mérito e reconhecimento."
         // data: abaixo da linha da faixa, acima da assinatura (já impressa no template)
         const camposPadrao = {
-            nome:  { xPct: 50, yPct: 46, fontSize: 62, color: '#1a1a2e', bold: false, italic: true },
-            faixa: { xPct: 50, yPct: 61, fontSize: 40, color: '#1a1a2e', bold: true,  italic: true },
-            data:  { xPct: 50, yPct: 71, fontSize: 28, color: '#1a1a2e', bold: false, italic: false }
+            nome:  { xPct: 50, yPct: 53, fontSize: 60, color: '#1a1a2e', bold: false, italic: true },
+            faixa: { xPct: 50, yPct: 67, fontSize: 38, color: '#1a1a2e', bold: true,  italic: true },
+            data:  { xPct: 50, yPct: 75, fontSize: 26, color: '#1a1a2e', bold: false, italic: false }
         };
         const campos = (cfg.campos && cfg.campos.nome) ? cfg.campos : camposPadrao;
 

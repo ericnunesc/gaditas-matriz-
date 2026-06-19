@@ -523,10 +523,15 @@ label {
     -webkit-backdrop-filter: blur(16px) !important;
     border-top: 1px solid rgba(51, 65, 85, 0.8) !important;
     display: flex !important;
-    justify-content: space-around !important;
     padding: 6px 4px 14px !important;
     z-index: 999 !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
 }
+
+.bottom-nav::-webkit-scrollbar { display: none; }
 
 .nav-item {
     background: transparent !important;
@@ -540,7 +545,8 @@ label {
     font-weight: 700 !important;
     letter-spacing: 0.4px !important;
     cursor: pointer !important;
-    flex: 1 !important;
+    flex: 1 0 60px !important;
+    min-width: 60px !important;
     padding: 4px 2px !important;
     position: relative !important;
     transition: color 0.2s !important;

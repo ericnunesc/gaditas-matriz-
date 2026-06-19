@@ -14814,11 +14814,10 @@ const certificado = {
             const path  = `certificados/${alunoId}/graduacao-${campos.faixaTexto.replace(/\s+/g,'-')}-${campos.dataStr}.png`;
             const url   = await this._apiUpload(b64, path, 'image/png');
 
-            const docRef   = db.collection('alunos').doc(alunoId);
-            const alunoSnap = await docRef.get();
+            const alunoSnap = await db.collection('alunos').doc(alunoId).get();
             const certs = alunoSnap.data()?.certificados || [];
             certs.unshift({ tipo: 'graduacao', faixa: campos.faixaTexto, data: campos.dataStr, url, emitidoEm: new Date().toISOString() });
-            await docRef.update({ certificados: certs });
+            await this._apiSalvarFirestore(`alunos/${alunoId}`, { certificados: certs });
 
             alert(`✅ Certificado salvo no perfil de ${campos.nome}!\nO aluno poderá visualizar e baixar pelo app.`);
             document.getElementById('modal-certificado-emitir')?.remove();
@@ -15030,11 +15029,23 @@ const certificado = {
         });
     },
 
-    async _apiUpload(base64, path, contentType) {
+    async _apiSalvarFirestore(firestoreDoc, firestoreData) {
         const r = await fetch('/api/upload-certificado', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageBase64: base64, path, contentType: contentType || 'image/png' })
+            body: JSON.stringify({ imageBase64: 'noop', path: 'noop', firestoreDoc, firestoreData, skipStorage: true })
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Erro ao salvar');
+    },
+
+    async _apiUpload(base64, path, contentType, firestoreDoc, firestoreData) {
+        const body = { imageBase64: base64, path, contentType: contentType || 'image/png' };
+        if (firestoreDoc && firestoreData) { body.firestoreDoc = firestoreDoc; body.firestoreData = firestoreData; }
+        const r = await fetch('/api/upload-certificado', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
         });
         const d = await r.json();
         if (!r.ok || !d.url) throw new Error(d.error || 'Falha no upload');
@@ -15052,9 +15063,9 @@ const certificado = {
             const maxH = tipo === 'preta' ? 1754 : 1240;
             const b64  = await this._comprimirImagem(file, maxW, maxH, true);
             const path = `certificados/templates/template-${tipo}-${Date.now()}.jpg`;
-            const url  = await this._apiUpload(b64, path, 'image/jpeg');
             const campo = tipo === 'preta' ? 'templatePretaUrl' : 'templateColoridoUrl';
-            await db.collection('configuracoes').doc('certificados').set({ [campo]: url }, { merge: true });
+            const url   = await this._apiUpload(b64, path, 'image/jpeg',
+                'configuracoes/certificados', { [campo]: '__URL__' });
             if (this._cfg) this._cfg[campo] = url;
             if (status) status.innerHTML = '<span style="color:#10b981;">✅ Template salvo!</span>';
             await this.abrirConfig();
@@ -15072,21 +15083,19 @@ const certificado = {
             // Assinaturas: max 800x300 mantendo PNG (transparência)
             const b64  = await this._comprimirImagem(file, 800, 300, false);
             const path = `certificados/assinaturas/ass-${tipo}-${Date.now()}.png`;
-            const url  = await this._apiUpload(b64, path, 'image/png');
-
             if (tipo === 'principal') {
                 const nomeAss = document.getElementById('cert-ass-nome')?.value.trim() || auth.adminCreds.nome || '';
-                await db.collection('configuracoes').doc('certificados').set({
-                    assinaturaPrincipalUrl: url, assinaturaPrincipalNome: nomeAss
-                }, { merge: true });
+                const url = await this._apiUpload(b64, path, 'image/png',
+                    'configuracoes/certificados', { assinaturaPrincipalUrl: '__URL__', assinaturaPrincipalNome: nomeAss });
                 if (this._cfg) { this._cfg.assinaturaPrincipalUrl = url; this._cfg.assinaturaPrincipalNome = nomeAss; }
             } else {
                 const nomeProf = document.getElementById('cert-novo-prof-nome')?.value.trim();
                 if (!nomeProf) { alert('Digite o nome do professor antes de enviar a assinatura.'); return; }
-                const cfg = await this._carregarCfg();
+                const cfg   = await this._carregarCfg();
                 const profs = cfg.professores || [];
+                const url   = await this._apiUpload(b64, path, 'image/png');
                 profs.push({ nome: nomeProf, url });
-                await db.collection('configuracoes').doc('certificados').set({ professores: profs }, { merge: true });
+                await this._apiSalvarFirestore('configuracoes/certificados', { professores: profs });
                 if (this._cfg) this._cfg.professores = profs;
             }
             if (status) status.innerHTML = '<span style="color:#10b981;">✅ Assinatura salva!</span>';
@@ -15135,21 +15144,19 @@ const certificado = {
             if (!assinaturaImg) throw new Error('Assinatura não encontrada');
 
             const path = `certificados/assinaturas/ass-${tipo}-${alunoId}.png`;
-            const url  = await this._apiUpload(assinaturaImg, path, 'image/png');
 
             if (tipo === 'principal') {
                 const nomeAss = document.getElementById('cert-ass-nome')?.value.trim() || nome;
-                await db.collection('configuracoes').doc('certificados').set({
-                    assinaturaPrincipalUrl: url,
-                    assinaturaPrincipalNome: nomeAss || nome
-                }, { merge: true });
+                const url = await this._apiUpload(assinaturaImg, path, 'image/png',
+                    'configuracoes/certificados', { assinaturaPrincipalUrl: '__URL__', assinaturaPrincipalNome: nomeAss || nome });
                 if (this._cfg) { this._cfg.assinaturaPrincipalUrl = url; this._cfg.assinaturaPrincipalNome = nomeAss || nome; }
             } else {
-                const cfg = await this._carregarCfg();
+                const cfg   = await this._carregarCfg();
                 const profs = cfg.professores || [];
                 if (!profs.find(p => p.nome === nome)) {
+                    const url = await this._apiUpload(assinaturaImg, path, 'image/png');
                     profs.push({ nome, url });
-                    await db.collection('configuracoes').doc('certificados').set({ professores: profs }, { merge: true });
+                    await this._apiSalvarFirestore('configuracoes/certificados', { professores: profs });
                     if (this._cfg) this._cfg.professores = profs;
                 }
             }
@@ -15195,8 +15202,8 @@ const certificado = {
 
         const status = document.getElementById('cert-cfg-status');
         try {
-            await db.collection('configuracoes').doc('certificados').set(update, { merge: true });
-            this._cfg = null; // Força recarregar
+            await this._apiSalvarFirestore('configuracoes/certificados', update);
+            this._cfg = null;
             if (status) status.innerHTML = '<span style="color:#10b981;">✅ Configurações salvas!</span>';
         } catch(e) {
             if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ Erro: ${e.message}</span>`;

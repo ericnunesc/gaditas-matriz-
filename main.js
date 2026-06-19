@@ -14717,12 +14717,16 @@ const certificado = {
 
     async _montarCanvas(campos_modal, templateUrl) {
         const cfg = await this._carregarCfg();
-        // Posições padrão calibradas para o layout do diploma (A4 landscape)
-        const campos = cfg.campos || {
-            nome:  { xPct: 50, yPct: 47, fontSize: 68, color: '#1a1a2e', bold: false, italic: true },
-            faixa: { xPct: 50, yPct: 61, fontSize: 46, color: '#1a1a2e', bold: true,  italic: true },
-            data:  { xPct: 50, yPct: 69, fontSize: 32, color: '#1a1a2e', bold: false, italic: false }
+        // Posições padrão calibradas para o layout do diploma (A4 landscape, 1320x934px aprox)
+        // nome: abaixo de "confere o presente diploma a"
+        // faixa: no meio do espaço entre "graduando a" e "por mérito e reconhecimento."
+        // data: abaixo da linha da faixa, acima da assinatura (já impressa no template)
+        const camposPadrao = {
+            nome:  { xPct: 50, yPct: 46, fontSize: 62, color: '#1a1a2e', bold: false, italic: true },
+            faixa: { xPct: 50, yPct: 61, fontSize: 40, color: '#1a1a2e', bold: true,  italic: true },
+            data:  { xPct: 50, yPct: 71, fontSize: 28, color: '#1a1a2e', bold: false, italic: false }
         };
+        const campos = (cfg.campos && cfg.campos.nome) ? cfg.campos : camposPadrao;
 
         const dataFormatada = this._ptDataFmt(campos_modal.dataStr, campos_modal.cidade);
 

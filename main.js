@@ -14826,9 +14826,9 @@ const certificado = {
             }
 
             const canvas = await this._montarCanvas(campos, templateUrl, isPreta);
-            const b64   = canvas.toDataURL('image/png');
-            const path  = `certificados/${alunoId}/graduacao-${campos.faixaTexto.replace(/\s+/g,'-')}-${campos.dataStr}.png`;
-            const url   = await this._apiUpload(b64, path, 'image/png');
+            const b64   = canvas.toDataURL('image/jpeg', 0.88);
+            const path  = `certificados/${alunoId}/graduacao-${campos.faixaTexto.replace(/\s+/g,'-')}-${campos.dataStr}.jpg`;
+            const url   = await this._apiUpload(b64, path, 'image/jpeg');
 
             const alunoSnap = await db.collection('alunos').doc(alunoId).get();
             const certs = alunoSnap.data()?.certificados || [];

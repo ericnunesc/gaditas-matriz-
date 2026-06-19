@@ -3,5 +3,8 @@
   "version": "1.0.0",
   "dependencies": {
     "firebase-admin": "^12.0.0"
+  },
+  "devDependencies": {
+    "pptxgenjs": "^4.0.1"
   }
 }

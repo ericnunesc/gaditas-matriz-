@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gaditasAPP",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-s", ".", "-l", "3000"],
+      "port": 3000
+    },
+    {
+      "name": "lotta",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "serve", "../LottaAPP", "-l", "3210"],
+      "port": 3210
+    }
+  ]
+}

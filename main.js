@@ -14715,18 +14715,11 @@ const certificado = {
         return d.dataUrl;
     },
 
-    async _montarCanvas(campos_modal, templateUrl) {
+    async _montarCanvas(campos_modal, templateUrl, isPreta) {
         const cfg = await this._carregarCfg();
-        // Posições padrão calibradas para o layout do diploma (A4 landscape, 1320x934px aprox)
-        // nome: abaixo de "confere o presente diploma a"
-        // faixa: no meio do espaço entre "graduando a" e "por mérito e reconhecimento."
-        // data: abaixo da linha da faixa, acima da assinatura (já impressa no template)
-        const camposPadrao = {
-            nome:  { xPct: 50, yPct: 53, fontSize: 60, color: '#1a1a2e', bold: false, italic: true },
-            faixa: { xPct: 50, yPct: 67, fontSize: 38, color: '#1a1a2e', bold: true,  italic: true },
-            data:  { xPct: 50, yPct: 75, fontSize: 26, color: '#1a1a2e', bold: false, italic: false }
-        };
-        const campos = (cfg.campos && cfg.campos.nome) ? cfg.campos : camposPadrao;
+        const campos = isPreta
+            ? (cfg.camposA3 || this._camposPadrao('a3'))
+            : (cfg.camposA4 || cfg.campos || this._camposPadrao('a4'));
 
         const dataFormatada = this._ptDataFmt(campos_modal.dataStr, campos_modal.cidade);
 
@@ -14805,7 +14798,7 @@ const certificado = {
             const isPreta = isPretaStr === 'true';
             const templateUrl = isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
             const campos = this._lerCamposModal();
-            const canvas = await this._montarCanvas(campos, templateUrl);
+            const canvas = await this._montarCanvas(campos, templateUrl, isPreta);
             const link = document.createElement('a');
             link.download = `certificado-${campos.nome.replace(/\s+/g,'-')}-${campos.faixaTexto.replace(/\s+/g,'-')}.png`;
             link.href = canvas.toDataURL('image/png');
@@ -14832,7 +14825,7 @@ const certificado = {
                 if (this._cfg) this._cfg.cidadePadrao = campos.cidade;
             }
 
-            const canvas = await this._montarCanvas(campos, templateUrl);
+            const canvas = await this._montarCanvas(campos, templateUrl, isPreta);
             const b64   = canvas.toDataURL('image/png');
             const path  = `certificados/${alunoId}/graduacao-${campos.faixaTexto.replace(/\s+/g,'-')}-${campos.dataStr}.png`;
             const url   = await this._apiUpload(b64, path, 'image/png');
@@ -14881,15 +14874,26 @@ const certificado = {
         }
     },
 
-    // Modal de configuração (admin)
-    async abrirConfig() {
-        const cfg = await this._carregarCfg();
-        const campos = cfg.campos || {
-            nome:  { xPct: 50, yPct: 48, fontSize: 72, color: '#1e3a8a', bold: true },
-            faixa: { xPct: 50, yPct: 58, fontSize: 52, color: '#92400e', bold: true },
-            data:  { xPct: 50, yPct: 70, fontSize: 38, color: '#475569', bold: false }
+    _camposPadrao(tipo) {
+        if (tipo === 'a3') return {
+            nome:  { xPct: 50, yPct: 43, fontSize: 58, color: '#1a1a2e', bold: false, italic: true },
+            faixa: { xPct: 50, yPct: 57, fontSize: 36, color: '#1a1a2e', bold: true,  italic: true },
+            data:  { xPct: 50, yPct: 66, fontSize: 26, color: '#1a1a2e', bold: false, italic: false }
         };
-        const assCfg = cfg.camposAssinatura || { yPct: 85, alturaPct: 8 };
+        return { // a4
+            nome:  { xPct: 50, yPct: 53, fontSize: 60, color: '#1a1a2e', bold: false, italic: true },
+            faixa: { xPct: 50, yPct: 67, fontSize: 38, color: '#1a1a2e', bold: true,  italic: true },
+            data:  { xPct: 50, yPct: 75, fontSize: 26, color: '#1a1a2e', bold: false, italic: false }
+        };
+    },
+
+    // Modal de configuração (admin)
+    async abrirConfig(abaAtiva) {
+        const cfg = await this._carregarCfg();
+        const aba = abaAtiva || 'a4';
+        const camposA4 = cfg.camposA4 || this._camposPadrao('a4');
+        const camposA3 = cfg.camposA3 || this._camposPadrao('a3');
+        const assCfg = cfg.camposAssinatura || { yPct: 80, alturaPct: 9 };
 
         let modal = document.getElementById('modal-config-certificado');
         if (!modal) { modal = document.createElement('div'); modal.id = 'modal-config-certificado'; document.body.appendChild(modal); }
@@ -14899,29 +14903,46 @@ const certificado = {
         const inp2 = 'padding:9px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.78rem;box-sizing:border-box;';
         const lbl  = 'color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:3px;';
 
-        const fieldHtml = (key, label) => {
-            const c = campos[key];
+        const fieldHtml = (prefix, key, label, campos) => {
+            const c = campos[key] || {};
             return `
             <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:8px;">
                 <div style="font-size:0.65rem;color:#f59e0b;font-weight:800;margin-bottom:8px;">${label}</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px;">
-                    <div><small style="${lbl}">X (%)</small><input type="number" id="cert-${key}-x" value="${c.xPct}" min="0" max="100" style="${inp2}width:100%;"></div>
-                    <div><small style="${lbl}">Y (%)</small><input type="number" id="cert-${key}-y" value="${c.yPct}" min="0" max="100" style="${inp2}width:100%;"></div>
-                    <div><small style="${lbl}">Fonte</small><input type="number" id="cert-${key}-fs" value="${c.fontSize}" min="10" max="300" style="${inp2}width:100%;"></div>
+                    <div><small style="${lbl}">X (%)</small><input type="number" id="cert-${prefix}-${key}-x" value="${c.xPct||50}" min="0" max="100" style="${inp2}width:100%;"></div>
+                    <div><small style="${lbl}">Y (%)</small><input type="number" id="cert-${prefix}-${key}-y" value="${c.yPct||50}" min="0" max="100" style="${inp2}width:100%;"></div>
+                    <div><small style="${lbl}">Fonte</small><input type="number" id="cert-${prefix}-${key}-fs" value="${c.fontSize||50}" min="10" max="300" style="${inp2}width:100%;"></div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-                    <div><small style="${lbl}">Cor</small><input type="color" id="cert-${key}-color" value="${c.color||'#1a1a2e'}" style="${inp2}width:100%;height:36px;padding:2px;"></div>
+                    <div><small style="${lbl}">Cor</small><input type="color" id="cert-${prefix}-${key}-color" value="${c.color||'#1a1a2e'}" style="${inp2}width:100%;height:36px;padding:2px;"></div>
                     <div style="display:flex;align-items:center;gap:6px;padding-top:14px;">
-                        <input type="checkbox" id="cert-${key}-bold" ${c.bold?'checked':''} style="accent-color:#3b82f6;">
-                        <label for="cert-${key}-bold" style="color:#e2e8f0;font-size:0.7rem;">Negrito</label>
+                        <input type="checkbox" id="cert-${prefix}-${key}-bold" ${c.bold?'checked':''} style="accent-color:#3b82f6;">
+                        <label style="color:#e2e8f0;font-size:0.7rem;">Negrito</label>
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;padding-top:14px;">
-                        <input type="checkbox" id="cert-${key}-italic" ${c.italic!==false?'checked':''} style="accent-color:#3b82f6;">
-                        <label for="cert-${key}-italic" style="color:#e2e8f0;font-size:0.7rem;">Itálico</label>
+                        <input type="checkbox" id="cert-${prefix}-${key}-italic" ${c.italic!==false?'checked':''} style="accent-color:#3b82f6;">
+                        <label style="color:#e2e8f0;font-size:0.7rem;">Itálico</label>
                     </div>
                 </div>
             </div>`;
         };
+
+        const secaoTemplate = (prefix, label, campos, templateUrl, tipoUpload) => `
+            <div style="background:#0f172a;border:1px solid #475569;border-radius:10px;padding:12px;margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <span style="font-size:0.7rem;color:#f59e0b;font-weight:800;">${label}</span>
+                    ${templateUrl ? `<span style="font-size:0.6rem;color:#10b981;">✅ Template enviado</span>` : `<span style="font-size:0.6rem;color:#f43f5e;">⚠️ Sem template</span>`}
+                </div>
+                <label style="cursor:pointer;display:block;padding:7px;background:#1e3a8a;border-radius:6px;font-size:0.65rem;color:#93c5fd;font-weight:700;text-align:center;margin-bottom:10px;">
+                    📤 Upload template ${prefix.toUpperCase()}
+                    <input type="file" accept="image/*" style="display:none;" onchange="certificado._uploadTemplate(this,'${tipoUpload}')">
+                </label>
+                ${fieldHtml(prefix, 'nome',  '👤 NOME DO ALUNO', campos)}
+                ${fieldHtml(prefix, 'faixa', '🥋 NOME DA FAIXA', campos)}
+                ${fieldHtml(prefix, 'data',  '📅 DATA', campos)}
+                <button onclick="certificado._previsualizarAba('${prefix}')" style="width:100%;padding:9px;background:#7c3aed;border:none;color:white;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.75rem;margin-top:4px;">👁️ VISUALIZAR ${prefix.toUpperCase()}</button>
+                <div id="cert-preview-${prefix}" style="margin-top:10px;"></div>
+            </div>`;
 
         const profsHtml = (cfg.professores || []).map((p, i) => `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:#0f172a;border-radius:8px;margin-bottom:6px;" id="cert-prof-item-${i}">
@@ -14939,32 +14960,9 @@ const certificado = {
                     <button onclick="document.getElementById('modal-config-certificado').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
                 </div>
 
-                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin-bottom:8px;">📄 TEMPLATES</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
-                        <div style="font-size:0.65rem;color:#94a3b8;font-weight:800;margin-bottom:6px;">A4 — COLORIDAS</div>
-                        <div style="font-size:0.55rem;color:#64748b;margin-bottom:6px;">(Branca a Marrom)</div>
-                        ${cfg.templateColoridoUrl ? `<div style="font-size:0.6rem;color:#10b981;margin-bottom:6px;">✅ Enviado</div>` : `<div style="font-size:0.6rem;color:#f43f5e;margin-bottom:6px;">⚠️ Não enviado</div>`}
-                        <label style="cursor:pointer;display:block;padding:7px;background:#1e3a8a;border-radius:6px;font-size:0.65rem;color:#93c5fd;font-weight:700;">
-                            📤 Upload A4
-                            <input type="file" accept="image/*" style="display:none;" onchange="certificado._uploadTemplate(this,'colorido')">
-                        </label>
-                    </div>
-                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
-                        <div style="font-size:0.65rem;color:#94a3b8;font-weight:800;margin-bottom:6px;">A3 — FAIXA PRETA</div>
-                        <div style="font-size:0.55rem;color:#64748b;margin-bottom:6px;">(Graus da Preta)</div>
-                        ${cfg.templatePretaUrl ? `<div style="font-size:0.6rem;color:#10b981;margin-bottom:6px;">✅ Enviado</div>` : `<div style="font-size:0.6rem;color:#f43f5e;margin-bottom:6px;">⚠️ Não enviado</div>`}
-                        <label style="cursor:pointer;display:block;padding:7px;background:#1e3a8a;border-radius:6px;font-size:0.65rem;color:#93c5fd;font-weight:700;">
-                            📤 Upload A3
-                            <input type="file" accept="image/*" style="display:none;" onchange="certificado._uploadTemplate(this,'preta')">
-                        </label>
-                    </div>
-                </div>
-
-                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin-bottom:8px;">✏️ POSIÇÃO DOS TEXTOS <span style="color:#64748b;font-weight:400;">(% da largura/altura da imagem)</span></div>
-                ${fieldHtml('nome',  '👤 NOME DO ALUNO')}
-                ${fieldHtml('faixa', '🥋 NOME DA FAIXA')}
-                ${fieldHtml('data',  '📅 DATA')}
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin-bottom:8px;">✏️ TEMPLATES E POSIÇÃO DOS TEXTOS <span style="color:#64748b;font-weight:400;">(% da imagem)</span></div>
+                ${secaoTemplate('a4', '📄 A4 — COLORIDAS (Branca a Marrom)', camposA4, cfg.templateColoridoUrl, 'colorido')}
+                ${secaoTemplate('a3', '📄 A3 — FAIXA PRETA', camposA3, cfg.templatePretaUrl, 'preta')}
 
                 <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin:12px 0 8px;">🏙️ CIDADE PADRÃO</div>
                 <input type="text" id="cert-cidade-padrao" value="${cfg.cidadePadrao||''}" placeholder="Ex: Aracaju" style="${inp}"/>
@@ -15005,12 +15003,8 @@ const certificado = {
                     </label>
                 </div>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                    <button onclick="certificado._salvarCfg()" style="padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.82rem;">💾 SALVAR</button>
-                    <button onclick="certificado._previsualizar()" style="padding:13px;background:#7c3aed;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.82rem;">👁️ VISUALIZAR</button>
-                </div>
+                <button onclick="certificado._salvarCfg()" style="width:100%;padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.82rem;">💾 SALVAR TODAS AS CONFIGURAÇÕES</button>
                 <div id="cert-cfg-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
-                <div id="cert-preview-canvas-area" style="margin-top:12px;"></div>
             </div>`;
     },
 
@@ -15132,61 +15126,48 @@ const certificado = {
         }
     },
 
-    async _previsualizar() {
-        const area = document.getElementById('cert-preview-canvas-area');
-        const status = document.getElementById('cert-cfg-status');
+    async _previsualizarAba(prefix) {
+        const isPreta = prefix === 'a3';
+        const area = document.getElementById(`cert-preview-${prefix}`);
         if (!area) return;
-        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Gerando prévia...</span>';
-        area.innerHTML = '';
+        area.innerHTML = '<div style="font-size:0.65rem;color:#f59e0b;padding:6px;">⏳ Gerando prévia...</div>';
         try {
             const cfg = await this._carregarCfg();
-            const templateUrl = cfg.templateColoridoUrl || cfg.templatePretaUrl;
+            const templateUrl = isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
             if (!templateUrl) {
-                if (status) status.innerHTML = '<span style="color:#f43f5e;">⚠️ Faça upload do template primeiro.</span>';
+                area.innerHTML = '<div style="font-size:0.65rem;color:#f43f5e;">⚠️ Faça upload do template primeiro.</div>';
                 return;
             }
-            // Lê valores atuais do formulário (sem salvar)
+            // Lê valores do formulário sem salvar
             const campos = {};
             for (const key of ['nome','faixa','data']) {
-                const xEl  = document.getElementById(`cert-${key}-x`);
-                const yEl  = document.getElementById(`cert-${key}-y`);
-                const fsEl = document.getElementById(`cert-${key}-fs`);
-                const cEl  = document.getElementById(`cert-${key}-color`);
-                const bEl  = document.getElementById(`cert-${key}-bold`);
-                const iEl  = document.getElementById(`cert-${key}-italic`);
-                if (xEl) {
-                    campos[key] = {
-                        xPct: parseFloat(xEl.value)||50, yPct: parseFloat(yEl.value)||50,
-                        fontSize: parseInt(fsEl?.value)||50, color: cEl?.value||'#1a1a2e',
-                        bold: bEl?.checked||false, italic: iEl?.checked||false
-                    };
-                }
+                campos[key] = {
+                    xPct:     parseFloat(document.getElementById(`cert-${prefix}-${key}-x`)?.value)  || 50,
+                    yPct:     parseFloat(document.getElementById(`cert-${prefix}-${key}-y`)?.value)  || 50,
+                    fontSize: parseInt(document.getElementById(`cert-${prefix}-${key}-fs`)?.value)   || 50,
+                    color:    document.getElementById(`cert-${prefix}-${key}-color`)?.value          || '#1a1a2e',
+                    bold:     document.getElementById(`cert-${prefix}-${key}-bold`)?.checked         || false,
+                    italic:   document.getElementById(`cert-${prefix}-${key}-italic`)?.checked       || false,
+                };
             }
-            const cfgFinal = Object.keys(campos).length === 3
-                ? { ...cfg, campos }
-                : cfg;
+            const cfgKey = isPreta ? 'camposA3' : 'camposA4';
+            const cfgOriginal = this._cfg;
+            this._cfg = { ...cfg, [cfgKey]: campos };
             const cidade = document.getElementById('cert-cidade-padrao')?.value || 'Aracaju';
             const campos_modal = {
                 nome: 'Nome do Aluno Exemplo',
-                faixaTexto: 'FAIXA EXEMPLO',
+                faixaTexto: isPreta ? 'FAIXA PRETA 1° GRAU' : 'FAIXA VERDE',
                 cidade,
                 dataStr: new Date().toISOString().split('T')[0]
             };
-            // Temporariamente sobrescreve cfg para usar valores do form
-            const cfgOriginal = this._cfg;
-            this._cfg = cfgFinal;
-            const canvas = await this._montarCanvas(campos_modal, templateUrl);
+            const canvas = await this._montarCanvas(campos_modal, templateUrl, isPreta);
             this._cfg = cfgOriginal;
-            // Exibe prévia escalada
-            const maxW = 360;
-            const scale = maxW / canvas.width;
             const previewUrl = canvas.toDataURL('image/jpeg', 0.85);
             area.innerHTML = `
-                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:6px;text-align:center;">PRÉVIA (ajuste os valores e clique 👁️ de novo)</div>
+                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:6px;text-align:center;">PRÉVIA — ajuste e clique 👁️ de novo</div>
                 <img src="${previewUrl}" style="width:100%;border-radius:8px;border:1px solid #334155;" />`;
-            if (status) status.innerHTML = '';
         } catch(e) {
-            if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ ${e.message}</span>`;
+            area.innerHTML = `<div style="font-size:0.65rem;color:#f43f5e;">❌ ${e.message}</div>`;
         }
     },
 
@@ -15264,24 +15245,29 @@ const certificado = {
     },
 
     async _salvarCfg() {
-        const campos = {};
-        for (const key of ['nome','faixa','data']) {
-            campos[key] = {
-                xPct:     parseFloat(document.getElementById(`cert-${key}-x`)?.value) || 50,
-                yPct:     parseFloat(document.getElementById(`cert-${key}-y`)?.value) || 50,
-                fontSize: parseInt(document.getElementById(`cert-${key}-fs`)?.value)  || 60,
-                color:    document.getElementById(`cert-${key}-color`)?.value || '#1a1a2e',
-                bold:     document.getElementById(`cert-${key}-bold`)?.checked   || false,
-                italic:   document.getElementById(`cert-${key}-italic`)?.checked || false,
-            };
-        }
-        const camposAssinatura = {
-            yPct:       parseFloat(document.getElementById('cert-ass-y')?.value) || 80,
-            alturaPct:  parseFloat(document.getElementById('cert-ass-h')?.value) || 9,
+        const lerCampos = (prefix) => {
+            const c = {};
+            for (const key of ['nome','faixa','data']) {
+                c[key] = {
+                    xPct:     parseFloat(document.getElementById(`cert-${prefix}-${key}-x`)?.value)  || 50,
+                    yPct:     parseFloat(document.getElementById(`cert-${prefix}-${key}-y`)?.value)  || 50,
+                    fontSize: parseInt(document.getElementById(`cert-${prefix}-${key}-fs`)?.value)   || 50,
+                    color:    document.getElementById(`cert-${prefix}-${key}-color`)?.value          || '#1a1a2e',
+                    bold:     document.getElementById(`cert-${prefix}-${key}-bold`)?.checked         || false,
+                    italic:   document.getElementById(`cert-${prefix}-${key}-italic`)?.checked       || false,
+                };
+            }
+            return c;
         };
-        const nomeAss    = document.getElementById('cert-ass-nome')?.value.trim();
+        const camposA4 = lerCampos('a4');
+        const camposA3 = lerCampos('a3');
+        const camposAssinatura = {
+            yPct:      parseFloat(document.getElementById('cert-ass-y')?.value) || 80,
+            alturaPct: parseFloat(document.getElementById('cert-ass-h')?.value) || 9,
+        };
+        const nomeAss    = document.getElementById('cert-ass-nome')?.value?.trim();
         const cidadePadrao = document.getElementById('cert-cidade-padrao')?.value?.trim() || '';
-        const update = { campos, camposAssinatura };
+        const update = { camposA4, camposA3, camposAssinatura };
         if (nomeAss) update.assinaturaPrincipalNome = nomeAss;
         if (cidadePadrao) update.cidadePadrao = cidadePadrao;
 

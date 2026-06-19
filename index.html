@@ -678,6 +678,7 @@ const PLANOS_ITENS = [
 function renderPlanos(precos, landing) {
     const container = document.getElementById('planos-grid');
     const maisPopular = landing?.mais_popular || 'semestral';
+    const taxaMatricula = parseFloat(precos.taxaMatricula) || 0;
     const ordem = ['mensal','trimestral','semestral','anual'];
     container.innerHTML = ordem.map(key => {
         const cfg      = PLANOS_CONFIG[key];
@@ -687,6 +688,10 @@ function renderPlanos(precos, landing) {
         const desc     = landing?.planos_desc?.[key] || cfg.desc;
         const itensRaw = landing?.planos_itens?.[key] || PLANOS_ITENS.join('\n');
         const itens    = itensRaw.split('\n').filter(i => i.trim());
+        const isAnual  = key === 'anual';
+        const badgeMatricula = (!isAnual && taxaMatricula > 0)
+            ? `<div style="font-size:0.62rem;color:#f59e0b;font-weight:700;margin-top:8px;background:#f59e0b15;border:1px solid #f59e0b44;border-radius:6px;padding:3px 8px;display:inline-block;">+ R$ ${taxaMatricula.toFixed(2).replace('.',',')} matrícula</div>`
+            : (isAnual ? `<div style="font-size:0.62rem;color:#10b981;font-weight:700;margin-top:8px;">✅ Matrícula grátis</div>` : '');
         return `
         <div class="plano-card${destaque ? ' destaque' : ''}">
             ${destaque ? '<div class="plano-badge-top">Mais popular</div>' : ''}
@@ -698,7 +703,8 @@ function renderPlanos(precos, landing) {
                 <span class="plano-valor">${typeof valor === 'number' ? valor.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2}) : valor}</span>
                 <span class="plano-periodo">/mês</span>
             </div>
-            <div class="plano-itens">
+            ${badgeMatricula}
+            <div class="plano-itens" style="margin-top:10px;">
                 ${itens.map(i=>`<div class="plano-item"><i class="fas fa-check-circle"></i> ${i}</div>`).join('')}
             </div>
             <a href="cadastro.html" class="plano-cta ${destaque ? 'filled' : 'outline'}">Quero me matricular</a>

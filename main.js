@@ -14703,6 +14703,18 @@ const certificado = {
         };
     },
 
+    async _carregarTemplateDataUrl(templateUrl) {
+        // Extrai o path do Storage a partir da URL pública
+        // https://storage.googleapis.com/bucket/certificados/templates/...
+        const match = templateUrl.match(/storage\.googleapis\.com\/[^/]+\/(.+)/);
+        if (!match) throw new Error('URL de template inválida');
+        const path = decodeURIComponent(match[1]);
+        const r = await fetch(`/api/cert-imagem?path=${encodeURIComponent(path)}`);
+        const d = await r.json();
+        if (!r.ok || !d.dataUrl) throw new Error(d.error || 'Não foi possível carregar o template');
+        return d.dataUrl;
+    },
+
     async _montarCanvas(campos_modal, templateUrl) {
         const cfg = await this._carregarCfg();
         // Posições padrão calibradas para o layout do diploma (A4 landscape)
@@ -14714,9 +14726,11 @@ const certificado = {
 
         const dataFormatada = this._ptDataFmt(campos_modal.dataStr, campos_modal.cidade);
 
+        // Carrega template via proxy para evitar CORS no Canvas
+        const dataUrl = await this._carregarTemplateDataUrl(templateUrl);
+
         return new Promise((resolve, reject) => {
             const img = new Image();
-            img.crossOrigin = 'anonymous';
             img.onload = async () => {
                 const canvas = document.createElement('canvas');
                 canvas.width  = img.width;
@@ -14754,23 +14768,28 @@ const certificado = {
                     const assCfg = cfg.camposAssinatura || { yPct: 80, alturaPct: 9 };
                     const assH   = H * assCfg.alturaPct / 100;
                     const espaco = W / (assinaturas.length + 1);
-                    const drawAss = (p, x) => new Promise(res => {
-                        const ai = new Image(); ai.crossOrigin = 'anonymous';
-                        ai.onload = () => {
-                            const assW = assH * (ai.width / ai.height);
-                            ctx.drawImage(ai, x - assW / 2, H * assCfg.yPct / 100, assW, assH);
-                            res();
-                        };
-                        ai.onerror = () => res();
-                        ai.src = p.url;
-                    });
+                    const drawAss = async (p, x) => {
+                        try {
+                            const assDataUrl = await this._carregarTemplateDataUrl(p.url);
+                            await new Promise(res => {
+                                const ai = new Image();
+                                ai.onload = () => {
+                                    const assW = assH * (ai.width / ai.height);
+                                    ctx.drawImage(ai, x - assW / 2, H * assCfg.yPct / 100, assW, assH);
+                                    res();
+                                };
+                                ai.onerror = () => res();
+                                ai.src = assDataUrl;
+                            });
+                        } catch(e) { /* assinatura não carregou, ignora */ }
+                    };
                     await Promise.all(assinaturas.map((p, i) => drawAss(p, espaco * (i + 1))));
                 }
 
                 resolve(canvas);
             };
-            img.onerror = () => reject(new Error('Não foi possível carregar o template. Verifique se o arquivo foi enviado corretamente.'));
-            img.src = templateUrl;
+            img.onerror = () => reject(new Error('Erro ao processar template'));
+            img.src = dataUrl;
         });
     },
 

@@ -647,11 +647,13 @@ const academia = {
     },
 
     async salvarConfiguracaoPlanos() {
+        const taxaInput = parseFloat(document.getElementById('plano-taxa-matricula')?.value);
         const planos = {
-            mensal:     { valor: parseFloat(document.getElementById('plano-val-mensal').value) || 120,     label: 'Mensal',     ciclo: 'mês' },
-            trimestral: { valor: parseFloat(document.getElementById('plano-val-trimestral').value) || 110, label: 'Trimestral', ciclo: 'mês' },
-            semestral:  { valor: parseFloat(document.getElementById('plano-val-semestral').value) || 100,  label: 'Semestral',  ciclo: 'mês' },
-            anual:      { valor: parseFloat(document.getElementById('plano-val-anual').value) || 90,       label: 'Anual',      ciclo: 'mês' }
+            mensal:        { valor: parseFloat(document.getElementById('plano-val-mensal').value) || 120,     label: 'Mensal',     ciclo: 'mês' },
+            trimestral:    { valor: parseFloat(document.getElementById('plano-val-trimestral').value) || 110, label: 'Trimestral', ciclo: 'mês' },
+            semestral:     { valor: parseFloat(document.getElementById('plano-val-semestral').value) || 100,  label: 'Semestral',  ciclo: 'mês' },
+            anual:         { valor: parseFloat(document.getElementById('plano-val-anual').value) || 90,       label: 'Anual',      ciclo: 'mês' },
+            taxaMatricula: isNaN(taxaInput) ? 0 : taxaInput
         };
         await db.collection('configuracoes').doc('planos').set(planos);
         alert("✅ Valores dos planos atualizados! Já refletem na página de cadastro.");
@@ -678,6 +680,12 @@ const academia = {
                                 <input type="number" id="plano-val-${key}" value="${planos[key].valor}" step="0.01"
                                     style="width:100%; padding:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.85rem; font-weight:700;"/>
                             </div>`).join('')}
+                    </div>
+                    <div style="margin-top:14px; padding-top:12px; border-top:1px solid #1e293b;">
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">TAXA DE MATRÍCULA (R$) — coloque 0 para não cobrar</small>
+                        <input type="number" id="plano-taxa-matricula" value="${planos.taxaMatricula ?? ''}" min="0" step="0.01" placeholder="0,00"
+                            style="width:100%; padding:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.85rem; font-weight:700; box-sizing:border-box;"/>
+                        <small style="color:#475569; font-size:0.55rem; display:block; margin-top:4px;">Cobrada automaticamente no Asaas quando um aluno se cadastra no cadastro.html</small>
                     </div>
                     <div style="display:flex; gap:8px; margin-top:12px;">
                         <button onclick="academia.salvarConfiguracaoPlanos()" style="flex:1; padding:12px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;">

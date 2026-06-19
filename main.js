@@ -240,6 +240,19 @@ const auth = {
             if (wp) wp.classList.remove('hidden');
         }
         // Boletim escolar: visível para kids (por idade ou por turma kids)
+        // Certificados do aluno
+        if (this.role === 'aluno') {
+            setTimeout(async () => {
+                const snap = await db.collection('alunos').doc(auth.currentUser.id).get();
+                const certs = snap.data()?.certificados || [];
+                if (certs.length > 0) {
+                    const card = document.getElementById('card-meus-certificados');
+                    if (card) card.classList.remove('hidden');
+                    certificado.renderMeusCertificados('lista-meus-certificados');
+                }
+            }, 1200);
+        }
+
         if (this.role === 'aluno') {
             const _nasc = this.currentUser?.nascimento;
             const _idadeBoletim = _nasc ? new Date().getFullYear() - new Date(_nasc).getFullYear() : 99;
@@ -5885,6 +5898,13 @@ Ele voltará a ser aluno normal.`)) return;
                 </button>
                 <div style="font-size:0.58rem;color:#475569;margin-top:6px;line-height:1.4;">Use após atualizar o contrato. Todos os alunos verão aviso para reassinar.</div>
                 <div style="height:1px;background:#334155;margin:16px 0;"></div>
+                <div style="height:1px;background:#334155;margin:16px 0;"></div>
+                <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">🏆 CERTIFICADOS</div>
+                <button onclick="document.getElementById('modal-config-admin').remove(); certificado.abrirConfig();" style="width:100%;padding:12px;background:#1c1000;border:1px solid #92400e;color:#fbbf24;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;margin-bottom:6px;">
+                    🏆 CONFIGURAR CERTIFICADOS DE GRADUAÇÃO
+                </button>
+                <div style="font-size:0.58rem;color:#475569;margin-bottom:4px;line-height:1.4;">Upload dos templates, posição dos textos e assinaturas dos professores.</div>
+                <div style="height:1px;background:#334155;margin:16px 0;"></div>
                 <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">🔔 DIAGNÓSTICO DE PUSH</div>
                 <input type="text" id="cfg-diag-email" placeholder="E-mail do aluno para testar..." style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:8px;box-sizing:border-box;"/>
                 <button onclick="academia._diagnosticarPush()" style="width:100%;padding:11px;background:#8b5cf6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.78rem;margin-bottom:8px;">🔍 DIAGNÓSTICO PUSH</button>
@@ -10530,6 +10550,11 @@ const exame = {
 
             // Remove card da lista
             card?.remove();
+
+            // Oferece emitir certificado
+            const hoje2 = new Date();
+            const dataGrad = `${hoje2.getFullYear()}-${String(hoje2.getMonth()+1).padStart(2,'0')}-${String(hoje2.getDate()).padStart(2,'0')}`;
+            setTimeout(() => certificado.abrirEmitir(alunoId, nome, faixaDestino, dataGrad), 300);
         } catch(e) {
             alert('Erro ao graduar: ' + e.message);
             if (btn) { btn.disabled = false; btn.textContent = '🥋 GRADUAR'; }
@@ -14566,3 +14591,447 @@ document.addEventListener('DOMContentLoaded', () => {
     auth.carregarCredenciaisAdmin();
     auth.carregarMetasAulas();
 });
+
+// ══════════════════════════════════════════════════════════
+// CERTIFICADOS
+// ══════════════════════════════════════════════════════════
+const certificado = {
+    _cfg: null,
+
+    async _carregarCfg() {
+        if (this._cfg) return this._cfg;
+        try {
+            const doc = await db.collection('configuracoes').doc('certificados').get();
+            this._cfg = doc.exists ? doc.data() : {};
+        } catch(e) { this._cfg = {}; }
+        return this._cfg;
+    },
+
+    _faixaEhPreta(faixa) {
+        return (faixa || '').toLowerCase().includes('preta');
+    },
+
+    // Abre modal para emitir certificado de graduação
+    async abrirEmitir(alunoId, nome, faixa, data) {
+        const cfg = await this._carregarCfg();
+        const isPreta = this._faixaEhPreta(faixa);
+        const templateUrl = isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
+
+        if (!templateUrl) {
+            alert('⚠️ Template de certificado não configurado.\nVá em Configurações → Certificados para fazer upload do template.');
+            return;
+        }
+
+        let modal = document.getElementById('modal-certificado-emitir');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-certificado-emitir'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+
+        const profs = cfg.professores || [];
+        const profHtml = profs.map((p,i) => `
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#0f172a;border-radius:8px;cursor:pointer;">
+                <input type="checkbox" id="cert-prof-${i}" value="${i}" style="width:16px;height:16px;accent-color:#3b82f6;">
+                <span style="font-size:0.75rem;color:#e2e8f0;">${p.nome}</span>
+            </label>`).join('');
+
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.95rem;font-weight:800;color:white;">🏆 Emitir Certificado</span>
+                    <button onclick="document.getElementById('modal-certificado-emitir').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:14px;">
+                    <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:2px;">Aluno</div>
+                    <div style="font-size:0.9rem;font-weight:800;color:white;">${nome}</div>
+                    <div style="font-size:0.7rem;color:#64748b;margin-top:4px;">Faixa: <span style="color:#f59e0b;font-weight:700;">${faixa}</span> · Template: <span style="color:#94a3b8;">${isPreta ? 'A3 (Preta)' : 'A4 (Coloridas)'}</span></div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DATA DO CERTIFICADO</small>
+                    <input type="date" id="cert-data" value="${data || new Date().toISOString().split('T')[0]}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;"/>
+                </div>
+                ${cfg.assinaturaPrincipalUrl ? `
+                <div style="margin-bottom:12px;">
+                    <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:6px;">ASSINATURAS</small>
+                    <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#0f172a;border-radius:8px;cursor:pointer;margin-bottom:6px;">
+                        <input type="checkbox" id="cert-prof-principal" checked style="width:16px;height:16px;accent-color:#3b82f6;">
+                        <span style="font-size:0.75rem;color:#f59e0b;font-weight:700;">${cfg.assinaturaPrincipalNome || 'Professor Principal'} ⭐</span>
+                    </label>
+                    ${profHtml}
+                </div>` : ''}
+                <div id="cert-preview-area" style="margin-bottom:14px;text-align:center;"></div>
+                <button onclick="certificado._gerarEBaixar('${alunoId}','${nome.replace(/'/g,"\\'")}','${faixa}','${isPreta}')" style="width:100%;padding:13px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;margin-bottom:8px;" id="btn-gerar-cert">
+                    🎓 GERAR E BAIXAR CERTIFICADO
+                </button>
+                <button onclick="certificado._gerarESalvar('${alunoId}','${nome.replace(/'/g,"\\'")}','${faixa}','${isPreta}')" style="width:100%;padding:11px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.78rem;" id="btn-salvar-cert">
+                    ☁️ SALVAR NO PERFIL DO ALUNO
+                </button>
+            </div>`;
+    },
+
+    async _montarCanvas(alunoNome, faixa, dataStr, templateUrl, professoresSelecionados) {
+        const cfg = await this._carregarCfg();
+        const campos = cfg.campos || {
+            nome:  { xPct: 50, yPct: 48, fontSize: 72, color: '#1e3a8a', bold: true },
+            faixa: { xPct: 50, yPct: 58, fontSize: 52, color: '#92400e', bold: true },
+            data:  { xPct: 50, yPct: 70, fontSize: 38, color: '#475569', bold: false }
+        };
+
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = async () => {
+                const canvas = document.createElement('canvas');
+                canvas.width  = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                const W = canvas.width;
+                const H = canvas.height;
+
+                // Desenha nome
+                const cn = campos.nome;
+                ctx.font = `${cn.bold?'bold ':''} ${Math.round(cn.fontSize * W / 1800)}px 'Georgia', serif`;
+                ctx.fillStyle = cn.color;
+                ctx.textAlign = 'center';
+                ctx.fillText(alunoNome, W * cn.xPct / 100, H * cn.yPct / 100);
+
+                // Desenha faixa
+                const cf = campos.faixa;
+                ctx.font = `${cf.bold?'bold ':''} ${Math.round(cf.fontSize * W / 1800)}px 'Georgia', serif`;
+                ctx.fillStyle = cf.color;
+                ctx.textAlign = 'center';
+                ctx.fillText(`Faixa ${faixa}`, W * cf.xPct / 100, H * cf.yPct / 100);
+
+                // Desenha data
+                const cd = campos.data;
+                const [ano, mes, dia] = dataStr.split('-');
+                const dataFmt = `${dia}/${mes}/${ano}`;
+                ctx.font = `${cd.bold?'bold ':''} ${Math.round(cd.fontSize * W / 1800)}px 'Georgia', serif`;
+                ctx.fillStyle = cd.color;
+                ctx.textAlign = 'center';
+                ctx.fillText(dataFmt, W * cd.xPct / 100, H * cd.yPct / 100);
+
+                // Assinaturas
+                const assinaturas = [];
+                if (document.getElementById('cert-prof-principal')?.checked && cfg.assinaturaPrincipalUrl) {
+                    assinaturas.push({ url: cfg.assinaturaPrincipalUrl, nome: cfg.assinaturaPrincipalNome || '' });
+                }
+                (cfg.professores || []).forEach((p, i) => {
+                    if (document.getElementById(`cert-prof-${i}`)?.checked) assinaturas.push(p);
+                });
+
+                // Desenha assinaturas no rodapé
+                if (assinaturas.length > 0) {
+                    const assCfg = cfg.camposAssinatura || { yPct: 85, alturaPct: 8 };
+                    const assH   = H * assCfg.alturaPct / 100;
+                    const espaco = W / (assinaturas.length + 1);
+                    const drawAss = (p, x) => new Promise(res => {
+                        const ai = new Image(); ai.crossOrigin = 'anonymous';
+                        ai.onload = () => {
+                            const assW = assH * (ai.width / ai.height);
+                            ctx.drawImage(ai, x - assW/2, H * assCfg.yPct / 100, assW, assH);
+                            ctx.font = `${Math.round(28 * W / 1800)}px Arial`;
+                            ctx.fillStyle = '#475569';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(p.nome || '', x, H * assCfg.yPct / 100 + assH + Math.round(35 * W / 1800));
+                            res();
+                        };
+                        ai.onerror = () => res();
+                        ai.src = p.url;
+                    });
+                    await Promise.all(assinaturas.map((p, i) => drawAss(p, espaco * (i + 1))));
+                }
+
+                resolve(canvas);
+            };
+            img.onerror = () => reject(new Error('Não foi possível carregar o template'));
+            img.src = templateUrl;
+        });
+    },
+
+    async _gerarEBaixar(alunoId, nome, faixa, isPretaStr) {
+        const btn = document.getElementById('btn-gerar-cert');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+        try {
+            const cfg = await this._carregarCfg();
+            const isPreta = isPretaStr === 'true';
+            const templateUrl = isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
+            const dataStr = document.getElementById('cert-data')?.value || new Date().toISOString().split('T')[0];
+            const canvas = await this._montarCanvas(nome, faixa, dataStr, templateUrl, []);
+            const link = document.createElement('a');
+            link.download = `certificado-${nome.replace(/\s+/g,'-')}-${faixa}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch(e) {
+            alert('Erro ao gerar certificado: ' + e.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '🎓 GERAR E BAIXAR CERTIFICADO'; }
+        }
+    },
+
+    async _gerarESalvar(alunoId, nome, faixa, isPretaStr) {
+        const btn = document.getElementById('btn-salvar-cert');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+        try {
+            const cfg = await this._carregarCfg();
+            const isPreta = isPretaStr === 'true';
+            const templateUrl = isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
+            const dataStr = document.getElementById('cert-data')?.value || new Date().toISOString().split('T')[0];
+            const canvas = await this._montarCanvas(nome, faixa, dataStr, templateUrl, []);
+
+            // Converte canvas para blob e faz upload no Storage
+            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+            const path = `certificados/${alunoId}/graduacao-${faixa}-${dataStr}.png`;
+            const snap = await getStorage().ref(path).put(blob);
+            const url  = await snap.ref.getDownloadURL();
+
+            // Salva URL no Firestore do aluno
+            const docRef = db.collection('alunos').doc(alunoId);
+            const alunoSnap = await docRef.get();
+            const certs = alunoSnap.data()?.certificados || [];
+            certs.unshift({ tipo: 'graduacao', faixa, data: dataStr, url, emitidoEm: new Date().toISOString() });
+            await docRef.update({ certificados: certs });
+
+            alert(`✅ Certificado salvo no perfil de ${nome}!\nO aluno poderá visualizar e baixar pelo app.`);
+            document.getElementById('modal-certificado-emitir')?.remove();
+        } catch(e) {
+            alert('Erro ao salvar certificado: ' + e.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '☁️ SALVAR NO PERFIL DO ALUNO'; }
+        }
+    },
+
+    // Renderiza "Meus Certificados" para o aluno logado
+    async renderMeusCertificados(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        try {
+            const snap = await db.collection('alunos').doc(auth.currentUser.id).get();
+            const certs = snap.data()?.certificados || [];
+            if (certs.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:#64748b;font-size:0.75rem;padding:16px;">Nenhum certificado emitido ainda.</div>';
+                return;
+            }
+            container.innerHTML = certs.map(c => {
+                const [ano, mes, dia] = (c.data || '').split('-');
+                const dataFmt = (dia && mes && ano) ? `${dia}/${mes}/${ano}` : c.data || '';
+                return `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:#0f172a;border-radius:10px;margin-bottom:8px;border:1px solid #334155;">
+                    <div>
+                        <div style="font-size:0.78rem;font-weight:800;color:white;">🏆 Faixa ${c.faixa}</div>
+                        <div style="font-size:0.6rem;color:#64748b;margin-top:2px;">${dataFmt}</div>
+                    </div>
+                    <a href="${c.url}" target="_blank" download style="background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;padding:8px 14px;border-radius:8px;font-size:0.68rem;font-weight:700;text-decoration:none;">
+                        ⬇️ BAIXAR
+                    </a>
+                </div>`;
+            }).join('');
+        } catch(e) {
+            container.innerHTML = '<div style="color:#f43f5e;font-size:0.72rem;">Erro ao carregar certificados.</div>';
+        }
+    },
+
+    // Modal de configuração (admin)
+    async abrirConfig() {
+        const cfg = await this._carregarCfg();
+        const campos = cfg.campos || {
+            nome:  { xPct: 50, yPct: 48, fontSize: 72, color: '#1e3a8a', bold: true },
+            faixa: { xPct: 50, yPct: 58, fontSize: 52, color: '#92400e', bold: true },
+            data:  { xPct: 50, yPct: 70, fontSize: 38, color: '#475569', bold: false }
+        };
+        const assCfg = cfg.camposAssinatura || { yPct: 85, alturaPct: 8 };
+
+        let modal = document.getElementById('modal-config-certificado');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-config-certificado'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+
+        const inp  = 'width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.78rem;margin-bottom:8px;box-sizing:border-box;';
+        const inp2 = 'padding:9px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.78rem;box-sizing:border-box;';
+        const lbl  = 'color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:3px;';
+
+        const fieldHtml = (key, label) => {
+            const c = campos[key];
+            return `
+            <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:8px;">
+                <div style="font-size:0.65rem;color:#f59e0b;font-weight:800;margin-bottom:8px;">${label}</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px;">
+                    <div><small style="${lbl}">X (%)</small><input type="number" id="cert-${key}-x" value="${c.xPct}" min="0" max="100" style="${inp2}width:100%;"></div>
+                    <div><small style="${lbl}">Y (%)</small><input type="number" id="cert-${key}-y" value="${c.yPct}" min="0" max="100" style="${inp2}width:100%;"></div>
+                    <div><small style="${lbl}">Fonte</small><input type="number" id="cert-${key}-fs" value="${c.fontSize}" min="10" max="300" style="${inp2}width:100%;"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                    <div><small style="${lbl}">Cor</small><input type="color" id="cert-${key}-color" value="${c.color}" style="${inp2}width:100%;height:36px;padding:2px;"></div>
+                    <div style="display:flex;align-items:center;gap:6px;padding-top:14px;">
+                        <input type="checkbox" id="cert-${key}-bold" ${c.bold?'checked':''} style="accent-color:#3b82f6;">
+                        <label for="cert-${key}-bold" style="color:#e2e8f0;font-size:0.7rem;">Negrito</label>
+                    </div>
+                </div>
+            </div>`;
+        };
+
+        const profsHtml = (cfg.professores || []).map((p, i) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:#0f172a;border-radius:8px;margin-bottom:6px;" id="cert-prof-item-${i}">
+                <div>
+                    <div style="font-size:0.72rem;color:white;font-weight:700;">${p.nome}</div>
+                    <div style="font-size:0.58rem;color:#64748b;">${p.url ? '✅ Assinatura enviada' : '⚠️ Sem assinatura'}</div>
+                </div>
+                <button onclick="certificado._removerProf(${i})" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.8rem;">🗑️</button>
+            </div>`).join('');
+
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:92vh;overflow-y:auto;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.95rem;font-weight:800;color:white;">🏆 Configurar Certificados</span>
+                    <button onclick="document.getElementById('modal-config-certificado').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin-bottom:8px;">📄 TEMPLATES</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
+                        <div style="font-size:0.65rem;color:#94a3b8;font-weight:800;margin-bottom:6px;">A4 — COLORIDAS</div>
+                        <div style="font-size:0.55rem;color:#64748b;margin-bottom:6px;">(Branca a Marrom)</div>
+                        ${cfg.templateColoridoUrl ? `<div style="font-size:0.6rem;color:#10b981;margin-bottom:6px;">✅ Enviado</div>` : `<div style="font-size:0.6rem;color:#f43f5e;margin-bottom:6px;">⚠️ Não enviado</div>`}
+                        <label style="cursor:pointer;display:block;padding:7px;background:#1e3a8a;border-radius:6px;font-size:0.65rem;color:#93c5fd;font-weight:700;">
+                            📤 Upload A4
+                            <input type="file" accept="image/*" style="display:none;" onchange="certificado._uploadTemplate(this,'colorido')">
+                        </label>
+                    </div>
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
+                        <div style="font-size:0.65rem;color:#94a3b8;font-weight:800;margin-bottom:6px;">A3 — FAIXA PRETA</div>
+                        <div style="font-size:0.55rem;color:#64748b;margin-bottom:6px;">(Graus da Preta)</div>
+                        ${cfg.templatePretaUrl ? `<div style="font-size:0.6rem;color:#10b981;margin-bottom:6px;">✅ Enviado</div>` : `<div style="font-size:0.6rem;color:#f43f5e;margin-bottom:6px;">⚠️ Não enviado</div>`}
+                        <label style="cursor:pointer;display:block;padding:7px;background:#1e3a8a;border-radius:6px;font-size:0.65rem;color:#93c5fd;font-weight:700;">
+                            📤 Upload A3
+                            <input type="file" accept="image/*" style="display:none;" onchange="certificado._uploadTemplate(this,'preta')">
+                        </label>
+                    </div>
+                </div>
+
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin-bottom:8px;">✏️ POSIÇÃO DOS TEXTOS <span style="color:#64748b;font-weight:400;">(% da largura/altura da imagem)</span></div>
+                ${fieldHtml('nome',  '👤 NOME DO ALUNO')}
+                ${fieldHtml('faixa', '🥋 NOME DA FAIXA')}
+                ${fieldHtml('data',  '📅 DATA')}
+
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin:12px 0 8px;">✍️ ASSINATURAS</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+                    <div><small style="${lbl}">Y da assinatura (%)</small><input type="number" id="cert-ass-y" value="${assCfg.yPct}" min="0" max="100" style="${inp2}width:100%;"></div>
+                    <div><small style="${lbl}">Altura (%)</small><input type="number" id="cert-ass-h" value="${assCfg.alturaPct}" min="1" max="40" style="${inp2}width:100%;"></div>
+                </div>
+
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:8px;">
+                    <div style="font-size:0.65rem;color:#f59e0b;font-weight:700;margin-bottom:6px;">⭐ SUA ASSINATURA (Principal)</div>
+                    <input type="text" id="cert-ass-nome" value="${cfg.assinaturaPrincipalNome||''}" placeholder="Seu nome p/ rodapé" style="${inp}"/>
+                    ${cfg.assinaturaPrincipalUrl ? `<div style="font-size:0.6rem;color:#10b981;margin-bottom:6px;">✅ Assinatura enviada</div>` : ''}
+                    <label style="cursor:pointer;display:block;padding:7px;background:#92400e;border-radius:6px;font-size:0.65rem;color:#fbbf24;font-weight:700;text-align:center;">
+                        📤 Upload da sua assinatura (PNG transparente)
+                        <input type="file" accept="image/*" style="display:none;" onchange="certificado._uploadAssinatura(this,'principal')">
+                    </label>
+                </div>
+
+                <div style="font-size:0.65rem;color:#94a3b8;font-weight:800;margin-bottom:6px;">OUTROS PROFESSORES</div>
+                <div id="cert-profs-lista">${profsHtml}</div>
+                <div style="display:flex;gap:6px;margin-bottom:12px;">
+                    <input type="text" id="cert-novo-prof-nome" placeholder="Nome do professor" style="${inp2}flex:1;"/>
+                    <label style="cursor:pointer;padding:9px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;font-size:0.65rem;color:#94a3b8;font-weight:700;white-space:nowrap;">
+                        📤 Ass.
+                        <input type="file" accept="image/*" style="display:none;" onchange="certificado._uploadAssinatura(this,'professor')">
+                    </label>
+                </div>
+
+                <button onclick="certificado._salvarCfg()" style="width:100%;padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">💾 SALVAR CONFIGURAÇÕES</button>
+                <div id="cert-cfg-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
+            </div>`;
+    },
+
+    async _uploadTemplate(input, tipo) {
+        const file = input.files?.[0];
+        if (!file) return;
+        const status = document.getElementById('cert-cfg-status');
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando template...</span>';
+        try {
+            const path = `certificados/templates/template-${tipo}-${Date.now()}.${file.name.split('.').pop()}`;
+            const snap = await getStorage().ref(path).put(file);
+            const url  = await snap.ref.getDownloadURL();
+            const campo = tipo === 'preta' ? 'templatePretaUrl' : 'templateColoridoUrl';
+            await db.collection('configuracoes').doc('certificados').set({ [campo]: url }, { merge: true });
+            if (this._cfg) this._cfg[campo] = url;
+            if (status) status.innerHTML = '<span style="color:#10b981;">✅ Template salvo!</span>';
+            await this.abrirConfig(); // Recarrega o modal
+        } catch(e) {
+            if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ Erro: ${e.message}</span>`;
+        }
+    },
+
+    async _uploadAssinatura(input, tipo) {
+        const file = input.files?.[0];
+        if (!file) return;
+        const status = document.getElementById('cert-cfg-status');
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando assinatura...</span>';
+        try {
+            const path = `certificados/assinaturas/ass-${tipo}-${Date.now()}.${file.name.split('.').pop()}`;
+            const snap = await getStorage().ref(path).put(file);
+            const url  = await snap.ref.getDownloadURL();
+
+            if (tipo === 'principal') {
+                const nomeAss = document.getElementById('cert-ass-nome')?.value.trim() || auth.adminCreds.nome || '';
+                await db.collection('configuracoes').doc('certificados').set({
+                    assinaturaPrincipalUrl: url,
+                    assinaturaPrincipalNome: nomeAss
+                }, { merge: true });
+                if (this._cfg) { this._cfg.assinaturaPrincipalUrl = url; this._cfg.assinaturaPrincipalNome = nomeAss; }
+            } else {
+                const nomeProf = document.getElementById('cert-novo-prof-nome')?.value.trim();
+                if (!nomeProf) { alert('Digite o nome do professor antes de enviar a assinatura.'); return; }
+                const cfg = await this._carregarCfg();
+                const profs = cfg.professores || [];
+                profs.push({ nome: nomeProf, url });
+                await db.collection('configuracoes').doc('certificados').set({ professores: profs }, { merge: true });
+                if (this._cfg) this._cfg.professores = profs;
+            }
+
+            if (status) status.innerHTML = '<span style="color:#10b981;">✅ Assinatura salva!</span>';
+            await this.abrirConfig();
+        } catch(e) {
+            if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ Erro: ${e.message}</span>`;
+        }
+    },
+
+    async _removerProf(idx) {
+        if (!confirm('Remover este professor?')) return;
+        const cfg = await this._carregarCfg();
+        const profs = cfg.professores || [];
+        profs.splice(idx, 1);
+        await db.collection('configuracoes').doc('certificados').set({ professores: profs }, { merge: true });
+        if (this._cfg) this._cfg.professores = profs;
+        await this.abrirConfig();
+    },
+
+    async _salvarCfg() {
+        const campos = {};
+        for (const key of ['nome','faixa','data']) {
+            campos[key] = {
+                xPct:     parseFloat(document.getElementById(`cert-${key}-x`)?.value) || 50,
+                yPct:     parseFloat(document.getElementById(`cert-${key}-y`)?.value) || 50,
+                fontSize: parseInt(document.getElementById(`cert-${key}-fs`)?.value)  || 60,
+                color:    document.getElementById(`cert-${key}-color`)?.value || '#000000',
+                bold:     document.getElementById(`cert-${key}-bold`)?.checked || false,
+            };
+        }
+        const camposAssinatura = {
+            yPct:       parseFloat(document.getElementById('cert-ass-y')?.value) || 85,
+            alturaPct:  parseFloat(document.getElementById('cert-ass-h')?.value) || 8,
+        };
+        const nomeAss = document.getElementById('cert-ass-nome')?.value.trim();
+        const update = { campos, camposAssinatura };
+        if (nomeAss) update.assinaturaPrincipalNome = nomeAss;
+
+        const status = document.getElementById('cert-cfg-status');
+        try {
+            await db.collection('configuracoes').doc('certificados').set(update, { merge: true });
+            this._cfg = null; // Força recarregar
+            if (status) status.innerHTML = '<span style="color:#10b981;">✅ Configurações salvas!</span>';
+        } catch(e) {
+            if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ Erro: ${e.message}</span>`;
+        }
+    },
+};

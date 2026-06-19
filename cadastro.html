@@ -234,6 +234,7 @@
                     anual:      { valor: 90,  label: 'Anual',      ciclo: 'mês' }
                 };
 
+                const taxaMatricula = parseFloat(planos.taxaMatricula) || 0;
                 const ordem = ['mensal', 'trimestral', 'semestral', 'anual'];
                 const emojis = { mensal: '📅', trimestral: '📆', semestral: '🗓️', anual: '🏆' };
                 const cores = { mensal: '#3b82f6', trimestral: '#8b5cf6', semestral: '#10b981', anual: '#f59e0b' };
@@ -242,6 +243,10 @@
                 const planosHtml = ordem.map(key => {
                     const p = planos[key];
                     if (!p) return '';
+                    const isAnual = key === 'anual';
+                    const badgeMatricula = (!isAnual && taxaMatricula > 0)
+                        ? `<div style="font-size:0.55rem; color:#f59e0b; font-weight:700; margin-top:5px; background:#f59e0b15; border:1px solid #f59e0b44; border-radius:6px; padding:2px 6px; display:inline-block;">+ R$ ${taxaMatricula.toFixed(2).replace('.',',')} matrícula</div>`
+                        : (isAnual ? `<div style="font-size:0.55rem; color:#10b981; font-weight:700; margin-top:5px;">✅ Matrícula grátis</div>` : '');
                     return `
                         <div id="plano-card-${key}" onclick="selecionarPlano('${key}', ${p.valor}, '${p.label}')"
                              style="background:#0f172a; border:2px solid #334155; border-radius:12px; padding:14px; text-align:center; cursor:pointer; transition:all 0.2s;">
@@ -251,6 +256,7 @@
                                 R$ ${parseFloat(p.valor).toFixed(2).replace('.', ',')}
                             </div>
                             <div style="font-size:0.6rem; color:#64748b; margin-top:2px;">por ${p.ciclo || 'mês'}</div>
+                            ${badgeMatricula}
                         </div>`;
                 }).join('');
 

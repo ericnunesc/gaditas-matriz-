@@ -10554,7 +10554,7 @@ const exame = {
             // Oferece emitir certificado
             const hoje2 = new Date();
             const dataGrad = `${hoje2.getFullYear()}-${String(hoje2.getMonth()+1).padStart(2,'0')}-${String(hoje2.getDate()).padStart(2,'0')}`;
-            setTimeout(() => certificado.abrirEmitir(alunoId, nome, faixaDestino, dataGrad), 300);
+            setTimeout(() => certificado.abrirEmitir(alunoId, nome, faixaDestino, dataGrad, 0), 300);
         } catch(e) {
             alert('Erro ao graduar: ' + e.message);
             if (btn) { btn.disabled = false; btn.textContent = '🥋 GRADUAR'; }
@@ -14611,8 +14611,15 @@ const certificado = {
         return (faixa || '').toLowerCase().includes('preta');
     },
 
+    _ptDataFmt(dataStr, cidade) {
+        const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        const [ano, mes, dia] = (dataStr || '').split('-');
+        if (!ano) return dataStr;
+        return `${cidade ? cidade + ', ' : ''}${parseInt(dia)} de ${meses[parseInt(mes)-1]} de ${ano}`;
+    },
+
     // Abre modal para emitir certificado de graduação
-    async abrirEmitir(alunoId, nome, faixa, data) {
+    async abrirEmitir(alunoId, nome, faixa, data, grau) {
         const cfg = await this._carregarCfg();
         const isPreta = this._faixaEhPreta(faixa);
         const templateUrl = isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
@@ -14622,58 +14629,90 @@ const certificado = {
             return;
         }
 
+        // Monta texto da faixa com grau para preta
+        const grauNum = parseInt(grau) || 0;
+        let faixaTexto = `FAIXA ${faixa.toUpperCase()}`;
+        if (isPreta && grauNum > 0) faixaTexto += ` ${grauNum}° GRAU`;
+
         let modal = document.getElementById('modal-certificado-emitir');
         if (!modal) { modal = document.createElement('div'); modal.id = 'modal-certificado-emitir'; document.body.appendChild(modal); }
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
 
+        const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;margin-bottom:10px;';
+        const lbl = 'color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;';
+
         const profs = cfg.professores || [];
         const profHtml = profs.map((p,i) => `
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#0f172a;border-radius:8px;cursor:pointer;">
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#0f172a;border-radius:8px;cursor:pointer;margin-bottom:4px;">
                 <input type="checkbox" id="cert-prof-${i}" value="${i}" style="width:16px;height:16px;accent-color:#3b82f6;">
                 <span style="font-size:0.75rem;color:#e2e8f0;">${p.nome}</span>
             </label>`).join('');
 
         modal.innerHTML = `
-            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;">
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:92vh;overflow-y:auto;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                     <span style="font-size:0.95rem;font-weight:800;color:white;">🏆 Emitir Certificado</span>
                     <button onclick="document.getElementById('modal-certificado-emitir').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
                 </div>
                 <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:14px;">
-                    <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:2px;">Aluno</div>
-                    <div style="font-size:0.9rem;font-weight:800;color:white;">${nome}</div>
-                    <div style="font-size:0.7rem;color:#64748b;margin-top:4px;">Faixa: <span style="color:#f59e0b;font-weight:700;">${faixa}</span> · Template: <span style="color:#94a3b8;">${isPreta ? 'A3 (Preta)' : 'A4 (Coloridas)'}</span></div>
+                    <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:2px;">Template: <span style="color:#f59e0b;">${isPreta ? 'A3 — Faixa Preta' : 'A4 — Coloridas'}</span></div>
                 </div>
-                <div style="margin-bottom:12px;">
-                    <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">DATA DO CERTIFICADO</small>
-                    <input type="date" id="cert-data" value="${data || new Date().toISOString().split('T')[0]}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;"/>
+
+                <small style="${lbl}">NOME DO ALUNO</small>
+                <input type="text" id="cert-nome" value="${nome}" style="${inp}"/>
+
+                <small style="${lbl}">TEXTO DA FAIXA (como aparecerá no certificado)</small>
+                <input type="text" id="cert-faixa-texto" value="${faixaTexto}" style="${inp}" placeholder="Ex: FAIXA PRETA 2° GRAU"/>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div>
+                        <small style="${lbl}">CIDADE</small>
+                        <input type="text" id="cert-cidade" value="${cfg.cidadePadrao || ''}" placeholder="Aracaju" style="${inp}"/>
+                    </div>
+                    <div>
+                        <small style="${lbl}">DATA</small>
+                        <input type="date" id="cert-data" value="${data || new Date().toISOString().split('T')[0]}" style="${inp}"/>
+                    </div>
                 </div>
+
+                ${cfg.assinaturaPrincipalUrl || profs.length > 0 ? `
+                <small style="${lbl}">ASSINATURAS</small>
                 ${cfg.assinaturaPrincipalUrl ? `
-                <div style="margin-bottom:12px;">
-                    <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:6px;">ASSINATURAS</small>
-                    <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#0f172a;border-radius:8px;cursor:pointer;margin-bottom:6px;">
-                        <input type="checkbox" id="cert-prof-principal" checked style="width:16px;height:16px;accent-color:#3b82f6;">
-                        <span style="font-size:0.75rem;color:#f59e0b;font-weight:700;">${cfg.assinaturaPrincipalNome || 'Professor Principal'} ⭐</span>
-                    </label>
-                    ${profHtml}
-                </div>` : ''}
-                <div id="cert-preview-area" style="margin-bottom:14px;text-align:center;"></div>
-                <button onclick="certificado._gerarEBaixar('${alunoId}','${nome.replace(/'/g,"\\'")}','${faixa}','${isPreta}')" style="width:100%;padding:13px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;margin-bottom:8px;" id="btn-gerar-cert">
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#0f172a;border-radius:8px;cursor:pointer;margin-bottom:4px;">
+                    <input type="checkbox" id="cert-prof-principal" checked style="width:16px;height:16px;accent-color:#3b82f6;">
+                    <span style="font-size:0.75rem;color:#f59e0b;font-weight:700;">${cfg.assinaturaPrincipalNome || 'Professor Principal'} ⭐</span>
+                </label>` : ''}
+                ${profHtml}
+                <div style="height:8px;"></div>` : ''}
+
+                <button onclick="certificado._gerarEBaixar('${alunoId}','${isPreta}')" style="width:100%;padding:13px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;margin-bottom:8px;" id="btn-gerar-cert">
                     🎓 GERAR E BAIXAR CERTIFICADO
                 </button>
-                <button onclick="certificado._gerarESalvar('${alunoId}','${nome.replace(/'/g,"\\'")}','${faixa}','${isPreta}')" style="width:100%;padding:11px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.78rem;" id="btn-salvar-cert">
+                <button onclick="certificado._gerarESalvar('${alunoId}','${isPreta}')" style="width:100%;padding:11px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.78rem;" id="btn-salvar-cert">
                     ☁️ SALVAR NO PERFIL DO ALUNO
                 </button>
             </div>`;
     },
 
-    async _montarCanvas(alunoNome, faixa, dataStr, templateUrl, professoresSelecionados) {
-        const cfg = await this._carregarCfg();
-        const campos = cfg.campos || {
-            nome:  { xPct: 50, yPct: 48, fontSize: 72, color: '#1e3a8a', bold: true },
-            faixa: { xPct: 50, yPct: 58, fontSize: 52, color: '#92400e', bold: true },
-            data:  { xPct: 50, yPct: 70, fontSize: 38, color: '#475569', bold: false }
+    _lerCamposModal() {
+        return {
+            nome:       document.getElementById('cert-nome')?.value.trim() || '',
+            faixaTexto: document.getElementById('cert-faixa-texto')?.value.trim() || '',
+            cidade:     document.getElementById('cert-cidade')?.value.trim() || '',
+            dataStr:    document.getElementById('cert-data')?.value || new Date().toISOString().split('T')[0],
         };
+    },
+
+    async _montarCanvas(campos_modal, templateUrl) {
+        const cfg = await this._carregarCfg();
+        // Posições padrão calibradas para o layout do diploma (A4 landscape)
+        const campos = cfg.campos || {
+            nome:  { xPct: 50, yPct: 47, fontSize: 68, color: '#1a1a2e', bold: false, italic: true },
+            faixa: { xPct: 50, yPct: 61, fontSize: 46, color: '#1a1a2e', bold: true,  italic: true },
+            data:  { xPct: 50, yPct: 69, fontSize: 32, color: '#1a1a2e', bold: false, italic: false }
+        };
+
+        const dataFormatada = this._ptDataFmt(campos_modal.dataStr, campos_modal.cidade);
 
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -14687,29 +14726,20 @@ const certificado = {
 
                 const W = canvas.width;
                 const H = canvas.height;
+                const escala = W / 1754; // base: A4 landscape 150dpi
 
-                // Desenha nome
-                const cn = campos.nome;
-                ctx.font = `${cn.bold?'bold ':''} ${Math.round(cn.fontSize * W / 1800)}px 'Georgia', serif`;
-                ctx.fillStyle = cn.color;
-                ctx.textAlign = 'center';
-                ctx.fillText(alunoNome, W * cn.xPct / 100, H * cn.yPct / 100);
+                const escrever = (texto, campo) => {
+                    const fs = Math.round(campo.fontSize * escala);
+                    const style = `${campo.italic ? 'italic ' : ''}${campo.bold ? 'bold ' : ''}${fs}px 'Georgia', 'Times New Roman', serif`;
+                    ctx.font = style;
+                    ctx.fillStyle = campo.color;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(texto, W * campo.xPct / 100, H * campo.yPct / 100);
+                };
 
-                // Desenha faixa
-                const cf = campos.faixa;
-                ctx.font = `${cf.bold?'bold ':''} ${Math.round(cf.fontSize * W / 1800)}px 'Georgia', serif`;
-                ctx.fillStyle = cf.color;
-                ctx.textAlign = 'center';
-                ctx.fillText(`Faixa ${faixa}`, W * cf.xPct / 100, H * cf.yPct / 100);
-
-                // Desenha data
-                const cd = campos.data;
-                const [ano, mes, dia] = dataStr.split('-');
-                const dataFmt = `${dia}/${mes}/${ano}`;
-                ctx.font = `${cd.bold?'bold ':''} ${Math.round(cd.fontSize * W / 1800)}px 'Georgia', serif`;
-                ctx.fillStyle = cd.color;
-                ctx.textAlign = 'center';
-                ctx.fillText(dataFmt, W * cd.xPct / 100, H * cd.yPct / 100);
+                escrever(campos_modal.nome,       campos.nome);
+                escrever(campos_modal.faixaTexto, campos.faixa);
+                escrever(dataFormatada,           campos.data);
 
                 // Assinaturas
                 const assinaturas = [];
@@ -14720,20 +14750,15 @@ const certificado = {
                     if (document.getElementById(`cert-prof-${i}`)?.checked) assinaturas.push(p);
                 });
 
-                // Desenha assinaturas no rodapé
                 if (assinaturas.length > 0) {
-                    const assCfg = cfg.camposAssinatura || { yPct: 85, alturaPct: 8 };
+                    const assCfg = cfg.camposAssinatura || { yPct: 80, alturaPct: 9 };
                     const assH   = H * assCfg.alturaPct / 100;
                     const espaco = W / (assinaturas.length + 1);
                     const drawAss = (p, x) => new Promise(res => {
                         const ai = new Image(); ai.crossOrigin = 'anonymous';
                         ai.onload = () => {
                             const assW = assH * (ai.width / ai.height);
-                            ctx.drawImage(ai, x - assW/2, H * assCfg.yPct / 100, assW, assH);
-                            ctx.font = `${Math.round(28 * W / 1800)}px Arial`;
-                            ctx.fillStyle = '#475569';
-                            ctx.textAlign = 'center';
-                            ctx.fillText(p.nome || '', x, H * assCfg.yPct / 100 + assH + Math.round(35 * W / 1800));
+                            ctx.drawImage(ai, x - assW / 2, H * assCfg.yPct / 100, assW, assH);
                             res();
                         };
                         ai.onerror = () => res();
@@ -14744,22 +14769,22 @@ const certificado = {
 
                 resolve(canvas);
             };
-            img.onerror = () => reject(new Error('Não foi possível carregar o template'));
+            img.onerror = () => reject(new Error('Não foi possível carregar o template. Verifique se o arquivo foi enviado corretamente.'));
             img.src = templateUrl;
         });
     },
 
-    async _gerarEBaixar(alunoId, nome, faixa, isPretaStr) {
+    async _gerarEBaixar(alunoId, isPretaStr) {
         const btn = document.getElementById('btn-gerar-cert');
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
         try {
             const cfg = await this._carregarCfg();
             const isPreta = isPretaStr === 'true';
             const templateUrl = isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
-            const dataStr = document.getElementById('cert-data')?.value || new Date().toISOString().split('T')[0];
-            const canvas = await this._montarCanvas(nome, faixa, dataStr, templateUrl, []);
+            const campos = this._lerCamposModal();
+            const canvas = await this._montarCanvas(campos, templateUrl);
             const link = document.createElement('a');
-            link.download = `certificado-${nome.replace(/\s+/g,'-')}-${faixa}.png`;
+            link.download = `certificado-${campos.nome.replace(/\s+/g,'-')}-${campos.faixaTexto.replace(/\s+/g,'-')}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         } catch(e) {
@@ -14769,30 +14794,34 @@ const certificado = {
         }
     },
 
-    async _gerarESalvar(alunoId, nome, faixa, isPretaStr) {
+    async _gerarESalvar(alunoId, isPretaStr) {
         const btn = document.getElementById('btn-salvar-cert');
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
         try {
             const cfg = await this._carregarCfg();
             const isPreta = isPretaStr === 'true';
             const templateUrl = isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
-            const dataStr = document.getElementById('cert-data')?.value || new Date().toISOString().split('T')[0];
-            const canvas = await this._montarCanvas(nome, faixa, dataStr, templateUrl, []);
+            const campos = this._lerCamposModal();
 
-            // Converte canvas para blob e faz upload no Storage
+            // Salva cidade padrão se preenchida
+            if (campos.cidade && campos.cidade !== cfg.cidadePadrao) {
+                await db.collection('configuracoes').doc('certificados').set({ cidadePadrao: campos.cidade }, { merge: true });
+                if (this._cfg) this._cfg.cidadePadrao = campos.cidade;
+            }
+
+            const canvas = await this._montarCanvas(campos, templateUrl);
             const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-            const path = `certificados/${alunoId}/graduacao-${faixa}-${dataStr}.png`;
+            const path = `certificados/${alunoId}/graduacao-${campos.faixaTexto.replace(/\s+/g,'-')}-${campos.dataStr}.png`;
             const snap = await getStorage().ref(path).put(blob);
             const url  = await snap.ref.getDownloadURL();
 
-            // Salva URL no Firestore do aluno
-            const docRef = db.collection('alunos').doc(alunoId);
+            const docRef   = db.collection('alunos').doc(alunoId);
             const alunoSnap = await docRef.get();
             const certs = alunoSnap.data()?.certificados || [];
-            certs.unshift({ tipo: 'graduacao', faixa, data: dataStr, url, emitidoEm: new Date().toISOString() });
+            certs.unshift({ tipo: 'graduacao', faixa: campos.faixaTexto, data: campos.dataStr, url, emitidoEm: new Date().toISOString() });
             await docRef.update({ certificados: certs });
 
-            alert(`✅ Certificado salvo no perfil de ${nome}!\nO aluno poderá visualizar e baixar pelo app.`);
+            alert(`✅ Certificado salvo no perfil de ${campos.nome}!\nO aluno poderá visualizar e baixar pelo app.`);
             document.getElementById('modal-certificado-emitir')?.remove();
         } catch(e) {
             alert('Erro ao salvar certificado: ' + e.message);
@@ -14859,11 +14888,15 @@ const certificado = {
                     <div><small style="${lbl}">Y (%)</small><input type="number" id="cert-${key}-y" value="${c.yPct}" min="0" max="100" style="${inp2}width:100%;"></div>
                     <div><small style="${lbl}">Fonte</small><input type="number" id="cert-${key}-fs" value="${c.fontSize}" min="10" max="300" style="${inp2}width:100%;"></div>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-                    <div><small style="${lbl}">Cor</small><input type="color" id="cert-${key}-color" value="${c.color}" style="${inp2}width:100%;height:36px;padding:2px;"></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+                    <div><small style="${lbl}">Cor</small><input type="color" id="cert-${key}-color" value="${c.color||'#1a1a2e'}" style="${inp2}width:100%;height:36px;padding:2px;"></div>
                     <div style="display:flex;align-items:center;gap:6px;padding-top:14px;">
                         <input type="checkbox" id="cert-${key}-bold" ${c.bold?'checked':''} style="accent-color:#3b82f6;">
                         <label for="cert-${key}-bold" style="color:#e2e8f0;font-size:0.7rem;">Negrito</label>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;padding-top:14px;">
+                        <input type="checkbox" id="cert-${key}-italic" ${c.italic!==false?'checked':''} style="accent-color:#3b82f6;">
+                        <label for="cert-${key}-italic" style="color:#e2e8f0;font-size:0.7rem;">Itálico</label>
                     </div>
                 </div>
             </div>`;
@@ -14912,7 +14945,11 @@ const certificado = {
                 ${fieldHtml('faixa', '🥋 NOME DA FAIXA')}
                 ${fieldHtml('data',  '📅 DATA')}
 
-                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin:12px 0 8px;">✍️ ASSINATURAS</div>
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin:12px 0 8px;">🏙️ CIDADE PADRÃO</div>
+                <input type="text" id="cert-cidade-padrao" value="${cfg.cidadePadrao||''}" placeholder="Ex: Aracaju" style="${inp}"/>
+                <div style="font-size:0.58rem;color:#64748b;margin-bottom:10px;">Aparece no campo data: "Aracaju, 14 de Dezembro de 2025"</div>
+
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin-bottom:8px;">✍️ ASSINATURAS</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
                     <div><small style="${lbl}">Y da assinatura (%)</small><input type="number" id="cert-ass-y" value="${assCfg.yPct}" min="0" max="100" style="${inp2}width:100%;"></div>
                     <div><small style="${lbl}">Altura (%)</small><input type="number" id="cert-ass-h" value="${assCfg.alturaPct}" min="1" max="40" style="${inp2}width:100%;"></div>
@@ -15091,17 +15128,20 @@ const certificado = {
                 xPct:     parseFloat(document.getElementById(`cert-${key}-x`)?.value) || 50,
                 yPct:     parseFloat(document.getElementById(`cert-${key}-y`)?.value) || 50,
                 fontSize: parseInt(document.getElementById(`cert-${key}-fs`)?.value)  || 60,
-                color:    document.getElementById(`cert-${key}-color`)?.value || '#000000',
-                bold:     document.getElementById(`cert-${key}-bold`)?.checked || false,
+                color:    document.getElementById(`cert-${key}-color`)?.value || '#1a1a2e',
+                bold:     document.getElementById(`cert-${key}-bold`)?.checked   || false,
+                italic:   document.getElementById(`cert-${key}-italic`)?.checked || false,
             };
         }
         const camposAssinatura = {
-            yPct:       parseFloat(document.getElementById('cert-ass-y')?.value) || 85,
-            alturaPct:  parseFloat(document.getElementById('cert-ass-h')?.value) || 8,
+            yPct:       parseFloat(document.getElementById('cert-ass-y')?.value) || 80,
+            alturaPct:  parseFloat(document.getElementById('cert-ass-h')?.value) || 9,
         };
-        const nomeAss = document.getElementById('cert-ass-nome')?.value.trim();
+        const nomeAss    = document.getElementById('cert-ass-nome')?.value.trim();
+        const cidadePadrao = document.getElementById('cert-cidade-padrao')?.value?.trim() || '';
         const update = { campos, camposAssinatura };
         if (nomeAss) update.assinaturaPrincipalNome = nomeAss;
+        if (cidadePadrao) update.cidadePadrao = cidadePadrao;
 
         const status = document.getElementById('cert-cfg-status');
         try {

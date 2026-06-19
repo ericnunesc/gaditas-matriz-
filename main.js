@@ -15005,8 +15005,12 @@ const certificado = {
                     </label>
                 </div>
 
-                <button onclick="certificado._salvarCfg()" style="width:100%;padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">💾 SALVAR CONFIGURAÇÕES</button>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <button onclick="certificado._salvarCfg()" style="padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.82rem;">💾 SALVAR</button>
+                    <button onclick="certificado._previsualizar()" style="padding:13px;background:#7c3aed;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.82rem;">👁️ VISUALIZAR</button>
+                </div>
                 <div id="cert-cfg-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
+                <div id="cert-preview-canvas-area" style="margin-top:12px;"></div>
             </div>`;
     },
 
@@ -15125,6 +15129,64 @@ const certificado = {
             await this.abrirConfig();
         } catch(e) {
             if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ Erro: ${e.message}</span>`;
+        }
+    },
+
+    async _previsualizar() {
+        const area = document.getElementById('cert-preview-canvas-area');
+        const status = document.getElementById('cert-cfg-status');
+        if (!area) return;
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Gerando prévia...</span>';
+        area.innerHTML = '';
+        try {
+            const cfg = await this._carregarCfg();
+            const templateUrl = cfg.templateColoridoUrl || cfg.templatePretaUrl;
+            if (!templateUrl) {
+                if (status) status.innerHTML = '<span style="color:#f43f5e;">⚠️ Faça upload do template primeiro.</span>';
+                return;
+            }
+            // Lê valores atuais do formulário (sem salvar)
+            const campos = {};
+            for (const key of ['nome','faixa','data']) {
+                const xEl  = document.getElementById(`cert-${key}-x`);
+                const yEl  = document.getElementById(`cert-${key}-y`);
+                const fsEl = document.getElementById(`cert-${key}-fs`);
+                const cEl  = document.getElementById(`cert-${key}-color`);
+                const bEl  = document.getElementById(`cert-${key}-bold`);
+                const iEl  = document.getElementById(`cert-${key}-italic`);
+                if (xEl) {
+                    campos[key] = {
+                        xPct: parseFloat(xEl.value)||50, yPct: parseFloat(yEl.value)||50,
+                        fontSize: parseInt(fsEl?.value)||50, color: cEl?.value||'#1a1a2e',
+                        bold: bEl?.checked||false, italic: iEl?.checked||false
+                    };
+                }
+            }
+            const cfgFinal = Object.keys(campos).length === 3
+                ? { ...cfg, campos }
+                : cfg;
+            const cidade = document.getElementById('cert-cidade-padrao')?.value || 'Aracaju';
+            const campos_modal = {
+                nome: 'Nome do Aluno Exemplo',
+                faixaTexto: 'FAIXA EXEMPLO',
+                cidade,
+                dataStr: new Date().toISOString().split('T')[0]
+            };
+            // Temporariamente sobrescreve cfg para usar valores do form
+            const cfgOriginal = this._cfg;
+            this._cfg = cfgFinal;
+            const canvas = await this._montarCanvas(campos_modal, templateUrl);
+            this._cfg = cfgOriginal;
+            // Exibe prévia escalada
+            const maxW = 360;
+            const scale = maxW / canvas.width;
+            const previewUrl = canvas.toDataURL('image/jpeg', 0.85);
+            area.innerHTML = `
+                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:6px;text-align:center;">PRÉVIA (ajuste os valores e clique 👁️ de novo)</div>
+                <img src="${previewUrl}" style="width:100%;border-radius:8px;border:1px solid #334155;" />`;
+            if (status) status.innerHTML = '';
+        } catch(e) {
+            if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ ${e.message}</span>`;
         }
     },
 

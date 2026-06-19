@@ -13601,7 +13601,7 @@ const premiosAno = {
         setTimeout(() => { document.getElementById('modal-premios-mencao')?.remove(); this.atualizarResumo(); }, 700);
     },
 
-    // Abre modal para override manual (categorias sem menções)
+    // Abre modal para override manual (todas as categorias)
     async abrirOverride() {
         const [mapa, overrides, alunosSnap] = await Promise.all([
             this._carregarMencoes(), this._carregarOverrides(),
@@ -13611,33 +13611,36 @@ const premiosAno = {
         alunosSnap.forEach(d => { if (d.data().nome) alunos.push({ id: d.id, nome: d.data().nome }); });
         alunos.sort((a, b) => a.nome.localeCompare(b.nome));
 
-        const semMencoes = this.CATEGORIAS.filter(c => !mapa[c.id] || Object.keys(mapa[c.id]).length === 0);
-        if (!semMencoes.length) { alert('Todas as categorias já têm menções registradas!'); return; }
-
-        const opcoesAlunos = `<option value="">— Selecionar aluno —</option>` +
-            alunos.map(a => `<option value="${a.id}|${a.nome.replace(/[|"]/g,'')}">${a.nome}</option>`).join('');
-
         let modal = document.getElementById('modal-premios-override');
         if (!modal) { modal = document.createElement('div'); modal.id = 'modal-premios-override'; document.body.appendChild(modal); }
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
+
+        const renderSelect = (catId, savedId, savedNome) => {
+            const opts = [`<option value="">— Sem escolha manual —</option>`]
+                .concat(alunos.map(a => {
+                    const val = `${a.id}|${a.nome.replace(/[|]/g,'')}`;
+                    const sel = a.id === savedId ? ' selected' : '';
+                    return `<option value="${val}"${sel}>${a.nome}</option>`;
+                })).join('');
+            return `<select id="ov-sel-${catId}" style="width:100%;padding:8px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;">${opts}</select>`;
+        };
+
         modal.innerHTML = `
             <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:440px;margin-top:10px;margin-bottom:30px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                     <span style="font-size:0.85rem;font-weight:800;color:#e2e8f0;">✏️ Escolha Manual</span>
                     <button onclick="document.getElementById('modal-premios-override').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
                 </div>
-                <p style="font-size:0.65rem;color:#64748b;margin-bottom:14px;">Categorias sem menções — escolha o vencedor manualmente:</p>
-                ${semMencoes.map(cat => {
+                <p style="font-size:0.65rem;color:#64748b;margin-bottom:14px;">Defina um vencedor manual por categoria (sobrepõe as menções automáticas se preenchido):</p>
+                ${this.CATEGORIAS.map(cat => {
                     const ov = overrides[cat.id] || {};
-                    const valSel = ov.alunoId ? `${ov.alunoId}|${ov.alunoNome}` : '';
-                    return `<div style="margin-bottom:12px;background:#0f172a;border-radius:10px;padding:12px;">
-                        <div style="font-size:0.7rem;font-weight:800;color:#e2e8f0;margin-bottom:6px;">${cat.emoji} ${cat.label}</div>
-                        <select id="ov-sel-${cat.id}" style="width:100%;padding:8px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;">
-                            ${opcoesAlunos.replace(`value="${valSel}"`, `value="${valSel}" selected`)}
-                        </select>
+                    const temMencoes = mapa[cat.id] && Object.keys(mapa[cat.id]).length > 0;
+                    return `<div style="margin-bottom:10px;background:#0f172a;border-radius:10px;padding:11px;">
+                        <div style="font-size:0.7rem;font-weight:800;color:#e2e8f0;margin-bottom:6px;">${cat.emoji} ${cat.label} ${temMencoes ? '<span style="color:#3b82f6;font-size:0.58rem;font-weight:600;">(tem menções)</span>' : ''}</div>
+                        ${renderSelect(cat.id, ov.alunoId || '', ov.alunoNome || '')}
                     </div>`;
                 }).join('')}
-                <button onclick="premiosAno.salvarOverride()" style="width:100%;padding:12px;background:#3b82f6;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.82rem;margin-top:4px;">💾 SALVAR ESCOLHAS</button>
+                <button onclick="premiosAno.salvarOverride()" style="width:100%;padding:12px;background:#3b82f6;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.82rem;margin-top:6px;">💾 SALVAR ESCOLHAS</button>
                 <div id="ov-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
             </div>`;
     },

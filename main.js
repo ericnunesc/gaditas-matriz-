@@ -8090,7 +8090,13 @@ const ui = {
             'Roxa':'#7c3aed',   'Marrom':'#92400e', 'Preta':'#111827',
             'Vermelha':'#dc2626'
         };
-        return c[nome.trim()] || '#e2e8f0';
+        const n = nome.trim();
+        if (c[n]) return c[n];
+        // Fallback: testa se começa com uma cor conhecida (ex: "Preta 1° Grau")
+        for (const key of Object.keys(c)) {
+            if (n.startsWith(key)) return c[key];
+        }
+        return '#e2e8f0';
     },
 
     _corMTSingle(nome) {

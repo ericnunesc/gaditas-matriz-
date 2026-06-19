@@ -3590,6 +3590,7 @@ Ele voltará a ser aluno normal.`)) return;
                     const tag = vencida ? `⚠️ ${dias}d DE ATRASO` : hoje ? 'Vence hoje' : 'A vencer';
                     const isPrimeira = idx === 0;
                     const btnExcluir = `<button onclick="academia._excluirFaturaModal('${f.id}')" style="background:#2a0808;border:1px solid #7f1d1d;color:#f43f5e;padding:4px 8px;border-radius:6px;font-size:0.6rem;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Excluir fatura do Asaas">🗑️</button>`;
+                    const btnEspecie = `<button onclick="academia._receberEspecieModal('${f.id}',${f.value})" style="background:#052e16;border:1px solid #166534;color:#4ade80;padding:4px 8px;border-radius:6px;font-size:0.6rem;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Registrar recebimento em espécie">💵 ESPÉCIE</button>`;
                     if (isPrimeira) {
                         // Fatura mais urgente — destaque total
                         const bgDestaque = vencida ? '#3b000e' : hoje ? '#2d1800' : '#052e16';
@@ -3604,12 +3605,13 @@ Ele voltará a ser aluno normal.`)) return;
                                 </div>
                                 <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
                                     <span style="font-size:0.65rem; font-weight:900; color:${cor}; background:${cor}33; padding:5px 10px; border-radius:8px; text-align:center;">${tag}</span>
+                                    ${btnEspecie}
                                     ${btnExcluir}
                                 </div>
                             </div>
                         </div>`;
                     } else {
-                        html += `<div style="background:#0f172a; border:1px solid ${cor}44; border-left:3px solid ${cor}; border-radius:8px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:6px;"><div style="flex:1;min-width:0;"><div style="font-size:0.85rem; font-weight:800; color:white;">${valor}</div><div style="font-size:0.62rem; color:#64748b;">Venc: ${vencStr} · ID: ${f.id.substring(0,12)}...</div></div><span style="font-size:0.6rem; font-weight:800; color:${cor}; background:${cor}22; padding:3px 8px; border-radius:6px;">${tag}</span>${btnExcluir}</div>`;
+                        html += `<div style="background:#0f172a; border:1px solid ${cor}44; border-left:3px solid ${cor}; border-radius:8px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:6px;"><div style="flex:1;min-width:0;"><div style="font-size:0.85rem; font-weight:800; color:white;">${valor}</div><div style="font-size:0.62rem; color:#64748b;">Venc: ${vencStr} · ID: ${f.id.substring(0,12)}...</div></div><span style="font-size:0.6rem; font-weight:800; color:${cor}; background:${cor}22; padding:3px 8px; border-radius:6px;">${tag}</span>${btnEspecie}${btnExcluir}</div>`;
                     }
                 });
             } else {
@@ -6046,7 +6048,6 @@ Ele voltará a ser aluno normal.`)) return;
             const d = text ? JSON.parse(text) : { deleted: true };
             if (r.ok || d.deleted === true) {
                 alert('✅ Fatura excluída!');
-                // Recarrega o modal do mesmo aluno
                 const modal = document.getElementById('modal-financeiro-admin');
                 if (modal) {
                     const emailEl = modal.querySelector('[data-email]');
@@ -6059,6 +6060,33 @@ Ele voltará a ser aluno normal.`)) return;
                 throw new Error(d.errors?.[0]?.description || JSON.stringify(d));
             }
         } catch(e) { alert('❌ Erro ao excluir fatura: ' + e.message); }
+    },
+
+    async _receberEspecieModal(faturaId, valor) {
+        const hoje = new Date().toISOString().split('T')[0];
+        const valorFmt = parseFloat(valor).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+        if (!confirm(`Confirmar recebimento em espécie de ${valorFmt}?\n\nIsso dará baixa imediata no Asaas.`)) return;
+        try {
+            const r = await fetch(`/api/asaas?endpoint=payments/${encodeURIComponent(faturaId)}/receiveInCash`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paymentDate: hoje, value: valor, notifyClient: false })
+            });
+            const d = await r.json();
+            if (r.ok && d.success !== false) {
+                alert('✅ Pagamento em espécie registrado no Asaas!');
+                const modal = document.getElementById('modal-financeiro-admin');
+                if (modal) {
+                    const emailEl = modal.querySelector('[data-email]');
+                    const email = emailEl?.dataset.email;
+                    const nome = emailEl?.dataset.nome;
+                    modal.remove();
+                    if (email && nome) setTimeout(() => academia.abrirModalFinanceiro(email, nome), 300);
+                }
+            } else {
+                throw new Error(d.errors?.[0]?.description || JSON.stringify(d));
+            }
+        } catch(e) { alert('❌ Erro ao registrar espécie: ' + e.message); }
     },
 
     // ── FOTO DO ALUNO ─────────────────────────────────────────

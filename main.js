@@ -14922,14 +14922,23 @@ const certificado = {
                     <div style="font-size:0.65rem;color:#f59e0b;font-weight:700;margin-bottom:6px;">⭐ SUA ASSINATURA (Principal)</div>
                     <input type="text" id="cert-ass-nome" value="${cfg.assinaturaPrincipalNome||''}" placeholder="Seu nome p/ rodapé" style="${inp}"/>
                     ${cfg.assinaturaPrincipalUrl ? `<div style="font-size:0.6rem;color:#10b981;margin-bottom:6px;">✅ Assinatura enviada</div>` : ''}
+                    <button onclick="certificado._buscarAssinaturaProfessor('principal')" style="width:100%;padding:9px;background:#064e3b;border:1px solid #10b981;color:#6ee7b7;border-radius:6px;font-size:0.68rem;font-weight:700;cursor:pointer;margin-bottom:6px;">
+                        🔄 Usar assinatura do meu perfil de professor
+                    </button>
+                    <div id="cert-lista-profs-principal" style="display:none;margin-bottom:6px;"></div>
                     <label style="cursor:pointer;display:block;padding:7px;background:#92400e;border-radius:6px;font-size:0.65rem;color:#fbbf24;font-weight:700;text-align:center;">
-                        📤 Upload da sua assinatura (PNG transparente)
+                        📤 Ou fazer upload manual (PNG transparente)
                         <input type="file" accept="image/*" style="display:none;" onchange="certificado._uploadAssinatura(this,'principal')">
                     </label>
                 </div>
 
                 <div style="font-size:0.65rem;color:#94a3b8;font-weight:800;margin-bottom:6px;">OUTROS PROFESSORES</div>
                 <div id="cert-profs-lista">${profsHtml}</div>
+                <button onclick="certificado._buscarAssinaturaProfessor('outro')" style="width:100%;padding:9px;background:#064e3b;border:1px solid #10b981;color:#6ee7b7;border-radius:6px;font-size:0.68rem;font-weight:700;cursor:pointer;margin-bottom:6px;">
+                    🔄 Adicionar professor do sistema (usa assinatura cadastrada)
+                </button>
+                <div id="cert-lista-profs-outro" style="display:none;margin-bottom:6px;"></div>
+                <div style="font-size:0.6rem;color:#64748b;margin-bottom:6px;">— ou adicionar manualmente —</div>
                 <div style="display:flex;gap:6px;margin-bottom:12px;">
                     <input type="text" id="cert-novo-prof-nome" placeholder="Nome do professor" style="${inp2}flex:1;"/>
                     <label style="cursor:pointer;padding:9px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;font-size:0.65rem;color:#94a3b8;font-weight:700;white-space:nowrap;">
@@ -14987,6 +14996,75 @@ const certificado = {
                 profs.push({ nome: nomeProf, url });
                 await db.collection('configuracoes').doc('certificados').set({ professores: profs }, { merge: true });
                 if (this._cfg) this._cfg.professores = profs;
+            }
+
+            if (status) status.innerHTML = '<span style="color:#10b981;">✅ Assinatura salva!</span>';
+            await this.abrirConfig();
+        } catch(e) {
+            if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ Erro: ${e.message}</span>`;
+        }
+    },
+
+    async _buscarAssinaturaProfessor(tipo) {
+        const containerId = tipo === 'principal' ? 'cert-lista-profs-principal' : 'cert-lista-profs-outro';
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.style.display = 'block';
+        container.innerHTML = '<div style="font-size:0.65rem;color:#f59e0b;padding:6px;">⏳ Buscando professores...</div>';
+        try {
+            const snap = await db.collection('alunos').where('role','==','professor').get();
+            const lista = [];
+            snap.forEach(doc => {
+                const d = doc.data();
+                if (d.contrato?.assinaturaImg) lista.push({ id: doc.id, nome: d.nome, assinaturaImg: d.contrato.assinaturaImg });
+            });
+            if (lista.length === 0) {
+                container.innerHTML = '<div style="font-size:0.65rem;color:#f43f5e;padding:6px;">Nenhum professor com assinatura cadastrada encontrado.</div>';
+                return;
+            }
+            container.innerHTML = lista.map(p => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:#0f172a;border-radius:8px;margin-bottom:4px;border:1px solid #334155;">
+                    <span style="font-size:0.72rem;color:#e2e8f0;">${p.nome}</span>
+                    <button onclick="certificado._usarAssinaturaProf('${p.id}','${p.nome.replace(/'/g,"\\'")}','${tipo}')"
+                        style="padding:5px 10px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:6px;font-size:0.62rem;font-weight:700;cursor:pointer;">
+                        ✅ Usar
+                    </button>
+                </div>`).join('');
+        } catch(e) {
+            container.innerHTML = `<div style="font-size:0.65rem;color:#f43f5e;padding:6px;">Erro: ${e.message}</div>`;
+        }
+    },
+
+    async _usarAssinaturaProf(alunoId, nome, tipo) {
+        const status = document.getElementById('cert-cfg-status');
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Salvando assinatura...</span>';
+        try {
+            const snap = await db.collection('alunos').doc(alunoId).get();
+            const assinaturaImg = snap.data()?.contrato?.assinaturaImg;
+            if (!assinaturaImg) throw new Error('Assinatura não encontrada');
+
+            // Converte data URL para blob e faz upload
+            const res  = await fetch(assinaturaImg);
+            const blob = await res.blob();
+            const path = `certificados/assinaturas/ass-${tipo}-${alunoId}.png`;
+            const uploadSnap = await getStorage().ref(path).put(blob);
+            const url = await uploadSnap.ref.getDownloadURL();
+
+            if (tipo === 'principal') {
+                const nomeAss = document.getElementById('cert-ass-nome')?.value.trim() || nome;
+                await db.collection('configuracoes').doc('certificados').set({
+                    assinaturaPrincipalUrl: url,
+                    assinaturaPrincipalNome: nomeAss || nome
+                }, { merge: true });
+                if (this._cfg) { this._cfg.assinaturaPrincipalUrl = url; this._cfg.assinaturaPrincipalNome = nomeAss || nome; }
+            } else {
+                const cfg = await this._carregarCfg();
+                const profs = cfg.professores || [];
+                if (!profs.find(p => p.nome === nome)) {
+                    profs.push({ nome, url });
+                    await db.collection('configuracoes').doc('certificados').set({ professores: profs }, { merge: true });
+                    if (this._cfg) this._cfg.professores = profs;
+                }
             }
 
             if (status) status.innerHTML = '<span style="color:#10b981;">✅ Assinatura salva!</span>';

@@ -14997,6 +14997,39 @@ const certificado = {
         });
     },
 
+    // Redimensiona e comprime imagem para manter abaixo de 3MB
+    async _comprimirImagem(file, maxW, maxH, isTemplate) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                let w = img.width, h = img.height;
+                if (w > maxW || h > maxH) {
+                    const ratio = Math.min(maxW / w, maxH / h);
+                    w = Math.round(w * ratio);
+                    h = Math.round(h * ratio);
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                if (!isTemplate) {
+                    // Fundo transparente para assinaturas — mantém PNG
+                    ctx.clearRect(0, 0, w, h);
+                } else {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, w, h);
+                }
+                ctx.drawImage(img, 0, 0, w, h);
+                const mime = isTemplate ? 'image/jpeg' : 'image/png';
+                const quality = isTemplate ? 0.88 : undefined;
+                resolve(canvas.toDataURL(mime, quality));
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
+    },
+
     async _apiUpload(base64, path, contentType) {
         const r = await fetch('/api/upload-certificado', {
             method: 'POST',
@@ -15012,12 +15045,14 @@ const certificado = {
         const file = input.files?.[0];
         if (!file) return;
         const status = document.getElementById('cert-cfg-status');
-        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando template...</span>';
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Comprimindo e enviando template...</span>';
         try {
-            const ext   = file.name.split('.').pop();
-            const path  = `certificados/templates/template-${tipo}-${Date.now()}.${ext}`;
-            const b64   = await this._toBase64(file);
-            const url   = await this._apiUpload(b64, path, file.type);
+            // Templates: reduz para max A4@150dpi e converte para JPEG
+            const maxW = tipo === 'preta' ? 2480 : 1754;
+            const maxH = tipo === 'preta' ? 1754 : 1240;
+            const b64  = await this._comprimirImagem(file, maxW, maxH, true);
+            const path = `certificados/templates/template-${tipo}-${Date.now()}.jpg`;
+            const url  = await this._apiUpload(b64, path, 'image/jpeg');
             const campo = tipo === 'preta' ? 'templatePretaUrl' : 'templateColoridoUrl';
             await db.collection('configuracoes').doc('certificados').set({ [campo]: url }, { merge: true });
             if (this._cfg) this._cfg[campo] = url;
@@ -15034,10 +15069,10 @@ const certificado = {
         const status = document.getElementById('cert-cfg-status');
         if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando assinatura...</span>';
         try {
-            const ext  = file.name.split('.').pop();
-            const path = `certificados/assinaturas/ass-${tipo}-${Date.now()}.${ext}`;
-            const b64  = await this._toBase64(file);
-            const url  = await this._apiUpload(b64, path, file.type);
+            // Assinaturas: max 800x300 mantendo PNG (transparência)
+            const b64  = await this._comprimirImagem(file, 800, 300, false);
+            const path = `certificados/assinaturas/ass-${tipo}-${Date.now()}.png`;
+            const url  = await this._apiUpload(b64, path, 'image/png');
 
             if (tipo === 'principal') {
                 const nomeAss = document.getElementById('cert-ass-nome')?.value.trim() || auth.adminCreds.nome || '';

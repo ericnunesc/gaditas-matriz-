@@ -14937,10 +14937,13 @@ const certificado = {
                     📤 Upload template ${prefix.toUpperCase()}
                     <input type="file" accept="image/*" style="display:none;" onchange="certificado._uploadTemplate(this,'${tipoUpload}')">
                 </label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+                    <button onclick="certificado._abrirEditorVisual('${prefix}')" style="padding:9px;background:#0f4c2a;border:1px solid #10b981;color:#6ee7b7;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.72rem;">🖱️ POSICIONAR</button>
+                    <button onclick="certificado._previsualizarAba('${prefix}')" style="padding:9px;background:#4c1d95;border:1px solid #7c3aed;color:#c4b5fd;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.72rem;">👁️ VISUALIZAR</button>
+                </div>
                 ${fieldHtml(prefix, 'nome',  '👤 NOME DO ALUNO', campos)}
                 ${fieldHtml(prefix, 'faixa', '🥋 NOME DA FAIXA', campos)}
                 ${fieldHtml(prefix, 'data',  '📅 DATA', campos)}
-                <button onclick="certificado._previsualizarAba('${prefix}')" style="width:100%;padding:9px;background:#7c3aed;border:none;color:white;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.75rem;margin-top:4px;">👁️ VISUALIZAR ${prefix.toUpperCase()}</button>
                 <div id="cert-preview-${prefix}" style="margin-top:10px;"></div>
             </div>`;
 
@@ -15124,6 +15127,150 @@ const certificado = {
         } catch(e) {
             if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ Erro: ${e.message}</span>`;
         }
+    },
+
+    async _abrirEditorVisual(prefix) {
+        const isPreta = prefix === 'a3';
+        const cfg = await this._carregarCfg();
+        const templateUrl = isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
+        if (!templateUrl) {
+            alert('Faça upload do template primeiro.');
+            return;
+        }
+
+        // Lê valores atuais dos inputs do formulário
+        const lerCampoAtual = (key) => ({
+            xPct:     parseFloat(document.getElementById(`cert-${prefix}-${key}-x`)?.value)    || 50,
+            yPct:     parseFloat(document.getElementById(`cert-${prefix}-${key}-y`)?.value)    || 50,
+            fontSize: parseInt(document.getElementById(`cert-${prefix}-${key}-fs`)?.value)     || 50,
+            color:    document.getElementById(`cert-${prefix}-${key}-color`)?.value             || '#1a1a2e',
+            bold:     document.getElementById(`cert-${prefix}-${key}-bold`)?.checked            || false,
+            italic:   document.getElementById(`cert-${prefix}-${key}-italic`)?.checked          || false,
+        });
+
+        const estado = {
+            nome:  lerCampoAtual('nome'),
+            faixa: lerCampoAtual('faixa'),
+            data:  lerCampoAtual('data'),
+        };
+
+        const labels = {
+            nome:  { texto: 'Nome do Aluno Exemplo', cor: '#3b82f6' },
+            faixa: { texto: isPreta ? 'FAIXA PRETA 1° GRAU' : 'FAIXA VERDE', cor: '#f59e0b' },
+            data:  { texto: 'Aracaju, 19 de Junho de 2026', cor: '#10b981' },
+        };
+
+        let overlay = document.getElementById('cert-editor-visual');
+        if (!overlay) { overlay = document.createElement('div'); overlay.id = 'cert-editor-visual'; document.body.appendChild(overlay); }
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:20000;display:flex;flex-direction:column;';
+
+        overlay.innerHTML = `
+            <div style="background:#0f172a;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                <div>
+                    <div style="font-size:0.8rem;font-weight:800;color:white;">🖱️ Posicionar textos — ${prefix.toUpperCase()}</div>
+                    <div style="font-size:0.6rem;color:#64748b;margin-top:2px;">Arraste os textos para posicionar</div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button id="cert-ev-confirmar" style="padding:8px 16px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;">✅ CONFIRMAR</button>
+                    <button onclick="document.getElementById('cert-editor-visual').remove()" style="padding:8px 14px;background:#334155;border:none;color:white;border-radius:8px;font-weight:700;cursor:pointer;">✕</button>
+                </div>
+            </div>
+            <div style="flex:1;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;background:#111;">
+                <div id="cert-ev-area" style="position:relative;display:inline-block;max-width:100%;max-height:100%;">
+                    <img id="cert-ev-img" style="display:block;max-width:100%;max-height:calc(100vh - 60px);object-fit:contain;user-select:none;" />
+                    <div id="cert-ev-labels" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></div>
+                </div>
+            </div>`;
+
+        // Carrega imagem via proxy
+        const imgEl = document.getElementById('cert-ev-img');
+        const labelsEl = document.getElementById('cert-ev-labels');
+        try {
+            const dataUrl = await this._carregarTemplateDataUrl(templateUrl);
+            imgEl.src = dataUrl;
+        } catch(e) { alert('Erro ao carregar template: ' + e.message); overlay.remove(); return; }
+
+        const renderLabels = () => {
+            labelsEl.innerHTML = '';
+            labelsEl.style.pointerEvents = 'all';
+            for (const [key, cfg2] of Object.entries(estado)) {
+                const el = document.createElement('div');
+                el.dataset.key = key;
+                const escala = imgEl.offsetWidth / (isPreta ? 2480 : 1754);
+                const fs = Math.max(10, Math.round(cfg2.fontSize * escala));
+                el.style.cssText = `
+                    position:absolute;
+                    left:${cfg2.xPct}%;top:${cfg2.yPct}%;
+                    transform:translate(-50%,-50%);
+                    font-size:${fs}px;
+                    font-family:Georgia,serif;
+                    font-weight:${cfg2.bold?'bold':'normal'};
+                    font-style:${cfg2.italic?'italic':'normal'};
+                    color:${cfg2.color};
+                    white-space:nowrap;
+                    cursor:grab;
+                    user-select:none;
+                    text-shadow:0 0 6px rgba(0,0,0,0.6);
+                    border:2px dashed ${labels[key].cor};
+                    padding:2px 6px;
+                    border-radius:4px;
+                    background:rgba(0,0,0,0.25);
+                    touch-action:none;
+                `;
+                el.textContent = labels[key].texto;
+                labelsEl.appendChild(el);
+
+                // Drag — mouse + touch
+                const onStart = (clientX, clientY) => {
+                    el.style.cursor = 'grabbing';
+                    const rect = imgEl.getBoundingClientRect();
+                    const startX = clientX - rect.left;
+                    const startY = clientY - rect.top;
+                    const startXPct = cfg2.xPct;
+                    const startYPct = cfg2.yPct;
+
+                    const onMove = (cx, cy) => {
+                        const dx = cx - rect.left - startX;
+                        const dy = cy - rect.top  - startY;
+                        cfg2.xPct = Math.min(100, Math.max(0, startXPct + dx / rect.width  * 100));
+                        cfg2.yPct = Math.min(100, Math.max(0, startYPct + dy / rect.height * 100));
+                        el.style.left = cfg2.xPct + '%';
+                        el.style.top  = cfg2.yPct + '%';
+                    };
+
+                    const onMouseMove = e => onMove(e.clientX, e.clientY);
+                    const onTouchMove = e => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); };
+                    const onEnd = () => {
+                        el.style.cursor = 'grab';
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup',   onEnd);
+                        document.removeEventListener('touchmove', onTouchMove);
+                        document.removeEventListener('touchend',  onEnd);
+                    };
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup',   onEnd);
+                    document.addEventListener('touchmove', onTouchMove, { passive: false });
+                    document.addEventListener('touchend',  onEnd);
+                };
+
+                el.addEventListener('mousedown',  e => { e.preventDefault(); onStart(e.clientX, e.clientY); });
+                el.addEventListener('touchstart', e => { e.preventDefault(); onStart(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+            }
+        };
+
+        imgEl.onload = () => renderLabels();
+        window.addEventListener('resize', renderLabels, { once: true });
+
+        document.getElementById('cert-ev-confirmar').onclick = () => {
+            // Escreve de volta nos inputs do formulário
+            for (const [key, val] of Object.entries(estado)) {
+                const xEl = document.getElementById(`cert-${prefix}-${key}-x`);
+                const yEl = document.getElementById(`cert-${prefix}-${key}-y`);
+                if (xEl) xEl.value = Math.round(val.xPct * 10) / 10;
+                if (yEl) yEl.value = Math.round(val.yPct * 10) / 10;
+            }
+            overlay.remove();
+        };
     },
 
     async _previsualizarAba(prefix) {

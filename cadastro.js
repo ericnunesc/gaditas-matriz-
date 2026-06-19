@@ -117,33 +117,6 @@ const iniciarCadastroApp = () => {
 
             await dbInstance.collection("alunos").doc(user.uid).set(novoAluno);
 
-            // 4. Gera cobrança de taxa de matrícula no Asaas (se configurada e > 0)
-            if (asaasCustomerId) {
-                try {
-                    btn.innerText = "GERANDO TAXA DE MATRÍCULA...";
-                    const docPlanos = await dbInstance.collection('configuracoes').doc('planos').get();
-                    const taxaMatricula = docPlanos.exists ? (docPlanos.data().taxaMatricula || 0) : 0;
-                    if (taxaMatricula > 0) {
-                        const dueDate = new Date();
-                        dueDate.setDate(dueDate.getDate() + 3);
-                        const dueDateStr = dueDate.toISOString().split('T')[0];
-                        await fetch('/api/asaas?endpoint=payments', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                customer: asaasCustomerId,
-                                billingType: 'UNDEFINED',
-                                value: taxaMatricula,
-                                dueDate: dueDateStr,
-                                description: 'Taxa de Matrícula — Gaditas Academy'
-                            })
-                        });
-                    }
-                } catch (errTaxa) {
-                    console.warn('⚠️ Erro ao gerar taxa de matrícula (cadastro continua):', errTaxa.message);
-                }
-            }
-
             alert("Matrícula realizada com sucesso! Seja bem-vindo à Gaditas Matriz! OSS.");
             window.location.href = "index.html";
 

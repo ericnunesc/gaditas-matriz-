@@ -497,13 +497,16 @@
                             } catch(errSub) { console.warn('Erro ao criar assinatura Asaas:', errSub.message); }
                         }
 
-                        // 4. Cria cobrança avulsa de matrícula (R$30 via PIX)
-                        //    Exceto: Plano Anual (grátis) ou aluno que já tinha assinatura ativa
+                        // 4. Cria cobrança avulsa de matrícula (valor configurável no Financeiro)
+                        //    Exceto: Plano Anual (grátis), aluno que já tinha assinatura ativa, ou taxa = 0
                         btnReg.innerText = "GERANDO TAXA DE MATRÍCULA...";
                         let asaasMatriculaId = null;
                         const matriculaGratis = planoSelecionado.key === 'anual' || assinaturaJaExiste;
                         if (asaasId && !matriculaGratis) {
                             try {
+                                const docPlanos = await db.collection('configuracoes').doc('planos').get();
+                                const taxaMatricula = docPlanos.exists ? (parseFloat(docPlanos.data().taxaMatricula) || 0) : 30;
+                                if (taxaMatricula > 0) {
                                 const dataMatricula = new Date();
                                 dataMatricula.setDate(dataMatricula.getDate() + 3); // vence em 3 dias
                                 const dueDateMatricula = dataMatricula.toISOString().split('T')[0];
@@ -514,7 +517,7 @@
                                     body: JSON.stringify({
                                         customer:    asaasId,
                                         billingType: 'PIX',
-                                        value:       30.00,
+                                        value:       taxaMatricula,
                                         dueDate:     dueDateMatricula,
                                         description: `Taxa de Matrícula — Gaditas Matriz — ${nome}`
                                     })
@@ -526,6 +529,7 @@
                                 } else {
                                     console.warn('⚠️ Matrícula não gerada:', dadosMat);
                                 }
+                                } // fim if taxaMatricula > 0
                             } catch(errMat) { console.warn('Erro ao gerar matrícula Asaas:', errMat.message); }
                         }
 

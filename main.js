@@ -281,7 +281,7 @@ const auth = {
         if (this.role === 'aluno') { academia.iniciarListenerRelatoAluno(); setTimeout(() => academia.iniciarListenerRecadosAluno(), 1500); }
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerRelatosProf();
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerCheckins();
-        if (this.role === 'professor') { profComms.iniciarListenerRecadosProf(); setTimeout(() => profComms.renderPainelDispensas(), 1000); }
+        if (this.role === 'professor') { profComms.iniciarListenerRecadosProf(); setTimeout(() => profComms.renderPainelDispensas(), 1000); setTimeout(() => profComms._verificarNotificacoesProf(), 1500); }
         if (this.role === 'admin') {
             setTimeout(() => profComms.renderPainelConvocacoes(), 1500);
             setTimeout(() => profComms.verificarDispensasAdmin(), 2000);
@@ -519,23 +519,129 @@ const academia = {
 
     async lancarPresencaManualAdmin(alunoId, alunoNome) {
         const turmasDisponiveis = [...new Set(Object.values(this.getGrade()).filter(v => Array.isArray(v)).flat())].filter(t => !t.includes("Sem treinos"));
-        let mMenu = `Selecione o número da turma para ${alunoNome.toUpperCase()}:\n\n`;
-        turmasDisponiveis.forEach((t, i) => { mMenu += `${i + 1}. ${t}\n`; });
-        const escolha = prompt(mMenu); if (!escolha) return; 
-        const index = parseInt(escolha) - 1;
-        if (isNaN(index) || index < 0 || index >= turmasDisponiveis.length) return alert("Opção inválida.");
+        const hoje = new Date().toISOString().split('T')[0];
+
+        let modal = document.getElementById('modal-presenca-manual');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-presenca-manual'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <span style="font-size:0.85rem;font-weight:800;color:#60a5fa;">➕ Lançar Presença</span>
+                    <button onclick="document.getElementById('modal-presenca-manual').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <div style="font-size:0.72rem;color:#94a3b8;margin-bottom:14px;">${alunoNome}</div>
+                <label style="font-size:0.65rem;color:#f59e0b;font-weight:800;display:block;margin-bottom:4px;">TURMA</label>
+                <select id="pm-turma" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;margin-bottom:12px;font-size:0.8rem;">
+                    ${turmasDisponiveis.map(t => `<option value="${t}">${t}</option>`).join('')}
+                </select>
+                <label style="font-size:0.65rem;color:#f59e0b;font-weight:800;display:block;margin-bottom:4px;">DATA DA AULA</label>
+                <input type="date" id="pm-data" value="${hoje}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;margin-bottom:16px;font-size:0.8rem;box-sizing:border-box;">
+                <button onclick="academia._confirmarPresencaManual('${alunoId}')" style="width:100%;padding:12px;background:#1e3a8a;border:none;color:#60a5fa;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;">✅ CONFIRMAR PRESENÇA</button>
+                <div id="pm-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
+            </div>`;
+    },
+
+    async _confirmarPresencaManual(alunoId) {
+        const turmaSel = document.getElementById('pm-turma')?.value;
+        const dataISO  = document.getElementById('pm-data')?.value;
+        const status   = document.getElementById('pm-status');
+        if (!turmaSel || !dataISO) return;
+        const [y, m, d] = dataISO.split('-');
+        const dataExib = `${d}/${m}/${y}`;
         try {
-            const ref = db.collection("alunos").doc(alunoId); const doc = await ref.get(); if (!doc.exists) return;
-            const d = doc.data(); const h = d.historico || [];
-            const turmaSel = turmasDisponiveis[index];
-            h.unshift({ data: new Date().toLocaleDateString('pt-BR'), turma: turmaSel, tipo: "Presença Manual (Adm/Prof)" });
-            const isMTManual = this._isTurmaMT(turmaSel);
-            const updManual = { historico: h };
-            if (isMTManual) updManual.aulasMT = (d.aulasMT || 0) + 1;
-            else             updManual.aulas   = (d.aulas   || 0) + 1;
-            await ref.update(updManual);
-            alert("✅ Presença inserida!"); this.renderAlunos(); this.renderRanking();
-        } catch (e) { alert("Erro ao lançar."); }
+            const ref = db.collection('alunos').doc(alunoId);
+            const doc = await ref.get(); if (!doc.exists) return;
+            const data = doc.data(); const h = data.historico || [];
+            h.unshift({ data: dataExib, turma: turmaSel, tipo: 'Presença Manual (Adm/Prof)' });
+            const isMT = this._isTurmaMT(turmaSel);
+            const upd  = { historico: h };
+            if (isMT) upd.aulasMT = (data.aulasMT || 0) + 1;
+            else       upd.aulas   = (data.aulas   || 0) + 1;
+            await ref.update(upd);
+            document.getElementById('modal-presenca-manual')?.remove();
+            this.renderAlunos(); this.renderRanking();
+        } catch(e) {
+            if (status) status.innerHTML = `<span style="color:#f43f5e;">Erro: ${e.message}</span>`;
+        }
+    },
+
+    async renderRankingGeral(filtro) {
+        const container = document.getElementById('ranking-geral-container');
+        if (!container) return;
+        container.innerHTML = '<small style="color:#64748b;font-size:0.72rem;">⏳ Carregando...</small>';
+
+        const snap = await db.collection('alunos').get();
+        const anoAtual = new Date().getFullYear();
+
+        const totalPresencas = (historico, isMT) => {
+            if (!historico?.length) return 0;
+            return historico.filter(h => {
+                const ehMT = this._isTurmaMT(h.turma || '');
+                return isMT === null ? true : (isMT ? ehMT : !ehMT);
+            }).length;
+        };
+
+        const FAIXAS_ORDEM = ['Branca','Cinza','Amarela','Laranja','Verde','Azul','Roxa','Marrom','Preta'];
+
+        let alunos = [];
+        snap.forEach(doc => {
+            const a = doc.data();
+            if (!a.nome) return;
+            const idade = a.nascimento ? anoAtual - new Date(a.nascimento).getFullYear() : 99;
+            const isKids = idade <= 15;
+            const isMT   = (a.modalidade || 'jiujitsu') === 'muaythai';
+            const faixa  = (a.faixa || 'Branca').split(' ')[0];
+            alunos.push({ nome: a.nome, faixa, idade, isKids, isMT, historico: a.historico || [] });
+        });
+
+        if (filtro === 'adulto')   alunos = alunos.filter(a => !a.isKids && !a.isMT);
+        else if (filtro === 'kids')      alunos = alunos.filter(a => a.isKids);
+        else if (filtro === 'muaythai')  alunos = alunos.filter(a => a.isMT);
+        else if (filtro !== 'faixa')     alunos = alunos.filter(a => true); // todos
+
+        const isMTFiltro = filtro === 'muaythai' ? true : filtro === 'faixa' || filtro === 'todos' || filtro === 'adulto' || filtro === 'kids' ? null : null;
+
+        if (filtro === 'faixa') {
+            // Agrupa por faixa
+            const grupos = {};
+            alunos.forEach(a => {
+                const f = a.faixa;
+                if (!grupos[f]) grupos[f] = [];
+                grupos[f].push({ ...a, total: totalPresencas(a.historico, null) });
+            });
+            let html = '';
+            FAIXAS_ORDEM.filter(f => grupos[f]?.length).forEach(faixa => {
+                const lista = grupos[faixa].sort((x, y) => y.total - x.total).slice(0, 10);
+                const cor   = ui.getCorFaixa(faixa);
+                html += `<div style="margin-bottom:14px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:${cor};border-left:3px solid ${cor};padding-left:8px;margin-bottom:6px;">FAIXA ${faixa.toUpperCase()} (${grupos[faixa].length} alunos)</div>
+                    ${lista.map((a, i) => _itemRanking(a, i)).join('')}
+                </div>`;
+            });
+            container.innerHTML = html || '<small style="color:#475569;">Nenhum aluno encontrado.</small>';
+            return;
+        }
+
+        const lista = alunos
+            .map(a => ({ ...a, total: totalPresencas(a.historico, filtro === 'muaythai' ? true : filtro === 'adulto' || filtro === 'kids' ? false : null) }))
+            .sort((x, y) => y.total - x.total);
+
+        const _itemRanking = (a, i) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#0f172a;border-radius:8px;margin-bottom:4px;border-left:3px solid ${ui.getCorFaixa(a.faixa)};">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:0.78rem;font-weight:700;color:#94a3b8;min-width:22px;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>
+                    <div>
+                        <div style="font-size:0.78rem;font-weight:700;color:#e2e8f0;">${a.nome}</div>
+                        <div style="font-size:0.58rem;color:#64748b;">${a.faixa}${a.isKids?' · Kids':''}${a.isMT?' · MT':''}</div>
+                    </div>
+                </div>
+                <span style="font-size:0.85rem;font-weight:800;color:#3b82f6;">${a.total}</span>
+            </div>`;
+
+        container.innerHTML = lista.length
+            ? lista.map((a, i) => _itemRanking(a, i)).join('')
+            : '<small style="color:#475569;">Nenhum aluno encontrado.</small>';
     },
 
     async removerPresencaAdmin(alunoId, alunoNome) {
@@ -2251,6 +2357,7 @@ const academia = {
                     : ''}
                     ${isAdmin ? `<button onclick="academia.reenviarContrato('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Contrato" style="background:#1c1000;border:1px solid #92400e;color:#f59e0b;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-file-contract"></i></button>` : ''}
                     ${isAdmin ? `<button onclick="academia.excluirAluno('${doc.id}')" title="Excluir" style="background:#2a0808;border:none;color:#ef4444;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-trash"></i></button>` : ''}
+                    <button onclick="academia.verCheckinsPendentesAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Check-ins pendentes" style="background:#1a1a00;border:1px solid #ca8a04;color:#fbbf24;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;" id="btn-checkin-${doc.id}"><i class="fas fa-clock"></i></button>
                     <button onclick="academia.lancarPresencaManualAdmin('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#1e3a8a;border:none;color:#60a5fa;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;"><i class="fas fa-plus"></i> Presença</button>
                     <button onclick="academia.removerPresencaAdmin('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Remover presença" style="background:#2a0808;border:1px solid #ef4444;color:#ef4444;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;"><i class="fas fa-minus"></i> Presença</button>
                 </div>
@@ -2368,6 +2475,35 @@ const academia = {
     },
 
     async recusarCheckin(cId) { if(confirm("Remover?")) { await db.collection("checkins").doc(cId).delete(); this.renderCheckins(); } },
+
+    async verCheckinsPendentesAluno(alunoId, nomeAluno) {
+        const snap = await db.collection('checkins').where('alunoId', '==', alunoId).get();
+        const checkins = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.tipo !== 'visual');
+        let modal = document.getElementById('modal-checkins-aluno');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-checkins-aluno'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <span style="font-size:0.9rem;font-weight:800;color:#fbbf24;">⏱ Check-ins Pendentes</span>
+                    <button onclick="document.getElementById('modal-checkins-aluno').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <div style="font-size:0.72rem;color:#94a3b8;margin-bottom:12px;">${nomeAluno}</div>
+                ${checkins.length === 0
+                    ? `<p style="color:#64748b;text-align:center;font-size:0.8rem;padding:16px;">Nenhum check-in pendente.</p>`
+                    : checkins.map(c => `
+                        <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+                            <div>
+                                <div style="font-size:0.78rem;font-weight:700;color:#e2e8f0;">${c.turma}</div>
+                                <div style="font-size:0.62rem;color:#64748b;">${c.data ? new Date(c.data).toLocaleString('pt-BR') : 'horário não registrado'}</div>
+                            </div>
+                            <div style="display:flex;gap:6px;">
+                                <button onclick="academia.aprovar('${c.id}','${alunoId}','${c.turma}').then(()=>academia.verCheckinsPendentesAluno('${alunoId}','${nomeAluno.replace(/'/g,"\\'")}'))" style="background:#062f1d;color:#10b981;border:none;padding:7px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;font-weight:700;"><i class="fas fa-check"></i></button>
+                                <button onclick="academia.recusarCheckin('${c.id}').then(()=>academia.verCheckinsPendentesAluno('${alunoId}','${nomeAluno.replace(/'/g,"\\'")}'))" style="background:#3b0707;color:#ef4444;border:none;padding:7px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;font-weight:700;"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>`).join('')}
+            </div>`;
+    },
 
     _getDataHoje() {
         const h = new Date();
@@ -5524,11 +5660,24 @@ Ele voltará a ser aluno normal.`)) return;
         const s = stories[idx];
         if (!s) return;
 
-        // Marca como visto
+        // Marca como visto (localStorage)
         const vistos = JSON.parse(localStorage.getItem('gaditas_stories_vistos') || '{}');
         vistos[s.id] = true;
         localStorage.setItem('gaditas_stories_vistos', JSON.stringify(vistos));
         this.renderStoriesBar();
+
+        // Registra visualização no Firestore (só alunos, uma vez por aluno)
+        if (auth.currentUser?.id && auth.role !== 'admin') {
+            const ref = db.collection('stories').doc(s.id);
+            ref.get().then(doc => {
+                if (!doc.exists) return;
+                const views = doc.data().views || [];
+                if (!views.some(v => v.id === auth.currentUser.id)) {
+                    ref.update({ views: [...views, { id: auth.currentUser.id, nome: auth.currentUser.nome || 'Aluno', em: new Date().toISOString() }] });
+                    s.views = [...views, { id: auth.currentUser.id, nome: auth.currentUser.nome || 'Aluno', em: new Date().toISOString() }];
+                }
+            }).catch(() => {});
+        }
 
         // Cancela timer anterior
         if (this._storyTimer) { clearTimeout(this._storyTimer); this._storyTimer = null; }
@@ -5553,6 +5702,7 @@ Ele voltará a ser aluno normal.`)) return;
 
         const link = s.link || '';
         const curtidas = s.curtidas || [];
+        const views = s.views || [];
         const isAdmin = auth.role === 'admin';
 
         overlay.innerHTML = `
@@ -5578,6 +5728,7 @@ Ele voltará a ser aluno normal.`)) return;
                     <span>${jaCurtiu ? '❤️' : '🤍'}</span><span id="curtidas-count">${curtidas.length || ''}</span>
                 </button>` : ''}
                 ${isAdmin && curtidas.length > 0 ? `<button onclick="academia._verCurtidas('${s.id}')" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:9px 16px;border-radius:20px;font-size:0.78rem;cursor:pointer;">❤️ ${curtidas.length} curtida${curtidas.length > 1 ? 's' : ''}</button>` : ''}
+                ${isAdmin ? `<button onclick="academia._verVisualizacoes('${s.id}')" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:9px 16px;border-radius:20px;font-size:0.78rem;cursor:pointer;">👁 ${views.length} viz</button>` : ''}
             </div>`;
 
         overlay.style.display = 'flex';
@@ -5628,6 +5779,14 @@ Ele voltará a ser aluno normal.`)) return;
         if (!curtidas.length) return alert('Nenhuma curtida ainda.');
         const lista = curtidas.map(c => `• ${c.nome}`).join('\n');
         alert(`❤️ Curtidas (${curtidas.length}):\n\n${lista}`);
+    },
+
+    async _verVisualizacoes(storyId) {
+        const doc = await db.collection('stories').doc(storyId).get();
+        const views = doc.exists ? (doc.data().views || []) : [];
+        if (!views.length) return alert('Nenhuma visualização registrada ainda.');
+        const lista = views.map(v => `• ${v.nome}`).join('\n');
+        alert(`👁 Visualizações (${views.length}):\n\n${lista}`);
     },
 
     fecharStory() {
@@ -6288,9 +6447,10 @@ Ele voltará a ser aluno normal.`)) return;
                 snapCI.docs.forEach(doc => { if (doc.data().turma === turmaQR) batch.delete(doc.ref); });
                 await batch.commit();
 
-                // Atualiza a lista de checkins pendentes do professor/admin
+                // Atualiza listas de checkins (admin/prof e aluno)
                 this.renderCheckins();
                 this.renderRanking();
+                this.carregarMeusCheckinsPendentes();
 
                 alert("✅ Presença computada automaticamente! Turma: " + turmaQR + " OSS! 🥋");
                 push.paraAluno(alunoId, '✅ Presença confirmada!', `Sua presença na turma ${turmaQR} foi registrada. OSS! 🥋`);
@@ -6552,6 +6712,7 @@ Ele voltará a ser aluno normal.`)) return;
                 container.insertBefore(painelDisp, container.firstChild);
             }
             profComms.renderPainelDispensas();
+            profComms._verificarNotificacoesProf();
         }
 
         // Preenche bloco de duração separadamente (evita problema com template literal aninhado)
@@ -7606,7 +7767,8 @@ const profComms = {
         const dispensasAmanha = [];
 
         snap.forEach(doc => {
-            const d = doc.data();
+            const d = { ...doc.data(), _id: doc.id };
+            if (d.adminCiente) return; // já cienciado, não mostra
             const fim = d.dataFim || d.data;
             if (d.data <= hoje   && fim >= hoje)   dispensasHoje.push(d);
             if (d.data <= amanha && fim >= amanha && !(d.data <= hoje && fim >= hoje)) dispensasAmanha.push(d);
@@ -7626,9 +7788,12 @@ const profComms = {
             corpo += `<div style="background:#3a1a00;border:1px solid #f59e0b;border-radius:10px;padding:12px;margin-bottom:10px;">
                 <div style="font-size:0.68rem;font-weight:800;color:#f59e0b;margin-bottom:8px;">⚠️ DISPENSAS HOJE</div>
                 ${dispensasHoje.map(d => `
-                    <div style="font-size:0.75rem;color:#e2e8f0;margin-bottom:4px;">
-                        👤 <b>${d.profNome}</b> — ${d.turma === 'todas' ? 'todas as turmas' : d.turma}
-                        <div style="font-size:0.62rem;color:#94a3b8;margin-top:1px;font-style:italic;">"${d.motivo}"</div>
+                    <div style="font-size:0.75rem;color:#e2e8f0;margin-bottom:8px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+                        <div>
+                            👤 <b>${d.profNome}</b> — ${d.turma === 'todas' ? 'todas as turmas' : d.turma}
+                            <div style="font-size:0.62rem;color:#94a3b8;margin-top:1px;font-style:italic;">"${d.motivo}"</div>
+                        </div>
+                        <button onclick="profComms._cienteDispensa('${d._id}','${d.profId}','${d.profNome.replace(/'/g,"\\'")}',this)" style="flex-shrink:0;background:#10b981;border:none;color:white;padding:4px 10px;border-radius:8px;font-size:0.62rem;font-weight:700;cursor:pointer;">✅ Ciente</button>
                     </div>`).join('')}
             </div>`;
         }
@@ -7636,9 +7801,12 @@ const profComms = {
             corpo += `<div style="background:#1a2a1a;border:1px solid #10b981;border-radius:10px;padding:12px;margin-bottom:10px;">
                 <div style="font-size:0.68rem;font-weight:800;color:#10b981;margin-bottom:8px;">📅 DISPENSAS AMANHÃ</div>
                 ${dispensasAmanha.map(d => `
-                    <div style="font-size:0.75rem;color:#e2e8f0;margin-bottom:4px;">
-                        👤 <b>${d.profNome}</b> — ${d.turma === 'todas' ? 'todas as turmas' : d.turma}
-                        <div style="font-size:0.62rem;color:#94a3b8;margin-top:1px;font-style:italic;">"${d.motivo}"</div>
+                    <div style="font-size:0.75rem;color:#e2e8f0;margin-bottom:8px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+                        <div>
+                            👤 <b>${d.profNome}</b> — ${d.turma === 'todas' ? 'todas as turmas' : d.turma}
+                            <div style="font-size:0.62rem;color:#94a3b8;margin-top:1px;font-style:italic;">"${d.motivo}"</div>
+                        </div>
+                        <button onclick="profComms._cienteDispensa('${d._id}','${d.profId}','${d.profNome.replace(/'/g,"\\'")}',this)" style="flex-shrink:0;background:#10b981;border:none;color:white;padding:4px 10px;border-radius:8px;font-size:0.62rem;font-weight:700;cursor:pointer;">✅ Ciente</button>
                     </div>`).join('')}
             </div>`;
         }
@@ -7657,6 +7825,63 @@ const profComms = {
                 </div>
             </div>`;
         document.body.appendChild(modal);
+    },
+
+    async _verificarNotificacoesProf() {
+        if (!auth.currentUser?.id) return;
+        const snap = await db.collection('notificacoes_prof')
+            .where('profId', '==', auth.currentUser.id)
+            .where('lida', '==', false)
+            .get();
+        if (snap.empty) return;
+        const msgs = [];
+        const ids  = [];
+        snap.forEach(doc => { msgs.push(doc.data().mensagem); ids.push(doc.id); });
+        // Marca todas como lidas
+        const batch = db.batch();
+        ids.forEach(id => batch.update(db.collection('notificacoes_prof').doc(id), { lida: true }));
+        await batch.commit();
+        // Exibe popup
+        let modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.95);z-index:99997;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        modal.id = 'modal-notif-prof';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border:2px solid #10b981;border-radius:20px;padding:24px;max-width:360px;width:100%;">
+                <div style="text-align:center;margin-bottom:16px;">
+                    <div style="font-size:2rem;margin-bottom:6px;">✅</div>
+                    <div style="font-size:1rem;font-weight:800;color:white;">Notificação da Academia</div>
+                </div>
+                <div style="background:#0f2a1a;border:1px solid #10b981;border-radius:10px;padding:12px;margin-bottom:16px;">
+                    ${msgs.map(m => `<div style="font-size:0.8rem;color:#e2e8f0;margin-bottom:4px;">${m}</div>`).join('')}
+                </div>
+                <button onclick="document.getElementById('modal-notif-prof').remove()" style="width:100%;padding:12px;background:#10b981;border:none;color:white;border-radius:10px;font-weight:700;cursor:pointer;">OK, ENTENDIDO</button>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async _cienteDispensa(dispensaId, profId, profNome, btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳';
+        try {
+            await db.collection('dispensas_prof').doc(dispensaId).update({
+                adminCiente: true,
+                adminCienteEm: new Date().toISOString()
+            });
+            // Notifica o professor via coleção de notificações
+            await db.collection('notificacoes_prof').add({
+                profId,
+                tipo: 'dispensa_ciente',
+                mensagem: `✅ ${auth.adminCreds?.nome || 'O admin'} está ciente da sua dispensa.`,
+                lida: false,
+                criadoEm: Date.now()
+            });
+            btn.textContent = '✅ OK';
+            btn.style.background = '#334155';
+        } catch(e) {
+            btn.disabled = false;
+            btn.textContent = '✅ Ciente';
+            alert('Erro: ' + e.message);
+        }
     },
 
     // ── DISPENSAS (VISÃO ADMIN) ────────────────────────────
@@ -8247,6 +8472,12 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         } else {
             card.classList.add('gestao-acc-fechado');
         }
+    },
+
+    toggleRelAcc(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.toggle('aberto');
     },
 
     _aplicarAcordeoesGestao() {
@@ -13271,6 +13502,240 @@ const avaliacaoFisica = {
         win.document.close();
         setTimeout(() => win.print(), 600);
     }
+};
+
+// ── PRÊMIOS DO ANO ───────────────────────────────────────────────────────────
+const premiosAno = {
+    CATEGORIAS: [
+        { id: 'superacao',        emoji: '💪', label: 'Melhor Superação' },
+        { id: 'espirito_equipe',  emoji: '🤝', label: 'Maior Espírito de Equipe' },
+        { id: 'destaque',         emoji: '⭐', label: 'Aluno Destaque' },
+        { id: 'disciplina',       emoji: '🎯', label: 'Aluno Mais Disciplinado' },
+        { id: 'foco_total',       emoji: '🔥', label: 'Foco Total' },
+        { id: 'competidor',       emoji: '🥇', label: 'Melhor Competidor' },
+        { id: 'revelacao',        emoji: '🌟', label: 'Revelação do Ano' },
+        { id: 'resiliencia',      emoji: '🛡️', label: 'Aluno Resiliência' },
+        { id: 'evolucao_tecnica', emoji: '📈', label: 'Melhor Evolução Técnica' },
+        { id: 'pai_mae_tatame',   emoji: '👨‍👩‍👧', label: 'Pai/Mãe do Tatame' },
+    ],
+
+    _ano() { return new Date().getFullYear(); },
+
+    async _carregarMencoes() {
+        const snap = await db.collection('premios_mencoes')
+            .where('ano', '==', this._ano()).get();
+        // Conta menções por categoria → { catId: { alunoId: { nome, count } } }
+        const mapa = {};
+        snap.forEach(doc => {
+            const d = doc.data();
+            if (!mapa[d.categoria]) mapa[d.categoria] = {};
+            if (!mapa[d.categoria][d.alunoId]) mapa[d.categoria][d.alunoId] = { nome: d.alunoNome, count: 0, mencoes: [] };
+            mapa[d.categoria][d.alunoId].count++;
+            mapa[d.categoria][d.alunoId].mencoes.push({ id: doc.id, motivo: d.motivo, data: d.data });
+        });
+        return mapa;
+    },
+
+    async _carregarOverrides() {
+        const doc = await db.collection('premios_ano').doc(String(this._ano())).get();
+        return doc.exists ? doc.data() : {};
+    },
+
+    // Vencedor de uma categoria: quem tem mais menções, ou override manual
+    _vencedor(catId, mapa, overrides) {
+        const entradas = Object.values(mapa[catId] || {});
+        if (entradas.length > 0) {
+            entradas.sort((a, b) => b.count - a.count);
+            return { ...entradas[0], automatico: true };
+        }
+        const ov = overrides[catId];
+        if (ov?.alunoNome) return { nome: ov.alunoNome, count: 0, motivo: ov.motivo, automatico: false };
+        return null;
+    },
+
+    // Abre modal para registrar menção
+    async abrirRegistrarMencao() {
+        const alunosSnap = await db.collection('alunos').get();
+        const alunos = [];
+        alunosSnap.forEach(d => { if (d.data().nome) alunos.push({ id: d.id, nome: d.data().nome }); });
+        alunos.sort((a, b) => a.nome.localeCompare(b.nome));
+        const opcoesAlunos = `<option value="">— Selecionar aluno —</option>` +
+            alunos.map(a => `<option value="${a.id}|${a.nome.replace(/[|"]/g,'')}">${a.nome}</option>`).join('');
+        const opcoesCats = this.CATEGORIAS.map(c => `<option value="${c.id}">${c.emoji} ${c.label}</option>`).join('');
+
+        let modal = document.getElementById('modal-premios-mencao');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-premios-mencao'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border:2px solid #f59e0b44;border-radius:16px;padding:22px;width:100%;max-width:420px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.9rem;font-weight:800;color:#f59e0b;">🏅 Registrar Menção</span>
+                    <button onclick="document.getElementById('modal-premios-mencao').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <p style="font-size:0.65rem;color:#64748b;margin-bottom:14px;">Registre quando um aluno se destacar em alguma categoria. Quem acumular mais menções vence no final do ano.</p>
+                <label style="font-size:0.62rem;color:#f59e0b;font-weight:800;display:block;margin-bottom:4px;">CATEGORIA</label>
+                <select id="pm-cat" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.78rem;margin-bottom:10px;">${opcoesCats}</select>
+                <label style="font-size:0.62rem;color:#f59e0b;font-weight:800;display:block;margin-bottom:4px;">ALUNO</label>
+                <select id="pm-aluno" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.78rem;margin-bottom:10px;">${opcoesAlunos}</select>
+                <label style="font-size:0.62rem;color:#f59e0b;font-weight:800;display:block;margin-bottom:4px;">MOTIVO (opcional)</label>
+                <input type="text" id="pm-motivo" placeholder="Ex: ganhou campeonato, ajudou colega..." style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;box-sizing:border-box;margin-bottom:14px;">
+                <button onclick="premiosAno.salvarMencao()" style="width:100%;padding:12px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;">✅ REGISTRAR MENÇÃO</button>
+                <div id="pm-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
+            </div>`;
+    },
+
+    async salvarMencao() {
+        const status = document.getElementById('pm-status');
+        const catId  = document.getElementById('pm-cat')?.value;
+        const selVal = document.getElementById('pm-aluno')?.value;
+        const motivo = document.getElementById('pm-motivo')?.value.trim();
+        if (!catId || !selVal) { if (status) status.innerHTML = '<span style="color:#f43f5e;">Selecione categoria e aluno.</span>'; return; }
+        const [alunoId, ...nomeParts] = selVal.split('|');
+        const alunoNome = nomeParts.join('|');
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Salvando...</span>';
+        await db.collection('premios_mencoes').add({
+            ano: this._ano(), categoria: catId, alunoId, alunoNome, motivo: motivo || '',
+            data: new Date().toLocaleDateString('pt-BR'), criadoEm: Date.now()
+        });
+        if (status) status.innerHTML = '<span style="color:#10b981;">✅ Menção registrada!</span>';
+        setTimeout(() => { document.getElementById('modal-premios-mencao')?.remove(); this.atualizarResumo(); }, 700);
+    },
+
+    // Abre modal para override manual (categorias sem menções)
+    async abrirOverride() {
+        const [mapa, overrides, alunosSnap] = await Promise.all([
+            this._carregarMencoes(), this._carregarOverrides(),
+            db.collection('alunos').get()
+        ]);
+        const alunos = [];
+        alunosSnap.forEach(d => { if (d.data().nome) alunos.push({ id: d.id, nome: d.data().nome }); });
+        alunos.sort((a, b) => a.nome.localeCompare(b.nome));
+
+        const semMencoes = this.CATEGORIAS.filter(c => !mapa[c.id] || Object.keys(mapa[c.id]).length === 0);
+        if (!semMencoes.length) { alert('Todas as categorias já têm menções registradas!'); return; }
+
+        const opcoesAlunos = `<option value="">— Selecionar aluno —</option>` +
+            alunos.map(a => `<option value="${a.id}|${a.nome.replace(/[|"]/g,'')}">${a.nome}</option>`).join('');
+
+        let modal = document.getElementById('modal-premios-override');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-premios-override'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:440px;margin-top:10px;margin-bottom:30px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <span style="font-size:0.85rem;font-weight:800;color:#e2e8f0;">✏️ Escolha Manual</span>
+                    <button onclick="document.getElementById('modal-premios-override').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <p style="font-size:0.65rem;color:#64748b;margin-bottom:14px;">Categorias sem menções — escolha o vencedor manualmente:</p>
+                ${semMencoes.map(cat => {
+                    const ov = overrides[cat.id] || {};
+                    const valSel = ov.alunoId ? `${ov.alunoId}|${ov.alunoNome}` : '';
+                    return `<div style="margin-bottom:12px;background:#0f172a;border-radius:10px;padding:12px;">
+                        <div style="font-size:0.7rem;font-weight:800;color:#e2e8f0;margin-bottom:6px;">${cat.emoji} ${cat.label}</div>
+                        <select id="ov-sel-${cat.id}" style="width:100%;padding:8px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;">
+                            ${opcoesAlunos.replace(`value="${valSel}"`, `value="${valSel}" selected`)}
+                        </select>
+                    </div>`;
+                }).join('')}
+                <button onclick="premiosAno.salvarOverride(${JSON.stringify(semMencoes.map(c=>c.id))})" style="width:100%;padding:12px;background:#3b82f6;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.82rem;margin-top:4px;">💾 SALVAR ESCOLHAS</button>
+                <div id="ov-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
+            </div>`;
+    },
+
+    async salvarOverride(catIds) {
+        const status = document.getElementById('ov-status');
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳...</span>';
+        const dados = {};
+        for (const catId of catIds) {
+            const val = document.getElementById(`ov-sel-${catId}`)?.value;
+            if (val) {
+                const [alunoId, ...nomeParts] = val.split('|');
+                dados[catId] = { alunoId, alunoNome: nomeParts.join('|') };
+            }
+        }
+        await db.collection('premios_ano').doc(String(this._ano())).set(dados, { merge: true });
+        if (status) status.innerHTML = '<span style="color:#10b981;">✅ Salvo!</span>';
+        setTimeout(() => { document.getElementById('modal-premios-override')?.remove(); this.atualizarResumo(); }, 700);
+    },
+
+    async atualizarResumo() {
+        const el = document.getElementById('premios-ano-resumo');
+        if (!el) return;
+        const mapa = await this._carregarMencoes();
+        const totalMencoes = Object.values(mapa).reduce((s, cat) => s + Object.values(cat).reduce((ss, a) => ss + a.count, 0), 0);
+        const catsComMencoes = Object.keys(mapa).length;
+        el.innerHTML = totalMencoes === 0
+            ? '<span style="color:#64748b;font-size:0.7rem;">Nenhuma menção registrada ainda. Clique em <b>+ Menção</b> para começar.</span>'
+            : `<span style="color:#10b981;font-size:0.72rem;">✅ ${totalMencoes} menção(ões) em ${catsComMencoes} categoria(s) — ${this._ano()}</span>`;
+    },
+
+    async verResultado() {
+        const [mapa, overrides, alunosSnap] = await Promise.all([
+            this._carregarMencoes(), this._carregarOverrides(), db.collection('alunos').get()
+        ]);
+        const anoAtual = this._ano();
+
+        // Rankings de presença
+        const tops = { geral: [], kids: [], adulto: [], mt: [] };
+        alunosSnap.forEach(doc => {
+            const a = doc.data(); if (!a.nome) return;
+            const idade = a.nascimento ? anoAtual - new Date(a.nascimento).getFullYear() : 99;
+            const isMT = (a.modalidade || 'jiujitsu') === 'muaythai';
+            const contaAno = (filtroMT) => (a.historico || []).filter(h => {
+                const p = (h.data || '').split('/'); if (p.length < 3) return false;
+                if (parseInt(p[2]) !== anoAtual) return false;
+                const ehMT = academia._isTurmaMT(h.turma || '');
+                return filtroMT === null ? true : (filtroMT ? ehMT : !ehMT);
+            }).length;
+            const tot = contaAno(null);
+            tops.geral.push({ nome: a.nome, total: tot });
+            if (isMT) tops.mt.push({ nome: a.nome, total: contaAno(true) });
+            else if (idade <= 15) tops.kids.push({ nome: a.nome, total: contaAno(false) });
+            else tops.adulto.push({ nome: a.nome, total: contaAno(false) });
+        });
+        const podio = (arr, titulo) => {
+            const t = arr.sort((a,b)=>b.total-a.total).slice(0,3);
+            if (!t.length) return '';
+            return `<div style="margin-bottom:10px;"><div style="font-size:0.6rem;font-weight:800;color:#f59e0b;margin-bottom:4px;">${titulo}</div>
+                ${t.map((a,i)=>`<div style="display:flex;justify-content:space-between;padding:5px 10px;background:#0f172a;border-radius:7px;margin-bottom:3px;">
+                    <span style="font-size:0.73rem;color:#e2e8f0;">${i===0?'🥇':i===1?'🥈':'🥉'} ${a.nome}</span>
+                    <span style="font-size:0.73rem;font-weight:800;color:#3b82f6;">${a.total}</span></div>`).join('')}</div>`;
+        };
+
+        let modal = document.getElementById('modal-premios-resultado');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-premios-resultado'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.97);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
+        modal.innerHTML = `
+            <div style="background:#0f172a;border:2px solid #f59e0b;border-radius:20px;padding:22px;width:100%;max-width:480px;margin-top:10px;margin-bottom:30px;position:relative;">
+                <button onclick="document.getElementById('modal-premios-resultado').remove()" style="position:absolute;top:14px;right:14px;background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.75rem;">✕</button>
+                <div style="text-align:center;margin-bottom:20px;">
+                    <div style="font-size:2.5rem;">🏆</div>
+                    <div style="font-size:1.1rem;font-weight:800;color:#f59e0b;">PRÊMIOS ${anoAtual}</div>
+                    <div style="font-size:0.6rem;color:#64748b;">GADITAS ACADEMY</div>
+                </div>
+
+                <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;letter-spacing:1px;margin-bottom:10px;border-bottom:1px solid #334155;padding-bottom:6px;">CATEGORIAS ESPECIAIS</div>
+                ${this.CATEGORIAS.map(cat => {
+                    const v = this._vencedor(cat.id, mapa, overrides);
+                    const catMapa = mapa[cat.id] || {};
+                    const top3cat = Object.values(catMapa).sort((a,b)=>b.count-a.count).slice(0,3);
+                    return `<div style="padding:10px 12px;background:#1e293b;border-radius:10px;margin-bottom:6px;border-left:3px solid ${v ? '#f59e0b' : '#334155'};">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:${top3cat.length>1?'6':'0'}px;">
+                            <span style="font-size:1.1rem;">${cat.emoji}</span>
+                            <div style="flex:1;">
+                                <div style="font-size:0.58rem;color:#64748b;font-weight:700;">${cat.label.toUpperCase()}</div>
+                                <div style="font-size:0.82rem;font-weight:800;color:${v?'#f59e0b':'#475569'};">${v ? '🥇 ' + v.nome : 'A definir'}</div>
+                                ${v?.automatico ? `<div style="font-size:0.58rem;color:#64748b;">${v.count} menção(ões)</div>` : v ? `<div style="font-size:0.58rem;color:#64748b;">escolha manual</div>` : ''}
+                            </div>
+                        </div>
+                        ${top3cat.length > 1 ? `<div style="padding-left:28px;">${top3cat.slice(1).map((a,i)=>`<div style="font-size:0.62rem;color:#64748b;">${i===0?'🥈':'🥉'} ${a.nome} (${a.count})</div>`).join('')}</div>` : ''}
+                    </div>`;
+                }).join('')}
+
+                <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;letter-spacing:1px;margin:16px 0 10px;border-bottom:1px solid #334155;padding-bottom:6px;">MAIS PRESENTES DO ANO</div>
+                ${podio(tops.geral,'🏅 GERAL')}${podio(tops.adulto,'👤 ADULTO JJ')}${podio(tops.kids,'👦 KIDS')}${podio(tops.mt,'🥊 MUAY THAI')}
+            </div>`;
+    },
 };
 
 // ── BOLETIM ESCOLAR ──────────────────────────────────────────────────────────

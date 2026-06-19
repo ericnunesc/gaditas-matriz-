@@ -27,6 +27,14 @@
         #menu-alunos, #menu-relatorios { display: none !important; }
         body.role-admin #menu-alunos, body.role-prof #menu-alunos,
         body.role-admin #menu-relatorios { display: flex !important; }
+        /* Acordeões de relatórios */
+        .rel-acc { background:#1e293b; border:1px solid #334155; border-radius:12px; margin-bottom:8px; overflow:hidden; }
+        .rel-acc-hdr { width:100%; display:flex; justify-content:space-between; align-items:center; padding:13px 15px; background:transparent; border:none; color:#e2e8f0; font-size:0.82rem; font-weight:800; cursor:pointer; text-align:left; }
+        .rel-acc-hdr:active { background:#334155; }
+        .rel-acc-arr { font-size:1.1rem; color:#475569; transition:transform 0.2s; display:inline-block; }
+        .rel-acc.aberto .rel-acc-arr { transform:rotate(90deg); color:#f59e0b; }
+        .rel-acc-body { display:none; padding:0 15px 15px; }
+        .rel-acc.aberto .rel-acc-body { display:block; }
         /* Acordeões gestão — embutido no HTML para garantir prioridade máxima */
         #card-aniversariantes-admin.gestao-acc-fechado > div:not(:first-child),
         #card-alertas-saude.gestao-acc-fechado > div:not(:first-child),
@@ -880,24 +888,99 @@
                 </div><!-- /gestao-aluno-body -->
             </div>
 
-            <div id="tab-relatorios" class="tab-content hidden" style="padding:15px;">
-                <div id="dashboard-admin-container"></div>
-                <div id="painel-boletim-admin"></div>
-                <div id="radar-sumidos-container" style="margin-bottom:12px;"></div>
-                <div id="avaliacoes-painel" style="margin-bottom:12px;"></div>
-                <div class="card" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px;">
-                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-chart-line"></i> Relatórios de Performance e Promoção</div>
-                    <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <button onclick="academia.generarRelatorioGraduacao()" style="flex:1; padding:12px; background:#f59e0b; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">🥋 QUEM GRADUA?</button>
-                        <button onclick="academia.exportarDadosBackup()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">BACKUP</button>
-                    </div>
-                    <button onclick="academia.renderRelatPlanos()" style="width:100%; padding:12px; background:#1e3a8a; border:1px solid #3b82f655; color:#60a5fa; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; margin-bottom:15px; letter-spacing:0.3px;">
-                        <i class="fas fa-wallet" style="margin-right:7px;"></i>💰 PLANOS & VALORES DO CONTRATO
+            <div id="tab-relatorios" class="tab-content hidden" style="padding:15px 15px 80px;">
+
+                <!-- ACORDEÃO: Dashboard -->
+                <div class="rel-acc" id="racc-dashboard">
+                    <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-dashboard')">
+                        <span><i class="fas fa-tachometer-alt" style="margin-right:7px;color:#3b82f6;"></i>Dashboard</span><span class="rel-acc-arr">›</span>
                     </button>
-                    <div id="resultado-relat-planos"></div>
-                    <div id="analytics-frequencia-container" style="margin-bottom:25px;"></div>
-                    <div id="resultado-relatorios"></div>
+                    <div class="rel-acc-body">
+                        <div id="dashboard-admin-container"></div>
+                    </div>
                 </div>
+
+                <!-- ACORDEÃO: Boletim -->
+                <div class="rel-acc" id="racc-boletim">
+                    <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-boletim')">
+                        <span><i class="fas fa-file-alt" style="margin-right:7px;color:#10b981;"></i>Boletim Mensal</span><span class="rel-acc-arr">›</span>
+                    </button>
+                    <div class="rel-acc-body">
+                        <div id="painel-boletim-admin"></div>
+                    </div>
+                </div>
+
+                <!-- ACORDEÃO: Alunos Sumidos -->
+                <div class="rel-acc" id="racc-sumidos">
+                    <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-sumidos')">
+                        <span><i class="fas fa-user-slash" style="margin-right:7px;color:#f43f5e;"></i>Alunos Sumidos</span><span class="rel-acc-arr">›</span>
+                    </button>
+                    <div class="rel-acc-body">
+                        <div id="radar-sumidos-container"></div>
+                    </div>
+                </div>
+
+                <!-- ACORDEÃO: Avaliações -->
+                <div class="rel-acc" id="racc-avaliacoes">
+                    <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-avaliacoes')">
+                        <span><i class="fas fa-star" style="margin-right:7px;color:#f59e0b;"></i>Avaliações</span><span class="rel-acc-arr">›</span>
+                    </button>
+                    <div class="rel-acc-body">
+                        <div id="avaliacoes-painel"></div>
+                    </div>
+                </div>
+
+                <!-- ACORDEÃO: Performance & Promoção -->
+                <div class="rel-acc" id="racc-performance">
+                    <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-performance')">
+                        <span><i class="fas fa-chart-line" style="margin-right:7px;color:#a78bfa;"></i>Performance & Promoção</span><span class="rel-acc-arr">›</span>
+                    </button>
+                    <div class="rel-acc-body">
+                        <div style="display:flex;gap:10px;margin-bottom:10px;">
+                            <button onclick="academia.generarRelatorioGraduacao()" style="flex:1;padding:12px;background:#f59e0b;border:none;color:white;border-radius:8px;font-weight:700;cursor:pointer;">🥋 QUEM GRADUA?</button>
+                            <button onclick="academia.exportarDadosBackup()" style="flex:1;padding:12px;background:#334155;border:none;color:white;border-radius:8px;font-weight:700;cursor:pointer;">BACKUP</button>
+                        </div>
+                        <button onclick="academia.renderRelatPlanos()" style="width:100%;padding:12px;background:#1e3a8a;border:1px solid #3b82f655;color:#60a5fa;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;margin-bottom:15px;letter-spacing:0.3px;">
+                            <i class="fas fa-wallet" style="margin-right:7px;"></i>💰 PLANOS & VALORES DO CONTRATO
+                        </button>
+                        <div id="resultado-relat-planos"></div>
+                        <div id="analytics-frequencia-container" style="margin-bottom:25px;"></div>
+                        <div id="resultado-relatorios"></div>
+                    </div>
+                </div>
+
+                <!-- ACORDEÃO: Prêmios do Ano -->
+                <div class="rel-acc" id="racc-premios">
+                    <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-premios')">
+                        <span><i class="fas fa-award" style="margin-right:7px;color:#f59e0b;"></i>Prêmios do Ano</span><span class="rel-acc-arr">›</span>
+                    </button>
+                    <div class="rel-acc-body">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                            <button onclick="premiosAno.abrirRegistrarMencao()" style="padding:8px 14px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🏅 + Menção</button>
+                            <button onclick="premiosAno.verResultado()" style="padding:8px 14px;background:#1a1a00;border:1px solid #f59e0b;color:#fcd34d;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🏆 Placar</button>
+                            <button onclick="premiosAno.abrirOverride()" style="padding:8px 12px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.7rem;font-weight:700;cursor:pointer;">✏️ Manual</button>
+                        </div>
+                        <div id="premios-ano-resumo" style="font-size:0.7rem;color:#64748b;">Clique em <b style="color:#e2e8f0;">+ Menção</b> para nominar alunos ao longo do ano.</div>
+                    </div>
+                </div>
+
+                <!-- ACORDEÃO: Ranking de Presenças -->
+                <div class="rel-acc" id="racc-ranking">
+                    <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-ranking')">
+                        <span><i class="fas fa-trophy" style="margin-right:7px;color:#f59e0b;"></i>Ranking de Presenças</span><span class="rel-acc-arr">›</span>
+                    </button>
+                    <div class="rel-acc-body">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                            <button onclick="academia.renderRankingGeral('todos')" style="padding:7px 12px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🏅 Todos</button>
+                            <button onclick="academia.renderRankingGeral('adulto')" style="padding:7px 12px;background:#1a2a1a;border:1px solid #10b981;color:#6ee7b7;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">👤 Adulto</button>
+                            <button onclick="academia.renderRankingGeral('kids')" style="padding:7px 12px;background:#2a1a00;border:1px solid #f59e0b;color:#fcd34d;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">👦 Kids</button>
+                            <button onclick="academia.renderRankingGeral('muaythai')" style="padding:7px 12px;background:#2a001a;border:1px solid #f43f5e;color:#fda4af;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🥊 Muay Thai</button>
+                            <button onclick="academia.renderRankingGeral('faixa')" style="padding:7px 12px;background:#1a1040;border:1px solid #a78bfa;color:#c4b5fd;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🥋 Por Faixa</button>
+                        </div>
+                        <div id="ranking-geral-container"><small style="color:#475569;font-size:0.72rem;">Selecione um filtro acima.</small></div>
+                    </div>
+                </div>
+
             </div>
 
             <div id="tab-horarios" class="tab-content hidden" style="padding:15px;"></div>
@@ -1024,7 +1107,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-    <script src="main.js?v=20260619f"></script>
+    <script src="main.js?v=20260619q"></script>
     <script src="filtros-academia.js?v=20260615a"></script>
     <script src="gaditas-modal-financeiro.js?v=20260616b"></script>
     <script src="gaditas-painel-adm.js?v=20260615c"></script>

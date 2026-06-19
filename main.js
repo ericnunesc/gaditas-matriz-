@@ -13637,22 +13637,21 @@ const premiosAno = {
                         </select>
                     </div>`;
                 }).join('')}
-                <button onclick="premiosAno.salvarOverride(${JSON.stringify(semMencoes.map(c=>c.id))})" style="width:100%;padding:12px;background:#3b82f6;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.82rem;margin-top:4px;">💾 SALVAR ESCOLHAS</button>
+                <button onclick="premiosAno.salvarOverride()" style="width:100%;padding:12px;background:#3b82f6;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.82rem;margin-top:4px;">💾 SALVAR ESCOLHAS</button>
                 <div id="ov-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
             </div>`;
     },
 
-    async salvarOverride(catIds) {
+    async salvarOverride() {
         const status = document.getElementById('ov-status');
         if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳...</span>';
         const dados = {};
-        for (const catId of catIds) {
-            const val = document.getElementById(`ov-sel-${catId}`)?.value;
-            if (val) {
-                const [alunoId, ...nomeParts] = val.split('|');
-                dados[catId] = { alunoId, alunoNome: nomeParts.join('|') };
-            }
-        }
+        document.querySelectorAll('[id^="ov-sel-"]').forEach(sel => {
+            if (!sel.value) return;
+            const catId = sel.id.replace('ov-sel-', '');
+            const [alunoId, ...nomeParts] = sel.value.split('|');
+            dados[catId] = { alunoId, alunoNome: nomeParts.join('|') };
+        });
         await db.collection('premios_ano').doc(String(this._ano())).set(dados, { merge: true });
         if (status) status.innerHTML = '<span style="color:#10b981;">✅ Salvo!</span>';
         setTimeout(() => { document.getElementById('modal-premios-override')?.remove(); this.atualizarResumo(); }, 700);

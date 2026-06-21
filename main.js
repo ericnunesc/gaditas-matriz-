@@ -13801,6 +13801,7 @@ const publicidade = {
                     </div>
                     <div style="display:flex;gap:6px;">
                         <button onclick="publicidade.verImpressoes('${d.id}')" style="background:#1e3a8a;border:none;color:#60a5fa;padding:5px 10px;border-radius:8px;font-size:0.6rem;font-weight:700;cursor:pointer;">📊 Stats</button>
+                        <button onclick="publicidade.abrirEditarCampanha('${d.id}')" style="background:#334155;border:none;color:#e2e8f0;padding:5px 10px;border-radius:8px;font-size:0.6rem;font-weight:700;cursor:pointer;">✏️</button>
                         <button onclick="publicidade.excluir('${d.id}',this)" style="background:#2d0a0a;border:none;color:#f43f5e;padding:5px 10px;border-radius:8px;font-size:0.6rem;font-weight:700;cursor:pointer;">🗑</button>
                     </div>
                 </div>
@@ -13974,6 +13975,100 @@ const publicidade = {
         setTimeout(() => { document.getElementById('modal-nova-campanha')?.remove(); this.renderAdmin(); }, 800);
     },
 
+    async abrirEditarCampanha(campId) {
+        const doc = await db.collection('publicidade').doc(campId).get();
+        if (!doc.exists) return;
+        const c = doc.data();
+        this._imagemBase64 = null; this._imagemNome = null;
+        let modal = document.getElementById('modal-nova-campanha');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-nova-campanha'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
+        const fmtOpts = this.FORMATOS.map(f => `<option value="${f.id}"${f.id===c.formato?' selected':''}>${f.label} — ${f.desc}</option>`).join('');
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:440px;margin-top:10px;margin-bottom:30px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.85rem;font-weight:800;color:#e2e8f0;">✏️ Editar Campanha</span>
+                    <button onclick="document.getElementById('modal-nova-campanha').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">ANUNCIANTE</label>
+                        <input id="camp-anunciante" value="${c.anunciante||''}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">FORMATO</label>
+                        <select id="camp-formato" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;">${fmtOpts}</select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">IMAGEM</label>
+                        <label for="camp-img-file" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:#0f172a;border:2px dashed #334155;color:#94a3b8;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;box-sizing:border-box;">
+                            📁 Trocar imagem
+                        </label>
+                        <input id="camp-img-file" type="file" accept="image/*" onchange="publicidade._selecionarImagem(this)" style="display:none;">
+                        <div id="camp-img-preview" style="margin-top:8px;display:${c.imagemUrl?'block':'none'};">
+                            <img id="camp-img-preview-img" src="${c.imagemUrl||''}" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid #334155;">
+                            <div id="camp-img-preview-nome" style="font-size:0.62rem;color:#64748b;margin-top:4px;text-align:center;">imagem atual</div>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">LINK (opcional)</label>
+                        <input id="camp-link" value="${c.linkExterno||''}" placeholder="https://..." style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div>
+                            <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">DATA INÍCIO</label>
+                            <input id="camp-inicio" type="date" value="${c.dataInicio||''}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">DATA FIM</label>
+                            <input id="camp-fim" type="date" value="${c.dataFim||''}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div>
+                            <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">EXIBIÇÕES / ALUNO</label>
+                            <input id="camp-impressoes" type="number" value="${c.impressoesPorAluno||3}" min="1" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">VALOR PAGO (R$)</label>
+                            <input id="camp-valor" type="number" value="${c.valorPago||0}" min="0" step="0.01" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                        </div>
+                    </div>
+                </div>
+                <button onclick="publicidade.atualizarCampanha('${campId}')" style="width:100%;padding:13px;background:#3b82f6;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.82rem;margin-top:16px;">💾 SALVAR ALTERAÇÕES</button>
+                <div id="camp-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
+            </div>`;
+    },
+
+    async atualizarCampanha(campId) {
+        const status = document.getElementById('camp-status');
+        const anunciante = document.getElementById('camp-anunciante')?.value?.trim();
+        if (!anunciante) { if (status) status.innerHTML = '<span style="color:#f43f5e;">❌ Informe o anunciante</span>'; return; }
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Salvando...</span>';
+        let imagemUrl = undefined;
+        if (this._imagemBase64) {
+            if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando imagem...</span>';
+            const resp = await fetch('/api/upload-story', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ imageBase64: this._imagemBase64, fileName: this._imagemNome||'ad.jpg' }) });
+            const json = await resp.json();
+            if (!json.ok) { if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ ${json.error}</span>`; return; }
+            imagemUrl = json.url;
+        }
+        const update = {
+            anunciante,
+            formato:            document.getElementById('camp-formato')?.value,
+            linkExterno:        document.getElementById('camp-link')?.value?.trim()||'',
+            dataInicio:         document.getElementById('camp-inicio')?.value,
+            dataFim:            document.getElementById('camp-fim')?.value,
+            impressoesPorAluno: parseInt(document.getElementById('camp-impressoes')?.value||3),
+            valorPago:          parseFloat(document.getElementById('camp-valor')?.value||0),
+        };
+        if (imagemUrl !== undefined) update.imagemUrl = imagemUrl;
+        await db.collection('publicidade').doc(campId).update(update);
+        this._imagemBase64 = null; this._imagemNome = null;
+        if (status) status.innerHTML = '<span style="color:#10b981;">✅ Atualizado!</span>';
+        setTimeout(() => { document.getElementById('modal-nova-campanha')?.remove(); this.renderAdmin(); }, 700);
+    },
+
     async excluir(campId, btn) {
         if (!confirm('Excluir esta campanha?')) return;
         btn.disabled = true;
@@ -13986,9 +14081,7 @@ const publicidade = {
         if (!doc.exists) return;
         const c = doc.data();
         const imp = c.impressoes || {};
-        const total = Object.values(imp).reduce((s, v) => s + v, 0);
-        const alcance = Object.keys(imp).length;
-        alert(`📊 ${c.anunciante}\n\nAlcance: ${alcance} alunos\nTotal exibições: ${total}`);
+        alert(`📊 ${c.anunciante}\n\nAlcance: ${Object.keys(imp).length} alunos\nTotal exibições: ${Object.values(imp).reduce((s,v)=>s+v,0)}`);
     },
 
     // ── Exibição para alunos ──────────────────────────────────────────────────
@@ -13996,20 +14089,26 @@ const publicidade = {
     async exibirAnuncios(alunoId) {
         if (!alunoId) return;
         const hoje = new Date().toISOString().slice(0,10);
-        const snap = await db.collection('publicidade')
-            .where('dataInicio','<=',hoje).get();
-        const campanhas = snap.docs
-            .filter(d => d.data().dataFim >= hoje)
-            .map(d => ({ id: d.id, ...d.data() }));
+        const snap = await db.collection('publicidade').where('dataInicio','<=',hoje).get();
+        const campanhas = snap.docs.filter(d => d.data().dataFim >= hoje).map(d => ({ id: d.id, ...d.data() }));
         if (!campanhas.length) return;
 
+        // Agrupar elegíveis por formato e sortear uma por banner/popup
+        const porFormato = {};
         for (const camp of campanhas) {
-            const vistas = (camp.impressoes || {})[alunoId] || 0;
-            if (vistas >= (camp.impressoesPorAluno || 3)) continue;
-
-            if (camp.formato === 'banner') this._exibirBanner(camp, alunoId);
-            else if (camp.formato === 'popup') { this._exibirPopup(camp, alunoId); break; }
-            else if (camp.formato === 'story') this._injetarStoryAd(camp, alunoId);
+            const vistas = (camp.impressoes||{})[alunoId] || 0;
+            if (vistas >= (camp.impressoesPorAluno||3)) continue;
+            if (!porFormato[camp.formato]) porFormato[camp.formato] = [];
+            porFormato[camp.formato].push(camp);
+        }
+        for (const [formato, lista] of Object.entries(porFormato)) {
+            if (formato === 'story') {
+                lista.forEach(camp => this._injetarStoryAd(camp, alunoId));
+            } else {
+                const camp = lista[Math.floor(Math.random() * lista.length)];
+                if (formato === 'banner') this._exibirBanner(camp, alunoId);
+                else if (formato === 'popup') this._exibirPopup(camp, alunoId);
+            }
         }
     },
 
@@ -14019,14 +14118,23 @@ const publicidade = {
         });
     },
 
+    _abrirImagemFullscreen(url) {
+        if (!url) return;
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.96);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        modal.innerHTML = `
+            <img src="${url}" style="max-width:100%;max-height:90%;object-fit:contain;border-radius:8px;" onclick="this.parentElement.remove()">
+            <button onclick="this.parentElement.remove()" style="position:absolute;top:14px;right:14px;background:rgba(0,0,0,0.5);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>`;
+        document.body.appendChild(modal);
+    },
+
     _exibirBanner(camp, alunoId) {
-        const existing = document.getElementById('pub-banner');
-        if (existing) return;
+        if (document.getElementById('pub-banner')) return;
+        const clickAction = camp.linkExterno ? `window.open('${camp.linkExterno}','_blank')` : (camp.imagemUrl ? `publicidade._abrirImagemFullscreen('${camp.imagemUrl}')` : '');
         const banner = document.createElement('div');
         banner.id = 'pub-banner';
-        banner.style.cssText = 'margin:10px 0;border-radius:12px;overflow:hidden;position:relative;cursor:pointer;';
         banner.innerHTML = `
-            <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;" onclick="${camp.linkExterno ? `window.open('${camp.linkExterno}','_blank')` : ''}">
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin:10px 0;cursor:${clickAction?'pointer':'default'};" onclick="${clickAction}">
                 ${camp.imagemUrl ? `<img src="${camp.imagemUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : ''}
                 <div style="flex:1;min-width:0;">
                     <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Patrocinado</div>
@@ -14043,18 +14151,19 @@ const publicidade = {
         const sessionKey = `pub_popup_${camp.id}`;
         if (sessionStorage.getItem(sessionKey)) return;
         sessionStorage.setItem(sessionKey, '1');
-        let modal = document.createElement('div');
+        const clickAction = camp.linkExterno ? `window.open('${camp.linkExterno}','_blank')` : '';
+        const modal = document.createElement('div');
         modal.id = 'pub-popup';
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
         modal.innerHTML = `
-            <div style="background:#1e293b;border-radius:20px;overflow:hidden;width:100%;max-width:380px;position:relative;" onclick="${camp.linkExterno ? `window.open('${camp.linkExterno}','_blank')` : ''}">
+            <div style="background:#1e293b;border-radius:20px;overflow:hidden;width:100%;max-width:380px;position:relative;cursor:${clickAction?'pointer':'default'};" onclick="${clickAction}">
                 ${camp.imagemUrl ? `<img src="${camp.imagemUrl}" style="width:100%;max-height:280px;object-fit:cover;display:block;">` : ''}
                 <div style="padding:16px;">
                     <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Patrocinado</div>
                     <div style="font-size:0.92rem;font-weight:800;color:#e2e8f0;">${camp.anunciante}</div>
                     ${camp.linkExterno ? `<div style="font-size:0.65rem;color:#3b82f6;margin-top:4px;">Toque para saber mais →</div>` : ''}
                 </div>
-                <button onclick="event.stopPropagation();document.getElementById('pub-popup').remove()" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;">✕</button>
+                <button onclick="event.stopPropagation();document.getElementById('pub-popup').remove()" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:0.9rem;">✕</button>
             </div>`;
         document.body.appendChild(modal);
         this._registrarImpressao(camp.id, alunoId);

@@ -13842,7 +13842,11 @@ const publicidade = {
         setTimeout(() => { document.getElementById('modal-midia-precos')?.remove(); this.renderAdmin(); }, 700);
     },
 
+    _imagemBase64: null,
+    _imagemNome: null,
+
     abrirNovaCampanha() {
+        this._imagemBase64 = null; this._imagemNome = null;
         let modal = document.getElementById('modal-nova-campanha');
         if (!modal) { modal = document.createElement('div'); modal.id = 'modal-nova-campanha'; document.body.appendChild(modal); }
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
@@ -13865,10 +13869,14 @@ const publicidade = {
                         </select>
                     </div>
                     <div>
-                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">IMAGEM (URL ou cole Base64)</label>
-                        <input id="camp-imagem" placeholder="https://... ou deixe em branco" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
-                        <div style="margin-top:6px;">
-                            <label style="font-size:0.62rem;color:#64748b;cursor:pointer;"><input type="file" accept="image/*" onchange="publicidade._uploadImagemCampanha(this)" style="display:none;"> 📎 Ou clique para enviar imagem do celular</label>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">IMAGEM</label>
+                        <label for="camp-img-file" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:#0f172a;border:2px dashed #334155;color:#94a3b8;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;box-sizing:border-box;">
+                            📁 Escolher imagem do dispositivo
+                        </label>
+                        <input id="camp-img-file" type="file" accept="image/*" onchange="publicidade._selecionarImagem(this)" style="display:none;">
+                        <div id="camp-img-preview" style="margin-top:8px;display:none;">
+                            <img id="camp-img-preview-img" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid #334155;">
+                            <div id="camp-img-preview-nome" style="font-size:0.62rem;color:#64748b;margin-top:4px;text-align:center;"></div>
                         </div>
                     </div>
                     <div>
@@ -13901,10 +13909,31 @@ const publicidade = {
             </div>`;
     },
 
-    _uploadImagemCampanha(input) {
+    _selecionarImagem(input) {
         const file = input.files[0]; if (!file) return;
+        this._imagemNome = file.name;
         const reader = new FileReader();
-        reader.onload = e => { document.getElementById('camp-imagem').value = e.target.result; };
+        reader.onload = e => {
+            // Comprimir via canvas
+            const img = new Image();
+            img.onload = () => {
+                const MAX = 800;
+                const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                this._imagemBase64 = canvas.toDataURL('image/jpeg', 0.82).replace(/^data:image\/jpeg;base64,/, '');
+                // Preview
+                const prev = document.getElementById('camp-img-preview');
+                const prevImg = document.getElementById('camp-img-preview-img');
+                const prevNome = document.getElementById('camp-img-preview-nome');
+                if (prev) prev.style.display = 'block';
+                if (prevImg) prevImg.src = `data:image/jpeg;base64,${this._imagemBase64}`;
+                if (prevNome) prevNome.textContent = file.name;
+            };
+            img.src = e.target.result;
+        };
         reader.readAsDataURL(file);
     },
 
@@ -13913,19 +13942,34 @@ const publicidade = {
         const anunciante = document.getElementById('camp-anunciante')?.value?.trim();
         if (!anunciante) { if (status) status.innerHTML = '<span style="color:#f43f5e;">❌ Informe o anunciante</span>'; return; }
         if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Salvando...</span>';
+
+        let imagemUrl = '';
+        if (this._imagemBase64) {
+            if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando imagem...</span>';
+            const resp = await fetch('/api/upload-story', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageBase64: this._imagemBase64, fileName: this._imagemNome || 'ad.jpg' })
+            });
+            const json = await resp.json();
+            if (!json.ok) { if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ Erro no upload: ${json.error}</span>`; return; }
+            imagemUrl = json.url;
+        }
+
         const dados = {
             anunciante,
-            formato:           document.getElementById('camp-formato')?.value,
-            imagemUrl:         document.getElementById('camp-imagem')?.value?.trim() || '',
-            linkExterno:       document.getElementById('camp-link')?.value?.trim() || '',
-            dataInicio:        document.getElementById('camp-inicio')?.value,
-            dataFim:           document.getElementById('camp-fim')?.value,
+            formato:            document.getElementById('camp-formato')?.value,
+            imagemUrl,
+            linkExterno:        document.getElementById('camp-link')?.value?.trim() || '',
+            dataInicio:         document.getElementById('camp-inicio')?.value,
+            dataFim:            document.getElementById('camp-fim')?.value,
             impressoesPorAluno: parseInt(document.getElementById('camp-impressoes')?.value || 3),
-            valorPago:         parseFloat(document.getElementById('camp-valor')?.value || 0),
-            criadoEm:          firebase.firestore.FieldValue.serverTimestamp(),
-            impressoes:        {},
+            valorPago:          parseFloat(document.getElementById('camp-valor')?.value || 0),
+            criadoEm:           firebase.firestore.FieldValue.serverTimestamp(),
+            impressoes:         {},
         };
         await db.collection('publicidade').add(dados);
+        this._imagemBase64 = null; this._imagemNome = null;
         if (status) status.innerHTML = '<span style="color:#10b981;">✅ Campanha criada!</span>';
         setTimeout(() => { document.getElementById('modal-nova-campanha')?.remove(); this.renderAdmin(); }, 800);
     },

@@ -14155,7 +14155,7 @@ const publicidade = {
                 linkExterno: p.linkExterno || null,
                 dataInicio: fmt(hoje),
                 dataFim: fmt(fim),
-                impressoesPorAluno: 3,
+                impressoesPorAluno: p.exibicao?.vezes || 3,
                 valorPago: p.valorTotal || 0,
                 criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
                 impressoes: {},
@@ -14294,16 +14294,23 @@ const publicidade = {
     // ── Config página pública ─────────────────────────────────────────────────
 
     async configurarPagina() {
-        const snap = await db.collection('publicidade_config').doc('pagina').get();
+        const [snap, precosSnap] = await Promise.all([
+            db.collection('publicidade_config').doc('pagina').get().catch(() => ({ exists: false })),
+            db.collection('publicidade_config').doc('precos').get().catch(() => ({ exists: false })),
+        ]);
         const cfg = snap.exists ? snap.data() : {};
-        const precos = await this._carregarPrecos();
+        const precos = precosSnap.exists ? precosSnap.data() : {};
 
+        const duracoes = cfg.duracoes || [{dias:7,label:'7 dias'},{dias:15,label:'15 dias'},{dias:30,label:'30 dias'}];
+        const exibicoes = cfg.exibicoes || [{vezes:1,label:'1× por aluno',preco:0},{vezes:3,label:'3× por aluno',preco:0},{vezes:5,label:'5× por aluno',preco:0}];
+        const links = cfg.links || {};
+
+        const inpStyle = 'background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px 9px;border-radius:8px;font-size:0.75rem;';
+
+        document.getElementById('modal-midia-pagina')?.remove();
         const modal = document.createElement('div');
         modal.id = 'modal-midia-pagina';
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:9999;overflow-y:auto;padding:20px;box-sizing:border-box;';
-
-        const duracoes = cfg.duracoes || [{dias:7,label:'7 dias'},{dias:15,label:'15 dias'},{dias:30,label:'30 dias'}];
-        const links = cfg.links || {};
 
         modal.innerHTML = `
             <div style="max-width:500px;margin:0 auto;">
@@ -14312,7 +14319,7 @@ const publicidade = {
                     <button onclick="document.getElementById('modal-midia-pagina').remove()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:1rem;">✕</button>
                 </div>
 
-                <!-- Ativar/desativar -->
+                <!-- Ativar -->
                 <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:12px;">
                     <label style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
                         <span style="font-size:0.8rem;font-weight:700;color:#e2e8f0;">Página ativa?</span>
@@ -14320,20 +14327,61 @@ const publicidade = {
                     </label>
                 </div>
 
-                <!-- Durações e multiplicadores -->
+                <!-- Preço por dia por formato -->
                 <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:12px;">
-                    <div style="font-size:0.75rem;font-weight:800;color:#e2e8f0;margin-bottom:10px;">📅 Opções de Duração</div>
-                    <div style="font-size:0.65rem;color:#64748b;margin-bottom:10px;">O preço final = preço do formato × multiplicador da duração</div>
+                    <div style="font-size:0.75rem;font-weight:800;color:#e2e8f0;margin-bottom:4px;">💰 Preço por dia (por formato)</div>
+                    <div style="font-size:0.62rem;color:#64748b;margin-bottom:10px;">Total = preço/dia × dias escolhidos + preço de exibição</div>
+                    ${this.FORMATOS.map(f => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <span style="font-size:0.75rem;color:#94a3b8;">${f.ico} ${f.label}</span>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span style="font-size:0.65rem;color:#64748b;">R$</span>
+                            <input type="number" id="preco-dia-${f.id}" value="${(precos[f.id]||0)}" min="0" step="0.01" style="${inpStyle}width:80px;">
+                            <span style="font-size:0.62rem;color:#475569;">/dia</span>
+                        </div>
+                    </div>`).join('')}
+                </div>
+
+                <!-- Opções de duração -->
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:12px;">
+                    <div style="font-size:0.75rem;font-weight:800;color:#e2e8f0;margin-bottom:4px;">📅 Opções de Duração</div>
+                    <div style="font-size:0.62rem;color:#64748b;margin-bottom:10px;">Quantidade de dias que o anunciante pode escolher</div>
+                    <div style="display:grid;grid-template-columns:60px 1fr 28px;gap:6px;margin-bottom:6px;">
+                        <span style="font-size:0.6rem;color:#475569;font-weight:700;">DIAS</span>
+                        <span style="font-size:0.6rem;color:#475569;font-weight:700;">RÓTULO</span>
+                        <span></span>
+                    </div>
                     <div id="pag-duracoes-lista">
                         ${duracoes.map((d,i) => `
-                        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
-                            <input type="number" placeholder="Dias" value="${d.dias}" style="width:60px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px;border-radius:8px;font-size:0.75rem;" data-dur-dias="${i}">
-                            <input type="text" placeholder="Rótulo" value="${d.label}" style="flex:1;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px;border-radius:8px;font-size:0.75rem;" data-dur-label="${i}">
-                            <input type="number" placeholder="×" value="${d.mult||1}" step="0.1" style="width:55px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px;border-radius:8px;font-size:0.75rem;" data-dur-mult="${i}">
-                            <button onclick="this.parentElement.remove()" style="background:#7f1d1d;border:none;color:#fca5a5;width:28px;height:28px;border-radius:6px;cursor:pointer;">🗑</button>
+                        <div style="display:grid;grid-template-columns:60px 1fr 28px;gap:6px;margin-bottom:6px;align-items:center;">
+                            <input type="number" value="${d.dias}" style="${inpStyle}" data-dur-dias="${i}">
+                            <input type="text" value="${d.label}" style="${inpStyle}" data-dur-label="${i}">
+                            <button onclick="this.parentElement.remove()" style="background:#7f1d1d;border:none;color:#fca5a5;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:0.8rem;">🗑</button>
                         </div>`).join('')}
                     </div>
                     <button onclick="publicidade._addDurLinha()" style="background:#334155;border:none;color:#94a3b8;padding:7px 12px;border-radius:8px;font-size:0.65rem;font-weight:700;cursor:pointer;width:100%;margin-top:4px;">+ Adicionar opção</button>
+                </div>
+
+                <!-- Opções de exibição por aluno -->
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:12px;">
+                    <div style="font-size:0.75rem;font-weight:800;color:#e2e8f0;margin-bottom:4px;">👁 Exibições por Aluno</div>
+                    <div style="font-size:0.62rem;color:#64748b;margin-bottom:10px;">Quantas vezes cada aluno verá o anúncio — defina o preço adicional de cada opção</div>
+                    <div style="display:grid;grid-template-columns:50px 1fr 80px 28px;gap:6px;margin-bottom:6px;">
+                        <span style="font-size:0.6rem;color:#475569;font-weight:700;">VEZES</span>
+                        <span style="font-size:0.6rem;color:#475569;font-weight:700;">RÓTULO</span>
+                        <span style="font-size:0.6rem;color:#475569;font-weight:700;">R$ ADICIONAL</span>
+                        <span></span>
+                    </div>
+                    <div id="pag-exibicoes-lista">
+                        ${exibicoes.map((e,i) => `
+                        <div style="display:grid;grid-template-columns:50px 1fr 80px 28px;gap:6px;margin-bottom:6px;align-items:center;">
+                            <input type="number" value="${e.vezes}" style="${inpStyle}" data-exib-vezes="${i}">
+                            <input type="text" value="${e.label}" style="${inpStyle}" data-exib-label="${i}">
+                            <input type="number" value="${e.preco||0}" step="0.01" style="${inpStyle}" data-exib-preco="${i}">
+                            <button onclick="this.parentElement.remove()" style="background:#7f1d1d;border:none;color:#fca5a5;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:0.8rem;">🗑</button>
+                        </div>`).join('')}
+                    </div>
+                    <button onclick="publicidade._addExibLinha()" style="background:#334155;border:none;color:#94a3b8;padding:7px 12px;border-radius:8px;font-size:0.65rem;font-weight:700;cursor:pointer;width:100%;margin-top:4px;">+ Adicionar opção</button>
                 </div>
 
                 <!-- Links de pagamento -->
@@ -14341,13 +14389,13 @@ const publicidade = {
                     <div style="font-size:0.75rem;font-weight:800;color:#e2e8f0;margin-bottom:4px;">💳 Link(s) de Pagamento</div>
                     <div style="font-size:0.65rem;color:#64748b;margin-bottom:10px;">Um link universal ou um por formato</div>
                     <div style="margin-bottom:8px;">
-                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">🔗 Link Universal (usado se os de formato estiverem vazios)</label>
-                        <input type="url" id="pag-link-universal" placeholder="https://..." value="${links.universal||''}" style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:8px;border-radius:8px;font-size:0.72rem;box-sizing:border-box;">
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">🔗 Link Universal</label>
+                        <input type="url" id="pag-link-universal" placeholder="https://..." value="${links.universal||''}" style="${inpStyle}width:100%;box-sizing:border-box;">
                     </div>
                     ${this.FORMATOS.map(f => `
                     <div style="margin-bottom:8px;">
-                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">${f.label} — link específico</label>
-                        <input type="url" id="pag-link-${f.id}" placeholder="https://..." value="${links[f.id]||''}" style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:8px;border-radius:8px;font-size:0.72rem;box-sizing:border-box;">
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">${f.ico} ${f.label} — link específico</label>
+                        <input type="url" id="pag-link-${f.id}" placeholder="https://..." value="${links[f.id]||''}" style="${inpStyle}width:100%;box-sizing:border-box;">
                     </div>`).join('')}
                 </div>
 
@@ -14360,26 +14408,48 @@ const publicidade = {
         const lista = document.getElementById('pag-duracoes-lista');
         const i = lista.children.length;
         const div = document.createElement('div');
-        div.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;align-items:center;';
+        div.style.cssText = 'display:grid;grid-template-columns:60px 1fr 28px;gap:6px;margin-bottom:6px;align-items:center;';
         div.innerHTML = `
-            <input type="number" placeholder="Dias" style="width:60px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px;border-radius:8px;font-size:0.75rem;" data-dur-dias="${i}">
-            <input type="text" placeholder="Rótulo" style="flex:1;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px;border-radius:8px;font-size:0.75rem;" data-dur-label="${i}">
-            <input type="number" placeholder="×" value="1" step="0.1" style="width:55px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px;border-radius:8px;font-size:0.75rem;" data-dur-mult="${i}">
-            <button onclick="this.parentElement.remove()" style="background:#7f1d1d;border:none;color:#fca5a5;width:28px;height:28px;border-radius:6px;cursor:pointer;">🗑</button>`;
+            <input type="number" placeholder="Dias" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px 9px;border-radius:8px;font-size:0.75rem;" data-dur-dias="${i}">
+            <input type="text" placeholder="Rótulo" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px 9px;border-radius:8px;font-size:0.75rem;" data-dur-label="${i}">
+            <button onclick="this.parentElement.remove()" style="background:#7f1d1d;border:none;color:#fca5a5;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:0.8rem;">🗑</button>`;
+        lista.appendChild(div);
+    },
+
+    _addExibLinha() {
+        const lista = document.getElementById('pag-exibicoes-lista');
+        const i = lista.children.length;
+        const div = document.createElement('div');
+        div.style.cssText = 'display:grid;grid-template-columns:50px 1fr 80px 28px;gap:6px;margin-bottom:6px;align-items:center;';
+        div.innerHTML = `
+            <input type="number" placeholder="×" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px 9px;border-radius:8px;font-size:0.75rem;" data-exib-vezes="${i}">
+            <input type="text" placeholder="Rótulo" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px 9px;border-radius:8px;font-size:0.75rem;" data-exib-label="${i}">
+            <input type="number" placeholder="R$" value="0" step="0.01" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px 9px;border-radius:8px;font-size:0.75rem;" data-exib-preco="${i}">
+            <button onclick="this.parentElement.remove()" style="background:#7f1d1d;border:none;color:#fca5a5;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:0.8rem;">🗑</button>`;
         lista.appendChild(div);
     },
 
     async _salvarPagina() {
         const ativa = document.getElementById('pag-ativa').checked;
 
+        // Preços por dia por formato
+        const precosNovos = {};
+        this.FORMATOS.forEach(f => {
+            precosNovos[f.id] = parseFloat(document.getElementById(`preco-dia-${f.id}`)?.value) || 0;
+        });
+
         // Durações
-        const lista = document.getElementById('pag-duracoes-lista');
-        const rows = [...lista.children];
-        const duracoes = rows.map(row => ({
-            dias: parseInt(row.querySelector('[data-dur-dias]')?.value) || 7,
+        const duracoes = [...document.getElementById('pag-duracoes-lista').children].map(row => ({
+            dias: parseInt(row.querySelector('[data-dur-dias]')?.value) || 0,
             label: row.querySelector('[data-dur-label]')?.value || '',
-            mult: parseFloat(row.querySelector('[data-dur-mult]')?.value) || 1,
         })).filter(d => d.dias && d.label);
+
+        // Exibições por aluno
+        const exibicoes = [...document.getElementById('pag-exibicoes-lista').children].map(row => ({
+            vezes: parseInt(row.querySelector('[data-exib-vezes]')?.value) || 1,
+            label: row.querySelector('[data-exib-label]')?.value || '',
+            preco: parseFloat(row.querySelector('[data-exib-preco]')?.value) || 0,
+        })).filter(e => e.vezes && e.label);
 
         // Links
         const links = { universal: document.getElementById('pag-link-universal').value.trim() };
@@ -14388,7 +14458,10 @@ const publicidade = {
             if (v) links[f.id] = v;
         });
 
-        await db.collection('publicidade_config').doc('pagina').set({ ativa, duracoes, links });
+        await Promise.all([
+            db.collection('publicidade_config').doc('pagina').set({ ativa, duracoes, exibicoes, links }),
+            db.collection('publicidade_config').doc('precos').set(precosNovos),
+        ]);
         document.getElementById('modal-midia-pagina')?.remove();
         this.renderAdmin();
         alert('✅ Configurações salvas!');

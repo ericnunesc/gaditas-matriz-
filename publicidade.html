@@ -200,6 +200,7 @@ let cfg = {};
 let precos = {};
 let selFormato = null;
 let selDurIdx = null;
+let selExibIdx = null;
 let imagemBase64 = null;
 let imagemNome = null;
 
@@ -235,7 +236,7 @@ function renderForm() {
           <div class="formato-btn" onclick="selecionarFormato('${f.id}')" id="fmt-${f.id}">
             <div class="ico">${f.ico}</div>
             <div class="nome">${f.label}</div>
-            <div class="preco-fmt" id="preco-fmt-${f.id}">R$ ${(precos[f.id]||0).toFixed(2)}</div>
+            <div class="preco-fmt">R$ ${(precos[f.id]||0).toFixed(2)}/dia</div>
             <div class="desc-fmt">${f.desc}</div>
           </div>`).join('')}
       </div>
@@ -248,9 +249,16 @@ function renderForm() {
       <div class="dur-grid" id="dur-grid"></div>
     </div>
 
-    <!-- PASSO 3: Imagem -->
-    <div class="step-card" id="step-imagem" style="display:none;">
+    <!-- PASSO 3: Exibições por aluno -->
+    <div class="step-card" id="step-exib" style="display:none;">
       <div class="step-label">Passo 3</div>
+      <div class="step-title">Quantas vezes cada aluno verá?</div>
+      <div class="dur-grid" id="exib-grid"></div>
+    </div>
+
+    <!-- PASSO 4: Imagem -->
+    <div class="step-card" id="step-imagem" style="display:none;">
+      <div class="step-label">Passo 4</div>
       <div class="step-title">Carregue sua imagem</div>
       <div class="upload-zone" onclick="document.getElementById('file-input').click()" id="upload-zone">
         <div class="up-ico">📁</div>
@@ -259,9 +267,9 @@ function renderForm() {
       <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="selecionarImagem(this)">
     </div>
 
-    <!-- PASSO 4: Dados -->
+    <!-- PASSO 5: Dados -->
     <div class="step-card" id="step-dados" style="display:none;">
-      <div class="step-label">Passo 4</div>
+      <div class="step-label">Passo 5</div>
       <div class="step-title">Informações do anúncio</div>
       <div style="margin-bottom:12px;">
         <label>Nome da empresa / produto *</label>
@@ -295,23 +303,26 @@ function renderForm() {
 function selecionarFormato(id) {
   selFormato = id;
   selDurIdx = null;
+  selExibIdx = null;
   document.querySelectorAll('.formato-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('fmt-' + id).classList.add('selected');
   renderDuracoes();
+  renderExibicoes();
   document.getElementById('step-dur').style.display = '';
+  document.getElementById('step-exib').style.display = '';
   document.getElementById('step-imagem').style.display = '';
   document.getElementById('step-dados').style.display = '';
   atualizarResumo();
 }
 
 function renderDuracoes() {
-  const dur = cfg.duracoes || [];
-  const precoBase = precos[selFormato] || 0;
-  document.getElementById('dur-grid').innerHTML = dur.map((d, i) => {
-    const total = (precoBase * (d.mult || 1)).toFixed(2);
+  const durs = cfg.duracoes || [];
+  const precoDia = precos[selFormato] || 0;
+  document.getElementById('dur-grid').innerHTML = durs.map((d, i) => {
+    const subtotal = (precoDia * d.dias).toFixed(2);
     return `<div class="dur-btn" onclick="selecionarDur(${i})" id="dur-${i}">
       <div class="dur-label">${d.label}</div>
-      <div class="dur-preco">R$ ${total}</div>
+      <div class="dur-preco">R$ ${subtotal}</div>
     </div>`;
   }).join('');
 }
@@ -320,6 +331,22 @@ function selecionarDur(idx) {
   selDurIdx = idx;
   document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('dur-' + idx).classList.add('selected');
+  atualizarResumo();
+}
+
+function renderExibicoes() {
+  const exibs = cfg.exibicoes || [];
+  document.getElementById('exib-grid').innerHTML = exibs.map((e, i) => `
+    <div class="dur-btn" onclick="selecionarExib(${i})" id="exib-${i}">
+      <div class="dur-label">${e.label}</div>
+      <div class="dur-preco">${e.preco > 0 ? `+ R$ ${e.preco.toFixed(2)}` : 'Incluído'}</div>
+    </div>`).join('');
+}
+
+function selecionarExib(idx) {
+  selExibIdx = idx;
+  document.querySelectorAll('#exib-grid .dur-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('exib-' + idx).classList.add('selected');
   atualizarResumo();
 }
 
@@ -351,32 +378,40 @@ function selecionarImagem(input) {
 }
 
 function calcularTotal() {
-  if (!selFormato || selDurIdx === null) return 0;
+  if (!selFormato || selDurIdx === null || selExibIdx === null) return 0;
   const dur = (cfg.duracoes || [])[selDurIdx];
-  if (!dur) return 0;
-  return (precos[selFormato] || 0) * (dur.mult || 1);
+  const exib = (cfg.exibicoes || [])[selExibIdx];
+  if (!dur || !exib) return 0;
+  return (precos[selFormato] || 0) * dur.dias + (exib.preco || 0);
 }
 
 function atualizarResumo() {
   const total = calcularTotal();
   const empresa = document.getElementById('campo-empresa')?.value.trim();
   const durObj = (cfg.duracoes || [])[selDurIdx];
+  const exibObj = (cfg.exibicoes || [])[selExibIdx];
   const fmtObj = FORMATOS.find(f => f.id === selFormato);
+  const precoDia = precos[selFormato] || 0;
 
-  const resumaCard = document.getElementById('resumo-card');
-  if (!resumaCard) return;
+  const resumoCard = document.getElementById('resumo-card');
+  if (!resumoCard) return;
 
-  const pronto = selFormato && selDurIdx !== null && imagemBase64 && empresa;
+  const pronto = selFormato && selDurIdx !== null && selExibIdx !== null && imagemBase64 && empresa;
 
-  if (selFormato && selDurIdx !== null) {
-    resumaCard.style.display = '';
+  if (selFormato && selDurIdx !== null && selExibIdx !== null) {
+    resumoCard.style.display = '';
+    const subtotalDias = precoDia * (durObj?.dias || 0);
+    const subtotalExib = exibObj?.preco || 0;
     document.getElementById('resumo-linhas').innerHTML = `
       ${fmtObj ? `<div class="resumo-linha"><span>Formato</span><span>${fmtObj.ico} ${fmtObj.label}</span></div>` : ''}
-      ${durObj ? `<div class="resumo-linha"><span>Duração</span><span>${durObj.label}</span></div>` : ''}
+      ${durObj ? `<div class="resumo-linha"><span>Duração</span><span>${durObj.label} (R$ ${precoDia.toFixed(2)}/dia × ${durObj.dias})</span></div>` : ''}
+      ${durObj ? `<div class="resumo-linha"><span>Subtotal duração</span><span>R$ ${subtotalDias.toFixed(2).replace('.',',')}</span></div>` : ''}
+      ${exibObj ? `<div class="resumo-linha"><span>Exibições</span><span>${exibObj.label}</span></div>` : ''}
+      ${subtotalExib > 0 ? `<div class="resumo-linha"><span>Subtotal exibições</span><span>R$ ${subtotalExib.toFixed(2).replace('.',',')}</span></div>` : ''}
       ${empresa ? `<div class="resumo-linha"><span>Anunciante</span><span>${empresa}</span></div>` : ''}
       <div class="resumo-linha destaque"><span>Total</span><span>R$ ${total.toFixed(2).replace('.',',')}</span></div>`;
     document.getElementById('total-valor').textContent = `R$ ${total.toFixed(2).replace('.',',')}`;
-    document.getElementById('total-detalhe').textContent = durObj ? `${fmtObj?.label || ''} · ${durObj.label}` : '';
+    document.getElementById('total-detalhe').textContent = `${fmtObj?.label || ''} · ${durObj?.label || ''} · ${exibObj?.label || ''}`;
   }
 
   const btnPagar = document.getElementById('btn-pagar');
@@ -388,9 +423,10 @@ async function irParaPagamento() {
   const empresa = document.getElementById('campo-empresa')?.value.trim();
   const link = document.getElementById('campo-link')?.value.trim();
   const durObj = (cfg.duracoes || [])[selDurIdx];
+  const exibObj = (cfg.exibicoes || [])[selExibIdx];
   const fmtObj = FORMATOS.find(f => f.id === selFormato);
 
-  if (!empresa || !selFormato || selDurIdx === null || !imagemBase64) {
+  if (!empresa || !selFormato || selDurIdx === null || selExibIdx === null || !imagemBase64) {
     alert('Preencha todos os campos obrigatórios e carregue a imagem.');
     return;
   }
@@ -419,6 +455,7 @@ async function irParaPagamento() {
       anunciante: empresa,
       formato: selFormato,
       duracao: durObj,
+      exibicao: exibObj,
       linkExterno: link || null,
       imagemUrl,
       valorTotal: total,
@@ -432,6 +469,7 @@ async function irParaPagamento() {
       `📢 Anunciante: ${empresa}\n` +
       `📌 Formato: ${fmtObj?.label}\n` +
       `📅 Duração: ${durObj?.label}\n` +
+      `👁 Exibições: ${exibObj?.label}\n` +
       `💰 Total: R$ ${total.toFixed(2).replace('.',',')}\n` +
       `🆔 Pedido: ${docRef.id}\n\n` +
       `(Enviarei o comprovante após o pagamento)`

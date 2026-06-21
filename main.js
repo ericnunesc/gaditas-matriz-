@@ -13778,12 +13778,12 @@ const publicidade = {
     async renderAdmin() {
         const [precos, snap, cfgSnap, pedidosSnap] = await Promise.all([
             this._carregarPrecos(),
-            db.collection('publicidade').orderBy('criadoEm', 'desc').get(),
-            db.collection('publicidade_config').doc('pagina').get(),
-            db.collection('publicidade_pedidos').where('status','==','pendente').get()
+            db.collection('publicidade').orderBy('criadoEm', 'desc').get().catch(() => ({ empty: true, docs: [] })),
+            db.collection('publicidade_config').doc('pagina').get().catch(() => ({ exists: false })),
+            db.collection('publicidade_pedidos').where('status','==','pendente').get().catch(() => ({ empty: true, docs: [], size: 0 })),
         ]);
         const cfg = cfgSnap.exists ? cfgSnap.data() : {};
-        this._atualizarBadgePendentes();
+        this._atualizarBadgePendentes().catch(() => {});
 
         // Tabela de preços
         const precosEl = document.getElementById('midia-precos-lista');

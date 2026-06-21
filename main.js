@@ -14333,7 +14333,7 @@ const publicidade = {
                     <div style="font-size:0.62rem;color:#64748b;margin-bottom:10px;">Total = preço/dia × dias escolhidos + preço de exibição</div>
                     ${this.FORMATOS.map(f => `
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                        <span style="font-size:0.75rem;color:#94a3b8;">${f.ico} ${f.label}</span>
+                        <span style="font-size:0.75rem;color:#94a3b8;">${f.label}</span>
                         <div style="display:flex;align-items:center;gap:6px;">
                             <span style="font-size:0.65rem;color:#64748b;">R$</span>
                             <input type="number" id="preco-dia-${f.id}" value="${(precos[f.id]||0)}" min="0" step="0.01" style="${inpStyle}width:80px;">

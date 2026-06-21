@@ -13758,13 +13758,32 @@ const publicidade = {
         return this._precos;
     },
 
+    async _atualizarBadgePendentes() {
+        const snap = await db.collection('publicidade_pedidos').where('status','==','pendente').get();
+        const btn = document.getElementById('menu-midia');
+        if (!btn) return;
+        let badge = btn.querySelector('.midia-badge');
+        if (snap.size > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'midia-badge';
+                badge.style.cssText = 'position:absolute;top:0;right:4px;background:#f59e0b;color:#000;font-size:0.5rem;font-weight:800;padding:2px 5px;border-radius:999px;min-width:16px;text-align:center;';
+                btn.style.position = 'relative';
+                btn.appendChild(badge);
+            }
+            badge.textContent = snap.size;
+        } else if (badge) badge.remove();
+    },
+
     async renderAdmin() {
-        const [precos, snap, cfgSnap] = await Promise.all([
+        const [precos, snap, cfgSnap, pedidosSnap] = await Promise.all([
             this._carregarPrecos(),
             db.collection('publicidade').orderBy('criadoEm', 'desc').get(),
-            db.collection('publicidade_config').doc('pagina').get()
+            db.collection('publicidade_config').doc('pagina').get(),
+            db.collection('publicidade_pedidos').where('status','==','pendente').orderBy('criadoEm','asc').get()
         ]);
         const cfg = cfgSnap.exists ? cfgSnap.data() : {};
+        this._atualizarBadgePendentes();
 
         // Tabela de preços
         const precosEl = document.getElementById('midia-precos-lista');
@@ -13789,6 +13808,37 @@ const publicidade = {
                     </div>
                 </div>
                 ${ativa ? `<div style="font-size:0.65rem;color:#64748b;">Anunciantes podem montar o pacote e pagar sozinhos em <b style="color:#3b82f6;">gaditas-matriz.vercel.app/publicidade.html</b></div>` : '<div style="font-size:0.65rem;color:#475569;">Ative para permitir que anunciantes contratem diretamente.</div>'}`;
+        }
+
+        // Pedidos pendentes de aprovação
+        const pendEl = document.getElementById('midia-pedidos-pendentes');
+        if (pendEl) {
+            if (pedidosSnap.empty) {
+                pendEl.innerHTML = '';
+            } else {
+                const fmtMap = { story:'🎬 Story', popup:'💬 Popup', banner:'🖼 Banner' };
+                pendEl.innerHTML = `
+                    <div style="font-size:0.72rem;font-weight:800;color:#f59e0b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">⏳ Aguardando Aprovação (${pedidosSnap.size})</div>
+                    ${pedidosSnap.docs.map(d => {
+                        const p = d.data();
+                        const dur = p.duracao || {};
+                        return `<div style="background:#1c1500;border:1px solid #f59e0b;border-radius:12px;padding:14px;margin-bottom:10px;">
+                            <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
+                                ${p.imagemUrl ? `<img src="${p.imagemUrl}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : '<div style="width:56px;height:56px;background:#1e293b;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">📢</div>'}
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:0.82rem;font-weight:800;color:#e2e8f0;">${p.anunciante}</div>
+                                    <div style="font-size:0.62rem;color:#94a3b8;margin-top:3px;">${fmtMap[p.formato]||p.formato} · ${dur.label||''}</div>
+                                    <div style="font-size:0.65rem;color:#10b981;font-weight:700;margin-top:2px;">R$ ${(p.valorTotal||0).toFixed(2)}</div>
+                                    ${p.linkExterno ? `<div style="font-size:0.6rem;color:#3b82f6;margin-top:2px;word-break:break-all;">${p.linkExterno}</div>` : ''}
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:8px;">
+                                <button onclick="publicidade.aprovarPedido('${d.id}')" style="flex:1;background:#052e16;border:1px solid #10b981;color:#10b981;padding:9px;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;">✅ Aprovar</button>
+                                <button onclick="publicidade.rejeitarPedido('${d.id}')" style="flex:1;background:#2d0a0a;border:1px solid #f43f5e;color:#f43f5e;padding:9px;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;">❌ Rejeitar</button>
+                            </div>
+                        </div>`;
+                    }).join('')}`;
+            }
         }
 
         // Lista de campanhas
@@ -14085,6 +14135,41 @@ const publicidade = {
         this._imagemBase64 = null; this._imagemNome = null;
         if (status) status.innerHTML = '<span style="color:#10b981;">✅ Atualizado!</span>';
         setTimeout(() => { document.getElementById('modal-nova-campanha')?.remove(); this.renderAdmin(); }, 700);
+    },
+
+    async aprovarPedido(pedidoId) {
+        const snap = await db.collection('publicidade_pedidos').doc(pedidoId).get();
+        if (!snap.exists) return;
+        const p = snap.data();
+        const dur = p.duracao || {};
+        const hoje = new Date();
+        const fim = new Date(hoje);
+        fim.setDate(fim.getDate() + (dur.dias || 7));
+        const fmt = d => d.toISOString().slice(0,10);
+
+        await Promise.all([
+            db.collection('publicidade').add({
+                anunciante: p.anunciante,
+                formato: p.formato,
+                imagemUrl: p.imagemUrl || null,
+                linkExterno: p.linkExterno || null,
+                dataInicio: fmt(hoje),
+                dataFim: fmt(fim),
+                impressoesPorAluno: 3,
+                valorPago: p.valorTotal || 0,
+                criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+                impressoes: {},
+            }),
+            db.collection('publicidade_pedidos').doc(pedidoId).update({ status: 'aprovado', aprovadoEm: firebase.firestore.FieldValue.serverTimestamp() })
+        ]);
+        this.renderAdmin();
+        alert(`✅ Campanha de "${p.anunciante}" aprovada e no ar por ${dur.dias||7} dias!`);
+    },
+
+    async rejeitarPedido(pedidoId) {
+        if (!confirm('Rejeitar este pedido?')) return;
+        await db.collection('publicidade_pedidos').doc(pedidoId).update({ status: 'rejeitado' });
+        this.renderAdmin();
     },
 
     async excluir(campId, btn) {

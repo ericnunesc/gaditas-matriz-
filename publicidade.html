@@ -383,7 +383,7 @@ function atualizarResumo() {
   if (btnPagar) btnPagar.disabled = !pronto;
 }
 
-function irParaPagamento() {
+async function irParaPagamento() {
   const total = calcularTotal();
   const empresa = document.getElementById('campo-empresa')?.value.trim();
   const link = document.getElementById('campo-link')?.value.trim();
@@ -395,7 +395,6 @@ function irParaPagamento() {
     return;
   }
 
-  // Determinar link de pagamento
   const links = cfg.links || {};
   const linkPgto = links[selFormato] || links.universal || '';
   if (!linkPgto) {
@@ -403,43 +402,61 @@ function irParaPagamento() {
     return;
   }
 
-  // Salvar pedido no Firestore como "pendente"
-  const pedido = {
-    anunciante: empresa,
-    formato: selFormato,
-    duracao: durObj,
-    linkExterno: link || null,
-    imagemBase64: imagemBase64,
-    imagemNome: imagemNome,
-    valorTotal: total,
-    status: 'pendente',
-    criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-  };
+  const btnPagar = document.getElementById('btn-pagar');
+  btnPagar.disabled = true;
+  btnPagar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
 
-  db.collection('publicidade_pedidos').add(pedido)
-    .then(ref => {
-      // Montar mensagem para WhatsApp se for link do WhatsApp
-      const msg = encodeURIComponent(
-        `Olá! Quero anunciar na Gaditas Academy.\n\n` +
-        `📢 Anunciante: ${empresa}\n` +
-        `📌 Formato: ${fmtObj?.label}\n` +
-        `📅 Duração: ${durObj?.label}\n` +
-        `💰 Total: R$ ${total.toFixed(2).replace('.',',')}\n` +
-        `🆔 Pedido: ${ref.id}\n\n` +
-        `(Vou enviar o comprovante após o pagamento)`
-      );
+  try {
+    // Upload da imagem para Firebase Storage
+    const storage = firebase.storage();
+    const nomeArq = `publicidade_pedidos/${Date.now()}_${imagemNome || 'imagem.jpg'}`;
+    const ref = storage.ref(nomeArq);
+    await ref.putString(imagemBase64, 'data_url');
+    const imagemUrl = await ref.getDownloadURL();
 
-      let urlFinal = linkPgto;
-      if (linkPgto.includes('wa.me') || linkPgto.includes('whatsapp')) {
-        const base = linkPgto.split('?')[0];
-        urlFinal = `${base}?text=${msg}`;
-      }
-      window.open(urlFinal, '_blank');
-    })
-    .catch(err => {
-      console.error(err);
-      alert('Erro ao registrar pedido. Tente novamente.');
+    // Salvar pedido no Firestore como "pendente" (sem base64)
+    const docRef = await db.collection('publicidade_pedidos').add({
+      anunciante: empresa,
+      formato: selFormato,
+      duracao: durObj,
+      linkExterno: link || null,
+      imagemUrl,
+      valorTotal: total,
+      status: 'pendente',
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
     });
+
+    // Redirecionar para pagamento
+    const msg = encodeURIComponent(
+      `Olá! Quero anunciar na Gaditas Academy.\n\n` +
+      `📢 Anunciante: ${empresa}\n` +
+      `📌 Formato: ${fmtObj?.label}\n` +
+      `📅 Duração: ${durObj?.label}\n` +
+      `💰 Total: R$ ${total.toFixed(2).replace('.',',')}\n` +
+      `🆔 Pedido: ${docRef.id}\n\n` +
+      `(Enviarei o comprovante após o pagamento)`
+    );
+    let urlFinal = linkPgto;
+    if (linkPgto.includes('wa.me') || linkPgto.includes('whatsapp')) {
+      urlFinal = `${linkPgto.split('?')[0]}?text=${msg}`;
+    }
+    window.open(urlFinal, '_blank');
+
+    // Mostrar confirmação
+    btnPagar.innerHTML = '✅ Pedido enviado!';
+    btnPagar.style.background = '#10b981';
+    document.getElementById('resumo-card').insertAdjacentHTML('afterend',
+      `<div style="background:#052e16;border:1px solid #10b981;border-radius:12px;padding:14px;margin-bottom:14px;text-align:center;">
+        <div style="font-size:0.85rem;font-weight:800;color:#10b981;margin-bottom:6px;">✅ Pedido recebido!</div>
+        <div style="font-size:0.7rem;color:#94a3b8;">Seu pedido <b style="color:#e2e8f0;">${docRef.id.slice(0,8)}...</b> está aguardando aprovação da academia após confirmação do pagamento.</div>
+      </div>`
+    );
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao enviar pedido: ' + err.message);
+    btnPagar.disabled = false;
+    btnPagar.innerHTML = '<i class="fas fa-credit-card"></i> IR PARA O PAGAMENTO';
+  }
 }
 
 init();

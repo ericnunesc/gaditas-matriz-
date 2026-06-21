@@ -224,6 +224,9 @@ async function init() {
   renderForm();
 }
 
+// tipoPagamento: 'dias' | 'exibicoes'
+let tipoPagamento = null;
+
 function renderForm() {
   const root = document.getElementById('app-root');
   root.innerHTML = `
@@ -236,20 +239,37 @@ function renderForm() {
           <div class="formato-btn" onclick="selecionarFormato('${f.id}')" id="fmt-${f.id}">
             <div class="ico">${f.ico}</div>
             <div class="nome">${f.label}</div>
-            <div class="preco-fmt">R$ ${(precos[f.id]||0).toFixed(2)}/dia</div>
             <div class="desc-fmt">${f.desc}</div>
           </div>`).join('')}
       </div>
     </div>
 
-    <!-- PASSO 2: Duração -->
-    <div class="step-card" id="step-dur" style="display:none;">
+    <!-- PASSO 2: Tipo de cobrança -->
+    <div class="step-card" id="step-tipo" style="display:none;">
       <div class="step-label">Passo 2</div>
-      <div class="step-title">Por quanto tempo?</div>
+      <div class="step-title">Como prefere contratar?</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="dur-btn" onclick="selecionarTipo('dias')" id="tipo-dias">
+          <div style="font-size:1.4rem;margin-bottom:6px;">📅</div>
+          <div class="dur-label">Por dias</div>
+          <div class="dur-preco" id="preco-tipo-dias">R$ ?/dia</div>
+        </div>
+        <div class="dur-btn" onclick="selecionarTipo('exibicoes')" id="tipo-exibicoes">
+          <div style="font-size:1.4rem;margin-bottom:6px;">👁</div>
+          <div class="dur-label">Por visualizações</div>
+          <div class="dur-preco">por aluno</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASSO 3a: Opções de duração (se escolheu "por dias") -->
+    <div class="step-card" id="step-dur" style="display:none;">
+      <div class="step-label">Passo 3</div>
+      <div class="step-title">Por quantos dias?</div>
       <div class="dur-grid" id="dur-grid"></div>
     </div>
 
-    <!-- PASSO 3: Exibições por aluno -->
+    <!-- PASSO 3b: Opções de exibições (se escolheu "por visualizações") -->
     <div class="step-card" id="step-exib" style="display:none;">
       <div class="step-label">Passo 3</div>
       <div class="step-title">Quantas vezes cada aluno verá?</div>
@@ -304,12 +324,36 @@ function selecionarFormato(id) {
   selFormato = id;
   selDurIdx = null;
   selExibIdx = null;
+  tipoPagamento = null;
   document.querySelectorAll('.formato-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('fmt-' + id).classList.add('selected');
-  renderDuracoes();
-  renderExibicoes();
-  document.getElementById('step-dur').style.display = '';
-  document.getElementById('step-exib').style.display = '';
+  // Mostrar preço/dia no card de tipo
+  const precoDia = precos[id] || 0;
+  const elPreco = document.getElementById('preco-tipo-dias');
+  if (elPreco) elPreco.textContent = `R$ ${precoDia.toFixed(2)}/dia`;
+  document.getElementById('step-tipo').style.display = '';
+  document.getElementById('step-dur').style.display = 'none';
+  document.getElementById('step-exib').style.display = 'none';
+  document.getElementById('step-imagem').style.display = 'none';
+  document.getElementById('step-dados').style.display = 'none';
+  atualizarResumo();
+}
+
+function selecionarTipo(tipo) {
+  tipoPagamento = tipo;
+  selDurIdx = null;
+  selExibIdx = null;
+  document.querySelectorAll('#step-tipo .dur-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('tipo-' + tipo).classList.add('selected');
+  if (tipo === 'dias') {
+    renderDuracoes();
+    document.getElementById('step-dur').style.display = '';
+    document.getElementById('step-exib').style.display = 'none';
+  } else {
+    renderExibicoes();
+    document.getElementById('step-exib').style.display = '';
+    document.getElementById('step-dur').style.display = 'none';
+  }
   document.getElementById('step-imagem').style.display = '';
   document.getElementById('step-dados').style.display = '';
   atualizarResumo();
@@ -329,7 +373,7 @@ function renderDuracoes() {
 
 function selecionarDur(idx) {
   selDurIdx = idx;
-  document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('#dur-grid .dur-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('dur-' + idx).classList.add('selected');
   atualizarResumo();
 }
@@ -339,7 +383,7 @@ function renderExibicoes() {
   document.getElementById('exib-grid').innerHTML = exibs.map((e, i) => `
     <div class="dur-btn" onclick="selecionarExib(${i})" id="exib-${i}">
       <div class="dur-label">${e.label}</div>
-      <div class="dur-preco">${e.preco > 0 ? `+ R$ ${e.preco.toFixed(2)}` : 'Incluído'}</div>
+      <div class="dur-preco">R$ ${(e.preco||0).toFixed(2)}</div>
     </div>`).join('');
 }
 
@@ -378,11 +422,18 @@ function selecionarImagem(input) {
 }
 
 function calcularTotal() {
-  if (!selFormato || selDurIdx === null || selExibIdx === null) return 0;
-  const dur = (cfg.duracoes || [])[selDurIdx];
-  const exib = (cfg.exibicoes || [])[selExibIdx];
-  if (!dur || !exib) return 0;
-  return (precos[selFormato] || 0) * dur.dias + (exib.preco || 0);
+  if (!selFormato || !tipoPagamento) return 0;
+  if (tipoPagamento === 'dias') {
+    if (selDurIdx === null) return 0;
+    const dur = (cfg.duracoes || [])[selDurIdx];
+    if (!dur) return 0;
+    return (precos[selFormato] || 0) * dur.dias;
+  } else {
+    if (selExibIdx === null) return 0;
+    const exib = (cfg.exibicoes || [])[selExibIdx];
+    if (!exib) return 0;
+    return exib.preco || 0;
+  }
 }
 
 function atualizarResumo() {
@@ -396,22 +447,27 @@ function atualizarResumo() {
   const resumoCard = document.getElementById('resumo-card');
   if (!resumoCard) return;
 
-  const pronto = selFormato && selDurIdx !== null && selExibIdx !== null && imagemBase64 && empresa;
+  const opcaoSelecionada = tipoPagamento === 'dias' ? selDurIdx !== null : selExibIdx !== null;
+  const pronto = selFormato && tipoPagamento && opcaoSelecionada && imagemBase64 && empresa;
 
-  if (selFormato && selDurIdx !== null && selExibIdx !== null) {
+  if (selFormato && tipoPagamento && opcaoSelecionada) {
     resumoCard.style.display = '';
-    const subtotalDias = precoDia * (durObj?.dias || 0);
-    const subtotalExib = exibObj?.preco || 0;
-    document.getElementById('resumo-linhas').innerHTML = `
-      ${fmtObj ? `<div class="resumo-linha"><span>Formato</span><span>${fmtObj.ico} ${fmtObj.label}</span></div>` : ''}
-      ${durObj ? `<div class="resumo-linha"><span>Duração</span><span>${durObj.label} (R$ ${precoDia.toFixed(2)}/dia × ${durObj.dias})</span></div>` : ''}
-      ${durObj ? `<div class="resumo-linha"><span>Subtotal duração</span><span>R$ ${subtotalDias.toFixed(2).replace('.',',')}</span></div>` : ''}
-      ${exibObj ? `<div class="resumo-linha"><span>Exibições</span><span>${exibObj.label}</span></div>` : ''}
-      ${subtotalExib > 0 ? `<div class="resumo-linha"><span>Subtotal exibições</span><span>R$ ${subtotalExib.toFixed(2).replace('.',',')}</span></div>` : ''}
-      ${empresa ? `<div class="resumo-linha"><span>Anunciante</span><span>${empresa}</span></div>` : ''}
-      <div class="resumo-linha destaque"><span>Total</span><span>R$ ${total.toFixed(2).replace('.',',')}</span></div>`;
+    let linhas = fmtObj ? `<div class="resumo-linha"><span>Formato</span><span>${fmtObj.label}</span></div>` : '';
+    if (tipoPagamento === 'dias' && durObj) {
+      linhas += `<div class="resumo-linha"><span>Modalidade</span><span>Por dias</span></div>`;
+      linhas += `<div class="resumo-linha"><span>Duração</span><span>${durObj.label} × R$ ${precoDia.toFixed(2)}/dia</span></div>`;
+    } else if (tipoPagamento === 'exibicoes' && exibObj) {
+      linhas += `<div class="resumo-linha"><span>Modalidade</span><span>Por visualizações</span></div>`;
+      linhas += `<div class="resumo-linha"><span>Exibições</span><span>${exibObj.label}</span></div>`;
+    }
+    if (empresa) linhas += `<div class="resumo-linha"><span>Anunciante</span><span>${empresa}</span></div>`;
+    linhas += `<div class="resumo-linha destaque"><span>Total</span><span>R$ ${total.toFixed(2).replace('.',',')}</span></div>`;
+
+    document.getElementById('resumo-linhas').innerHTML = linhas;
     document.getElementById('total-valor').textContent = `R$ ${total.toFixed(2).replace('.',',')}`;
-    document.getElementById('total-detalhe').textContent = `${fmtObj?.label || ''} · ${durObj?.label || ''} · ${exibObj?.label || ''}`;
+    document.getElementById('total-detalhe').textContent =
+      tipoPagamento === 'dias' ? `${fmtObj?.label || ''} · ${durObj?.label || ''}` :
+      `${fmtObj?.label || ''} · ${exibObj?.label || ''}`;
   }
 
   const btnPagar = document.getElementById('btn-pagar');
@@ -426,7 +482,8 @@ async function irParaPagamento() {
   const exibObj = (cfg.exibicoes || [])[selExibIdx];
   const fmtObj = FORMATOS.find(f => f.id === selFormato);
 
-  if (!empresa || !selFormato || selDurIdx === null || selExibIdx === null || !imagemBase64) {
+  const opcaoOk = tipoPagamento === 'dias' ? selDurIdx !== null : selExibIdx !== null;
+  if (!empresa || !selFormato || !tipoPagamento || !opcaoOk || !imagemBase64) {
     alert('Preencha todos os campos obrigatórios e carregue a imagem.');
     return;
   }
@@ -454,8 +511,9 @@ async function irParaPagamento() {
     const docRef = await db.collection('publicidade_pedidos').add({
       anunciante: empresa,
       formato: selFormato,
-      duracao: durObj,
-      exibicao: exibObj,
+      tipoPagamento,
+      duracao: tipoPagamento === 'dias' ? durObj : null,
+      exibicao: tipoPagamento === 'exibicoes' ? exibObj : null,
       linkExterno: link || null,
       imagemUrl,
       valorTotal: total,
@@ -464,12 +522,14 @@ async function irParaPagamento() {
     });
 
     // Redirecionar para pagamento
+    const detalhe = tipoPagamento === 'dias'
+      ? `📅 Duração: ${durObj?.label}`
+      : `👁 Exibições: ${exibObj?.label}`;
     const msg = encodeURIComponent(
       `Olá! Quero anunciar na Gaditas Academy.\n\n` +
       `📢 Anunciante: ${empresa}\n` +
       `📌 Formato: ${fmtObj?.label}\n` +
-      `📅 Duração: ${durObj?.label}\n` +
-      `👁 Exibições: ${exibObj?.label}\n` +
+      `${detalhe}\n` +
       `💰 Total: R$ ${total.toFixed(2).replace('.',',')}\n` +
       `🆔 Pedido: ${docRef.id}\n\n` +
       `(Enviarei o comprovante após o pagamento)`

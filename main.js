@@ -13780,7 +13780,7 @@ const publicidade = {
             this._carregarPrecos(),
             db.collection('publicidade').orderBy('criadoEm', 'desc').get(),
             db.collection('publicidade_config').doc('pagina').get(),
-            db.collection('publicidade_pedidos').where('status','==','pendente').orderBy('criadoEm','asc').get()
+            db.collection('publicidade_pedidos').where('status','==','pendente').get()
         ]);
         const cfg = cfgSnap.exists ? cfgSnap.data() : {};
         this._atualizarBadgePendentes();

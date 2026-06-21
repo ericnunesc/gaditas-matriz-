@@ -417,13 +417,28 @@ async function alterarGrau(alunoId, delta) {
   try {
     await db.collection('alunos').doc(alunoId).update({ grau: novoGrau });
     aluno.grau = novoGrau;
-    // Atualiza UI sem re-renderizar tudo
+
+    // Atualiza UI tab Graus
     document.getElementById(`grau-num-${alunoId}`).textContent = novoGrau;
     const card = document.getElementById(`card-grau-${alunoId}`);
     const dotsEl = card?.querySelector('.grau-dots');
     if (dotsEl) dotsEl.outerHTML = _grauDots(novoGrau, maxGrau);
     btnInc.disabled = novoGrau >= maxGrau;
     btnDec.disabled = novoGrau <= 0;
+
+    // Sincroniza no tab Exame de Faixa se o aluno for convocado
+    const convocado = todosConvocados.find(a => a.id === alunoId);
+    if (convocado) {
+      convocado.grau = novoGrau;
+      const cardExame = document.getElementById(`card-exame-${alunoId}`);
+      if (cardExame) {
+        const maxG = graduacao.getMaxGraus(convocado.faixa || 'Branca');
+        const labelEl = cardExame.querySelector('.card-faixa-label');
+        if (labelEl) labelEl.textContent = `${convocado.faixa || '?'}${novoGrau > 0 ? ` ${novoGrau}º grau` : ''}`;
+        const dotsExame = cardExame.querySelector('.grau-dots');
+        if (dotsExame) dotsExame.outerHTML = _grauDots(novoGrau, maxG);
+      }
+    }
   } catch(e) {
     alert('Erro ao salvar grau: ' + e.message);
     btnInc.disabled = novoGrau >= maxGrau;

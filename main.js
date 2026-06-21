@@ -234,6 +234,9 @@ const auth = {
         academia.carregarBibliotecaTecnica();
         academia.renderStoriesBar();
 
+        // Exibe anúncios ativos para o usuário
+        setTimeout(() => { if (typeof publicidade !== 'undefined' && auth.currentUser?.id) publicidade.exibirAnuncios(auth.currentUser.id); }, 1500);
+
         // Mostra wrapper de perfil para aluno e professor
         if (this.role === 'aluno' || this.role === 'professor') {
             const wp = document.getElementById('wrapper-perfil-proprio');
@@ -13737,6 +13740,315 @@ const premiosAno = {
                 <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;letter-spacing:1px;margin:16px 0 10px;border-bottom:1px solid #334155;padding-bottom:6px;">MAIS PRESENTES DO ANO</div>
                 ${podio(tops.geral,'🏅 GERAL')}${podio(tops.adulto,'👤 ADULTO JJ')}${podio(tops.kids,'👦 KIDS')}${podio(tops.mt,'🥊 MUAY THAI')}
             </div>`;
+    },
+};
+
+// ── PUBLICIDADE / MÍDIA ──────────────────────────────────────────────────────
+const publicidade = {
+    FORMATOS: [
+        { id: 'story',  label: '📖 Story Patrocinado', desc: 'Aparece no carrossel de stories' },
+        { id: 'popup',  label: '💬 Popup',             desc: 'Abre 1x por sessão ao entrar no app' },
+        { id: 'banner', label: '📌 Banner Fixo',       desc: 'Faixa fixa na aba Treino' },
+    ],
+    _precos: {},
+
+    async _carregarPrecos() {
+        const doc = await db.collection('publicidade_config').doc('precos').get();
+        this._precos = doc.exists ? doc.data() : { story: 0, popup: 0, banner: 0 };
+        return this._precos;
+    },
+
+    async renderAdmin() {
+        const [precos, snap] = await Promise.all([
+            this._carregarPrecos(),
+            db.collection('publicidade').orderBy('criadoEm', 'desc').get()
+        ]);
+
+        // Tabela de preços
+        const precosEl = document.getElementById('midia-precos-lista');
+        if (precosEl) precosEl.innerHTML = this.FORMATOS.map(f =>
+            `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1e293b;">
+                <span>${f.label}</span>
+                <span style="color:#10b981;font-weight:700;">R$ ${(precos[f.id]||0).toFixed(2)}</span>
+            </div>`
+        ).join('');
+
+        // Lista de campanhas
+        const listaEl = document.getElementById('midia-campanhas-lista');
+        if (!listaEl) return;
+        if (snap.empty) {
+            listaEl.innerHTML = '<div style="text-align:center;padding:30px;color:#475569;font-size:0.75rem;">Nenhuma campanha cadastrada.</div>';
+            return;
+        }
+        listaEl.innerHTML = snap.docs.map(d => {
+            const c = d.data();
+            const hoje = new Date().toISOString().slice(0,10);
+            const ativa = c.dataInicio <= hoje && hoje <= c.dataFim;
+            const fmt = this.FORMATOS.find(f => f.id === c.formato);
+            return `<div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                    <div>
+                        <div style="font-size:0.82rem;font-weight:800;color:#e2e8f0;">${c.anunciante}</div>
+                        <div style="font-size:0.62rem;color:#64748b;margin-top:2px;">${fmt?.label || c.formato} · ${c.dataInicio} → ${c.dataFim}</div>
+                    </div>
+                    <span style="padding:3px 8px;border-radius:999px;font-size:0.6rem;font-weight:800;background:${ativa?'#052e16':'#1e293b'};color:${ativa?'#10b981':'#475569'};border:1px solid ${ativa?'#10b981':'#334155'};">${ativa?'ATIVA':'INATIVA'}</span>
+                </div>
+                ${c.imagemUrl ? `<img src="${c.imagemUrl}" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px;">` : ''}
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div style="font-size:0.65rem;color:#64748b;">
+                        👁 <b style="color:#e2e8f0;">${c.impressoesPorAluno || 0}</b> exib/aluno ·
+                        💰 <b style="color:#10b981;">R$ ${(c.valorPago||0).toFixed(2)}</b>
+                    </div>
+                    <div style="display:flex;gap:6px;">
+                        <button onclick="publicidade.verImpressoes('${d.id}')" style="background:#1e3a8a;border:none;color:#60a5fa;padding:5px 10px;border-radius:8px;font-size:0.6rem;font-weight:700;cursor:pointer;">📊 Stats</button>
+                        <button onclick="publicidade.excluir('${d.id}',this)" style="background:#2d0a0a;border:none;color:#f43f5e;padding:5px 10px;border-radius:8px;font-size:0.6rem;font-weight:700;cursor:pointer;">🗑</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    },
+
+    async editarPrecos() {
+        await this._carregarPrecos();
+        let modal = document.getElementById('modal-midia-precos');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-midia-precos'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.85rem;font-weight:800;color:#e2e8f0;">💰 Tabela de Preços</span>
+                    <button onclick="document.getElementById('modal-midia-precos').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                ${this.FORMATOS.map(f => `
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:0.68rem;color:#94a3b8;font-weight:700;">${f.label}</label>
+                        <div style="font-size:0.6rem;color:#475569;margin-bottom:4px;">${f.desc}</div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span style="color:#64748b;font-size:0.8rem;">R$</span>
+                            <input id="preco-${f.id}" type="number" value="${this._precos[f.id]||0}" min="0" step="0.01"
+                                style="flex:1;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;">
+                        </div>
+                    </div>`).join('')}
+                <button onclick="publicidade._salvarPrecos()" style="width:100%;padding:12px;background:#10b981;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;margin-top:4px;">💾 SALVAR PREÇOS</button>
+                <div id="precos-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
+            </div>`;
+    },
+
+    async _salvarPrecos() {
+        const dados = {};
+        this.FORMATOS.forEach(f => { dados[f.id] = parseFloat(document.getElementById(`preco-${f.id}`)?.value || 0); });
+        await db.collection('publicidade_config').doc('precos').set(dados);
+        document.getElementById('precos-status').innerHTML = '<span style="color:#10b981;">✅ Salvo!</span>';
+        setTimeout(() => { document.getElementById('modal-midia-precos')?.remove(); this.renderAdmin(); }, 700);
+    },
+
+    abrirNovaCampanha() {
+        let modal = document.getElementById('modal-nova-campanha');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-nova-campanha'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
+        const hoje = new Date().toISOString().slice(0,10);
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:440px;margin-top:10px;margin-bottom:30px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.85rem;font-weight:800;color:#e2e8f0;">📢 Nova Campanha</span>
+                    <button onclick="document.getElementById('modal-nova-campanha').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">ANUNCIANTE</label>
+                        <input id="camp-anunciante" placeholder="Nome da empresa" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">FORMATO</label>
+                        <select id="camp-formato" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;">
+                            ${this.FORMATOS.map(f => `<option value="${f.id}">${f.label} — ${f.desc}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">IMAGEM (URL ou cole Base64)</label>
+                        <input id="camp-imagem" placeholder="https://... ou deixe em branco" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                        <div style="margin-top:6px;">
+                            <label style="font-size:0.62rem;color:#64748b;cursor:pointer;"><input type="file" accept="image/*" onchange="publicidade._uploadImagemCampanha(this)" style="display:none;"> 📎 Ou clique para enviar imagem do celular</label>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">LINK (opcional)</label>
+                        <input id="camp-link" placeholder="https://..." style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div>
+                            <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">DATA INÍCIO</label>
+                            <input id="camp-inicio" type="date" value="${hoje}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">DATA FIM</label>
+                            <input id="camp-fim" type="date" value="${hoje}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div>
+                            <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">EXIBIÇÕES / ALUNO</label>
+                            <input id="camp-impressoes" type="number" value="3" min="1" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">VALOR PAGO (R$)</label>
+                            <input id="camp-valor" type="number" value="0" min="0" step="0.01" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                        </div>
+                    </div>
+                </div>
+                <button onclick="publicidade.salvarCampanha()" style="width:100%;padding:13px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.82rem;margin-top:16px;">💾 SALVAR CAMPANHA</button>
+                <div id="camp-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
+            </div>`;
+    },
+
+    _uploadImagemCampanha(input) {
+        const file = input.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => { document.getElementById('camp-imagem').value = e.target.result; };
+        reader.readAsDataURL(file);
+    },
+
+    async salvarCampanha() {
+        const status = document.getElementById('camp-status');
+        const anunciante = document.getElementById('camp-anunciante')?.value?.trim();
+        if (!anunciante) { if (status) status.innerHTML = '<span style="color:#f43f5e;">❌ Informe o anunciante</span>'; return; }
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Salvando...</span>';
+        const dados = {
+            anunciante,
+            formato:           document.getElementById('camp-formato')?.value,
+            imagemUrl:         document.getElementById('camp-imagem')?.value?.trim() || '',
+            linkExterno:       document.getElementById('camp-link')?.value?.trim() || '',
+            dataInicio:        document.getElementById('camp-inicio')?.value,
+            dataFim:           document.getElementById('camp-fim')?.value,
+            impressoesPorAluno: parseInt(document.getElementById('camp-impressoes')?.value || 3),
+            valorPago:         parseFloat(document.getElementById('camp-valor')?.value || 0),
+            criadoEm:          firebase.firestore.FieldValue.serverTimestamp(),
+            impressoes:        {},
+        };
+        await db.collection('publicidade').add(dados);
+        if (status) status.innerHTML = '<span style="color:#10b981;">✅ Campanha criada!</span>';
+        setTimeout(() => { document.getElementById('modal-nova-campanha')?.remove(); this.renderAdmin(); }, 800);
+    },
+
+    async excluir(campId, btn) {
+        if (!confirm('Excluir esta campanha?')) return;
+        btn.disabled = true;
+        await db.collection('publicidade').doc(campId).delete();
+        this.renderAdmin();
+    },
+
+    async verImpressoes(campId) {
+        const doc = await db.collection('publicidade').doc(campId).get();
+        if (!doc.exists) return;
+        const c = doc.data();
+        const imp = c.impressoes || {};
+        const total = Object.values(imp).reduce((s, v) => s + v, 0);
+        const alcance = Object.keys(imp).length;
+        alert(`📊 ${c.anunciante}\n\nAlcance: ${alcance} alunos\nTotal exibições: ${total}`);
+    },
+
+    // ── Exibição para alunos ──────────────────────────────────────────────────
+
+    async exibirAnuncios(alunoId) {
+        if (!alunoId) return;
+        const hoje = new Date().toISOString().slice(0,10);
+        const snap = await db.collection('publicidade')
+            .where('dataInicio','<=',hoje).get();
+        const campanhas = snap.docs
+            .filter(d => d.data().dataFim >= hoje)
+            .map(d => ({ id: d.id, ...d.data() }));
+        if (!campanhas.length) return;
+
+        for (const camp of campanhas) {
+            const vistas = (camp.impressoes || {})[alunoId] || 0;
+            if (vistas >= (camp.impressoesPorAluno || 3)) continue;
+
+            if (camp.formato === 'banner') this._exibirBanner(camp, alunoId);
+            else if (camp.formato === 'popup') { this._exibirPopup(camp, alunoId); break; }
+            else if (camp.formato === 'story') this._injetarStoryAd(camp, alunoId);
+        }
+    },
+
+    async _registrarImpressao(campId, alunoId) {
+        await db.collection('publicidade').doc(campId).update({
+            [`impressoes.${alunoId}`]: firebase.firestore.FieldValue.increment(1)
+        });
+    },
+
+    _exibirBanner(camp, alunoId) {
+        const existing = document.getElementById('pub-banner');
+        if (existing) return;
+        const banner = document.createElement('div');
+        banner.id = 'pub-banner';
+        banner.style.cssText = 'margin:10px 0;border-radius:12px;overflow:hidden;position:relative;cursor:pointer;';
+        banner.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;" onclick="${camp.linkExterno ? `window.open('${camp.linkExterno}','_blank')` : ''}">
+                ${camp.imagemUrl ? `<img src="${camp.imagemUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : ''}
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Patrocinado</div>
+                    <div style="font-size:0.78rem;font-weight:800;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${camp.anunciante}</div>
+                </div>
+                <button onclick="event.stopPropagation();document.getElementById('pub-banner').remove()" style="background:none;border:none;color:#475569;font-size:1rem;cursor:pointer;padding:4px;">✕</button>
+            </div>`;
+        const container = document.getElementById('tab-checkin');
+        if (container) container.insertBefore(banner, container.firstChild);
+        this._registrarImpressao(camp.id, alunoId);
+    },
+
+    _exibirPopup(camp, alunoId) {
+        const sessionKey = `pub_popup_${camp.id}`;
+        if (sessionStorage.getItem(sessionKey)) return;
+        sessionStorage.setItem(sessionKey, '1');
+        let modal = document.createElement('div');
+        modal.id = 'pub-popup';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:20px;overflow:hidden;width:100%;max-width:380px;position:relative;" onclick="${camp.linkExterno ? `window.open('${camp.linkExterno}','_blank')` : ''}">
+                ${camp.imagemUrl ? `<img src="${camp.imagemUrl}" style="width:100%;max-height:280px;object-fit:cover;display:block;">` : ''}
+                <div style="padding:16px;">
+                    <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Patrocinado</div>
+                    <div style="font-size:0.92rem;font-weight:800;color:#e2e8f0;">${camp.anunciante}</div>
+                    ${camp.linkExterno ? `<div style="font-size:0.65rem;color:#3b82f6;margin-top:4px;">Toque para saber mais →</div>` : ''}
+                </div>
+                <button onclick="event.stopPropagation();document.getElementById('pub-popup').remove()" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>`;
+        document.body.appendChild(modal);
+        this._registrarImpressao(camp.id, alunoId);
+    },
+
+    _injetarStoryAd(camp, alunoId) {
+        const bar = document.getElementById('stories-bar');
+        if (!bar || document.getElementById(`story-ad-${camp.id}`)) return;
+        const el = document.createElement('div');
+        el.id = `story-ad-${camp.id}`;
+        el.style.cssText = 'flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;';
+        el.onclick = () => this._abrirStoryAd(camp, alunoId);
+        el.innerHTML = `
+            <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#ef4444);padding:2px;position:relative;">
+                ${camp.imagemUrl
+                    ? `<img src="${camp.imagemUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid #0f172a;">`
+                    : `<div style="width:100%;height:100%;border-radius:50%;background:#1e293b;border:2px solid #0f172a;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">📢</div>`}
+                <span style="position:absolute;bottom:-2px;right:-2px;background:#f59e0b;color:#000;font-size:0.42rem;font-weight:800;padding:1px 4px;border-radius:999px;">AD</span>
+            </div>
+            <span style="font-size:0.52rem;color:#94a3b8;max-width:52px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${camp.anunciante.split(' ')[0]}</span>`;
+        bar.appendChild(el);
+        this._registrarImpressao(camp.id, alunoId);
+    },
+
+    _abrirStoryAd(camp, alunoId) {
+        let modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9999;display:flex;align-items:center;justify-content:center;';
+        modal.innerHTML = `
+            <div style="width:100%;max-width:420px;height:100%;position:relative;display:flex;flex-direction:column;">
+                ${camp.imagemUrl ? `<img src="${camp.imagemUrl}" style="width:100%;flex:1;object-fit:cover;">` : `<div style="flex:1;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:3rem;">📢</div>`}
+                <div style="padding:20px;background:#0f172a;">
+                    <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Patrocinado</div>
+                    <div style="font-size:1rem;font-weight:800;color:#e2e8f0;margin-bottom:10px;">${camp.anunciante}</div>
+                    ${camp.linkExterno ? `<button onclick="window.open('${camp.linkExterno}','_blank')" style="width:100%;padding:12px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-weight:800;cursor:pointer;">Saiba mais →</button>` : ''}
+                </div>
+                <button onclick="this.closest('div[style*=fixed]').remove()" style="position:absolute;top:14px;right:14px;background:rgba(0,0,0,0.5);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>
+            </div>`;
+        document.body.appendChild(modal);
     },
 };
 

@@ -24,9 +24,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Tabs ocultos por padrão — JS mostra só para admin/prof */
-        #menu-alunos, #menu-relatorios { display: none !important; }
+        #menu-alunos, #menu-relatorios, #menu-midia { display: none !important; }
         body.role-admin #menu-alunos, body.role-prof #menu-alunos,
         body.role-admin #menu-relatorios { display: flex !important; }
+        body.role-admin #menu-midia { display: flex !important; }
         /* Acordeões de relatórios */
         .rel-acc { background:#1e293b; border:1px solid #334155; border-radius:12px; margin-bottom:8px; overflow:hidden; }
         .rel-acc-hdr { width:100%; display:flex; justify-content:space-between; align-items:center; padding:13px 15px; background:transparent; border:none; color:#e2e8f0; font-size:0.82rem; font-weight:800; cursor:pointer; text-align:left; }
@@ -1061,6 +1062,30 @@
             </div>
         </div>
 
+        <!-- ══ TAB MÍDIA / PUBLICIDADE ══ -->
+        <div id="tab-midia" class="tab-content hidden" style="padding:15px 15px 100px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <div>
+                    <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:2px;">Admin</div>
+                    <div style="font-size:1.05rem;font-weight:800;color:#f8fafc;letter-spacing:-0.3px;"><i class="fas fa-bullhorn" style="color:#f59e0b;margin-right:8px;font-size:0.9rem;"></i>PUBLICIDADE</div>
+                </div>
+                <button onclick="publicidade.abrirNovaCampanha()" style="background:#f59e0b;border:none;color:#000;padding:9px 16px;border-radius:12px;font-size:0.68rem;font-weight:800;cursor:pointer;">+ NOVA CAMPANHA</button>
+            </div>
+
+            <!-- Tabela de preços -->
+            <div id="midia-tabela-precos" style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <span style="font-size:0.75rem;font-weight:800;color:#e2e8f0;">💰 Tabela de Preços</span>
+                    <button onclick="publicidade.editarPrecos()" style="background:#334155;border:none;color:#94a3b8;padding:5px 10px;border-radius:8px;font-size:0.62rem;font-weight:700;cursor:pointer;">✏️ Editar</button>
+                </div>
+                <div id="midia-precos-lista" style="font-size:0.7rem;color:#64748b;">Carregando...</div>
+            </div>
+
+            <!-- Lista de campanhas -->
+            <div style="font-size:0.72rem;font-weight:800;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Campanhas</div>
+            <div id="midia-campanhas-lista"><div style="text-align:center;padding:30px;color:#475569;font-size:0.75rem;">Nenhuma campanha cadastrada.</div></div>
+        </div>
+
         </main>
 
         <nav class="bottom-nav">
@@ -1079,6 +1104,7 @@
                 <span>RELATÓRIOS</span>
                 <span id="badge-solic-avaliacao" style="display:none;position:absolute;top:0;right:4px;background:#10b981;color:white;font-size:0.5rem;font-weight:800;padding:2px 5px;border-radius:999px;min-width:16px;text-align:center;"></span>
             </button>
+            <button onclick="ui.showTab('tab-midia'); publicidade.renderAdmin()" id="menu-midia" class="nav-item" style="display:none;"><i class="fas fa-bullhorn"></i><span>MÍDIA</span></button>
             <button onclick="auth.logout()" class="nav-item logout-item"><i class="fas fa-sign-out-alt"></i><span>SAIR</span></button>
         </nav>
     </div>
@@ -1107,7 +1133,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-    <script src="main.js?v=20260619q"></script>
+    <script src="main.js?v=20260620a"></script>
     <script src="filtros-academia.js?v=20260615a"></script>
     <script src="gaditas-modal-financeiro.js?v=20260616b"></script>
     <script src="gaditas-painel-adm.js?v=20260615c"></script>

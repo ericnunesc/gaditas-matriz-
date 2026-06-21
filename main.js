@@ -13952,30 +13952,65 @@ const publicidade = {
                         <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">LINK (opcional)</label>
                         <input id="camp-link" placeholder="https://..." style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                        <div>
-                            <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">DATA INÍCIO</label>
-                            <input id="camp-inicio" type="date" value="${hoje}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
-                        </div>
-                        <div>
-                            <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">DATA FIM</label>
-                            <input id="camp-fim" type="date" value="${hoje}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                    <!-- Tipo de vigência -->
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px;">TIPO DE VIGÊNCIA</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <button type="button" id="tipo-btn-dias" onclick="publicidade._toggleTipoCamp('dias')"
+                                style="padding:10px;background:#1c1500;border:2px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;">
+                                📅 Por Dias
+                            </button>
+                            <button type="button" id="tipo-btn-exib" onclick="publicidade._toggleTipoCamp('exib')"
+                                style="padding:10px;background:#0f172a;border:2px solid #334155;color:#64748b;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;">
+                                👁 Por Visualizações
+                            </button>
                         </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                        <div>
-                            <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">EXIBIÇÕES / ALUNO</label>
-                            <input id="camp-impressoes" type="number" value="3" min="1" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                    <!-- Por dias -->
+                    <div id="camp-bloco-dias">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div>
+                                <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">DATA INÍCIO</label>
+                                <input id="camp-inicio" type="date" value="${hoje}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">DATA FIM</label>
+                                <input id="camp-fim" type="date" value="${hoje}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                            </div>
                         </div>
-                        <div>
-                            <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">VALOR PAGO (R$)</label>
-                            <input id="camp-valor" type="number" value="0" min="0" step="0.01" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
-                        </div>
+                    </div>
+                    <!-- Por visualizações -->
+                    <div id="camp-bloco-exib" style="display:none;">
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">EXIBIÇÕES / ALUNO</label>
+                        <input id="camp-impressoes" type="number" value="3" min="1" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
+                    </div>
+                    <!-- Valor pago -->
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">VALOR PAGO (R$)</label>
+                        <input id="camp-valor" type="number" value="0" min="0" step="0.01" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
                     </div>
                 </div>
                 <button onclick="publicidade.salvarCampanha()" style="width:100%;padding:13px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.82rem;margin-top:16px;">💾 SALVAR CAMPANHA</button>
                 <div id="camp-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
             </div>`;
+    },
+
+    _toggleTipoCamp(tipo) {
+        const btnDias = document.getElementById('tipo-btn-dias');
+        const btnExib = document.getElementById('tipo-btn-exib');
+        const blocoDias = document.getElementById('camp-bloco-dias');
+        const blocoExib = document.getElementById('camp-bloco-exib');
+        if (tipo === 'dias') {
+            btnDias.style.cssText = 'padding:10px;background:#1c1500;border:2px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;';
+            btnExib.style.cssText = 'padding:10px;background:#0f172a;border:2px solid #334155;color:#64748b;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;';
+            blocoDias.style.display = '';
+            blocoExib.style.display = 'none';
+        } else {
+            btnExib.style.cssText = 'padding:10px;background:#1c1500;border:2px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;';
+            btnDias.style.cssText = 'padding:10px;background:#0f172a;border:2px solid #334155;color:#64748b;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;';
+            blocoExib.style.display = '';
+            blocoDias.style.display = 'none';
+        }
     },
 
     _selecionarImagem(input) {
@@ -14025,14 +14060,17 @@ const publicidade = {
             imagemUrl = json.url;
         }
 
+        const porDias = document.getElementById('camp-bloco-exib')?.style.display === 'none';
+        const hoje2 = new Date().toISOString().slice(0,10);
         const dados = {
             anunciante,
             formato:            document.getElementById('camp-formato')?.value,
             imagemUrl,
             linkExterno:        document.getElementById('camp-link')?.value?.trim() || '',
-            dataInicio:         document.getElementById('camp-inicio')?.value,
-            dataFim:            document.getElementById('camp-fim')?.value,
-            impressoesPorAluno: parseInt(document.getElementById('camp-impressoes')?.value || 3),
+            tipoPagamento:      porDias ? 'dias' : 'exibicoes',
+            dataInicio:         porDias ? (document.getElementById('camp-inicio')?.value || hoje2) : hoje2,
+            dataFim:            porDias ? (document.getElementById('camp-fim')?.value || hoje2) : '2099-12-31',
+            impressoesPorAluno: porDias ? 999 : parseInt(document.getElementById('camp-impressoes')?.value || 3),
             valorPago:          parseFloat(document.getElementById('camp-valor')?.value || 0),
             criadoEm:           firebase.firestore.FieldValue.serverTimestamp(),
             impressoes:         {},

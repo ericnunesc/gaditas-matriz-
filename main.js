@@ -93,6 +93,10 @@ const auth = {
                 if (d.nascimentoMestre) this.adminCreds.nascimentoMestre = d.nascimentoMestre;
             }
         } catch(e) { console.warn('carregarCredenciaisAdmin:', e.message); }
+        try {
+            const doc2 = await db.collection('configuracoes').doc('graduacao_config').get();
+            this.gradCreds = doc2.exists ? doc2.data() : { user: 'graduacao', pass: 'grad2024' };
+        } catch(e) { this.gradCreds = { user: 'graduacao', pass: 'grad2024' }; }
     },
 
     async login() {
@@ -6061,6 +6065,14 @@ Ele voltará a ser aluno normal.`)) return;
                 <div style="font-size:0.58rem;color:#475569;margin-top:6px;line-height:1.4;">Use após atualizar o contrato. Todos os alunos verão aviso para reassinar.</div>
                 <div style="height:1px;background:#334155;margin:16px 0;"></div>
                 <div style="height:1px;background:#334155;margin:16px 0;"></div>
+                <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">🥋 ACESSO — HOMOLOGAÇÃO DE FAIXA</div>
+                <div style="font-size:0.62rem;color:#475569;margin-bottom:10px;line-height:1.4;">Credenciais para o funcionário acessar a página de homologação no dia da graduação.</div>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">USUÁRIO</small>
+                <input type="text" id="cfg-grad-user" value="${auth.gradCreds?.user||'graduacao'}" style="${inp}" placeholder="usuário"/>
+                <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">SENHA</small>
+                <input type="password" id="cfg-grad-pass" placeholder="deixe em branco para manter" style="${inp}"/>
+                <button onclick="academia.salvarCredGraduacao()" style="width:100%;padding:11px;background:#7c3aed;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.78rem;">🥋 SALVAR ACESSO GRADUAÇÃO</button>
+                <div style="height:1px;background:#334155;margin:16px 0;"></div>
                 <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">🏆 CERTIFICADOS</div>
                 <button onclick="document.getElementById('modal-config-admin').remove(); certificado.abrirConfig();" style="width:100%;padding:12px;background:#1c1000;border:1px solid #92400e;color:#fbbf24;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;margin-bottom:6px;">
                     🏆 CONFIGURAR CERTIFICADOS DE GRADUAÇÃO
@@ -6158,6 +6170,21 @@ Ele voltará a ser aluno normal.`)) return;
             }
             document.getElementById('modal-config-admin')?.remove();
             alert('✅ Configurações salvas!');
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async salvarCredGraduacao() {
+        const user = document.getElementById('cfg-grad-user')?.value.trim().toLowerCase();
+        const pass = document.getElementById('cfg-grad-pass')?.value;
+        if (!user) return alert('Usuário é obrigatório.');
+        const dados = { user };
+        if (pass) dados.pass = pass;
+        try {
+            await db.collection('configuracoes').doc('graduacao_config').set(dados, { merge: true });
+            if (!auth.gradCreds) auth.gradCreds = {};
+            auth.gradCreds.user = user;
+            if (pass) auth.gradCreds.pass = pass;
+            alert('✅ Acesso da Homologação salvo!');
         } catch(e) { alert('Erro: ' + e.message); }
     },
 

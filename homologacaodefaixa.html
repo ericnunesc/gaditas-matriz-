@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Homologação de Faixa</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+#tela-login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:#1e293b;border-radius:16px;padding:32px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.login-logo{text-align:center;font-size:2.5rem;margin-bottom:8px}
+.login-title{text-align:center;font-size:1.1rem;font-weight:800;color:white;margin-bottom:4px}
+.login-sub{text-align:center;font-size:0.75rem;color:#64748b;margin-bottom:24px}
+.login-label{font-size:0.65rem;font-weight:800;color:#94a3b8;display:block;margin-bottom:4px;margin-top:12px}
+.login-input{width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.875rem}
+.login-input:focus{border-color:#3b82f6}
+.btn-login{width:100%;padding:12px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.9rem;margin-top:20px}
+.btn-login:hover{background:#2563eb}
+.login-erro{color:#f87171;font-size:0.75rem;text-align:center;margin-top:10px;display:none}
+
+#tela-app{display:none}
+.header{background:#1e293b;border-bottom:1px solid #334155;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.header-title{font-size:0.9rem;font-weight:800;color:white}
+.header-sub{font-size:0.65rem;color:#64748b}
+.btn-sair{background:#334155;border:none;color:#94a3b8;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.75rem}
+
+.tabs{display:flex;background:#1e293b;border-bottom:1px solid #334155}
+.tab{flex:1;padding:12px;text-align:center;font-size:0.8rem;font-weight:700;cursor:pointer;color:#64748b;border-bottom:3px solid transparent;transition:all .2s}
+.tab.ativo{color:white;border-bottom-color:#3b82f6}
+
+.conteudo{padding:16px;max-width:600px;margin:0 auto}
+.filtros{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.search-input{flex:1;min-width:180px;padding:9px 12px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem}
+.search-input:focus{border-color:#3b82f6}
+.select-faixa{padding:9px 10px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;outline:none;font-size:0.8rem;cursor:pointer}
+.select-faixa:focus{border-color:#3b82f6}
+
+.lista-alunos{display:flex;flex-direction:column;gap:8px}
+.card-aluno{background:#1e293b;border-radius:12px;padding:14px;border-left:4px solid #3b82f6;display:flex;align-items:center;gap:12px}
+.card-info{flex:1;min-width:0}
+.card-nome{font-size:0.85rem;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-faixa-label{font-size:0.65rem;color:#94a3b8;margin-top:2px}
+.grau-dots{display:flex;gap:3px;margin-top:4px}
+.grau-dot{width:8px;height:8px;border-radius:50%;background:#334155;border:1px solid #475569}
+.grau-dot.ativo{background:#f59e0b;border-color:#f59e0b}
+.card-prox{font-size:0.65rem;color:#10b981;margin-top:3px;font-weight:600}
+
+.btn-graduar{padding:8px 14px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.75rem;white-space:nowrap}
+.btn-graduar:disabled{background:#334155;color:#64748b;cursor:not-allowed}
+
+.btn-grau-dec{padding:7px 10px;background:#334155;border:none;color:#94a3b8;border-radius:8px;cursor:pointer;font-size:0.85rem}
+.btn-grau-inc{padding:7px 10px;background:#3b82f6;border:none;color:white;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:700}
+.btn-grau-dec:disabled,.btn-grau-inc:disabled{opacity:.4;cursor:not-allowed}
+.grau-controles{display:flex;align-items:center;gap:6px}
+.grau-num{font-size:0.8rem;font-weight:800;color:white;min-width:20px;text-align:center}
+
+.vazio{text-align:center;padding:40px;color:#475569;font-size:0.8rem}
+.loading-msg{text-align:center;padding:30px;color:#64748b;font-size:0.8rem}
+.badge-total{font-size:0.7rem;color:#64748b;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div id="tela-login">
+  <div class="login-box">
+    <div class="login-logo">🥋</div>
+    <div class="login-title">Homologação de Faixa</div>
+    <div class="login-sub">Acesso restrito — Dia de Graduação</div>
+    <label class="login-label">USUÁRIO</label>
+    <input class="login-input" id="login-user" type="text" autocomplete="off" placeholder="usuário"/>
+    <label class="login-label">SENHA</label>
+    <input class="login-input" id="login-pass" type="password" placeholder="••••••"/>
+    <button class="btn-login" onclick="fazerLogin()">ENTRAR</button>
+    <div class="login-erro" id="login-erro">Usuário ou senha incorretos.</div>
+  </div>
+</div>
+
+<!-- TELA DO APP -->
+<div id="tela-app">
+  <div class="header">
+    <div>
+      <div class="header-title">🥋 Homologação de Faixa</div>
+      <div class="header-sub" id="header-data"></div>
+    </div>
+    <button class="btn-sair" onclick="sair()">Sair</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab ativo" id="tab-exame" onclick="trocarTab('exame')">🏆 Exame de Faixa</div>
+    <div class="tab" id="tab-graus" onclick="trocarTab('graus')">🎯 Atualizar Graus</div>
+  </div>
+
+  <!-- TAB EXAME -->
+  <div id="painel-exame" class="conteudo">
+    <div class="filtros">
+      <input class="search-input" id="exame-busca" type="text" placeholder="🔍 Buscar por nome..." oninput="filtrarExame()"/>
+      <select class="select-faixa" id="exame-faixa" onchange="filtrarExame()">
+        <option value="">Todas as faixas</option>
+      </select>
+    </div>
+    <div class="badge-total" id="exame-total"></div>
+    <div class="lista-alunos" id="exame-lista">
+      <div class="loading-msg">⏳ Carregando convocados...</div>
+    </div>
+  </div>
+
+  <!-- TAB GRAUS -->
+  <div id="painel-graus" class="conteudo" style="display:none">
+    <div class="filtros">
+      <input class="search-input" id="graus-busca" type="text" placeholder="🔍 Buscar por nome..." oninput="filtrarGraus()"/>
+      <select class="select-faixa" id="graus-faixa" onchange="filtrarGraus()">
+        <option value="">Todas as faixas</option>
+      </select>
+    </div>
+    <div class="badge-total" id="graus-total"></div>
+    <div class="lista-alunos" id="graus-lista">
+      <div class="loading-msg">⏳ Carregando alunos...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+  authDomain: "gaditasmatriz.firebaseapp.com",
+  projectId: "gaditasmatriz",
+  storageBucket: "gaditasmatriz.firebasestorage.app",
+  messagingSenderId: "166834416988",
+  appId: "1:166834416988:web:2921c95c87c42019282599"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ── DADOS ──────────────────────────────────────────────────
+const graduacao = {
+  infantil: ["Branca","Cinza/Branca","Cinza","Cinza/Preta","Amarela/Branca","Amarela","Amarela/Preta","Laranja/Branca","Laranja","Laranja/Preta","Verde/Branca","Verde","Verde/Preta"],
+  adulto: ["Branca","Azul","Roxa","Marrom","Preta"],
+  getMaxGraus(faixa) { return faixa === "Preta" ? 6 : 4; }
+};
+
+function _getCategoria(aluno) {
+  const ano = new Date().getFullYear();
+  const idade = aluno.nascimento ? (ano - new Date(aluno.nascimento).getFullYear()) : 99;
+  if (idade < 16) return 'kids';
+  if (aluno.faixa === 'Marrom' || aluno.faixa === 'Preta') return 'preta';
+  return 'adulto';
+}
+
+function _getProxFaixa(aluno) {
+  const cat = _getCategoria(aluno);
+  if (cat === 'kids') {
+    if (aluno.proxFaixaCustom) return aluno.proxFaixaCustom;
+    const idx = graduacao.infantil.indexOf(aluno.faixa);
+    return idx >= 0 && idx < graduacao.infantil.length - 1 ? graduacao.infantil[idx + 1] : aluno.faixa;
+  }
+  if (cat === 'preta') {
+    if (aluno.faixa === 'Marrom') return 'Preta';
+    const grau = aluno.grau || 0;
+    if (grau === 0) return 'Preta 1º Grau';
+    return `Preta ${grau + 1}º Grau`;
+  }
+  const faixas = ['Branca','Azul','Roxa','Marrom'];
+  const idx = faixas.indexOf(aluno.faixa);
+  return idx >= 0 && idx < faixas.length - 1 ? faixas[idx + 1] : aluno.faixa;
+}
+
+function _corFaixa(faixa) {
+  const c = {
+    'Branca':  '#ffffff', 'Cinza': '#94a3b8', 'Amarela': '#eab308',
+    'Laranja': '#f97316', 'Verde': '#22c55e', 'Azul':    '#3b82f6',
+    'Roxa':    '#8b5cf6', 'Marrom':'#d97706', 'Preta':   '#f59e0b',
+  };
+  const base = faixa ? faixa.split('/')[0] : 'Branca';
+  return c[base] || '#ffffff';
+}
+
+function _grauDots(grau, maxGrau) {
+  let html = '<div class="grau-dots">';
+  for (let i = 1; i <= maxGrau; i++) {
+    html += `<div class="grau-dot${i <= grau ? ' ativo' : ''}"></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+// ── AUTH LOCAL ─────────────────────────────────────────────
+let credGraduacao = { user: 'graduacao', pass: 'grad2024' };
+
+async function carregarCredenciais() {
+  try {
+    const doc = await db.collection('configuracoes').doc('graduacao_config').get();
+    if (doc.exists) {
+      const d = doc.data();
+      if (d.user) credGraduacao.user = d.user;
+      if (d.pass) credGraduacao.pass = d.pass;
+    }
+  } catch(e) {}
+}
+
+async function fazerLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value.trim();
+  const erro = document.getElementById('login-erro');
+  erro.style.display = 'none';
+
+  await carregarCredenciais();
+
+  if (u === credGraduacao.user && p === credGraduacao.pass) {
+    document.getElementById('tela-login').style.display = 'none';
+    document.getElementById('tela-app').style.display = 'block';
+    const hoje = new Date().toLocaleDateString('pt-BR', {weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+    document.getElementById('header-data').textContent = hoje;
+    carregarExame();
+    carregarGraus();
+  } else {
+    erro.style.display = 'block';
+  }
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') fazerLogin();
+});
+
+function sair() {
+  document.getElementById('tela-app').style.display = 'none';
+  document.getElementById('tela-login').style.display = 'flex';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+// ── TABS ───────────────────────────────────────────────────
+function trocarTab(tab) {
+  document.getElementById('tab-exame').classList.toggle('ativo', tab === 'exame');
+  document.getElementById('tab-graus').classList.toggle('ativo', tab === 'graus');
+  document.getElementById('painel-exame').style.display = tab === 'exame' ? 'block' : 'none';
+  document.getElementById('painel-graus').style.display = tab === 'graus' ? 'block' : 'none';
+}
+
+// ── TAB 1: EXAME DE FAIXA ──────────────────────────────────
+let todosConvocados = [];
+
+async function carregarExame() {
+  try {
+    const snap = await db.collection('alunos').where('aspiranteGraduacao', '==', true).get();
+    todosConvocados = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    popularFiltroFaixas(todosConvocados, 'exame-faixa');
+    filtrarExame();
+  } catch(e) {
+    document.getElementById('exame-lista').innerHTML = `<div class="vazio">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+function filtrarExame() {
+  const busca = document.getElementById('exame-busca').value.toLowerCase();
+  const faixaSel = document.getElementById('exame-faixa').value;
+  const filtrados = todosConvocados.filter(a => {
+    const nome = (a.nome || '').toLowerCase();
+    const faixaBase = (a.faixa || '').split('/')[0];
+    return nome.includes(busca) && (!faixaSel || faixaBase === faixaSel || a.faixa === faixaSel);
+  });
+  renderExame(filtrados);
+}
+
+function renderExame(alunos) {
+  const lista = document.getElementById('exame-lista');
+  const total = document.getElementById('exame-total');
+  total.textContent = `${alunos.length} convocado(s)`;
+
+  if (!alunos.length) {
+    lista.innerHTML = '<div class="vazio">Nenhum convocado encontrado.</div>';
+    return;
+  }
+
+  lista.innerHTML = alunos.map(a => {
+    const cor = _corFaixa(a.faixa);
+    const prox = _getProxFaixa(a);
+    const grauAtual = a.grau || 0;
+    const maxGrau = graduacao.getMaxGraus(a.faixa || 'Branca');
+    return `
+      <div class="card-aluno" id="card-exame-${a.id}" style="border-left-color:${cor}">
+        <div class="card-info">
+          <div class="card-nome">${a.nome || '—'}</div>
+          <div class="card-faixa-label" style="color:${cor}">${a.faixa || '?'}${grauAtual > 0 ? ` ${grauAtual}º grau` : ''}</div>
+          ${_grauDots(grauAtual, maxGrau)}
+          <div class="card-prox">→ ${prox}</div>
+        </div>
+        <button class="btn-graduar" id="btn-grad-${a.id}"
+          data-faixa-destino="${prox}"
+          data-nome="${(a.nome||'').replace(/"/g,'&quot;')}"
+          onclick="graduarAluno('${a.id}')">🥋 GRADUAR</button>
+      </div>`;
+  }).join('');
+}
+
+async function graduarAluno(alunoId) {
+  const card = document.getElementById(`card-exame-${alunoId}`);
+  const btn = document.getElementById(`btn-grad-${alunoId}`);
+  const faixaDestino = btn?.dataset.faixaDestino;
+  const nomeAluno = btn?.dataset.nome || '';
+  if (!faixaDestino) return;
+
+  if (!confirm(`Graduar ${nomeAluno} para ${faixaDestino}?`)) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Graduando...';
+
+  try {
+    const docRef = db.collection('alunos').doc(alunoId);
+    const snap = await docRef.get();
+    if (!snap.exists) throw new Error('Aluno não encontrado');
+    const dados = snap.data();
+
+    const hoje = new Date();
+    const dataFormatada = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
+    const historicoGrad = dados.historicoGraduacao || [];
+    historicoGrad.push({ faixa: faixaDestino, grau: 0, faixaMT: null, modalidade: 'jiujitsu', data: dataFormatada });
+
+    await docRef.update({
+      faixa: faixaDestino,
+      grau: 0,
+      aspiranteGraduacao: false,
+      graduacaoPendente: { faixa: faixaDestino, grau: 0, faixaMT: null, modalidadeAlterada: 'jiujitsu' },
+      historicoGraduacao: historicoGrad,
+      aulas: 0
+    });
+
+    card?.remove();
+    todosConvocados = todosConvocados.filter(a => a.id !== alunoId);
+
+    const dataGrad = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+    setTimeout(() => abrirEmitirCertificado(alunoId, nomeAluno, faixaDestino, dataGrad), 300);
+  } catch(e) {
+    alert('Erro ao graduar: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '🥋 GRADUAR';
+  }
+}
+
+// ── TAB 2: ATUALIZAR GRAUS ─────────────────────────────────
+let todosAlunos = [];
+
+async function carregarGraus() {
+  try {
+    const snap = await db.collection('alunos').orderBy('nome').get();
+    todosAlunos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    popularFiltroFaixas(todosAlunos, 'graus-faixa');
+    filtrarGraus();
+  } catch(e) {
+    document.getElementById('graus-lista').innerHTML = `<div class="vazio">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+function filtrarGraus() {
+  const busca = document.getElementById('graus-busca').value.toLowerCase();
+  const faixaSel = document.getElementById('graus-faixa').value;
+  const filtrados = todosAlunos.filter(a => {
+    const nome = (a.nome || '').toLowerCase();
+    const faixaBase = (a.faixa || '').split('/')[0];
+    return nome.includes(busca) && (!faixaSel || faixaBase === faixaSel || a.faixa === faixaSel);
+  });
+  renderGraus(filtrados);
+}
+
+function renderGraus(alunos) {
+  const lista = document.getElementById('graus-lista');
+  const total = document.getElementById('graus-total');
+  total.textContent = `${alunos.length} aluno(s)`;
+
+  if (!alunos.length) {
+    lista.innerHTML = '<div class="vazio">Nenhum aluno encontrado.</div>';
+    return;
+  }
+
+  lista.innerHTML = alunos.map(a => {
+    const cor = _corFaixa(a.faixa);
+    const grauAtual = a.grau || 0;
+    const maxGrau = graduacao.getMaxGraus(a.faixa || 'Branca');
+    const podeInc = grauAtual < maxGrau;
+    const podeDec = grauAtual > 0;
+    return `
+      <div class="card-aluno" id="card-grau-${a.id}" style="border-left-color:${cor}">
+        <div class="card-info">
+          <div class="card-nome">${a.nome || '—'}</div>
+          <div class="card-faixa-label" style="color:${cor}">${a.faixa || '?'}</div>
+          ${_grauDots(grauAtual, maxGrau)}
+        </div>
+        <div class="grau-controles">
+          <button class="btn-grau-dec" id="btn-dec-${a.id}" ${podeDec ? '' : 'disabled'}
+            onclick="alterarGrau('${a.id}',-1)">−</button>
+          <span class="grau-num" id="grau-num-${a.id}">${grauAtual}</span>
+          <button class="btn-grau-inc" id="btn-inc-${a.id}" ${podeInc ? '' : 'disabled'}
+            onclick="alterarGrau('${a.id}',+1)">+</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function alterarGrau(alunoId, delta) {
+  const aluno = todosAlunos.find(a => a.id === alunoId);
+  if (!aluno) return;
+
+  const maxGrau = graduacao.getMaxGraus(aluno.faixa || 'Branca');
+  const novoGrau = Math.max(0, Math.min(maxGrau, (aluno.grau || 0) + delta));
+  if (novoGrau === (aluno.grau || 0)) return;
+
+  const btnInc = document.getElementById(`btn-inc-${alunoId}`);
+  const btnDec = document.getElementById(`btn-dec-${alunoId}`);
+  btnInc.disabled = true;
+  btnDec.disabled = true;
+
+  try {
+    await db.collection('alunos').doc(alunoId).update({ grau: novoGrau });
+    aluno.grau = novoGrau;
+    // Atualiza UI sem re-renderizar tudo
+    document.getElementById(`grau-num-${alunoId}`).textContent = novoGrau;
+    const card = document.getElementById(`card-grau-${alunoId}`);
+    const dotsEl = card?.querySelector('.grau-dots');
+    if (dotsEl) dotsEl.outerHTML = _grauDots(novoGrau, maxGrau);
+    btnInc.disabled = novoGrau >= maxGrau;
+    btnDec.disabled = novoGrau <= 0;
+  } catch(e) {
+    alert('Erro ao salvar grau: ' + e.message);
+    btnInc.disabled = novoGrau >= maxGrau;
+    btnDec.disabled = novoGrau <= 0;
+  }
+}
+
+// ── FILTRO DE FAIXAS ───────────────────────────────────────
+function popularFiltroFaixas(alunos, selectId) {
+  const sel = document.getElementById(selectId);
+  const faixasUnicas = [...new Set(alunos.map(a => a.faixa).filter(Boolean))].sort();
+  const atual = sel.value;
+  while (sel.options.length > 1) sel.remove(1);
+  faixasUnicas.forEach(f => {
+    const o = document.createElement('option');
+    o.value = f; o.textContent = f;
+    sel.appendChild(o);
+  });
+  if (atual) sel.value = atual;
+}
+
+// ── CERTIFICADO ────────────────────────────────────────────
+let _certCfg = null;
+
+async function _carregarCfgCert() {
+  if (_certCfg) return _certCfg;
+  try {
+    const doc = await db.collection('configuracoes').doc('certificados').get();
+    _certCfg = doc.exists ? doc.data() : {};
+  } catch(e) { _certCfg = {}; }
+  return _certCfg;
+}
+
+async function abrirEmitirCertificado(alunoId, nome, faixa, data) {
+  const cfg = await _carregarCfgCert();
+  const isPreta = ['Preta','Preta 1º Grau','Preta 2º Grau','Preta 3º Grau','Preta 4º Grau','Preta 5º Grau','Preta 6º Grau'].some(p => faixa.startsWith('Preta'));
+  const templateUrl = isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
+
+  if (!templateUrl) {
+    alert('⚠️ Template de certificado não configurado.\nPeça ao administrador configurar em Configurações → Certificados.');
+    return;
+  }
+
+  const grauNum = 0;
+  const faixaTexto = `FAIXA ${faixa.toUpperCase()}`;
+  const profs = cfg.professores || [];
+  const lbl = 'color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;';
+  const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;margin-bottom:10px;';
+
+  const profHtml = profs.map((p,i) => `
+    <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#0f172a;border-radius:8px;cursor:pointer;margin-bottom:4px;">
+      <input type="checkbox" id="cert-prof-${i}" value="${i}" style="width:16px;height:16px;accent-color:#3b82f6;">
+      <span style="font-size:0.75rem;color:#e2e8f0;">${p.nome}</span>
+    </label>`).join('');
+
+  let modal = document.getElementById('modal-certificado-emitir');
+  if (!modal) { modal = document.createElement('div'); modal.id = 'modal-certificado-emitir'; document.body.appendChild(modal); }
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+
+  modal.innerHTML = `
+    <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:92vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span style="font-size:0.95rem;font-weight:800;color:white;">🏆 Emitir Certificado</span>
+        <button onclick="document.getElementById('modal-certificado-emitir').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+      </div>
+      <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:14px;">
+        <div style="font-size:0.7rem;color:#94a3b8;">Template: <span style="color:#f59e0b;">${isPreta ? 'A3 — Faixa Preta' : 'A4 — Coloridas'}</span></div>
+      </div>
+      <small style="${lbl}">NOME DO ALUNO</small>
+      <input type="text" id="cert-nome" value="${nome}" style="${inp}"/>
+      <small style="${lbl}">TEXTO DA FAIXA</small>
+      <input type="text" id="cert-faixa-texto" value="${faixaTexto}" style="${inp}"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <small style="${lbl}">CIDADE</small>
+          <input type="text" id="cert-cidade" value="${cfg.cidadePadrao || ''}" placeholder="Aracaju" style="${inp}"/>
+        </div>
+        <div>
+          <small style="${lbl}">DATA</small>
+          <input type="date" id="cert-data" value="${data || new Date().toISOString().split('T')[0]}" style="${inp}"/>
+        </div>
+      </div>
+      ${cfg.assinaturaPrincipalUrl || profs.length > 0 ? `
+      <small style="${lbl}">ASSINATURAS</small>
+      ${cfg.assinaturaPrincipalUrl ? `
+      <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#0f172a;border-radius:8px;cursor:pointer;margin-bottom:4px;">
+        <input type="checkbox" id="cert-prof-principal" checked style="width:16px;height:16px;accent-color:#3b82f6;">
+        <span style="font-size:0.75rem;color:#f59e0b;font-weight:700;">${cfg.assinaturaPrincipalNome || 'Professor Principal'} ⭐</span>
+      </label>` : ''}
+      ${profHtml}
+      <div style="height:8px;"></div>` : ''}
+      <button onclick="_gerarCertificado('${alunoId}','${isPreta}')" style="width:100%;padding:13px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;margin-bottom:8px;">
+        🎓 GERAR E BAIXAR CERTIFICADO
+      </button>
+    </div>`;
+
+  _certAlunoId = alunoId;
+  _certTemplateUrl = templateUrl;
+  _certIsPreta = isPreta;
+  _certCfgCache = cfg;
+}
+
+let _certAlunoId, _certTemplateUrl, _certIsPreta, _certCfgCache;
+
+async function _gerarCertificado(alunoId, isPreta) {
+  const cfg = _certCfgCache || {};
+  const nome       = document.getElementById('cert-nome')?.value.trim() || '';
+  const faixaTexto = document.getElementById('cert-faixa-texto')?.value.trim() || '';
+  const cidade     = document.getElementById('cert-cidade')?.value.trim() || '';
+  const data       = document.getElementById('cert-data')?.value || '';
+  const templateUrl = _certTemplateUrl;
+
+  const assinaturas = [];
+  if (isPreta && cfg.assinaturaPrincipalUrl && document.getElementById('cert-prof-principal')?.checked) {
+    assinaturas.push({ url: cfg.assinaturaPrincipalUrl, nome: cfg.assinaturaPrincipalNome || 'Prof. Principal' });
+  }
+  (cfg.professores || []).forEach((p, i) => {
+    if (document.getElementById(`cert-prof-${i}`)?.checked) {
+      assinaturas.push({ url: p.assinaturaUrl, nome: p.nome });
+    }
+  });
+
+  const btn = document.querySelector('#modal-certificado-emitir button[onclick*="_gerarCertificado"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+
+  try {
+    const payload = { alunoId, nome, faixaTexto, cidade, data, templateUrl, assinaturas, isPreta };
+    const res = await fetch('/api/gerar-certificado', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `certificado_${nome.replace(/\s+/g,'_')}.pdf`;
+    a.click(); URL.revokeObjectURL(url);
+    document.getElementById('modal-certificado-emitir')?.remove();
+  } catch(e) {
+    alert('Erro ao gerar certificado: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '🎓 GERAR E BAIXAR CERTIFICADO'; }
+  }
+}
+</script>
+</body>
+</html>

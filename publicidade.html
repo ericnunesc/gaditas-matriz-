@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anuncie na Gaditas Academy</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+  .header {
+    background: #1e293b;
+    border-bottom: 1px solid #334155;
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .header-logo { font-size: 0.6rem; color: #f59e0b; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; }
+  .header-title { font-size: 1.2rem; font-weight: 900; color: #f8fafc; margin-top: 4px; }
+  .header-sub { font-size: 0.72rem; color: #64748b; margin-top: 4px; }
+
+  .container { max-width: 480px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  .step-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .step-label {
+    font-size: 0.58rem;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+  }
+  .step-title {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: #e2e8f0;
+    margin-bottom: 14px;
+  }
+
+  .formato-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  .formato-btn {
+    background: #0f172a;
+    border: 2px solid #334155;
+    border-radius: 12px;
+    padding: 14px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    color: #e2e8f0;
+  }
+  .formato-btn.selected {
+    border-color: #f59e0b;
+    background: #1c1500;
+  }
+  .formato-btn .ico { font-size: 1.6rem; margin-bottom: 6px; }
+  .formato-btn .nome { font-size: 0.65rem; font-weight: 800; color: #e2e8f0; }
+  .formato-btn .preco-fmt { font-size: 0.6rem; color: #10b981; font-weight: 700; margin-top: 3px; }
+  .formato-btn .desc-fmt { font-size: 0.55rem; color: #64748b; margin-top: 2px; }
+
+  .dur-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .dur-btn {
+    background: #0f172a;
+    border: 2px solid #334155;
+    border-radius: 10px;
+    padding: 12px 6px;
+    cursor: pointer;
+    text-align: center;
+    color: #e2e8f0;
+    transition: all 0.2s;
+  }
+  .dur-btn.selected { border-color: #3b82f6; background: #0d1e3a; }
+  .dur-btn .dur-label { font-size: 0.75rem; font-weight: 800; }
+  .dur-btn .dur-preco { font-size: 0.6rem; color: #10b981; font-weight: 700; margin-top: 4px; }
+
+  input[type=text], input[type=url], input[type=email] {
+    width: 100%;
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus { border-color: #f59e0b; }
+  label { font-size: 0.65rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 5px; }
+
+  .upload-zone {
+    border: 2px dashed #334155;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    background: #0f172a;
+  }
+  .upload-zone:hover { border-color: #f59e0b; }
+  .upload-zone .up-ico { font-size: 2rem; color: #475569; margin-bottom: 8px; }
+  .upload-zone .up-text { font-size: 0.72rem; color: #64748b; }
+  .upload-zone img { max-width: 100%; max-height: 200px; border-radius: 8px; object-fit: contain; }
+
+  .total-card {
+    background: linear-gradient(135deg, #1c1500, #0f172a);
+    border: 2px solid #f59e0b;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .total-label { font-size: 0.65rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .total-valor { font-size: 2.2rem; font-weight: 900; color: #f59e0b; }
+  .total-detalhe { font-size: 0.65rem; color: #64748b; margin-top: 6px; }
+
+  .btn-pagar {
+    width: 100%;
+    background: #f59e0b;
+    border: none;
+    color: #000;
+    padding: 16px;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+  .btn-pagar:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-pagar:hover:not(:disabled) { opacity: 0.9; }
+
+  .aviso-inativo {
+    text-align: center;
+    padding: 60px 20px;
+    color: #475569;
+  }
+  .aviso-inativo .ico { font-size: 3rem; margin-bottom: 16px; }
+  .aviso-inativo h2 { font-size: 1rem; font-weight: 800; color: #64748b; margin-bottom: 8px; }
+  .aviso-inativo p { font-size: 0.75rem; }
+
+  .loading { text-align: center; padding: 60px 20px; color: #475569; font-size: 0.8rem; }
+
+  .resumo-linha {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    padding: 6px 0;
+    border-bottom: 1px solid #1e293b;
+    color: #94a3b8;
+  }
+  .resumo-linha span:last-child { color: #e2e8f0; font-weight: 700; }
+  .resumo-linha.destaque span:last-child { color: #f59e0b; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">🥋 Gaditas Academy</div>
+  <div class="header-title">Anuncie Aqui</div>
+  <div class="header-sub">Alcance alunos e familiares diretamente no app</div>
+</div>
+
+<div id="app-root" class="container">
+  <div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+  authDomain: "gaditasmatriz.firebaseapp.com",
+  projectId: "gaditasmatriz",
+  storageBucket: "gaditasmatriz.firebasestorage.app",
+  messagingSenderId: "166834416988",
+  appId: "1:166834416988:web:2921c95c87c42019282599"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const FORMATOS = [
+  { id: 'story',  label: 'Story',  ico: '🎬', desc: 'Tela cheia ao abrir o app' },
+  { id: 'popup',  label: 'Popup',  ico: '💬', desc: 'Aparece no login do aluno' },
+  { id: 'banner', label: 'Banner', ico: '🖼', desc: 'Fixo na tela inicial' },
+];
+
+let cfg = {};
+let precos = {};
+let selFormato = null;
+let selDurIdx = null;
+let imagemBase64 = null;
+let imagemNome = null;
+
+async function init() {
+  const [cfgSnap, precosSnap] = await Promise.all([
+    db.collection('publicidade_config').doc('pagina').get(),
+    db.collection('publicidade_config').doc('precos').get(),
+  ]);
+  cfg = cfgSnap.exists ? cfgSnap.data() : {};
+  precos = precosSnap.exists ? precosSnap.data() : {};
+
+  if (!cfg.ativa) {
+    document.getElementById('app-root').innerHTML = `
+      <div class="aviso-inativo">
+        <div class="ico">🚫</div>
+        <h2>Página indisponível</h2>
+        <p>As vagas de publicidade estão temporariamente fechadas. Tente novamente em breve.</p>
+      </div>`;
+    return;
+  }
+  renderForm();
+}
+
+function renderForm() {
+  const root = document.getElementById('app-root');
+  root.innerHTML = `
+    <!-- PASSO 1: Formato -->
+    <div class="step-card">
+      <div class="step-label">Passo 1</div>
+      <div class="step-title">Onde você quer anunciar?</div>
+      <div class="formato-grid" id="formato-grid">
+        ${FORMATOS.map(f => `
+          <div class="formato-btn" onclick="selecionarFormato('${f.id}')" id="fmt-${f.id}">
+            <div class="ico">${f.ico}</div>
+            <div class="nome">${f.label}</div>
+            <div class="preco-fmt" id="preco-fmt-${f.id}">R$ ${(precos[f.id]||0).toFixed(2)}</div>
+            <div class="desc-fmt">${f.desc}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- PASSO 2: Duração -->
+    <div class="step-card" id="step-dur" style="display:none;">
+      <div class="step-label">Passo 2</div>
+      <div class="step-title">Por quanto tempo?</div>
+      <div class="dur-grid" id="dur-grid"></div>
+    </div>
+
+    <!-- PASSO 3: Imagem -->
+    <div class="step-card" id="step-imagem" style="display:none;">
+      <div class="step-label">Passo 3</div>
+      <div class="step-title">Carregue sua imagem</div>
+      <div class="upload-zone" onclick="document.getElementById('file-input').click()" id="upload-zone">
+        <div class="up-ico">📁</div>
+        <div class="up-text">Toque para selecionar imagem<br><span style="font-size:0.6rem;color:#475569;">JPG, PNG, GIF — máx 5MB</span></div>
+      </div>
+      <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="selecionarImagem(this)">
+    </div>
+
+    <!-- PASSO 4: Dados -->
+    <div class="step-card" id="step-dados" style="display:none;">
+      <div class="step-label">Passo 4</div>
+      <div class="step-title">Informações do anúncio</div>
+      <div style="margin-bottom:12px;">
+        <label>Nome da empresa / produto *</label>
+        <input type="text" id="campo-empresa" placeholder="Ex: Loja do João" oninput="atualizarResumo()">
+      </div>
+      <div>
+        <label>Link (opcional) — ao clicar no anúncio, abre esse endereço</label>
+        <input type="url" id="campo-link" placeholder="https://..." oninput="atualizarResumo()">
+      </div>
+    </div>
+
+    <!-- RESUMO + TOTAL -->
+    <div class="total-card" id="resumo-card" style="display:none;">
+      <div class="total-label">Resumo do pedido</div>
+      <div id="resumo-linhas" style="text-align:left;margin-bottom:16px;"></div>
+      <div class="total-label" style="margin-top:4px;">Total a pagar</div>
+      <div class="total-valor" id="total-valor">R$ 0,00</div>
+      <div class="total-detalhe" id="total-detalhe"></div>
+    </div>
+
+    <!-- BOTÃO PAGAR -->
+    <button class="btn-pagar" id="btn-pagar" disabled onclick="irParaPagamento()">
+      <i class="fas fa-credit-card"></i> IR PARA O PAGAMENTO
+    </button>
+
+    <div style="text-align:center;margin-top:12px;font-size:0.62rem;color:#334155;">
+      Após o pagamento, envie o comprovante para confirmarmos seu anúncio.
+    </div>`;
+}
+
+function selecionarFormato(id) {
+  selFormato = id;
+  selDurIdx = null;
+  document.querySelectorAll('.formato-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('fmt-' + id).classList.add('selected');
+  renderDuracoes();
+  document.getElementById('step-dur').style.display = '';
+  document.getElementById('step-imagem').style.display = '';
+  document.getElementById('step-dados').style.display = '';
+  atualizarResumo();
+}
+
+function renderDuracoes() {
+  const dur = cfg.duracoes || [];
+  const precoBase = precos[selFormato] || 0;
+  document.getElementById('dur-grid').innerHTML = dur.map((d, i) => {
+    const total = (precoBase * (d.mult || 1)).toFixed(2);
+    return `<div class="dur-btn" onclick="selecionarDur(${i})" id="dur-${i}">
+      <div class="dur-label">${d.label}</div>
+      <div class="dur-preco">R$ ${total}</div>
+    </div>`;
+  }).join('');
+}
+
+function selecionarDur(idx) {
+  selDurIdx = idx;
+  document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('dur-' + idx).classList.add('selected');
+  atualizarResumo();
+}
+
+function selecionarImagem(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('Imagem muito grande! Máx 5MB.'); return; }
+  imagemNome = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const max = 800;
+      let w = img.width, h = img.height;
+      if (w > max) { h = Math.round(h * max / w); w = max; }
+      if (h > max) { w = Math.round(w * max / h); h = max; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      imagemBase64 = canvas.toDataURL('image/jpeg', 0.82);
+      const zone = document.getElementById('upload-zone');
+      zone.innerHTML = `<img src="${imagemBase64}" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:contain;">
+        <div style="margin-top:8px;font-size:0.65rem;color:#10b981;font-weight:700;">✅ Imagem pronta</div>`;
+      atualizarResumo();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function calcularTotal() {
+  if (!selFormato || selDurIdx === null) return 0;
+  const dur = (cfg.duracoes || [])[selDurIdx];
+  if (!dur) return 0;
+  return (precos[selFormato] || 0) * (dur.mult || 1);
+}
+
+function atualizarResumo() {
+  const total = calcularTotal();
+  const empresa = document.getElementById('campo-empresa')?.value.trim();
+  const durObj = (cfg.duracoes || [])[selDurIdx];
+  const fmtObj = FORMATOS.find(f => f.id === selFormato);
+
+  const resumaCard = document.getElementById('resumo-card');
+  if (!resumaCard) return;
+
+  const pronto = selFormato && selDurIdx !== null && imagemBase64 && empresa;
+
+  if (selFormato && selDurIdx !== null) {
+    resumaCard.style.display = '';
+    document.getElementById('resumo-linhas').innerHTML = `
+      ${fmtObj ? `<div class="resumo-linha"><span>Formato</span><span>${fmtObj.ico} ${fmtObj.label}</span></div>` : ''}
+      ${durObj ? `<div class="resumo-linha"><span>Duração</span><span>${durObj.label}</span></div>` : ''}
+      ${empresa ? `<div class="resumo-linha"><span>Anunciante</span><span>${empresa}</span></div>` : ''}
+      <div class="resumo-linha destaque"><span>Total</span><span>R$ ${total.toFixed(2).replace('.',',')}</span></div>`;
+    document.getElementById('total-valor').textContent = `R$ ${total.toFixed(2).replace('.',',')}`;
+    document.getElementById('total-detalhe').textContent = durObj ? `${fmtObj?.label || ''} · ${durObj.label}` : '';
+  }
+
+  const btnPagar = document.getElementById('btn-pagar');
+  if (btnPagar) btnPagar.disabled = !pronto;
+}
+
+function irParaPagamento() {
+  const total = calcularTotal();
+  const empresa = document.getElementById('campo-empresa')?.value.trim();
+  const link = document.getElementById('campo-link')?.value.trim();
+  const durObj = (cfg.duracoes || [])[selDurIdx];
+  const fmtObj = FORMATOS.find(f => f.id === selFormato);
+
+  if (!empresa || !selFormato || selDurIdx === null || !imagemBase64) {
+    alert('Preencha todos os campos obrigatórios e carregue a imagem.');
+    return;
+  }
+
+  // Determinar link de pagamento
+  const links = cfg.links || {};
+  const linkPgto = links[selFormato] || links.universal || '';
+  if (!linkPgto) {
+    alert('Link de pagamento não configurado. Entre em contato diretamente com a academia.');
+    return;
+  }
+
+  // Salvar pedido no Firestore como "pendente"
+  const pedido = {
+    anunciante: empresa,
+    formato: selFormato,
+    duracao: durObj,
+    linkExterno: link || null,
+    imagemBase64: imagemBase64,
+    imagemNome: imagemNome,
+    valorTotal: total,
+    status: 'pendente',
+    criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+  };
+
+  db.collection('publicidade_pedidos').add(pedido)
+    .then(ref => {
+      // Montar mensagem para WhatsApp se for link do WhatsApp
+      const msg = encodeURIComponent(
+        `Olá! Quero anunciar na Gaditas Academy.\n\n` +
+        `📢 Anunciante: ${empresa}\n` +
+        `📌 Formato: ${fmtObj?.label}\n` +
+        `📅 Duração: ${durObj?.label}\n` +
+        `💰 Total: R$ ${total.toFixed(2).replace('.',',')}\n` +
+        `🆔 Pedido: ${ref.id}\n\n` +
+        `(Vou enviar o comprovante após o pagamento)`
+      );
+
+      let urlFinal = linkPgto;
+      if (linkPgto.includes('wa.me') || linkPgto.includes('whatsapp')) {
+        const base = linkPgto.split('?')[0];
+        urlFinal = `${base}?text=${msg}`;
+      }
+      window.open(urlFinal, '_blank');
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Erro ao registrar pedido. Tente novamente.');
+    });
+}
+
+init();
+</script>
+</body>
+</html>

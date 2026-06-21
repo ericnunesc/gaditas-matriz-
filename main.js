@@ -14351,6 +14351,7 @@ const publicidade = {
 
         const duracoes = cfg.duracoes || [{dias:7,label:'7 dias'},{dias:15,label:'15 dias'},{dias:30,label:'30 dias'}];
         const exibicoes = cfg.exibicoes || [{vezes:1,label:'1× por aluno',preco:0},{vezes:3,label:'3× por aluno',preco:0},{vezes:5,label:'5× por aluno',preco:0}];
+        const pacotesBanner = cfg.pacotesBanner || [{label:'1 dia',preco:0},{label:'5 dias',preco:0},{label:'10 dias',preco:0},{label:'30 dias',preco:0}];
         const links = cfg.links || {};
 
         const inpStyle = 'background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px 9px;border-radius:8px;font-size:0.75rem;';
@@ -14375,11 +14376,11 @@ const publicidade = {
                     </label>
                 </div>
 
-                <!-- Preço por dia por formato -->
+                <!-- Preço por dia — Story e Popup -->
                 <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:12px;">
-                    <div style="font-size:0.75rem;font-weight:800;color:#e2e8f0;margin-bottom:4px;">💰 Preço por dia (por formato)</div>
-                    <div style="font-size:0.62rem;color:#64748b;margin-bottom:10px;">Total = preço/dia × dias escolhidos + preço de exibição</div>
-                    ${this.FORMATOS.map(f => `
+                    <div style="font-size:0.75rem;font-weight:800;color:#e2e8f0;margin-bottom:4px;">💰 Preço por dia — Story e Popup</div>
+                    <div style="font-size:0.62rem;color:#64748b;margin-bottom:10px;">Total = preço/dia × dias escolhidos</div>
+                    ${this.FORMATOS.filter(f => f.id !== 'banner').map(f => `
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                         <span style="font-size:0.75rem;color:#94a3b8;">${f.label}</span>
                         <div style="display:flex;align-items:center;gap:6px;">
@@ -14388,6 +14389,26 @@ const publicidade = {
                             <span style="font-size:0.62rem;color:#475569;">/dia</span>
                         </div>
                     </div>`).join('')}
+                </div>
+
+                <!-- Pacotes Banner Fixo -->
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:12px;">
+                    <div style="font-size:0.75rem;font-weight:800;color:#e2e8f0;margin-bottom:4px;">📌 Pacotes Banner Fixo</div>
+                    <div style="font-size:0.62rem;color:#64748b;margin-bottom:10px;">Pacotes com preço fixo que o anunciante escolhe</div>
+                    <div style="display:grid;grid-template-columns:1fr 80px 28px;gap:6px;margin-bottom:6px;">
+                        <span style="font-size:0.6rem;color:#475569;font-weight:700;">RÓTULO</span>
+                        <span style="font-size:0.6rem;color:#475569;font-weight:700;">R$ PREÇO</span>
+                        <span></span>
+                    </div>
+                    <div id="pag-banner-lista">
+                        ${pacotesBanner.map((b,i) => `
+                        <div style="display:grid;grid-template-columns:1fr 80px 28px;gap:6px;margin-bottom:6px;align-items:center;">
+                            <input type="text" value="${b.label}" style="${inpStyle}" data-banner-label="${i}">
+                            <input type="number" value="${b.preco||0}" step="0.01" style="${inpStyle}" data-banner-preco="${i}">
+                            <button onclick="this.parentElement.remove()" style="background:#7f1d1d;border:none;color:#fca5a5;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:0.8rem;">🗑</button>
+                        </div>`).join('')}
+                    </div>
+                    <button onclick="publicidade._addBannerLinha()" style="background:#334155;border:none;color:#94a3b8;padding:7px 12px;border-radius:8px;font-size:0.65rem;font-weight:700;cursor:pointer;width:100%;margin-top:4px;">+ Adicionar pacote</button>
                 </div>
 
                 <!-- Opções de duração -->
@@ -14464,6 +14485,18 @@ const publicidade = {
         lista.appendChild(div);
     },
 
+    _addBannerLinha() {
+        const lista = document.getElementById('pag-banner-lista');
+        const i = lista.children.length;
+        const div = document.createElement('div');
+        div.style.cssText = 'display:grid;grid-template-columns:1fr 80px 28px;gap:6px;margin-bottom:6px;align-items:center;';
+        div.innerHTML = `
+            <input type="text" placeholder="Rótulo" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px 9px;border-radius:8px;font-size:0.75rem;" data-banner-label="${i}">
+            <input type="number" placeholder="R$" value="0" step="0.01" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px 9px;border-radius:8px;font-size:0.75rem;" data-banner-preco="${i}">
+            <button onclick="this.parentElement.remove()" style="background:#7f1d1d;border:none;color:#fca5a5;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:0.8rem;">🗑</button>`;
+        lista.appendChild(div);
+    },
+
     _addExibLinha() {
         const lista = document.getElementById('pag-exibicoes-lista');
         const i = lista.children.length;
@@ -14480,11 +14513,17 @@ const publicidade = {
     async _salvarPagina() {
         const ativa = document.getElementById('pag-ativa').checked;
 
-        // Preços por dia por formato
+        // Preços por dia (só story e popup)
         const precosNovos = {};
-        this.FORMATOS.forEach(f => {
+        this.FORMATOS.filter(f => f.id !== 'banner').forEach(f => {
             precosNovos[f.id] = parseFloat(document.getElementById(`preco-dia-${f.id}`)?.value) || 0;
         });
+
+        // Pacotes Banner
+        const pacotesBanner = [...document.getElementById('pag-banner-lista').children].map(row => ({
+            label: row.querySelector('[data-banner-label]')?.value || '',
+            preco: parseFloat(row.querySelector('[data-banner-preco]')?.value) || 0,
+        })).filter(b => b.label);
 
         // Durações
         const duracoes = [...document.getElementById('pag-duracoes-lista').children].map(row => ({
@@ -14507,7 +14546,7 @@ const publicidade = {
         });
 
         await Promise.all([
-            db.collection('publicidade_config').doc('pagina').set({ ativa, duracoes, exibicoes, links }),
+            db.collection('publicidade_config').doc('pagina').set({ ativa, duracoes, exibicoes, pacotesBanner, links }),
             db.collection('publicidade_config').doc('precos').set(precosNovos),
         ]);
         document.getElementById('modal-midia-pagina')?.remove();

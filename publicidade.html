@@ -226,6 +226,7 @@ async function init() {
 
 // tipoPagamento: 'dias' | 'exibicoes'
 let tipoPagamento = null;
+let selBannerIdx = null;
 
 function renderForm() {
   const root = document.getElementById('app-root');
@@ -262,11 +263,18 @@ function renderForm() {
       </div>
     </div>
 
-    <!-- PASSO 3a: Opções de duração (se escolheu "por dias") -->
+    <!-- PASSO 3a: Opções de duração (Story/Popup por dias) -->
     <div class="step-card" id="step-dur" style="display:none;">
       <div class="step-label">Passo 3</div>
       <div class="step-title">Por quantos dias?</div>
       <div class="dur-grid" id="dur-grid"></div>
+    </div>
+
+    <!-- PASSO 3c: Pacotes Banner -->
+    <div class="step-card" id="step-banner" style="display:none;">
+      <div class="step-label">Passo 2</div>
+      <div class="step-title">Escolha o pacote</div>
+      <div class="dur-grid" id="banner-grid"></div>
     </div>
 
     <!-- PASSO 3b: Opções de exibições (se escolheu "por visualizações") -->
@@ -332,17 +340,23 @@ function selecionarFormato(id) {
   const elPreco = document.getElementById('preco-tipo-dias');
   if (elPreco) elPreco.textContent = `R$ ${precoDia.toFixed(2)}/dia`;
 
-  // Banner só aceita por dias — seleciona automaticamente
-  const soBannerPorDia = id === 'banner';
-  const btnExib = document.getElementById('tipo-exibicoes');
-  if (btnExib) btnExib.style.display = soBannerPorDia ? 'none' : '';
-  if (soBannerPorDia) {
-    selecionarTipo('dias');
+  if (id === 'banner') {
+    // Banner: pula escolha de tipo, mostra pacotes próprios
+    tipoPagamento = 'banner';
+    selDurIdx = null; selExibIdx = null; selBannerIdx = null;
+    renderBannerPacotes();
+    document.getElementById('step-tipo').style.display = 'none';
+    document.getElementById('step-dur').style.display = 'none';
+    document.getElementById('step-exib').style.display = 'none';
+    document.getElementById('step-banner').style.display = '';
+  } else {
+    tipoPagamento = null;
+    selBannerIdx = null;
+    document.getElementById('step-tipo').style.display = '';
+    document.getElementById('step-dur').style.display = 'none';
+    document.getElementById('step-exib').style.display = 'none';
+    document.getElementById('step-banner').style.display = 'none';
   }
-
-  document.getElementById('step-tipo').style.display = soBannerPorDia ? 'none' : '';
-  document.getElementById('step-dur').style.display = soBannerPorDia ? '' : 'none';
-  document.getElementById('step-exib').style.display = 'none';
   document.getElementById('step-imagem').style.display = '';
   document.getElementById('step-dados').style.display = '';
   atualizarResumo();
@@ -403,6 +417,22 @@ function selecionarExib(idx) {
   atualizarResumo();
 }
 
+function renderBannerPacotes() {
+  const pacotes = cfg.pacotesBanner || [];
+  document.getElementById('banner-grid').innerHTML = pacotes.map((p, i) => `
+    <div class="dur-btn" onclick="selecionarBanner(${i})" id="banner-${i}">
+      <div class="dur-label">${p.label}</div>
+      <div class="dur-preco">R$ ${(p.preco||0).toFixed(2)}</div>
+    </div>`).join('');
+}
+
+function selecionarBanner(idx) {
+  selBannerIdx = idx;
+  document.querySelectorAll('#banner-grid .dur-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('banner-' + idx).classList.add('selected');
+  atualizarResumo();
+}
+
 function selecionarImagem(input) {
   const file = input.files[0];
   if (!file) return;
@@ -432,17 +462,20 @@ function selecionarImagem(input) {
 
 function calcularTotal() {
   if (!selFormato || !tipoPagamento) return 0;
+  if (tipoPagamento === 'banner') {
+    if (selBannerIdx === null) return 0;
+    return (cfg.pacotesBanner || [])[selBannerIdx]?.preco || 0;
+  }
   if (tipoPagamento === 'dias') {
     if (selDurIdx === null) return 0;
     const dur = (cfg.duracoes || [])[selDurIdx];
-    if (!dur) return 0;
-    return (precos[selFormato] || 0) * dur.dias;
-  } else {
-    if (selExibIdx === null) return 0;
-    const exib = (cfg.exibicoes || [])[selExibIdx];
-    if (!exib) return 0;
-    return exib.preco || 0;
+    return dur ? (precos[selFormato] || 0) * dur.dias : 0;
   }
+  if (tipoPagamento === 'exibicoes') {
+    if (selExibIdx === null) return 0;
+    return (cfg.exibicoes || [])[selExibIdx]?.preco || 0;
+  }
+  return 0;
 }
 
 function atualizarResumo() {
@@ -450,19 +483,24 @@ function atualizarResumo() {
   const empresa = document.getElementById('campo-empresa')?.value.trim();
   const durObj = (cfg.duracoes || [])[selDurIdx];
   const exibObj = (cfg.exibicoes || [])[selExibIdx];
+  const bannerObj = (cfg.pacotesBanner || [])[selBannerIdx];
   const fmtObj = FORMATOS.find(f => f.id === selFormato);
   const precoDia = precos[selFormato] || 0;
 
   const resumoCard = document.getElementById('resumo-card');
   if (!resumoCard) return;
 
-  const opcaoSelecionada = tipoPagamento === 'dias' ? selDurIdx !== null : selExibIdx !== null;
-  const pronto = selFormato && tipoPagamento && opcaoSelecionada && imagemBase64 && empresa;
+  const opcaoOk = tipoPagamento === 'banner' ? selBannerIdx !== null
+                : tipoPagamento === 'dias'    ? selDurIdx !== null
+                : tipoPagamento === 'exibicoes' ? selExibIdx !== null : false;
+  const pronto = selFormato && tipoPagamento && opcaoOk && imagemBase64 && empresa;
 
-  if (selFormato && tipoPagamento && opcaoSelecionada) {
+  if (selFormato && tipoPagamento && opcaoOk) {
     resumoCard.style.display = '';
     let linhas = fmtObj ? `<div class="resumo-linha"><span>Formato</span><span>${fmtObj.label}</span></div>` : '';
-    if (tipoPagamento === 'dias' && durObj) {
+    if (tipoPagamento === 'banner' && bannerObj) {
+      linhas += `<div class="resumo-linha"><span>Pacote</span><span>${bannerObj.label}</span></div>`;
+    } else if (tipoPagamento === 'dias' && durObj) {
       linhas += `<div class="resumo-linha"><span>Modalidade</span><span>Por dias</span></div>`;
       linhas += `<div class="resumo-linha"><span>Duração</span><span>${durObj.label} × R$ ${precoDia.toFixed(2)}/dia</span></div>`;
     } else if (tipoPagamento === 'exibicoes' && exibObj) {
@@ -474,9 +512,10 @@ function atualizarResumo() {
 
     document.getElementById('resumo-linhas').innerHTML = linhas;
     document.getElementById('total-valor').textContent = `R$ ${total.toFixed(2).replace('.',',')}`;
-    document.getElementById('total-detalhe').textContent =
-      tipoPagamento === 'dias' ? `${fmtObj?.label || ''} · ${durObj?.label || ''}` :
-      `${fmtObj?.label || ''} · ${exibObj?.label || ''}`;
+    const detalhe = tipoPagamento === 'banner' ? `${fmtObj?.label || ''} · ${bannerObj?.label || ''}`
+                  : tipoPagamento === 'dias'   ? `${fmtObj?.label || ''} · ${durObj?.label || ''}`
+                  : `${fmtObj?.label || ''} · ${exibObj?.label || ''}`;
+    document.getElementById('total-detalhe').textContent = detalhe;
   }
 
   const btnPagar = document.getElementById('btn-pagar');
@@ -491,7 +530,9 @@ async function irParaPagamento() {
   const exibObj = (cfg.exibicoes || [])[selExibIdx];
   const fmtObj = FORMATOS.find(f => f.id === selFormato);
 
-  const opcaoOk = tipoPagamento === 'dias' ? selDurIdx !== null : selExibIdx !== null;
+  const opcaoOk = tipoPagamento === 'banner' ? selBannerIdx !== null
+                : tipoPagamento === 'dias'   ? selDurIdx !== null
+                : selExibIdx !== null;
   if (!empresa || !selFormato || !tipoPagamento || !opcaoOk || !imagemBase64) {
     alert('Preencha todos os campos obrigatórios e carregue a imagem.');
     return;
@@ -521,7 +562,7 @@ async function irParaPagamento() {
       anunciante: empresa,
       formato: selFormato,
       tipoPagamento,
-      duracao: tipoPagamento === 'dias' ? durObj : null,
+      duracao: tipoPagamento === 'dias' ? durObj : tipoPagamento === 'banner' ? (cfg.pacotesBanner||[])[selBannerIdx] : null,
       exibicao: tipoPagamento === 'exibicoes' ? exibObj : null,
       linkExterno: link || null,
       imagemUrl,
@@ -531,9 +572,10 @@ async function irParaPagamento() {
     });
 
     // Redirecionar para pagamento
-    const detalhe = tipoPagamento === 'dias'
-      ? `📅 Duração: ${durObj?.label}`
-      : `👁 Exibições: ${exibObj?.label}`;
+    const bannerObj2 = (cfg.pacotesBanner || [])[selBannerIdx];
+    const detalhe = tipoPagamento === 'banner' ? `📌 Pacote: ${bannerObj2?.label}`
+                  : tipoPagamento === 'dias'   ? `📅 Duração: ${durObj?.label}`
+                  : `👁 Exibições: ${exibObj?.label}`;
     const msg = encodeURIComponent(
       `Olá! Quero anunciar na Gaditas Academy.\n\n` +
       `📢 Anunciante: ${empresa}\n` +

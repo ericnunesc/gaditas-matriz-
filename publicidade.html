@@ -327,15 +327,24 @@ function selecionarFormato(id) {
   tipoPagamento = null;
   document.querySelectorAll('.formato-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('fmt-' + id).classList.add('selected');
-  // Mostrar preço/dia no card de tipo
+
   const precoDia = precos[id] || 0;
   const elPreco = document.getElementById('preco-tipo-dias');
   if (elPreco) elPreco.textContent = `R$ ${precoDia.toFixed(2)}/dia`;
-  document.getElementById('step-tipo').style.display = '';
-  document.getElementById('step-dur').style.display = 'none';
+
+  // Banner só aceita por dias — seleciona automaticamente
+  const soBannerPorDia = id === 'banner';
+  const btnExib = document.getElementById('tipo-exibicoes');
+  if (btnExib) btnExib.style.display = soBannerPorDia ? 'none' : '';
+  if (soBannerPorDia) {
+    selecionarTipo('dias');
+  }
+
+  document.getElementById('step-tipo').style.display = soBannerPorDia ? 'none' : '';
+  document.getElementById('step-dur').style.display = soBannerPorDia ? '' : 'none';
   document.getElementById('step-exib').style.display = 'none';
-  document.getElementById('step-imagem').style.display = 'none';
-  document.getElementById('step-dados').style.display = 'none';
+  document.getElementById('step-imagem').style.display = '';
+  document.getElementById('step-dados').style.display = '';
   atualizarResumo();
 }
 

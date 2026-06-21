@@ -13933,7 +13933,7 @@ const publicidade = {
                     </div>
                     <div>
                         <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">FORMATO</label>
-                        <select id="camp-formato" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;">
+                        <select id="camp-formato" onchange="publicidade._onFormatoChange(this.value)" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;">
                             ${this.FORMATOS.map(f => `<option value="${f.id}">${f.label} — ${f.desc}</option>`).join('')}
                         </select>
                     </div>
@@ -13993,6 +13993,16 @@ const publicidade = {
                 <button onclick="publicidade.salvarCampanha()" style="width:100%;padding:13px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.82rem;margin-top:16px;">💾 SALVAR CAMPANHA</button>
                 <div id="camp-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
             </div>`;
+    },
+
+    _onFormatoChange(formato) {
+        const btnExib = document.getElementById('tipo-btn-exib');
+        if (formato === 'banner') {
+            if (btnExib) btnExib.style.display = 'none';
+            this._toggleTipoCamp('dias');
+        } else {
+            if (btnExib) btnExib.style.display = '';
+        }
     },
 
     _toggleTipoCamp(tipo) {

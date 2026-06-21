@@ -13981,7 +13981,7 @@ const publicidade = {
                     </div>
                     <!-- Por visualizações -->
                     <div id="camp-bloco-exib" style="display:none;">
-                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">EXIBIÇÕES / ALUNO</label>
+                        <label id="camp-label-exib" style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">EXIBIÇÕES / ALUNO</label>
                         <input id="camp-impressoes" type="number" value="3" min="1" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;">
                     </div>
                     <!-- Valor pago -->
@@ -13993,15 +13993,24 @@ const publicidade = {
                 <button onclick="publicidade.salvarCampanha()" style="width:100%;padding:13px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.82rem;margin-top:16px;">💾 SALVAR CAMPANHA</button>
                 <div id="camp-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
             </div>`;
+        // Aplicar regras do formato padrão ao abrir
+        const fmtInicial = document.getElementById('camp-formato')?.value;
+        if (fmtInicial) this._onFormatoChange(fmtInicial);
     },
 
     _onFormatoChange(formato) {
         const btnExib = document.getElementById('tipo-btn-exib');
+        const blocoExib = document.getElementById('camp-bloco-exib');
+        const labelExib = document.getElementById('camp-label-exib');
         if (formato === 'banner') {
-            if (btnExib) btnExib.style.display = 'none';
+            // Força "por dias" e esconde tudo relacionado a visualizações
             this._toggleTipoCamp('dias');
+            if (btnExib) btnExib.style.display = 'none';
+            if (blocoExib) blocoExib.style.display = 'none';
+            if (labelExib) labelExib.style.display = 'none';
         } else {
             if (btnExib) btnExib.style.display = '';
+            if (labelExib) labelExib.style.display = '';
         }
     },
 

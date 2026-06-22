@@ -563,7 +563,13 @@
                         if (asaasMatriculaId)    novoAluno.asaasMatriculaId    = asaasMatriculaId;
                         await db.collection("alunos").doc(uid).set(novoAluno);
 
-                        // 6. Registra na coleção de novos cadastros para alerta do admin
+                        // 6. Marca experimental como concluído (se veio de link experimental)
+                        const expId = params.get('expId');
+                        if (expId) {
+                            await db.collection('experimentais').doc(expId).update({ status: 'concluido', alunoId: uid }).catch(() => {});
+                        }
+
+                        // 7. Registra na coleção de novos cadastros para alerta do admin
                         await db.collection("novos_cadastros").add({
                             alunoId: uid,
                             nome, email,

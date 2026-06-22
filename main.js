@@ -7231,8 +7231,8 @@ Ele voltará a ser aluno normal.`)) return;
             docs.forEach(e => {
                 const isHoje = e.data === hoje;
                 const modalLabel = e.modalidade === 'muaythai' ? '🥊 MT' : e.modalidade === 'ambos' ? '⚔️ Ambos' : '🥋 JJ';
-                const statusColor = e.status === 'aprovado' ? '#10b981' : e.status === 'matriculado' ? '#a78bfa' : '#f59e0b';
-                const statusLabel = e.status === 'aprovado' ? '✅ Aprovado' : e.status === 'matriculado' ? '🎓 Matriculado' : '⏳ Pendente';
+                const statusColor = e.status === 'concluido' ? '#10b981' : e.status === 'aprovado' ? '#10b981' : e.status === 'matriculado' ? '#a78bfa' : '#f59e0b';
+                const statusLabel = e.status === 'concluido' ? '🎓 Cadastro Concluído' : e.status === 'aprovado' ? '✅ Aprovado' : e.status === 'matriculado' ? '🔗 Link Enviado' : '⏳ Pendente';
                 html += `
                     <div style="background:#0f172a; border:1px solid ${isHoje ? '#3b82f633' : '#1e293b'}; border-radius:10px; padding:12px; margin-bottom:8px;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
@@ -7247,7 +7247,11 @@ Ele voltará a ser aluno normal.`)) return;
                                     style="background:#1e1040; border:1px solid #7c3aed44; color:#a78bfa; padding:5px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer; white-space:nowrap;">
                                     🔗 Gerar link matrícula
                                 </button>
-                                ${e.status === 'matriculado' ? `<button onclick="academia.reverterExperimentalPendente('${e.id}')"
+                                ${e.status === 'concluido' ? `<button onclick="academia.confirmarMatriculaExperimental('${e.id}')"
+                                    style="background:#052e16; border:1px solid #10b981; color:#10b981; padding:5px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer; white-space:nowrap;">
+                                    ✅ OK — Confirmar Matrícula
+                                </button>` : ''}
+                                ${(e.status === 'matriculado' || e.status === 'concluido') ? `<button onclick="academia.reverterExperimentalPendente('${e.id}')"
                                     style="background:#1a0a00; border:1px solid #f59e0b55; color:#f59e0b; padding:5px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer; white-space:nowrap;">
                                     ↩️ Reverter para Pendente
                                 </button>` : ''}
@@ -7282,20 +7286,27 @@ Ele voltará a ser aluno normal.`)) return;
                 telefone:   e.telefone   || '',
                 nascimento: e.nascimento || '',
                 cpf:        e.cpf        || '',
-                modalidade: e.modalidade || 'jiujitsu'
+                modalidade: e.modalidade || 'jiujitsu',
+                expId:      expId
             });
             const link = `${window.location.origin}/cadastro.html?${params.toString()}`;
             await navigator.clipboard.writeText(link);
 
-            // Marca como matriculado
+            // Marca como matriculado (aguardando aluno concluir cadastro)
             await db.collection('experimentais').doc(expId).update({ status: 'matriculado' });
             alert('✅ Link copiado!\n\nEnvie para o aluno pelo WhatsApp. Os dados dele já estarão pré-preenchidos, só precisará escolher o plano.');
             this.renderPainelExperimentais();
         } catch(e) { alert('Erro: ' + e.message); }
     },
 
+    async confirmarMatriculaExperimental(id) {
+        if (!confirm('Confirmar matrícula e remover da lista de experimentais?')) return;
+        await db.collection('experimentais').doc(id).delete();
+        this.renderPainelExperimentais();
+    },
+
     async reverterExperimentalPendente(id) {
-        if (!confirm('Reverter para Pendente? O status "Matriculado" será desfeito.')) return;
+        if (!confirm('Reverter para Pendente? O status atual será desfeito.')) return;
         await db.collection('experimentais').doc(id).update({ status: 'pendente' });
         this.renderPainelExperimentais();
     },

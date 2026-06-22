@@ -14618,7 +14618,7 @@ const publicidade = {
                 ${camp.imagemUrl
                     ? `<img src="${camp.imagemUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid #0f172a;">`
                     : `<div style="width:100%;height:100%;border-radius:50%;background:#1e293b;border:2px solid #0f172a;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">📢</div>`}
-                <span style="position:absolute;bottom:-2px;right:-2px;background:#f59e0b;color:#000;font-size:0.42rem;font-weight:800;padding:1px 4px;border-radius:999px;">AD</span>
+                <span style="position:absolute;bottom:-2px;right:-2px;background:#f59e0b;color:#000;font-size:0.42rem;font-weight:800;padding:1px 4px;border-radius:999px;">PUB</span>
             </div>
             <span style="font-size:0.52rem;color:#94a3b8;max-width:52px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${camp.anunciante.split(' ')[0]}</span>`;
         const flex = bar.querySelector('div') || bar;

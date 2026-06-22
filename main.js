@@ -7300,20 +7300,24 @@ Ele voltará a ser aluno normal.`)) return;
         this.renderPainelExperimentais();
     },
 
-    editarExperimental(id, turmaAtual, dataAtual, modalidadeAtual) {
+    async editarExperimental(id, turmaAtual, dataAtual, modalidadeAtual) {
         document.getElementById('modal-edit-exp')?.remove();
-        const grade = this.gradeFirebase || {};
-        const diasNomes = { seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo' };
-        // Monta lista de todas as turmas disponíveis na grade
-        const turmas = [];
-        Object.entries(diasNomes).forEach(([d, dNome]) => {
-            (grade[d] || []).filter(s => s !== 'Sem treinos hoje').forEach(slot => {
-                turmas.push(`${slot} - BJJ`);
-                turmas.push(`${slot} - Muay Thai`);
+
+        // Carrega grade do Firestore para ter todas as turmas disponíveis
+        let turmas = [];
+        try {
+            const snap = await db.collection('configuracoes').doc('horarios').get();
+            const grade = snap.exists ? snap.data() : {};
+            const dias = ['seg','ter','qua','qui','sex','sab','dom'];
+            dias.forEach(d => {
+                (grade[d] || []).filter(s => s && s !== 'Sem treinos hoje').forEach(slot => {
+                    turmas.push(`${slot} - BJJ`);
+                    turmas.push(`${slot} - Muay Thai`);
+                });
             });
-        });
-        // Garante que turma atual aparece mesmo se não estiver na grade
+        } catch(_) {}
         if (turmaAtual && !turmas.includes(turmaAtual)) turmas.unshift(turmaAtual);
+        if (!turmas.length) turmas = [turmaAtual || ''];
 
         const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.8rem;box-sizing:border-box;';
         const modal = document.createElement('div');

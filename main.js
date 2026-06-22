@@ -7251,6 +7251,10 @@ Ele voltará a ser aluno normal.`)) return;
                                     style="background:#1a0a00; border:1px solid #f59e0b55; color:#f59e0b; padding:5px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer; white-space:nowrap;">
                                     ↩️ Reverter para Pendente
                                 </button>` : ''}
+                                <button onclick="academia.editarExperimental('${e.id}','${(e.turma||'').replace(/'/g,"\\'")}','${e.data||''}','${e.modalidade||'jiujitsu'}')"
+                                    style="background:#0c2340; border:1px solid #3b82f644; color:#60a5fa; padding:5px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer; white-space:nowrap;">
+                                    ✏️ Editar
+                                </button>
                                 <button onclick="academia.excluirExperimental('${e.id}')"
                                     style="background:none; border:none; color:#475569; padding:4px; font-size:0.6rem; cursor:pointer;">
                                     🗑️ excluir
@@ -7294,6 +7298,68 @@ Ele voltará a ser aluno normal.`)) return;
         if (!confirm('Reverter para Pendente? O status "Matriculado" será desfeito.')) return;
         await db.collection('experimentais').doc(id).update({ status: 'pendente' });
         this.renderPainelExperimentais();
+    },
+
+    editarExperimental(id, turmaAtual, dataAtual, modalidadeAtual) {
+        document.getElementById('modal-edit-exp')?.remove();
+        const grade = this.gradeFirebase || {};
+        const diasNomes = { seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo' };
+        // Monta lista de todas as turmas disponíveis na grade
+        const turmas = [];
+        Object.entries(diasNomes).forEach(([d, dNome]) => {
+            (grade[d] || []).filter(s => s !== 'Sem treinos hoje').forEach(slot => {
+                turmas.push(`${slot} - BJJ`);
+                turmas.push(`${slot} - Muay Thai`);
+            });
+        });
+        // Garante que turma atual aparece mesmo se não estiver na grade
+        if (turmaAtual && !turmas.includes(turmaAtual)) turmas.unshift(turmaAtual);
+
+        const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.8rem;box-sizing:border-box;';
+        const modal = document.createElement('div');
+        modal.id = 'modal-edit-exp';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.9rem;font-weight:800;color:#e2e8f0;">✏️ Editar Aula Experimental</span>
+                    <button onclick="document.getElementById('modal-edit-exp').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">TURMA / HORÁRIO</label>
+                        <select id="exp-edit-turma" style="${inp}">
+                            ${turmas.map(t => `<option value="${t}" ${t === turmaAtual ? 'selected' : ''}>${t}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">DATA</label>
+                        <input type="date" id="exp-edit-data" value="${dataAtual}" style="${inp}">
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px;">MODALIDADE</label>
+                        <select id="exp-edit-modalidade" style="${inp}">
+                            <option value="jiujitsu" ${modalidadeAtual==='jiujitsu'?'selected':''}>🥋 Jiu-Jitsu</option>
+                            <option value="muaythai" ${modalidadeAtual==='muaythai'?'selected':''}>🥊 Muay Thai</option>
+                            <option value="ambos" ${modalidadeAtual==='ambos'?'selected':''}>⚔️ Ambos</option>
+                        </select>
+                    </div>
+                    <button onclick="academia.salvarEdicaoExperimental('${id}')" style="width:100%;padding:12px;background:#3b82f6;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;margin-top:4px;">💾 Salvar</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async salvarEdicaoExperimental(id) {
+        const turma = document.getElementById('exp-edit-turma')?.value;
+        const data  = document.getElementById('exp-edit-data')?.value;
+        const modalidade = document.getElementById('exp-edit-modalidade')?.value;
+        if (!turma || !data) return alert('Preencha turma e data.');
+        try {
+            await db.collection('experimentais').doc(id).update({ turma, data, modalidade });
+            document.getElementById('modal-edit-exp')?.remove();
+            this.renderPainelExperimentais();
+        } catch(e) { alert('Erro: ' + e.message); }
     },
 
     async excluirExperimental(id) {

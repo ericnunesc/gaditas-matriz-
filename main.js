@@ -212,6 +212,7 @@ const auth = {
     },
 
     sucesso() {
+        localStorage.setItem('gaditas_sessao', JSON.stringify({ id: this.currentUser.id, role: this.role }));
         document.getElementById('screen-login').classList.add('hidden');
         document.getElementById('screen-dashboard').classList.remove('hidden');
         document.getElementById('display-user').innerText = this.currentUser.nome;
@@ -491,8 +492,46 @@ const auth = {
         } catch(e) { console.warn('_renderFaixaHeader error:', e.message); }
     },
     logout() {
+        localStorage.removeItem('gaditas_sessao');
         firebase.auth().signOut().catch(() => {});
         window.location.reload();
+    },
+
+    async restaurarSessao() {
+        try {
+            const raw = localStorage.getItem('gaditas_sessao');
+            if (!raw) return false;
+            const sessao = JSON.parse(raw);
+            // Garante sessão Firebase para acessar Firestore
+            try { await firebase.auth().signInAnonymously(); } catch(_) {}
+
+            if (sessao.role === 'admin') {
+                await this.carregarCredenciaisAdmin();
+                this.role = 'admin';
+                this.currentUser = {
+                    id: 'admin',
+                    nome:      this.adminCreds.nome       || 'Admin',
+                    faixa:     this.adminCreds.faixa      || 'Preta',
+                    grau:      this.adminCreds.grau       ?? 3,
+                    modalidade: this.adminCreds.modalidade || 'jiujitsu'
+                };
+            } else {
+                const colecao = (sessao.role === 'professor' || sessao.role === 'financeiro') ? 'professores' : 'alunos';
+                const snap = await db.collection(colecao).doc(sessao.id).get();
+                if (!snap.exists) { localStorage.removeItem('gaditas_sessao'); return false; }
+                this.role = sessao.role;
+                this.currentUser = { id: snap.id, ...snap.data() };
+                // Tenta reautenticar no Firebase Auth se tiver email/senha Firebase
+                if (snap.data().email) {
+                    try { await firebase.auth().signInWithEmailAndPassword(snap.data().email, snap.data().senha || ''); } catch(_) {}
+                }
+            }
+            this.sucesso();
+            return true;
+        } catch(e) {
+            localStorage.removeItem('gaditas_sessao');
+            return false;
+        }
     }
 };
 
@@ -16186,6 +16225,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Carrega credenciais e metas do admin salvas no Firestore
     auth.carregarCredenciaisAdmin();
     auth.carregarMetasAulas();
+
+    // Tenta restaurar sessão salva (evita login toda vez)
+    auth.restaurarSessao();
 });
 
 // ══════════════════════════════════════════════════════════

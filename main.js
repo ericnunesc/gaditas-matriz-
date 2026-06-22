@@ -7306,16 +7306,15 @@ Ele voltará a ser aluno normal.`)) return;
         // Carrega grade do Firestore para ter todas as turmas disponíveis
         let turmas = [];
         try {
-            const snap = await db.collection('configuracoes').doc('horarios').get();
-            const grade = snap.exists ? snap.data() : {};
-            const dias = ['seg','ter','qua','qui','sex','sab','dom'];
-            dias.forEach(d => {
-                (grade[d] || []).filter(s => s && s !== 'Sem treinos hoje').forEach(slot => {
-                    turmas.push(`${slot} - BJJ`);
-                    turmas.push(`${slot} - Muay Thai`);
-                });
-            });
+            const grade = academia.gradeFirebase || (await academia.carregarGradeFirebase());
+            const diasNomes = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+            for (let d = 0; d <= 6; d++) {
+                const slots = (grade[d] || grade[String(d)] || []).filter(s => s && s !== 'Sem treinos hoje');
+                slots.forEach(slot => turmas.push(slot));
+            }
         } catch(_) {}
+        // Remove duplicatas e garante turma atual
+        turmas = [...new Set(turmas)];
         if (turmaAtual && !turmas.includes(turmaAtual)) turmas.unshift(turmaAtual);
         if (!turmas.length) turmas = [turmaAtual || ''];
 

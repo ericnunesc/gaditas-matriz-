@@ -7247,7 +7247,7 @@ Ele voltará a ser aluno normal.`)) return;
                                     style="background:#1e1040; border:1px solid #7c3aed44; color:#a78bfa; padding:5px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer; white-space:nowrap;">
                                     🔗 Gerar link matrícula
                                 </button>
-                                ${e.status === 'concluido' ? `<button onclick="academia.confirmarMatriculaExperimental('${e.id}')"
+                                ${(e.status === 'concluido' || e.status === 'matriculado') ? `<button onclick="academia.confirmarMatriculaExperimental('${e.id}')"
                                     style="background:#052e16; border:1px solid #10b981; color:#10b981; padding:5px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer; white-space:nowrap;">
                                     ✅ OK — Confirmar Matrícula
                                 </button>` : ''}

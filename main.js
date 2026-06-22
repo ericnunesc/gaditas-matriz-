@@ -14551,21 +14551,37 @@ const publicidade = {
 
     _exibirBanner(camp, alunoId) {
         if (document.getElementById('pub-banner')) return;
-        const clickAction = camp.linkExterno ? `window.open('${camp.linkExterno}','_blank')` : (camp.imagemUrl ? `publicidade._abrirImagemFullscreen('${camp.imagemUrl}')` : '');
+        const enc = s => (s||'').replace(/'/g,"\\'");
         const banner = document.createElement('div');
         banner.id = 'pub-banner';
+        banner.style.cssText = 'margin:10px 0;';
         banner.innerHTML = `
-            <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin:10px 0;cursor:${clickAction?'pointer':'default'};" onclick="${clickAction}">
-                ${camp.imagemUrl ? `<img src="${camp.imagemUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : ''}
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Patrocinado</div>
-                    <div style="font-size:0.78rem;font-weight:800;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${camp.anunciante}</div>
+            <div style="border-radius:12px;overflow:hidden;cursor:pointer;position:relative;" onclick="publicidade._abrirBannerFullscreen('${enc(camp.imagemUrl)}','${enc(camp.linkExterno)}','${enc(camp.anunciante)}')">
+                ${camp.imagemUrl
+                    ? `<img src="${camp.imagemUrl}" style="width:100%;height:140px;object-fit:cover;display:block;">`
+                    : `<div style="width:100%;height:100px;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:2.5rem;">📢</div>`}
+                <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 35%,rgba(0,0,0,0.75) 100%);pointer-events:none;"></div>
+                <button onclick="event.stopPropagation();document.getElementById('pub-banner').remove()" style="position:absolute;top:7px;right:7px;background:rgba(0,0,0,0.55);border:none;color:white;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:0.8rem;line-height:1;">✕</button>
+                <div style="position:absolute;bottom:0;left:0;right:0;padding:8px 12px;pointer-events:none;">
+                    <div style="font-size:0.5rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Patrocinado</div>
+                    <div style="font-size:0.82rem;font-weight:800;color:#f8fafc;">${camp.anunciante}</div>
                 </div>
-                <button onclick="event.stopPropagation();document.getElementById('pub-banner').remove()" style="background:none;border:none;color:#475569;font-size:1rem;cursor:pointer;padding:4px;">✕</button>
             </div>`;
         const container = document.getElementById('tab-checkin');
         if (container) container.insertBefore(banner, container.firstChild);
         this._registrarImpressao(camp.id, alunoId);
+    },
+
+    _abrirBannerFullscreen(imagemUrl, linkExterno, anunciante) {
+        const destino = linkExterno || 'publicidade.html';
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.97);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <button onclick="this.parentElement.remove()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.12);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>
+            <div style="font-size:0.55rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📢 Patrocinado · ${anunciante}</div>
+            ${imagemUrl ? `<img src="${imagemUrl}" style="max-width:100%;max-height:55vh;object-fit:contain;border-radius:12px;margin-bottom:20px;">` : ''}
+            <button onclick="window.open('${destino}','_blank');this.closest('div[style*=fixed]').remove()" style="background:#f59e0b;border:none;color:#000;padding:14px;border-radius:12px;font-weight:800;font-size:0.88rem;cursor:pointer;width:100%;max-width:320px;">📢 Clique aqui para saber mais</button>`;
+        document.body.appendChild(modal);
     },
 
     _exibirPopup(camp, alunoId) {

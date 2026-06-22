@@ -550,12 +550,19 @@ async function irParaPagamento() {
   btnPagar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
 
   try {
-    // Upload da imagem para Firebase Storage
-    const storage = firebase.storage();
-    const nomeArq = `publicidade_pedidos/${Date.now()}_${imagemNome || 'imagem.jpg'}`;
-    const ref = storage.ref(nomeArq);
-    await ref.putString(imagemBase64, 'data_url');
-    const imagemUrl = await ref.getDownloadURL();
+    // Upload da imagem via endpoint servidor (evita erro de permissão no Storage)
+    const uploadRes = await fetch('/api/upload-story', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: imagemBase64.split(',').pop(),
+        fileName: imagemNome || 'imagem.jpg',
+        slug: 'publicidade_pedidos'
+      })
+    });
+    if (!uploadRes.ok) throw new Error('Falha no upload da imagem');
+    const uploadData = await uploadRes.json();
+    const imagemUrl = uploadData.url;
 
     // Salvar pedido no Firestore como "pendente" (sem base64)
     const docRef = await db.collection('publicidade_pedidos').add({

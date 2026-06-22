@@ -12352,6 +12352,7 @@ const loja = {
             const snap = await db.collection('loja_produtos').get();
             const prods = snap.docs.map(d => ({ id: d.id, ...d.data() }))
                 .sort((a, b) => (b.destaque ? 1 : 0) - (a.destaque ? 1 : 0) || (a.ordem || 0) - (b.ordem || 0));
+            this._produtos = prods;
             if (prods.length === 0) {
                 container.innerHTML = '<div style="text-align:center; padding:20px; color:#475569; font-size:0.7rem;">Nenhum produto cadastrado.<br><br>Clique em <strong>+ PRODUTO</strong> para adicionar.</div>';
                 return;

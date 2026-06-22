@@ -14694,12 +14694,12 @@ const publicidade = {
     _abrirBannerFullscreen(imagemUrl, linkExterno, anunciante) {
         const destino = linkExterno || 'publicidade.html';
         const modal = document.createElement('div');
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.97);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.97);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px;box-sizing:border-box;overflow-y:auto;';
         modal.innerHTML = `
-            <button onclick="this.parentElement.remove()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.12);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>
-            <div style="font-size:0.55rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📢 Patrocinado · ${anunciante}</div>
-            ${imagemUrl ? `<img src="${imagemUrl}" style="max-width:100%;max-height:55vh;object-fit:contain;border-radius:12px;margin-bottom:20px;">` : ''}
-            <button onclick="window.open('${destino}','_blank');this.closest('div[style*=fixed]').remove()" style="background:#f59e0b;border:none;color:#000;padding:14px;border-radius:12px;font-weight:800;font-size:0.88rem;cursor:pointer;width:100%;max-width:320px;">📢 Clique aqui para saber mais</button>`;
+            <button onclick="this.parentElement.remove()" style="position:fixed;top:14px;right:14px;background:rgba(255,255,255,0.12);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;z-index:1;">✕</button>
+            <div style="font-size:0.55rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:44px 0 10px;">📢 Patrocinado · ${anunciante}</div>
+            ${imagemUrl ? `<img src="${imagemUrl}" style="width:100%;max-width:420px;height:auto;border-radius:12px;margin-bottom:20px;display:block;">` : ''}
+            <button onclick="window.open('${destino}','_blank');this.closest('div[style*=fixed]').remove()" style="background:#f59e0b;border:none;color:#000;padding:14px;border-radius:12px;font-weight:800;font-size:0.88rem;cursor:pointer;width:100%;max-width:320px;margin-bottom:20px;">📢 Clique aqui para saber mais</button>`;
         document.body.appendChild(modal);
     },
 

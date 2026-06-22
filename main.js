@@ -14698,7 +14698,7 @@ const publicidade = {
         modal.innerHTML = `
             <button onclick="this.parentElement.remove()" style="position:fixed;top:14px;right:14px;background:rgba(255,255,255,0.12);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;z-index:1;">✕</button>
             <div style="font-size:0.55rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:44px 0 10px;">📢 Patrocinado · ${anunciante}</div>
-            ${imagemUrl ? `<img src="${imagemUrl}" style="width:100%;max-width:420px;height:auto;border-radius:12px;margin-bottom:20px;display:block;">` : ''}
+            ${imagemUrl ? `<img src="${imagemUrl}" style="max-width:100%;max-height:calc(100vh - 150px);width:auto;height:auto;border-radius:12px;margin-bottom:20px;display:block;object-fit:contain;">` : ''}
             <button onclick="window.open('${destino}','_blank');this.closest('div[style*=fixed]').remove()" style="background:#f59e0b;border:none;color:#000;padding:14px;border-radius:12px;font-weight:800;font-size:0.88rem;cursor:pointer;width:100%;max-width:320px;margin-bottom:20px;">📢 Clique aqui para saber mais</button>`;
         document.body.appendChild(modal);
     },

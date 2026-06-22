@@ -14715,7 +14715,7 @@ const publicidade = {
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
         modal.innerHTML = `
             <div style="background:#1e293b;border-radius:20px;overflow:hidden;width:100%;max-width:380px;position:relative;cursor:${clickAction?'pointer':'default'};" onclick="${clickAction}">
-                ${camp.imagemUrl ? `<img src="${camp.imagemUrl}" style="width:100%;max-height:280px;object-fit:cover;display:block;">` : ''}
+                ${camp.imagemUrl ? `<div style="width:100%;text-align:center;"><img src="${camp.imagemUrl}" style="max-width:100%;max-height:60vh;height:auto;display:inline-block;"></div>` : ''}
                 <div style="padding:16px;">
                     <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Patrocinado</div>
                     <div style="font-size:0.92rem;font-weight:800;color:#e2e8f0;">${camp.anunciante}</div>
@@ -14972,7 +14972,7 @@ const publicidade = {
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9999;display:flex;align-items:center;justify-content:center;';
         modal.innerHTML = `
             <div style="width:100%;max-width:420px;height:100%;position:relative;display:flex;flex-direction:column;">
-                ${camp.imagemUrl ? `<img src="${camp.imagemUrl}" style="width:100%;flex:1;object-fit:cover;">` : `<div style="flex:1;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:3rem;">📢</div>`}
+                ${camp.imagemUrl ? `<div style="width:100%;flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;"><img src="${camp.imagemUrl}" style="max-width:100%;max-height:100%;object-fit:contain;display:block;"></div>` : `<div style="flex:1;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:3rem;">📢</div>`}
                 <div style="padding:20px;background:#0f172a;">
                     <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Patrocinado</div>
                     <div style="font-size:1rem;font-weight:800;color:#e2e8f0;margin-bottom:10px;">${camp.anunciante}</div>

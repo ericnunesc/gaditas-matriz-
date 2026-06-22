@@ -592,7 +592,7 @@ async function irParaPagamento() {
       `🆔 Pedido: ${docRef.id}\n\n` +
       `(Enviarei o comprovante após o pagamento)`
     );
-    let urlFinal = linkPgto;
+    let urlFinal = linkPgto.match(/^https?:\/\//) ? linkPgto : 'https://' + linkPgto;
     if (linkPgto.includes('wa.me') || linkPgto.includes('whatsapp')) {
       urlFinal = `${linkPgto.split('?')[0]}?text=${msg}`;
     }

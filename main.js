@@ -14694,12 +14694,14 @@ const publicidade = {
     _abrirBannerFullscreen(imagemUrl, linkExterno, anunciante) {
         const destino = linkExterno || 'publicidade.html';
         const modal = document.createElement('div');
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.97);z-index:9999;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:16px;box-sizing:border-box;overflow-y:auto;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:9999;overflow:auto;';
         modal.innerHTML = `
-            <button onclick="this.parentElement.remove()" style="position:fixed;top:14px;right:14px;background:rgba(255,255,255,0.12);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;z-index:1;">✕</button>
-            <div style="font-size:0.55rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:44px 0 10px;text-align:center;">📢 Patrocinado · ${anunciante}</div>
-            ${imagemUrl ? `<img src="${imagemUrl}" style="width:100%;height:auto;max-height:calc(100vh - 160px);object-fit:contain;border-radius:12px;margin-bottom:20px;display:block;">` : ''}
-            <button onclick="window.open('${destino}','_blank');this.closest('div[style*=fixed]').remove()" style="background:#f59e0b;border:none;color:#000;padding:14px;border-radius:12px;font-weight:800;font-size:0.88rem;cursor:pointer;width:100%;margin-bottom:20px;">📢 Clique aqui para saber mais</button>`;
+            <div style="min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;">
+                <button onclick="this.closest('[style*=fixed]').remove()" style="position:fixed;top:14px;right:14px;background:rgba(255,255,255,0.15);border:none;color:white;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.1rem;z-index:10;">✕</button>
+                <div style="font-size:0.55rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;text-align:center;">📢 Patrocinado · ${anunciante}</div>
+                ${imagemUrl ? `<div style="width:100%;text-align:center;"><img src="${imagemUrl}" style="max-width:100%;max-height:70vh;height:auto;border-radius:12px;display:inline-block;"></div>` : ''}
+                <button onclick="window.open('${destino}','_blank');this.closest('[style*=fixed]').remove()" style="background:#f59e0b;border:none;color:#000;padding:14px;border-radius:12px;font-weight:800;font-size:0.88rem;cursor:pointer;width:100%;max-width:360px;margin-top:20px;">📢 Clique aqui para saber mais</button>
+            </div>`;
         document.body.appendChild(modal);
     },
 

@@ -1070,7 +1070,10 @@
                     <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:2px;">Comunidade</div>
                     <div style="font-size:1.05rem;font-weight:800;color:#f8fafc;"><i class="fas fa-handshake" style="color:#10b981;margin-right:8px;font-size:0.9rem;"></i>SERVIÇOS</div>
                 </div>
-                <button onclick="window.open('cadastro-servico.html','_blank')" style="background:#10b981;border:none;color:white;padding:9px 14px;border-radius:12px;font-size:0.68rem;font-weight:800;cursor:pointer;">+ ANUNCIAR</button>
+                <div style="display:flex;gap:8px;">
+                    <button id="btn-srv-config" onclick="comunidade.abrirConfig()" style="display:none;background:#334155;border:none;color:#e2e8f0;padding:9px 12px;border-radius:12px;font-size:0.68rem;font-weight:800;cursor:pointer;">⚙️ Config</button>
+                    <button onclick="window.open('cadastro-servico.html','_blank')" style="background:#10b981;border:none;color:white;padding:9px 14px;border-radius:12px;font-size:0.68rem;font-weight:800;cursor:pointer;">+ ANUNCIAR</button>
+                </div>
             </div>
             <div style="font-size:0.65rem;color:#475569;margin-bottom:14px;">Serviços oferecidos por alunos da academia</div>
 

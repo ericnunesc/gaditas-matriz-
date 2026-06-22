@@ -13794,7 +13794,9 @@ const comunidade = {
             lista.innerHTML = `<div style="text-align:center;padding:30px;color:#f87171;font-size:0.8rem;">Erro ao carregar: ${e.message}</div>`;
         }
 
-        // Admin vê pendentes
+        // Admin vê botão config e pendentes
+        const btnCfg = document.getElementById('btn-srv-config');
+        if (btnCfg) btnCfg.style.display = auth.role === 'admin' ? 'block' : 'none';
         if (auth.role === 'admin') this._carregarPendentes();
     },
 
@@ -13898,6 +13900,107 @@ const comunidade = {
             btn.closest('div[style*="background:#1e293b"]')?.remove();
             this._todos = this._todos.filter(s => s.id !== id);
         } catch(e) { alert('Erro: ' + e.message); btn.disabled = false; }
+    },
+
+    async abrirConfig() {
+        let cfgAtual = {};
+        try {
+            const doc = await db.collection('configuracoes').doc('servicos_config').get();
+            if (doc.exists) cfgAtual = doc.data();
+        } catch(e) {}
+
+        const planos = cfgAtual.planos || [
+            { label: '1 mês',    valor: 15, desc: 'Visível por 30 dias' },
+            { label: '3 meses',  valor: 35, desc: 'Melhor custo-benefício' },
+            { label: '6 meses',  valor: 60, desc: 'Máxima exposição' },
+        ];
+        const ativa = cfgAtual.ativa !== false;
+        const linkUniversal = cfgAtual.links?.universal || '';
+
+        const inp = 'width:100%;padding:9px 10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.78rem;box-sizing:border-box;';
+        const lbl = 'color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;margin-top:10px;';
+
+        let modal = document.getElementById('modal-srv-config');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-srv-config'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;max-height:92vh;overflow-y:auto;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.95rem;font-weight:800;color:white;">⚙️ Config — Serviços</span>
+                    <button onclick="document.getElementById('modal-srv-config').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+
+                <!-- Página ativa -->
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <div>
+                        <div style="font-size:0.75rem;font-weight:800;color:#e2e8f0;">Página ativa</div>
+                        <div style="font-size:0.62rem;color:#64748b;margin-top:2px;">Alunos podem cadastrar serviços</div>
+                    </div>
+                    <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
+                        <span id="srv-toggle-ativa" data-on="${ativa}" onclick="const on=this.dataset.on==='true';this.dataset.on=on?'false':'true';this.style.background=(!on)?'#10b981':'#334155';this.querySelector('span').style.left=(!on)?'23px':'3px';"
+                            style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:${ativa?'#10b981':'#334155'};border-radius:24px;transition:background .3s;">
+                            <span style="position:absolute;height:18px;width:18px;left:${ativa?'23px':'3px'};bottom:3px;background:white;border-radius:50%;transition:left .3s;"></span>
+                        </span>
+                    </label>
+                </div>
+
+                <!-- Planos -->
+                <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:8px;">📦 PLANOS E PREÇOS</div>
+                <div id="srv-planos-lista" style="display:flex;flex-direction:column;gap:6px;">
+                    ${planos.map((p,i) => `
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;display:grid;grid-template-columns:1fr 1fr 60px auto;gap:6px;align-items:center;" id="srv-plano-row-${i}">
+                        <input type="text" value="${p.label}" placeholder="Rótulo" style="${inp}margin-bottom:0;" id="srv-pl-label-${i}"/>
+                        <input type="text" value="${p.desc||''}" placeholder="Descrição" style="${inp}margin-bottom:0;" id="srv-pl-desc-${i}"/>
+                        <input type="number" value="${p.valor}" min="1" placeholder="R$" style="${inp}margin-bottom:0;text-align:center;" id="srv-pl-valor-${i}"/>
+                        <button onclick="document.getElementById('srv-plano-row-${i}').remove()" style="background:#2d0a0a;border:none;color:#f87171;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:0.8rem;">🗑</button>
+                    </div>`).join('')}
+                </div>
+                <button onclick="comunidade._addPlanoLinha()" style="width:100%;padding:8px;background:#0f172a;border:1px dashed #334155;color:#64748b;border-radius:8px;cursor:pointer;font-size:0.72rem;margin-top:6px;">+ Adicionar plano</button>
+
+                <!-- Link de pagamento -->
+                <small style="${lbl}">LINK DE PAGAMENTO</small>
+                <input type="text" id="srv-link-universal" value="${linkUniversal}" placeholder="https://link.mercadopago.com.br/..." style="${inp}"/>
+                <div style="font-size:0.58rem;color:#475569;margin-top:3px;">Link único usado no redirecionamento após cadastro.</div>
+
+                <button onclick="comunidade._salvarConfig()" style="width:100%;padding:12px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;margin-top:16px;">💾 SALVAR</button>
+            </div>`;
+    },
+
+    _addPlanoLinha() {
+        const lista = document.getElementById('srv-planos-lista');
+        if (!lista) return;
+        const i = Date.now();
+        const row = document.createElement('div');
+        row.id = `srv-plano-row-${i}`;
+        row.style.cssText = 'background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;display:grid;grid-template-columns:1fr 1fr 60px auto;gap:6px;align-items:center;';
+        const inp = 'width:100%;padding:9px 10px;background:#0f172a;border:1px solid #475569;color:white;border-radius:8px;outline:none;font-size:0.78rem;box-sizing:border-box;';
+        row.innerHTML = `
+            <input type="text" placeholder="Rótulo" style="${inp}" id="srv-pl-label-${i}"/>
+            <input type="text" placeholder="Descrição" style="${inp}" id="srv-pl-desc-${i}"/>
+            <input type="number" placeholder="R$" min="1" style="${inp}text-align:center;" id="srv-pl-valor-${i}"/>
+            <button onclick="this.closest('div').remove()" style="background:#2d0a0a;border:none;color:#f87171;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:0.8rem;">🗑</button>`;
+        lista.appendChild(row);
+    },
+
+    async _salvarConfig() {
+        const ativa = document.getElementById('srv-toggle-ativa')?.dataset.on === 'true';
+        const linkUniversal = document.getElementById('srv-link-universal')?.value.trim() || '';
+
+        const planos = [];
+        document.querySelectorAll('[id^="srv-plano-row-"]').forEach(row => {
+            const id = row.id.replace('srv-plano-row-','');
+            const label = document.getElementById(`srv-pl-label-${id}`)?.value.trim();
+            const desc  = document.getElementById(`srv-pl-desc-${id}`)?.value.trim() || '';
+            const valor = parseFloat(document.getElementById(`srv-pl-valor-${id}`)?.value) || 0;
+            if (label && valor > 0) planos.push({ label, desc, valor });
+        });
+
+        try {
+            await db.collection('configuracoes').doc('servicos_config').set({ ativa, planos, links: { universal: linkUniversal } }, { merge: true });
+            document.getElementById('modal-srv-config')?.remove();
+            alert('✅ Configurações salvas!');
+        } catch(e) { alert('Erro: ' + e.message); }
     },
 };
 

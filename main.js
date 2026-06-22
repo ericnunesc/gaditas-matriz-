@@ -14621,7 +14621,13 @@ const publicidade = {
                 <span style="position:absolute;bottom:-2px;right:-2px;background:#f59e0b;color:#000;font-size:0.42rem;font-weight:800;padding:1px 4px;border-radius:999px;">AD</span>
             </div>
             <span style="font-size:0.52rem;color:#94a3b8;max-width:52px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${camp.anunciante.split(' ')[0]}</span>`;
-        bar.appendChild(el);
+        const flex = bar.querySelector('div') || bar;
+        // Insere como 2º item (depois do + admin ou do 1º story)
+        if (flex.children.length > 1) {
+            flex.insertBefore(el, flex.children[1]);
+        } else {
+            flex.appendChild(el);
+        }
         this._registrarImpressao(camp.id, alunoId);
     },
 

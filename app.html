@@ -1063,6 +1063,38 @@
         </div>
 
         <!-- ══ TAB MÍDIA / PUBLICIDADE ══ -->
+        <!-- TAB SERVIÇOS DA COMUNIDADE -->
+        <div id="tab-servicos" class="tab-content hidden" style="padding:15px 15px 100px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <div>
+                    <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:2px;">Comunidade</div>
+                    <div style="font-size:1.05rem;font-weight:800;color:#f8fafc;"><i class="fas fa-handshake" style="color:#10b981;margin-right:8px;font-size:0.9rem;"></i>SERVIÇOS</div>
+                </div>
+                <button onclick="window.open('cadastro-servico.html','_blank')" style="background:#10b981;border:none;color:white;padding:9px 14px;border-radius:12px;font-size:0.68rem;font-weight:800;cursor:pointer;">+ ANUNCIAR</button>
+            </div>
+            <div style="font-size:0.65rem;color:#475569;margin-bottom:14px;">Serviços oferecidos por alunos da academia</div>
+
+            <!-- Filtros -->
+            <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+                <input type="text" id="srv-busca" placeholder="🔍 Buscar..." oninput="comunidade.filtrar()"
+                    style="flex:1;min-width:140px;padding:8px 12px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.78rem;"/>
+                <select id="srv-categoria" onchange="comunidade.filtrar()"
+                    style="padding:8px 10px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;outline:none;font-size:0.78rem;cursor:pointer;">
+                    <option value="">Todas as categorias</option>
+                </select>
+            </div>
+
+            <div id="srv-lista" style="display:flex;flex-direction:column;gap:10px;">
+                <div style="text-align:center;padding:30px;color:#475569;font-size:0.8rem;">⏳ Carregando...</div>
+            </div>
+
+            <!-- Seção admin: pendentes -->
+            <div id="srv-admin-pendentes" style="display:none;margin-top:24px;">
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">⏳ AGUARDANDO APROVAÇÃO</div>
+                <div id="srv-pendentes-lista" style="display:flex;flex-direction:column;gap:8px;"></div>
+            </div>
+        </div>
+
         <div id="tab-midia" class="tab-content hidden" style="padding:15px 15px 100px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <div>
@@ -1099,6 +1131,7 @@
             <button onclick="ui.showTab('tab-eventos')" class="nav-item"><i class="fas fa-calendar-alt"></i><span>EVENTOS</span></button>
             <button onclick="ui.showTab('tab-horarios')" id="menu-horarios" class="nav-item"><i class="fas fa-clock"></i><span>HORÁRIOS</span></button>
             <button onclick="ui.showTab('tab-loja')" id="menu-loja" class="nav-item" style="position:relative;"><i class="fas fa-shopping-bag"></i><span>LOJA</span></button>
+            <button onclick="ui.showTab('tab-servicos'); comunidade.carregar()" class="nav-item"><i class="fas fa-handshake"></i><span>SERVIÇOS</span></button>
             <button onclick="ui.showTab('tab-exame'); exame.carregarExameAluno()" id="menu-exame" class="nav-item" style="display:none; position:relative;">
                 <i class="fas fa-medal"></i>
                 <span>EXAME</span>

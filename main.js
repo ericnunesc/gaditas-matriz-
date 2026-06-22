@@ -13770,6 +13770,137 @@ const premiosAno = {
     },
 };
 
+// ── SERVIÇOS DA COMUNIDADE ───────────────────────────────────────────────────
+const comunidade = {
+    _todos: [],
+
+    CATEGORIAS: ['Saúde & Bem-estar','Beleza & Estética','Construção & Reforma','Tecnologia','Design & Criação',
+                  'Educação & Aulas','Alimentação','Transporte','Fotografia & Vídeo','Outros'],
+
+    async carregar() {
+        const lista = document.getElementById('srv-lista');
+        if (!lista) return;
+        lista.innerHTML = '<div style="text-align:center;padding:30px;color:#475569;font-size:0.8rem;">⏳ Carregando...</div>';
+
+        try {
+            const snap = await db.collection('servicos_comunidade').where('status','==','ativo').orderBy('criadoEm','desc').get().catch(async () => {
+                // fallback sem orderBy se índice não existir ainda
+                return db.collection('servicos_comunidade').where('status','==','ativo').get();
+            });
+            this._todos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            this._popularCategorias();
+            this.filtrar();
+        } catch(e) {
+            lista.innerHTML = `<div style="text-align:center;padding:30px;color:#f87171;font-size:0.8rem;">Erro ao carregar: ${e.message}</div>`;
+        }
+
+        // Admin vê pendentes
+        if (auth.role === 'admin') this._carregarPendentes();
+    },
+
+    _popularCategorias() {
+        const sel = document.getElementById('srv-categoria');
+        if (!sel) return;
+        const cats = [...new Set(this._todos.map(s => s.categoria).filter(Boolean))].sort();
+        while (sel.options.length > 1) sel.remove(1);
+        cats.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+    },
+
+    filtrar() {
+        const busca = (document.getElementById('srv-busca')?.value || '').toLowerCase();
+        const cat   = document.getElementById('srv-categoria')?.value || '';
+        const filtrados = this._todos.filter(s =>
+            (!busca || (s.nome||'').toLowerCase().includes(busca) || (s.descricao||'').toLowerCase().includes(busca)) &&
+            (!cat   || s.categoria === cat)
+        );
+        this._renderLista(filtrados);
+    },
+
+    _renderLista(servicos) {
+        const lista = document.getElementById('srv-lista');
+        if (!lista) return;
+        if (!servicos.length) {
+            lista.innerHTML = '<div style="text-align:center;padding:40px;color:#475569;font-size:0.8rem;">Nenhum serviço encontrado.</div>';
+            return;
+        }
+        lista.innerHTML = servicos.map(s => this._cardHtml(s)).join('');
+    },
+
+    _cardHtml(s) {
+        const foto = s.fotoUrl ? `<img src="${s.fotoUrl}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #334155;flex-shrink:0;" onerror="this.style.display='none'"/>` : `<div style="width:52px;height:52px;border-radius:50%;background:#1e3a8a;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">🤝</div>`;
+        const telLimpo = (s.whatsapp||'').replace(/\D/g,'');
+        const waLink = telLimpo ? `https://wa.me/55${telLimpo}?text=${encodeURIComponent(`Olá ${s.nomeAluno||s.anunciante||''}! Vi seu serviço de ${s.servico||''} no app da Gaditas Academy e gostaria de saber mais.`)}` : '';
+        const adminBtns = auth.role === 'admin' ? `
+            <button onclick="comunidade.excluir('${s.id}',this)" style="background:#2d0a0a;border:1px solid #f43f5e;color:#f87171;padding:5px 10px;border-radius:8px;font-size:0.6rem;font-weight:700;cursor:pointer;">🗑 Excluir</button>` : '';
+        return `<div style="background:#1e293b;border-radius:14px;padding:14px;display:flex;gap:12px;align-items:flex-start;border:1px solid #334155;">
+            ${foto}
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:0.55rem;color:#10b981;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">${s.categoria||''}</div>
+                <div style="font-size:0.85rem;font-weight:800;color:white;margin-bottom:2px;">${s.servico||''}  </div>
+                <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:6px;">por <b style="color:#e2e8f0;">${s.nomeAluno||s.anunciante||''}</b></div>
+                <div style="font-size:0.72rem;color:#cbd5e1;line-height:1.4;margin-bottom:8px;">${s.descricao||''}</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    ${waLink ? `<a href="${waLink}" target="_blank" style="background:#16a34a;color:white;padding:7px 14px;border-radius:8px;font-size:0.7rem;font-weight:800;text-decoration:none;">💬 WhatsApp</a>` : ''}
+                    ${adminBtns}
+                </div>
+            </div>
+        </div>`;
+    },
+
+    async _carregarPendentes() {
+        const sec = document.getElementById('srv-admin-pendentes');
+        const lista = document.getElementById('srv-pendentes-lista');
+        if (!sec || !lista) return;
+        try {
+            const snap = await db.collection('servicos_comunidade').where('status','==','pendente').get();
+            if (snap.empty) { sec.style.display = 'none'; return; }
+            sec.style.display = 'block';
+            lista.innerHTML = snap.docs.map(d => {
+                const s = { id: d.id, ...d.data() };
+                const telLimpo = (s.whatsapp||'').replace(/\D/g,'');
+                return `<div style="background:#1c1400;border:1px solid #f59e0b;border-radius:12px;padding:12px;">
+                    <div style="font-size:0.75rem;font-weight:800;color:#fbbf24;margin-bottom:2px;">${s.servico||''}</div>
+                    <div style="font-size:0.65rem;color:#94a3b8;margin-bottom:4px;">${s.nomeAluno||''} · ${s.categoria||''}</div>
+                    <div style="font-size:0.68rem;color:#cbd5e1;margin-bottom:8px;">${s.descricao||''}</div>
+                    ${telLimpo ? `<div style="font-size:0.62rem;color:#64748b;margin-bottom:8px;">📱 ${s.whatsapp}</div>` : ''}
+                    <div style="display:flex;gap:6px;">
+                        <button onclick="comunidade.aprovar('${s.id}',this)" style="flex:1;background:#052e16;border:1px solid #10b981;color:#10b981;padding:8px;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;">✅ Aprovar</button>
+                        <button onclick="comunidade.rejeitar('${s.id}',this)" style="flex:1;background:#2d0a0a;border:1px solid #f43f5e;color:#f87171;padding:8px;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;">❌ Rejeitar</button>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch(e) { sec.style.display = 'none'; }
+    },
+
+    async aprovar(id, btn) {
+        btn.disabled = true; btn.textContent = '⏳';
+        try {
+            await db.collection('servicos_comunidade').doc(id).update({ status: 'ativo' });
+            btn.closest('div[style*="border:1px solid #f59e0b"]')?.remove();
+            await this.carregar();
+        } catch(e) { alert('Erro: ' + e.message); btn.disabled = false; btn.textContent = '✅ Aprovar'; }
+    },
+
+    async rejeitar(id, btn) {
+        if (!confirm('Rejeitar este serviço?')) return;
+        btn.disabled = true; btn.textContent = '⏳';
+        try {
+            await db.collection('servicos_comunidade').doc(id).update({ status: 'rejeitado' });
+            btn.closest('div[style*="border:1px solid #f59e0b"]')?.remove();
+        } catch(e) { alert('Erro: ' + e.message); btn.disabled = false; btn.textContent = '❌ Rejeitar'; }
+    },
+
+    async excluir(id, btn) {
+        if (!confirm('Excluir este serviço?')) return;
+        btn.disabled = true;
+        try {
+            await db.collection('servicos_comunidade').doc(id).delete();
+            btn.closest('div[style*="background:#1e293b"]')?.remove();
+            this._todos = this._todos.filter(s => s.id !== id);
+        } catch(e) { alert('Erro: ' + e.message); btn.disabled = false; }
+    },
+};
+
 // ── PUBLICIDADE / MÍDIA ──────────────────────────────────────────────────────
 const publicidade = {
     FORMATOS: [

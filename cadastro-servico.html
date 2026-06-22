@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Anunciar Serviço — Gaditas Academy</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;padding-bottom:40px}
+.hero{background:linear-gradient(135deg,#064e3b,#065f46);padding:28px 20px 24px;text-align:center}
+.hero-icon{font-size:2.5rem;margin-bottom:8px}
+.hero-title{font-size:1.3rem;font-weight:800;color:white;margin-bottom:4px}
+.hero-sub{font-size:0.78rem;color:#6ee7b7;line-height:1.4}
+.container{max-width:500px;margin:0 auto;padding:20px}
+.card{background:#1e293b;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid #334155}
+.card-title{font-size:0.65rem;font-weight:800;color:#10b981;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px}
+.label{font-size:0.62rem;font-weight:800;color:#94a3b8;display:block;margin-bottom:4px;margin-top:12px}
+.label:first-child{margin-top:0}
+.input{width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.83rem}
+.input:focus{border-color:#10b981}
+.textarea{width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.83rem;resize:vertical;min-height:80px;font-family:inherit}
+.textarea:focus{border-color:#10b981}
+.select{width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;outline:none;font-size:0.83rem;cursor:pointer}
+.select:focus{border-color:#10b981}
+.upload-zone{border:2px dashed #334155;border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s;margin-top:4px}
+.upload-zone:hover{border-color:#10b981}
+.upload-zone .ico{font-size:2rem;color:#475569;margin-bottom:6px}
+.upload-zone .txt{font-size:0.7rem;color:#64748b}
+.upload-zone img{max-width:100%;max-height:180px;border-radius:10px;object-fit:contain}
+.resumo{background:#0f172a;border:1px solid #334155;border-radius:12px;padding:14px}
+.resumo-row{display:flex;justify-content:space-between;font-size:0.72rem;color:#94a3b8;margin-bottom:6px}
+.resumo-row span:last-child{color:#e2e8f0;font-weight:700}
+.resumo-total{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #334155;padding-top:10px;margin-top:4px}
+.resumo-total-label{font-size:0.7rem;color:#64748b}
+.resumo-total-valor{font-size:1.4rem;font-weight:800;color:#10b981}
+.btn-enviar{width:100%;padding:14px;background:#10b981;border:none;color:white;border-radius:12px;font-weight:800;cursor:pointer;font-size:0.9rem;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-enviar:disabled{background:#334155;color:#64748b;cursor:not-allowed}
+.btn-enviar:hover:not(:disabled){background:#059669}
+.aviso{background:#172554;border:1px solid #1e40af;border-radius:10px;padding:12px;font-size:0.7rem;color:#93c5fd;line-height:1.5;margin-top:12px}
+.erro{color:#f87171;font-size:0.72rem;margin-top:8px;display:none}
+.sucesso-box{display:none;background:#052e16;border:1px solid #10b981;border-radius:16px;padding:24px;text-align:center;margin-top:20px}
+.sucesso-box .ico{font-size:2.5rem;margin-bottom:8px}
+.sucesso-box h3{font-size:1rem;font-weight:800;color:#10b981;margin-bottom:6px}
+.sucesso-box p{font-size:0.75rem;color:#6ee7b7;line-height:1.5}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-icon">🤝</div>
+  <div class="hero-title">Anuncie seu Serviço</div>
+  <div class="hero-sub">Alcance todos os alunos da academia e<br>faça parte da comunidade Gaditas</div>
+</div>
+
+<div class="container">
+
+  <!-- INDISPONÍVEL -->
+  <div id="box-indisponivel" style="display:none;background:#1e293b;border:1px solid #334155;border-radius:16px;padding:32px;text-align:center;margin-top:8px;">
+    <div style="font-size:2.5rem;margin-bottom:12px;">🔒</div>
+    <div style="font-size:0.95rem;font-weight:800;color:white;margin-bottom:6px;">Página indisponível</div>
+    <div style="font-size:0.75rem;color:#64748b;">O cadastro de serviços está temporariamente desativado.</div>
+  </div>
+
+  <div id="box-form">
+
+    <!-- PASSO 1: Dados pessoais -->
+    <div class="card">
+      <div class="card-title">📋 Passo 1 — Seus dados</div>
+      <label class="label">SEU NOME *</label>
+      <input class="input" id="campo-nome" type="text" placeholder="Nome completo" oninput="validar()"/>
+      <label class="label">WHATSAPP *</label>
+      <input class="input" id="campo-whatsapp" type="tel" placeholder="(79) 99999-9999" oninput="validar()"/>
+    </div>
+
+    <!-- PASSO 2: Serviço -->
+    <div class="card">
+      <div class="card-title">🛠 Passo 2 — Seu serviço</div>
+      <label class="label">CATEGORIA *</label>
+      <select class="select" id="campo-categoria" onchange="validar()">
+        <option value="">Selecione...</option>
+        <option>Saúde & Bem-estar</option>
+        <option>Beleza & Estética</option>
+        <option>Construção & Reforma</option>
+        <option>Tecnologia</option>
+        <option>Design & Criação</option>
+        <option>Educação & Aulas</option>
+        <option>Alimentação</option>
+        <option>Transporte</option>
+        <option>Fotografia & Vídeo</option>
+        <option>Outros</option>
+      </select>
+      <label class="label">NOME DO SERVIÇO *</label>
+      <input class="input" id="campo-servico" type="text" placeholder="Ex: Eletricista residencial, Designer gráfico..." oninput="validar()"/>
+      <label class="label">DESCRIÇÃO *</label>
+      <textarea class="textarea" id="campo-descricao" placeholder="Descreva o que você oferece, sua experiência, área de atuação..." oninput="validar()"></textarea>
+      <label class="label">FOTO (opcional)</label>
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-foto').click()">
+        <div class="ico">📷</div>
+        <div class="txt">Toque para adicionar uma foto sua ou do serviço</div>
+      </div>
+      <input type="file" id="file-foto" accept="image/*" style="display:none" onchange="carregarFoto(this)"/>
+    </div>
+
+    <!-- PASSO 3: Plano -->
+    <div class="card">
+      <div class="card-title">💳 Passo 3 — Plano</div>
+      <div id="planos-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+        <div style="text-align:center;padding:20px;color:#64748b;font-size:0.75rem;">⏳ Carregando planos...</div>
+      </div>
+
+      <div class="resumo" id="resumo-card" style="display:none">
+        <div class="resumo-row"><span>Serviço</span><span id="res-servico">—</span></div>
+        <div class="resumo-row"><span>Plano</span><span id="res-plano">—</span></div>
+        <div class="resumo-total">
+          <div>
+            <div class="resumo-total-label">Total a pagar</div>
+          </div>
+          <div class="resumo-total-valor" id="res-total">R$ 0,00</div>
+        </div>
+      </div>
+
+      <div class="aviso">
+        <i class="fas fa-info-circle"></i> Após o pagamento, seu serviço será revisado e publicado em até 24h. Você receberá contato via WhatsApp.
+      </div>
+    </div>
+
+    <div id="box-erro" class="erro"></div>
+
+    <button class="btn-enviar" id="btn-enviar" disabled onclick="enviar()">
+      <i class="fas fa-paper-plane"></i> ENVIAR E IR PARA O PAGAMENTO
+    </button>
+
+  </div><!-- /box-form -->
+
+  <div class="sucesso-box" id="box-sucesso">
+    <div class="ico">✅</div>
+    <h3>Pedido recebido!</h3>
+    <p>Seu serviço foi enviado para aprovação.<br>Após confirmarmos o pagamento, publicaremos no app em até 24h.<br><br>
+    Dúvidas? Fale com a academia pelo WhatsApp.</p>
+  </div>
+
+</div><!-- /container -->
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+  authDomain: "gaditasmatriz.firebaseapp.com",
+  projectId: "gaditasmatriz",
+  storageBucket: "gaditasmatriz.firebasestorage.app",
+  messagingSenderId: "166834416988",
+  appId: "1:166834416988:web:2921c95c87c42019282599"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let cfg = {};
+let planoSelecionado = null;
+let fotoBase64 = null;
+let fotoNome = null;
+
+// ── INICIALIZAÇÃO ──────────────────────────────────────────
+(async () => {
+  try {
+    const doc = await db.collection('configuracoes').doc('servicos_config').get();
+    cfg = doc.exists ? doc.data() : {};
+
+    if (cfg.ativa === false) {
+      document.getElementById('box-indisponivel').style.display = 'block';
+      document.getElementById('box-form').style.display = 'none';
+      return;
+    }
+
+    renderPlanos();
+  } catch(e) {
+    renderPlanos();
+  }
+})();
+
+function renderPlanos() {
+  const lista = document.getElementById('planos-lista');
+  const planos = cfg.planos || [
+    { id: 'mensal', label: '1 mês', valor: 15, desc: 'Visível por 30 dias para todos os alunos' },
+    { id: 'trimestral', label: '3 meses', valor: 35, desc: 'Melhor custo-benefício — economia de R$10' },
+    { id: 'semestral', label: '6 meses', valor: 60, desc: 'Máxima exposição — economia de R$30' },
+  ];
+
+  lista.innerHTML = planos.map((p, i) => `
+    <div id="plano-${i}" onclick="selecionarPlano(${i})" style="border:2px solid #334155;border-radius:12px;padding:14px;cursor:pointer;transition:all .2s;position:relative;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:0.85rem;font-weight:800;color:white;">${p.label}</div>
+          <div style="font-size:0.68rem;color:#94a3b8;margin-top:2px;">${p.desc||''}</div>
+        </div>
+        <div style="font-size:1rem;font-weight:800;color:#10b981;">R$ ${Number(p.valor).toFixed(2).replace('.',',')}</div>
+      </div>
+    </div>`).join('');
+}
+
+function selecionarPlano(idx) {
+  const planos = cfg.planos || [
+    { id: 'mensal', label: '1 mês', valor: 15, desc: '' },
+    { id: 'trimestral', label: '3 meses', valor: 35, desc: '' },
+    { id: 'semestral', label: '6 meses', valor: 60, desc: '' },
+  ];
+  planoSelecionado = { idx, ...planos[idx] };
+
+  document.querySelectorAll('[id^="plano-"]').forEach((el, i) => {
+    el.style.borderColor = i === idx ? '#10b981' : '#334155';
+    el.style.background = i === idx ? '#052e16' : '';
+  });
+
+  document.getElementById('resumo-card').style.display = 'block';
+  document.getElementById('res-plano').textContent = planos[idx].label;
+  document.getElementById('res-total').textContent = `R$ ${Number(planos[idx].valor).toFixed(2).replace('.',',')}`;
+  validar();
+}
+
+function carregarFoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  fotoNome = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    fotoBase64 = e.target.result;
+    const zone = document.getElementById('upload-zone');
+    zone.innerHTML = `<img src="${fotoBase64}" style="max-width:100%;max-height:180px;border-radius:10px;object-fit:contain;">
+      <div style="font-size:0.65rem;color:#10b981;margin-top:6px;">✅ Imagem pronta</div>`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function validar() {
+  const ok = document.getElementById('campo-nome')?.value.trim() &&
+             document.getElementById('campo-whatsapp')?.value.trim() &&
+             document.getElementById('campo-categoria')?.value &&
+             document.getElementById('campo-servico')?.value.trim() &&
+             document.getElementById('campo-descricao')?.value.trim() &&
+             planoSelecionado;
+  const servico = document.getElementById('campo-servico')?.value.trim() || '—';
+  document.getElementById('res-servico').textContent = servico;
+  document.getElementById('btn-enviar').disabled = !ok;
+}
+
+async function enviar() {
+  const nome      = document.getElementById('campo-nome').value.trim();
+  const whatsapp  = document.getElementById('campo-whatsapp').value.trim();
+  const categoria = document.getElementById('campo-categoria').value;
+  const servico   = document.getElementById('campo-servico').value.trim();
+  const descricao = document.getElementById('campo-descricao').value.trim();
+  const erroEl    = document.getElementById('box-erro');
+  erroEl.style.display = 'none';
+
+  const btn = document.getElementById('btn-enviar');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+  try {
+    let fotoUrl = null;
+    if (fotoBase64) {
+      const res = await fetch('/api/upload-story', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: fotoBase64.split(',').pop(), fileName: fotoNome || 'foto.jpg', slug: 'servicos_comunidade' })
+      });
+      if (res.ok) { const data = await res.json(); fotoUrl = data.url; }
+    }
+
+    const docRef = await db.collection('servicos_comunidade').add({
+      nomeAluno: nome,
+      whatsapp,
+      categoria,
+      servico,
+      descricao,
+      fotoUrl,
+      plano: planoSelecionado,
+      valorTotal: planoSelecionado.valor,
+      status: 'pendente',
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Redirecionar para pagamento
+    const links = cfg.links || {};
+    const linkPgto = links.universal || '';
+    if (linkPgto) {
+      const msg = encodeURIComponent(
+        `Olá! Quero anunciar meu serviço na comunidade Gaditas Academy.\n\n` +
+        `👤 Nome: ${nome}\n🛠 Serviço: ${servico}\n📦 Plano: ${planoSelecionado.label}\n` +
+        `💰 Valor: R$ ${Number(planoSelecionado.valor).toFixed(2).replace('.',',')}\n🆔 Pedido: ${docRef.id}`
+      );
+      let urlFinal = linkPgto.match(/^https?:\/\//) ? linkPgto : 'https://' + linkPgto;
+      if (linkPgto.includes('wa.me') || linkPgto.includes('whatsapp')) {
+        urlFinal = `${urlFinal.split('?')[0]}?text=${msg}`;
+      }
+      window.open(urlFinal, '_blank');
+    }
+
+    document.getElementById('box-form').style.display = 'none';
+    document.getElementById('box-sucesso').style.display = 'block';
+  } catch(e) {
+    erroEl.textContent = 'Erro ao enviar: ' + e.message;
+    erroEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> ENVIAR E IR PARA O PAGAMENTO';
+  }
+}
+</script>
+</body>
+</html>

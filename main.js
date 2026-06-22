@@ -10282,7 +10282,36 @@ const exame = {
     },
 
     // ── Relatório costureira ──
-    async abrirRelatorioCostureira() {
+    selecionarFiltroCostureira() {
+        document.getElementById('modal-filtro-costureira')?.remove();
+        const m = document.createElement('div');
+        m.id = 'modal-filtro-costureira';
+        m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:10010;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;';
+        m.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:24px;width:100%;max-width:320px;">
+                <div style="font-size:0.85rem;font-weight:800;color:white;margin-bottom:6px;">🧵 Relatório para Costureira</div>
+                <div style="font-size:0.65rem;color:#64748b;margin-bottom:18px;">Selecione qual grupo incluir no relatório:</div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <button onclick="document.getElementById('modal-filtro-costureira').remove();exame.abrirRelatorioCostureira('todos')"
+                        style="padding:12px;background:#0f172a;border:1px solid #334155;color:white;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;text-align:left;">
+                        👥 Todos os atletas
+                    </button>
+                    <button onclick="document.getElementById('modal-filtro-costureira').remove();exame.abrirRelatorioCostureira('adulto')"
+                        style="padding:12px;background:#0f172a;border:1px solid #3b82f655;color:#93c5fd;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;text-align:left;">
+                        🥋 Somente Adultos (16+)
+                    </button>
+                    <button onclick="document.getElementById('modal-filtro-costureira').remove();exame.abrirRelatorioCostureira('kids')"
+                        style="padding:12px;background:#0f172a;border:1px solid #a855f755;color:#d8b4fe;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;text-align:left;">
+                        🌟 Somente Kids (até 15 anos)
+                    </button>
+                    <button onclick="document.getElementById('modal-filtro-costureira').remove()"
+                        style="padding:10px;background:transparent;border:none;color:#64748b;font-size:0.7rem;cursor:pointer;">Cancelar</button>
+                </div>
+            </div>`;
+        document.body.appendChild(m);
+    },
+
+    async abrirRelatorioCostureira(filtro = 'todos') {
         const snap = await db.collection('alunos').where('aspiranteGraduacao','==',true).get();
         if (snap.empty) return alert('Nenhum atleta convocado.');
 
@@ -10291,13 +10320,16 @@ const exame = {
         snap.forEach(doc => {
             const a = doc.data();
             const idade = a.nascimento ? (ano - new Date(a.nascimento).getFullYear()) : 99;
-            const cat = idade < 16 ? 'kids' : (a.faixa === 'Marrom' || a.faixa === 'Preta' ? 'preta' : 'adulto');
+            const isKids = idade < 16;
+            if (filtro === 'adulto' && isKids) return;
+            if (filtro === 'kids' && !isKids) return;
+            const cat = isKids ? 'kids' : (a.faixa === 'Marrom' || a.faixa === 'Preta' ? 'preta' : 'adulto');
             const proxFaixa = this._getProxFaixa(a, cat);
             linhas.push({
                 nome:     a.nome || '—',
                 faixa:    proxFaixa || '—',
                 tamanho:  a.tamanhoFaixa || '—',
-                cat:      idade < 16 ? 'Kids' : 'Adulto'
+                cat:      isKids ? 'Kids' : 'Adulto'
             });
         });
 
@@ -10494,7 +10526,7 @@ const exame = {
                 <button onclick="exame.migrarConvocacoesPendentes()"
                     style="flex:1;padding:9px;font-size:0.62rem;font-weight:800;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;cursor:pointer;">📣 Notificar todos</button>
             </div>
-            <button onclick="exame.abrirRelatorioCostureira()"
+            <button onclick="exame.selecionarFiltroCostureira()"
                 style="width:100%;padding:9px;font-size:0.62rem;font-weight:800;background:#0f172a;border:1px solid #94a3b8;color:#94a3b8;border-radius:8px;cursor:pointer;margin-bottom:8px;">🧵 Relatório para Costureira</button>
             <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:12px;margin-bottom:10px;overflow:hidden;">
                 <div onclick="(()=>{const b=document.getElementById('acc-convocados');const c=document.getElementById('chev-convocados');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='block'?'rotate(180deg)':''})()"

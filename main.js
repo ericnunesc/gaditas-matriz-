@@ -10273,17 +10273,20 @@ const exame = {
                 <div style="background:#0f172a; border:1px solid #f59e0b44; border-radius:12px; padding:14px; margin-bottom:14px;">
                     <div style="font-size:0.6rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px; margin-bottom:8px;">📏 TAMANHO DA SUA FAIXA</div>
                     <div style="font-size:0.7rem; color:#94a3b8; margin-bottom:8px;">Informe o tamanho para confecção da nova faixa.</div>
+                    <select id="select-tamanho-faixa" style="width:100%;padding:10px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.82rem;margin-bottom:10px;">
+                        <option value="">— Selecione —</option>
+                        ${isKids
+                            ? ['M00','M0','M1','M2','M3','M4','A0','A1','A2'].map(t => `<option value="${t}" ${aluno.tamanhoFaixa===t?'selected':''}>${t}</option>`).join('')
+                            : ['A0','A1','A2','A3','A4','A5'].map(t => `<option value="${t}" ${aluno.tamanhoFaixa===t?'selected':''}>${t}</option>`).join('')
+                        }
+                    </select>
+                    <div style="font-size:0.6rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px; margin-bottom:6px;">🏷️ NOME NA ETIQUETA DA FAIXA</div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <select id="select-tamanho-faixa" style="flex:1;padding:10px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.82rem;">
-                            <option value="">— Selecione —</option>
-                            ${isKids
-                                ? ['M00','M0','M1','M2','M3','M4','A0','A1','A2'].map(t => `<option value="${t}" ${aluno.tamanhoFaixa===t?'selected':''}>${t}</option>`).join('')
-                                : ['A0','A1','A2','A3','A4','A5'].map(t => `<option value="${t}" ${aluno.tamanhoFaixa===t?'selected':''}>${t}</option>`).join('')
-                            }
-                        </select>
+                        <input id="input-nome-etiqueta" type="text" value="${aluno.nomeEtiqueta||''}" placeholder="Nome que aparecerá na etiqueta"
+                            style="flex:1;padding:10px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.82rem;">
                         <button onclick="exame.salvarTamanhoFaixa('${alunoId}')" style="padding:10px 16px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.78rem;white-space:nowrap;">💾 Salvar</button>
                     </div>
-                    ${aluno.tamanhoFaixa ? `<div style="margin-top:6px;font-size:0.65rem;color:#10b981;">✅ Tamanho registrado: <strong>${aluno.tamanhoFaixa}</strong></div>` : `<div style="margin-top:6px;font-size:0.65rem;color:#f59e0b;">⚠️ Tamanho não informado ainda.</div>`}
+                    ${aluno.tamanhoFaixa ? `<div style="margin-top:6px;font-size:0.65rem;color:#10b981;">✅ Tamanho: <strong>${aluno.tamanhoFaixa}</strong>${aluno.nomeEtiqueta ? ` · Etiqueta: <strong>${aluno.nomeEtiqueta}</strong>` : ''}</div>` : `<div style="margin-top:6px;font-size:0.65rem;color:#f59e0b;">⚠️ Tamanho não informado ainda.</div>`}
                 </div>
 
                 <!-- BOTÕES -->
@@ -10324,10 +10327,11 @@ const exame = {
     // ── Salvar tamanho da faixa ──
     async salvarTamanhoFaixa(alunoId) {
         const sel = document.getElementById('select-tamanho-faixa');
+        const nomeEtiqueta = document.getElementById('input-nome-etiqueta')?.value.trim() || '';
         if (!sel || !sel.value) return alert('Selecione um tamanho.');
         try {
-            await db.collection('alunos').doc(alunoId).update({ tamanhoFaixa: sel.value });
-            alert(`✅ Tamanho ${sel.value} salvo!`);
+            await db.collection('alunos').doc(alunoId).update({ tamanhoFaixa: sel.value, nomeEtiqueta });
+            alert(`✅ Tamanho ${sel.value} e nome da etiqueta salvos!`);
             exame.carregarExameAluno();
         } catch(e) { alert('Erro ao salvar: ' + e.message); }
     },
@@ -10377,19 +10381,12 @@ const exame = {
             const cat = isKids ? 'kids' : (a.faixa === 'Marrom' || a.faixa === 'Preta' ? 'preta' : 'adulto');
             const proxFaixa = this._getProxFaixa(a, cat);
             linhas.push({
-                nome:     a.nome || '—',
-                faixa:    proxFaixa || '—',
-                tamanho:  a.tamanhoFaixa || '—',
-                cat:      isKids ? 'Kids' : 'Adulto'
+                nome:         a.nome || '—',
+                faixa:        proxFaixa || '—',
+                tamanho:      a.tamanhoFaixa || '—',
+                nomeEtiqueta: a.nomeEtiqueta || '',
+                cat:          isKids ? 'Kids' : 'Adulto'
             });
-        });
-
-        // Agrupa por faixa destino + tamanho
-        const grupos = {};
-        linhas.forEach(l => {
-            const k = `${l.faixa}||${l.tamanho}`;
-            if (!grupos[k]) grupos[k] = { faixa: l.faixa, tamanho: l.tamanho, alunos: [] };
-            grupos[k].alunos.push(l);
         });
 
         const corFaixaCSS = f => ({
@@ -10398,31 +10395,31 @@ const exame = {
             'Marrom':'#92400e','Preta':'#1e293b'
         }[f] || '#64748b');
 
-        let rows = '';
-        Object.values(grupos).sort((a,b) => a.faixa.localeCompare(b.faixa) || a.tamanho.localeCompare(b.tamanho))
-            .forEach(g => {
-                const cor = corFaixaCSS(g.faixa);
-                rows += `<tr style="border-bottom:1px solid #e2e8f0;">
-                    <td style="padding:6px 10px;font-weight:700;color:${cor};border-right:1px solid #e2e8f0;">${g.faixa}</td>
-                    <td style="padding:6px 10px;font-weight:800;text-align:center;border-right:1px solid #e2e8f0;">${g.tamanho}</td>
-                    <td style="padding:6px 10px;text-align:center;border-right:1px solid #e2e8f0;">${g.alunos.length}</td>
-                    <td style="padding:6px 10px;font-size:0.75rem;">${g.alunos.map(a=>a.nome).join(', ')}</td>
-                </tr>`;
-            });
-
-        // Linha de sem tamanho
         const semTamanho = linhas.filter(l => l.tamanho === '—');
+        const comTamanho = linhas.filter(l => l.tamanho !== '—')
+            .sort((a,b) => a.faixa.localeCompare(b.faixa) || a.tamanho.localeCompare(b.tamanho));
+
+        const rows = comTamanho.map(l => {
+            const cor = corFaixaCSS(l.faixa);
+            return `<tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:6px 10px;font-weight:700;color:${cor};border-right:1px solid #e2e8f0;">${l.faixa}</td>
+                <td style="padding:6px 10px;font-weight:800;text-align:center;border-right:1px solid #e2e8f0;">${l.tamanho}</td>
+                <td style="padding:6px 10px;font-size:0.75rem;border-right:1px solid #e2e8f0;">${l.nome}</td>
+                <td style="padding:6px 10px;font-size:0.75rem;font-weight:700;color:#1e3a8a;">${l.nomeEtiqueta || '<span style="color:#94a3b8;font-style:italic;">não informado</span>'}</td>
+            </tr>`;
+        }).join('');
 
         const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pedido Costureira — Gaditas Academy</title>
         <style>body{font-family:Arial,sans-serif;padding:24px;color:#1e293b;}h2{margin-bottom:4px;}p{color:#64748b;font-size:0.85rem;margin-bottom:16px;}
         table{width:100%;border-collapse:collapse;border:1px solid #e2e8f0;}th{background:#1e293b;color:white;padding:8px 10px;text-align:left;font-size:0.8rem;}
+        td{border-right:1px solid #e2e8f0;}tr:nth-child(even){background:#f8fafc;}
         @media print{button{display:none!important;}}
         </style></head><body>
         <h2>🧵 Pedido de Faixas — Gaditas Academy</h2>
         <p>Gerado em: ${new Date().toLocaleString('pt-BR')} · Total: ${linhas.length} atletas</p>
         <button onclick="window.print()" style="margin-bottom:16px;padding:10px 20px;background:#1e293b;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">🖨️ IMPRIMIR</button>
         <table>
-            <thead><tr><th>Faixa</th><th style="text-align:center;">Tamanho</th><th style="text-align:center;">Qtd</th><th>Alunos</th></tr></thead>
+            <thead><tr><th>Faixa</th><th style="text-align:center;">Tamanho</th><th>Nome do Aluno</th><th>Nome na Etiqueta</th></tr></thead>
             <tbody>${rows}</tbody>
         </table>
         ${semTamanho.length ? `<div style="margin-top:20px;padding:12px;background:#fef9c3;border:1px solid #f59e0b;border-radius:8px;">

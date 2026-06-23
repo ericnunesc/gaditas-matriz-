@@ -3159,9 +3159,9 @@ const academia = {
         ui.showTab('tab-alunos');
     },
 
-    abrirAlterarSenha() {
-        const id = document.getElementById('edit-aluno-id')?.value;
-        const nome = document.getElementById('nome-aluno')?.value || 'este aluno';
+    abrirAlterarSenha(idParam, nomeParam) {
+        const id = idParam || document.getElementById('edit-aluno-id')?.value;
+        const nome = nomeParam || document.getElementById('nome-aluno')?.value || 'este aluno';
         if (!id) return;
         document.getElementById('modal-alterar-senha-aluno')?.remove();
         const m = document.createElement('div');
@@ -3413,6 +3413,7 @@ const academia = {
                 ${isAdmin ? `<button onclick="academia._meSalvar('${id}')" style="flex:2; padding:13px; background:#3b82f6; border:none; color:white; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.85rem;">💾 SALVAR ALTERAÇÕES</button>` : ''}
                 <button onclick="document.getElementById('modal-editar-atleta').remove()" style="flex:1; padding:13px; background:#334155; border:none; color:white; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.85rem;">✕ FECHAR</button>
             </div>
+            ${isAdmin ? `<button onclick="academia.abrirAlterarSenha('${id}','${(a.nome||'').replace(/'/g,"\\'")}',true)" style="width:100%; margin-top:10px; padding:11px; background:#0f172a; border:1px solid #f59e0b55; color:#fbbf24; border-radius:10px; font-size:0.75rem; font-weight:700; cursor:pointer;">🔑 Alterar Senha do Aluno</button>` : ''}
         </div>`;
 
         modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });

@@ -3154,7 +3154,55 @@ const academia = {
         }
         document.querySelectorAll('#card-gestao-atleta input, #card-gestao-atleta select').forEach(el => el.disabled = !isAdmin);
         document.getElementById('btn-salvar-atleta').style.display = isAdmin ? 'block' : 'none';
+        const btnSenha = document.getElementById('btn-alterar-senha-aluno');
+        if (btnSenha) btnSenha.style.display = (isAdmin && id) ? 'block' : 'none';
         ui.showTab('tab-alunos');
+    },
+
+    abrirAlterarSenha() {
+        const id = document.getElementById('edit-aluno-id')?.value;
+        const nome = document.getElementById('nome-aluno')?.value || 'este aluno';
+        if (!id) return;
+        document.getElementById('modal-alterar-senha-aluno')?.remove();
+        const m = document.createElement('div');
+        m.id = 'modal-alterar-senha-aluno';
+        m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:10020;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;';
+        m.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:24px;width:100%;max-width:340px;">
+                <div style="font-size:0.85rem;font-weight:800;color:#fbbf24;margin-bottom:4px;">🔑 Alterar Senha</div>
+                <div style="font-size:0.65rem;color:#64748b;margin-bottom:16px;">${nome}</div>
+                <input id="input-nova-senha" type="password" placeholder="Nova senha (mínimo 6 caracteres)"
+                    style="width:100%;padding:11px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;box-sizing:border-box;margin-bottom:12px;">
+                <div id="senha-status" style="font-size:0.65rem;min-height:16px;margin-bottom:12px;"></div>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="academia.confirmarAlterarSenha('${id}')"
+                        style="flex:2;padding:11px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-size:0.75rem;font-weight:800;cursor:pointer;">✅ Confirmar</button>
+                    <button onclick="document.getElementById('modal-alterar-senha-aluno').remove()"
+                        style="flex:1;padding:11px;background:#334155;border:none;color:white;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;">Cancelar</button>
+                </div>
+            </div>`;
+        document.body.appendChild(m);
+        setTimeout(() => document.getElementById('input-nova-senha')?.focus(), 100);
+    },
+
+    async confirmarAlterarSenha(uid) {
+        const senha = document.getElementById('input-nova-senha')?.value || '';
+        const status = document.getElementById('senha-status');
+        if (senha.length < 6) { if (status) { status.style.color='#ef4444'; status.textContent='A senha precisa ter pelo menos 6 caracteres.'; } return; }
+        if (status) { status.style.color='#64748b'; status.textContent='Aguarde...'; }
+        try {
+            const res = await fetch('/api/alterar-senha', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uid, novaSenha: senha })
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Erro desconhecido');
+            document.getElementById('modal-alterar-senha-aluno')?.remove();
+            alert('✅ Senha alterada com sucesso!');
+        } catch(e) {
+            if (status) { status.style.color='#ef4444'; status.textContent='Erro: ' + e.message; }
+        }
     },
 
     // ── MODAL POPUP EDITAR ATLETA ────────────────────────
@@ -3678,6 +3726,8 @@ Ele voltará a ser aluno normal.`)) return;
         document.getElementById('nascimento-aluno').value = "";
         document.getElementById('admin-painel-leoes').classList.add('hidden');
         document.querySelectorAll('#card-gestao-atleta input, #card-gestao-atleta select').forEach(el => el.disabled = false);
+        const btnSenha = document.getElementById('btn-alterar-senha-aluno');
+        if (btnSenha) btnSenha.style.display = 'none';
         // Reset modalidade para JJ (padrão)
         this._modalidadeAtual = 'jiujitsu';
         this.selecionarModalidade('jiujitsu');

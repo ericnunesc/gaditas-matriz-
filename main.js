@@ -10418,6 +10418,7 @@ const exame = {
         <h2>🧵 Pedido de Faixas — Gaditas Academy</h2>
         <p>Gerado em: ${new Date().toLocaleString('pt-BR')} · Total: ${linhas.length} atletas</p>
         <button onclick="window.print()" style="margin-bottom:16px;padding:10px 20px;background:#1e293b;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">🖨️ IMPRIMIR</button>
+        <button onclick="window.close()" style="margin-bottom:16px;margin-left:8px;padding:10px 20px;background:#ef4444;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">✕ Fechar</button>
         <table>
             <thead><tr><th>Faixa</th><th style="text-align:center;">Tamanho</th><th>Nome do Aluno</th><th>Nome na Etiqueta</th></tr></thead>
             <tbody>${rows}</tbody>

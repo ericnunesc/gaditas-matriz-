@@ -95,7 +95,9 @@ export default async function handler(req, res) {
     try {
         const certBuffer = Buffer.from(process.env.EFI_CERT_BASE64, 'base64');
         const certPass = process.env.EFI_CERT_PASS;
-        const chave = process.env.EFI_PIX_KEY;
+        // Chave PIX: prioriza Firestore, cai no env var como fallback
+        const efiDoc = await db.collection('configuracoes').doc('efi_config').get();
+        const chave = (efiDoc.exists && efiDoc.data().chavePix) || process.env.EFI_PIX_KEY;
 
         const token = await getToken(certBuffer, certPass);
 

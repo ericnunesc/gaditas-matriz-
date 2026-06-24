@@ -10635,8 +10635,23 @@ const exame = {
                 </div>
             </div>`;
 
+        // Config Efí PIX
+        const dEfi = await db.collection('configuracoes').doc('efi_config').get();
+        const efiCfg = dEfi.exists ? dEfi.data() : {};
+        const efiAccordion = accordion('cfg-efi', '⚡ CONFIGURAÇÕES PIX (EFÍ BANK)', '#10b981', `
+            <div style="margin-bottom:8px;">
+                <small style="color:#10b981;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">🔑 CHAVE PIX</small>
+                <input type="text" id="efi-chavePix" value="${efiCfg.chavePix||''}" placeholder="CPF, e-mail, celular ou chave aleatória"
+                    style="width:100%;padding:9px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.78rem;box-sizing:border-box;"/>
+            </div>
+            <button onclick="exame.salvarConfigEfi()"
+                style="width:100%;padding:10px;background:#10b981;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.75rem;">
+                💾 SALVAR CHAVE PIX
+            </button>`);
+
         container.innerHTML =
             `<div id="relatorio-exame" style="margin-bottom:10px;"><small style="color:#475569;font-size:0.65rem;">Carregando relatório...</small></div>` +
+            efiAccordion +
             secao('🧒 KIDS', '#f59e0b', 'kids', kids) +
             secao('🥋 16+ ATÉ MARROM', '#3b82f6', 'adulto', adulto) +
             secaoPreta() +
@@ -10646,6 +10661,13 @@ const exame = {
         this.carregarConfirmados();
         this.carregarRelatorioExame({ kids, adulto, preta });
         tecnicasExame.carregarPainel();
+    },
+
+    async salvarConfigEfi() {
+        const chave = document.getElementById('efi-chavePix')?.value?.trim();
+        if (!chave) return alert('Informe a chave PIX.');
+        await db.collection('configuracoes').doc('efi_config').set({ chavePix: chave }, { merge: true });
+        alert('✅ Chave PIX salva com sucesso!');
     },
 
     async salvarConfigExame(categoria) {

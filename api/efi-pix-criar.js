@@ -69,7 +69,7 @@ export default async function handler(req, res) {
 
         // 2. Chave PIX
         const efiDoc = await db.collection('configuracoes').doc('efi_config').get();
-        const chave = (efiDoc.exists && efiDoc.data().chavePix) || process.env.EFI_PIX_KEY;
+        const chave = ((efiDoc.exists && efiDoc.data().chavePix) || process.env.EFI_PIX_KEY || '').trim();
         console.log('[efi] chave:', chave);
 
         // 3. Criar cobrança

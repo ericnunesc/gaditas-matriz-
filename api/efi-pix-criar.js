@@ -120,7 +120,9 @@ export default async function handler(req, res) {
         });
 
         if (!cobResp.data?.loc?.id) {
-            return res.status(500).json({ error: 'Erro ao criar cobrança', detail: cobResp.data });
+            const detalhe = JSON.stringify(cobResp.data);
+            console.error('[efi] erro cob:', detalhe);
+            return res.status(500).json({ error: `Erro ao criar cobrança: ${detalhe}` });
         }
 
         const { txid, loc } = cobResp.data;

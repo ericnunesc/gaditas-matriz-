@@ -44,8 +44,8 @@ export default async function handler(req, res) {
     try {
         const certBase64 = process.env.EFI_CERT_BASE64 || '';
         const certPass   = (process.env.EFI_CERT_PASS || '').trim();
-        const clientId   = process.env.EFI_CLIENT_ID || '';
-        const clientSec  = process.env.EFI_CLIENT_SECRET || '';
+        const clientId   = (process.env.EFI_CLIENT_ID || '').trim();
+        const clientSec  = (process.env.EFI_CLIENT_SECRET || '').trim();
 
         console.log('[efi] cert len:', certBase64.length, 'pass len:', certPass.length, 'clientId ok:', !!clientId);
 

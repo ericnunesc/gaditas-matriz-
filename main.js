@@ -10289,16 +10289,27 @@ const exame = {
                     ${aluno.tamanhoFaixa ? `<div style="margin-top:6px;font-size:0.65rem;color:#10b981;">✅ Tamanho: <strong>${aluno.tamanhoFaixa}</strong>${aluno.nomeEtiqueta ? ` · Etiqueta: <strong>${aluno.nomeEtiqueta}</strong>` : ''}</div>` : `<div style="margin-top:6px;font-size:0.65rem;color:#f59e0b;">⚠️ Tamanho não informado ainda.</div>`}
                 </div>
 
-                <!-- BOTÕES -->
+                <!-- BOTÕES PAGAMENTO -->
                 <div style="display:flex; flex-direction:column; gap:10px;">
                     ${(() => {
-                        let link = cfg.linkPagamento;
-                        if (categoria === 'preta' && faixa === 'Preta') link = cfg.linkPagamento2;
-                        return link ? `
-                        <button onclick="window.open('${link}','_blank')"
-                            style="width:100%; padding:15px; background:linear-gradient(135deg,#059669,#10b981); border:none; color:white; border-radius:12px; font-weight:900; font-size:0.88rem; cursor:pointer; box-shadow:0 4px 15px #10b98133;">
-                            <i class="fas fa-credit-card"></i> PAGAR TAXA DE EXAME
-                        </button>` : '';
+                        let v2 = cfg.valor, link = cfg.linkPagamento;
+                        if (categoria === 'preta' && faixa === 'Preta') { v2 = cfg.valor2; link = cfg.linkPagamento2; }
+                        if (!v2) return '';
+                        if (aluno.taxaExamePaga) return `
+                        <div style="width:100%;padding:14px;background:#052e16;border:2px solid #10b981;color:#10b981;border-radius:12px;font-weight:900;font-size:0.88rem;text-align:center;">
+                            ✅ TAXA PAGA
+                        </div>`;
+                        return `
+                        <div style="display:flex;gap:8px;">
+                            <button onclick="exame.pagarPix('${alunoId}','${v2}',this)"
+                                style="flex:1;padding:14px;background:linear-gradient(135deg,#0ea5e9,#38bdf8);border:none;color:white;border-radius:12px;font-weight:900;font-size:0.85rem;cursor:pointer;">
+                                📱 PIX
+                            </button>
+                            ${link ? `<button onclick="window.open('${link}','_blank')"
+                                style="flex:1;padding:14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);border:none;color:white;border-radius:12px;font-weight:900;font-size:0.85rem;cursor:pointer;">
+                                💳 Cartão
+                            </button>` : ''}
+                        </div>`;
                     })()}
                     <button id="btn-confirmar-exame" onclick="exame.confirmarPresenca('${alunoId}')"
                         style="width:100%; padding:13px; background:${jaConfirmou ? '#064e3b' : '#1e3a8a'}; border:2px solid ${jaConfirmou ? '#10b981' : '#3b82f6'}; color:${jaConfirmou ? '#10b981' : '#93c5fd'}; border-radius:12px; font-weight:800; font-size:0.85rem; cursor:pointer;">
@@ -10313,6 +10324,42 @@ const exame = {
 
         } catch(e) {
             if (container) container.innerHTML = `<p style="color:#f43f5e;text-align:center;padding:20px;font-size:0.8rem;">Erro: ${e.message}</p>`;
+        }
+    },
+
+    async pagarPix(alunoId, valor, btn) {
+        const orig = btn?.textContent;
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+        try {
+            const res = await fetch('/api/efi-pix-criar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ alunoId, valor, nomeAluno: auth.currentUser?.nome || '' })
+            });
+            const data = await res.json();
+            if (!data.qrcode) throw new Error(data.error || 'Erro ao gerar PIX');
+
+            const qrcodeEsc = data.qrcode.replace(/'/g, "\\'");
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.96);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+            modal.innerHTML = `
+                <div style="background:#1e293b;border-radius:16px;padding:24px;max-width:340px;width:100%;text-align:center;position:relative;">
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="position:absolute;top:12px;right:12px;background:#334155;border:none;color:white;width:32px;height:32px;border-radius:50%;font-size:1rem;cursor:pointer;">✕</button>
+                    <div style="font-size:0.65rem;font-weight:800;color:#64748b;letter-spacing:1px;margin-bottom:4px;">📱 PAGAMENTO VIA PIX</div>
+                    <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:14px;">Escaneie ou copie o código</div>
+                    <img src="${data.imagemQrcode}" style="width:210px;height:210px;background:white;padding:8px;border-radius:12px;margin-bottom:14px;">
+                    <div style="font-size:0.55rem;color:#64748b;word-break:break-all;background:#0f172a;padding:10px;border-radius:8px;margin-bottom:14px;text-align:left;">${data.qrcode}</div>
+                    <button onclick="navigator.clipboard.writeText('${qrcodeEsc}');this.textContent='✅ Copiado!';setTimeout(()=>this.textContent='📋 Copiar Código PIX',2000)"
+                        style="width:100%;padding:12px;background:#0ea5e9;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.85rem;margin-bottom:10px;">
+                        📋 Copiar Código PIX
+                    </button>
+                    <div style="font-size:0.62rem;color:#475569;">✅ Confirmação automática após pagamento</div>
+                </div>`;
+            document.body.appendChild(modal);
+        } catch(e) {
+            alert('Erro ao gerar PIX: ' + e.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = orig; }
         }
     },
 

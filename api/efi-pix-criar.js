@@ -148,6 +148,7 @@ export default async function handler(req, res) {
             imagemQrcode: qrResp.data.imagemQrcode
         });
     } catch (e) {
-        return res.status(500).json({ error: e.message });
+        console.error('[efi-pix-criar] erro:', e.message, e.stack);
+        return res.status(500).json({ error: e.message, stack: e.stack });
     }
 }

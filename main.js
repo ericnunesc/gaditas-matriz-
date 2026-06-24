@@ -10146,8 +10146,12 @@ const exame = {
             const aluno = alunoDoc.data();
 
             const categoria  = this._getCategoria(aluno);
-            const configDoc  = await db.collection('configuracoes').doc(this._docId(categoria)).get();
-            const cfg        = configDoc.exists ? configDoc.data() : {};
+            const [configDoc, efiDoc] = await Promise.all([
+                db.collection('configuracoes').doc(this._docId(categoria)).get(),
+                db.collection('configuracoes').doc('efi_config').get()
+            ]);
+            const cfg    = configDoc.exists ? configDoc.data() : {};
+            const efiCfg = efiDoc.exists ? efiDoc.data() : {};
 
             const faixa      = aluno.faixa || 'Branca';
             const aulas      = aluno.aulas || 0;
@@ -10299,16 +10303,19 @@ const exame = {
                         <div style="width:100%;padding:14px;background:#052e16;border:2px solid #10b981;color:#10b981;border-radius:12px;font-weight:900;font-size:0.88rem;text-align:center;">
                             ✅ TAXA PAGA
                         </div>`;
-                        return `
-                        <div style="display:flex;gap:8px;">
-                            <button onclick="exame.pagarPix('${alunoId}','${v2}',this)"
-                                style="flex:1;padding:14px;background:linear-gradient(135deg,#0ea5e9,#38bdf8);border:none;color:white;border-radius:12px;font-weight:900;font-size:0.85rem;cursor:pointer;">
-                                📱 PIX
-                            </button>
-                            ${link ? `<button onclick="window.open('${link}','_blank')"
-                                style="flex:1;padding:14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);border:none;color:white;border-radius:12px;font-weight:900;font-size:0.85rem;cursor:pointer;">
-                                💳 Cartão
-                            </button>` : ''}
+                        const mostrarPix    = efiCfg.ativarPix    !== false;
+                        const mostrarCartao = efiCfg.ativarCartao !== false;
+                        const mostrarLink   = efiCfg.ativarLink   !== false && link;
+                        return `<div style="display:flex;flex-wrap:wrap;gap:8px;">
+                            ${mostrarPix ? `<button onclick="exame.pagarPix('${alunoId}','${v2}',this)"
+                                style="flex:1;min-width:80px;padding:14px;background:linear-gradient(135deg,#0ea5e9,#38bdf8);border:none;color:white;border-radius:12px;font-weight:900;font-size:0.82rem;cursor:pointer;">
+                                📱 PIX</button>` : ''}
+                            ${mostrarCartao ? `<button onclick="exame.pagarCartaoEfi('${alunoId}','${v2}',this)"
+                                style="flex:1;min-width:80px;padding:14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);border:none;color:white;border-radius:12px;font-weight:900;font-size:0.82rem;cursor:pointer;">
+                                💳 Cartão</button>` : ''}
+                            ${mostrarLink ? `<button onclick="window.open('${link}','_blank')"
+                                style="flex:1;min-width:80px;padding:14px;background:linear-gradient(135deg,#059669,#10b981);border:none;color:white;border-radius:12px;font-weight:900;font-size:0.82rem;cursor:pointer;">
+                                🔗 InfinityPay</button>` : ''}
                         </div>`;
                     })()}
                     <button id="btn-confirmar-exame" onclick="exame.confirmarPresenca('${alunoId}')"
@@ -10324,6 +10331,27 @@ const exame = {
 
         } catch(e) {
             if (container) container.innerHTML = `<p style="color:#f43f5e;text-align:center;padding:20px;font-size:0.8rem;">Erro: ${e.message}</p>`;
+        }
+    },
+
+    async pagarCartaoEfi(alunoId, valor, btn) {
+        const orig = btn?.textContent;
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+        try {
+            const res = await fetch('/api/efi-cartao-criar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ alunoId, valor, nomeAluno: auth.currentUser?.nome || '' })
+            });
+            const data = await res.json();
+            if (!data.link) throw new Error(data.error || 'Erro ao gerar link de pagamento');
+            const w = window.open('', '_blank');
+            if (w) { w.location.href = data.link; }
+            else { window.location.href = data.link; }
+        } catch(e) {
+            alert('Erro ao gerar pagamento: ' + e.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = orig; }
         }
     },
 
@@ -10638,15 +10666,27 @@ const exame = {
         // Config Efí PIX
         const dEfi = await db.collection('configuracoes').doc('efi_config').get();
         const efiCfg = dEfi.exists ? dEfi.data() : {};
-        const efiAccordion = accordion('cfg-efi', '⚡ CONFIGURAÇÕES PIX (EFÍ BANK)', '#10b981', `
-            <div style="margin-bottom:8px;">
+        const chk = (id, label, checked) =>
+            `<label style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1e293b;cursor:pointer;">
+                <input type="checkbox" id="${id}" ${checked?'checked':''} style="width:16px;height:16px;accent-color:#10b981;">
+                <span style="font-size:0.75rem;color:#e2e8f0;">${label}</span>
+            </label>`;
+
+        const efiAccordion = accordion('cfg-efi', '⚡ PAGAMENTOS — EFÍ BANK', '#10b981', `
+            <div style="margin-bottom:10px;">
                 <small style="color:#10b981;font-size:0.58rem;font-weight:800;display:block;margin-bottom:3px;">🔑 CHAVE PIX</small>
                 <input type="text" id="efi-chavePix" value="${efiCfg.chavePix||''}" placeholder="CPF, e-mail, celular ou chave aleatória"
                     style="width:100%;padding:9px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.78rem;box-sizing:border-box;"/>
             </div>
+            <div style="margin-bottom:12px;">
+                <small style="color:#64748b;font-size:0.58rem;font-weight:800;display:block;margin-bottom:4px;">🔘 MÉTODOS DE PAGAMENTO ATIVOS</small>
+                ${chk('efi-ativarPix',    '📱 PIX via Efí (automático)',         efiCfg.ativarPix    !== false)}
+                ${chk('efi-ativarCartao', '💳 Cartão via Efí (link de cobrança)', efiCfg.ativarCartao !== false)}
+                ${chk('efi-ativarLink',   '🔗 Link InfinityPay (manual)',          efiCfg.ativarLink   !== false)}
+            </div>
             <button onclick="exame.salvarConfigEfi()"
                 style="width:100%;padding:10px;background:#10b981;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.75rem;">
-                💾 SALVAR CHAVE PIX
+                💾 SALVAR CONFIGURAÇÕES DE PAGAMENTO
             </button>`);
 
         container.innerHTML =
@@ -10664,10 +10704,13 @@ const exame = {
     },
 
     async salvarConfigEfi() {
-        const chave = document.getElementById('efi-chavePix')?.value?.trim();
+        const chave      = document.getElementById('efi-chavePix')?.value?.trim();
+        const ativarPix    = document.getElementById('efi-ativarPix')?.checked ?? true;
+        const ativarCartao = document.getElementById('efi-ativarCartao')?.checked ?? true;
+        const ativarLink   = document.getElementById('efi-ativarLink')?.checked ?? true;
         if (!chave) return alert('Informe a chave PIX.');
-        await db.collection('configuracoes').doc('efi_config').set({ chavePix: chave }, { merge: true });
-        alert('✅ Chave PIX salva com sucesso!');
+        await db.collection('configuracoes').doc('efi_config').set({ chavePix: chave, ativarPix, ativarCartao, ativarLink }, { merge: true });
+        alert('✅ Configurações de pagamento salvas!');
     },
 
     async salvarConfigExame(categoria) {

@@ -97,20 +97,35 @@ export default async function handler(req, res) {
                 }
             }
 
+            // Gerar link de pagamento (hosted checkout para boleto + cartão + PIX)
+            const expire_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            const linkBody = JSON.stringify({
+                billet_discount: 0,
+                card_discount: 0,
+                message: '',
+                expire_at,
+                request_delivery_address: false,
+                payment_method: 'all'
+            });
+            const linkResp = await httpsReq(EFI_COB_HOST, `/v1/charge/${chargeData.charge_id}/link`, 'POST', {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(linkBody)
+            }, pfx, certPass, linkBody);
+
+            console.log('[efi-cartao] link status:', linkResp.status, JSON.stringify(linkResp.data).slice(0, 300));
+
+            const payLink = linkResp.data?.data?.link || linkResp.data?.link || '';
+            if (!payLink) {
+                return res.status(500).json({ error: `Sem link. Resp: ${JSON.stringify(linkResp.data).slice(0, 400)}` });
+            }
+
             await db.collection('exame_cobrancas').doc(`c${chargeData.charge_id}`).set({
                 alunoId, valor: parseFloat(valor), tipo: 'cartao', status: 'pendente',
                 chargeId: chargeData.charge_id, criadoEm: new Date().toISOString()
             });
 
-            const link = chargeData.link
-                || chargeData.payment?.banking_billet?.link
-                || chargeData.payment?.credit_card?.installments?.[0]?.url
-                || '';
-            console.log('[efi-cartao] chargeData keys:', Object.keys(chargeData), 'link:', link);
-            if (!link) {
-                return res.status(500).json({ error: `Sem link. Dados: ${JSON.stringify(chargeData).slice(0, 400)}` });
-            }
-            return res.status(200).json({ link });
+            return res.status(200).json({ link: payLink });
         } catch (e) {
             console.error('[efi-cartao] exceção:', e.message);
             return res.status(500).json({ error: e.message });

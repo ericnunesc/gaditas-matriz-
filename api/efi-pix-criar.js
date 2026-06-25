@@ -100,8 +100,6 @@ export default async function handler(req, res) {
             // Gerar link de pagamento (hosted checkout para boleto + cartão + PIX)
             const expire_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
             const linkBody = JSON.stringify({
-                billet_discount: 0,
-                card_discount: 0,
                 message: '',
                 expire_at,
                 request_delivery_address: false,

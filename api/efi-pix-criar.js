@@ -102,9 +102,15 @@ export default async function handler(req, res) {
                 chargeId: chargeData.charge_id, criadoEm: new Date().toISOString()
             });
 
-            return res.status(200).json({
-                link: chargeData.link || chargeData.payment?.banking_billet?.link || ''
-            });
+            const link = chargeData.link
+                || chargeData.payment?.banking_billet?.link
+                || chargeData.payment?.credit_card?.installments?.[0]?.url
+                || '';
+            console.log('[efi-cartao] chargeData keys:', Object.keys(chargeData), 'link:', link);
+            if (!link) {
+                return res.status(500).json({ error: `Sem link. Dados: ${JSON.stringify(chargeData).slice(0, 400)}` });
+            }
+            return res.status(200).json({ link });
         } catch (e) {
             console.error('[efi-cartao] exceção:', e.message);
             return res.status(500).json({ error: e.message });

@@ -2457,7 +2457,12 @@ const academia = {
         let h = "";
         for (const t in g) {
             h += `<h4 style="color:#3b82f6; font-size:0.7rem; margin:15px 0 6px 4px; font-weight:800; letter-spacing:0.5px;">${t.toUpperCase()}</h4>`;
-            h += g[t].map(c => `<div class="item-card" style="border-left: 4px solid ${ui.getCorFaixa(info[c.alunoId]?.faixa || "Branca")};"><span style="font-size:0.85rem; color:#e2e8f0; font-weight:600;">${c.alunoNome}</span><div style="display:flex; gap:6px;"><button onclick="academia.aprovar('${c.id}', '${c.alunoId}', '${c.turma}')" style="background:#062f1d; color:#10b981; border:none; padding:8px 12px; border-radius:6px; font-size:0.75rem; cursor:pointer;"><i class="fas fa-check"></i></button><button onclick="academia.recusarCheckin('${c.id}')" style="background:#3b0707; color:#ef4444; border:none; padding:8px 12px; border-radius:6px; font-size:0.75rem; cursor:pointer;"><i class="fas fa-times"></i></button></div></div>`).join('');
+            h += g[t].map(c => {
+                const al = info[c.alunoId] || {};
+                const cor = ui.getCorFaixa(al.faixa || 'Branca');
+                const foto = al.fotoPerfil ? `<img src="${al.fotoPerfil}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid ${cor};flex-shrink:0;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#334155;border:2px solid ${cor};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">👤</div>`;
+                return `<div class="item-card" style="border-left:4px solid ${cor};display:flex;align-items:center;gap:10px;">${foto}<span style="font-size:0.85rem;color:#e2e8f0;font-weight:600;flex:1;">${c.alunoNome}</span><div style="display:flex;gap:6px;"><button onclick="academia.aprovar('${c.id}','${c.alunoId}','${c.turma}')" style="background:#062f1d;color:#10b981;border:none;padding:8px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;"><i class="fas fa-check"></i></button><button onclick="academia.recusarCheckin('${c.id}')" style="background:#3b0707;color:#ef4444;border:none;padding:8px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;"><i class="fas fa-times"></i></button></div></div>`;
+            }).join('');
         }
         l.innerHTML = h || "<p style='color:var(--text-muted); text-align:center; font-size:0.8rem; padding:10px;'>Nenhum check-in pendente.</p>";
     },

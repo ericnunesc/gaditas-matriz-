@@ -113,7 +113,7 @@ export default async function handler(req, res) {
 
             console.log('[efi-cartao] link status:', linkResp.status, JSON.stringify(linkResp.data).slice(0, 300));
 
-            const payLink = linkResp.data?.data?.link || linkResp.data?.link || '';
+            const payLink = linkResp.data?.data?.payment_url || linkResp.data?.data?.link || linkResp.data?.link || '';
             if (!payLink) {
                 return res.status(500).json({ error: `Sem link. Resp: ${JSON.stringify(linkResp.data).slice(0, 400)}` });
             }

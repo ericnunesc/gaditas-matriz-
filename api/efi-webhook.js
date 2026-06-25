@@ -54,7 +54,7 @@ export default async function handler(req, res) {
             const tokenBody = JSON.stringify({ grant_type: 'client_credentials' });
             const tokenResp = await new Promise((resolve, reject) => {
                 const r = https.request({
-                    hostname: 'cobrancas.api.efipay.com.br', path: '/oauth/token', method: 'POST',
+                    hostname: 'cobrancas.api.efipay.com.br', path: '/v1/authorize', method: 'POST',
                     headers: { 'Authorization': `Basic ${creds}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(tokenBody) },
                     pfx: certBuffer, passphrase: certPass
                 }, (resp) => { let d=''; resp.on('data',c=>d+=c); resp.on('end',()=>resolve(JSON.parse(d))); });

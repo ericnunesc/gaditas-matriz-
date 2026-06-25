@@ -51,7 +51,7 @@ export default async function handler(req, res) {
         try {
             const EFI_COB_HOST = 'cobrancas.api.efipay.com.br';
             const tokenBody = JSON.stringify({ grant_type: 'client_credentials' });
-            const tokenResp = await httpsReq(EFI_COB_HOST, '/oauth/token', 'POST', {
+            const tokenResp = await httpsReq(EFI_COB_HOST, '/v1/authorize', 'POST', {
                 'Authorization': `Basic ${creds}`,
                 'Content-Type': 'application/json',
                 'Content-Length': Buffer.byteLength(tokenBody)

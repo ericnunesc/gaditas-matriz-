@@ -1,4 +1,5 @@
 import admin from 'firebase-admin';
+import https from 'https';
 
 if (!admin.apps.length) {
     admin.initializeApp({
@@ -20,30 +21,77 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).end();
 
     try {
-        const { pix } = req.body || {};
-        if (!pix || !Array.isArray(pix)) return res.status(200).json({ ok: true });
+        const body = req.body || {};
 
-        for (const p of pix) {
-            const { txid } = p;
-            if (!txid) continue;
+        // PIX webhook: payload tem campo "pix"
+        if (body.pix && Array.isArray(body.pix)) {
+            for (const p of body.pix) {
+                const { txid } = p;
+                if (!txid) continue;
+                const cobDoc = await db.collection('exame_cobrancas').doc(txid).get();
+                if (!cobDoc.exists) continue;
+                const { alunoId } = cobDoc.data();
+                await Promise.all([
+                    db.collection('alunos').doc(alunoId).update({
+                        taxaExamePaga: true,
+                        txidExame: txid,
+                        taxaExamePagaEm: new Date().toISOString()
+                    }),
+                    cobDoc.ref.update({ status: 'pago', pagoEm: new Date().toISOString() })
+                ]);
+            }
+            return res.status(200).json({ ok: true });
+        }
 
-            const cobDoc = await db.collection('exame_cobrancas').doc(txid).get();
-            if (!cobDoc.exists) continue;
+        // Cartão webhook: payload tem campo "notification"
+        if (body.notification) {
+            const clientId  = (process.env.EFI_CLIENT_ID || '').trim();
+            const clientSec = (process.env.EFI_CLIENT_SECRET || '').trim();
+            const certBuffer = Buffer.from((process.env.EFI_CERT_BASE64 || ''), 'base64');
+            const certPass   = (process.env.EFI_CERT_PASS || '').trim();
+            const creds = Buffer.from(`${clientId}:${clientSec}`).toString('base64');
 
-            const { alunoId } = cobDoc.data();
-            await Promise.all([
-                db.collection('alunos').doc(alunoId).update({
-                    taxaExamePaga: true,
-                    txidExame: txid,
-                    taxaExamePagaEm: new Date().toISOString()
-                }),
-                cobDoc.ref.update({ status: 'pago', pagoEm: new Date().toISOString() })
-            ]);
+            const tokenBody = JSON.stringify({ grant_type: 'client_credentials' });
+            const tokenResp = await new Promise((resolve, reject) => {
+                const r = https.request({
+                    hostname: 'cobrancas.api.efipay.com.br', path: '/oauth/token', method: 'POST',
+                    headers: { 'Authorization': `Basic ${creds}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(tokenBody) },
+                    pfx: certBuffer, passphrase: certPass
+                }, (resp) => { let d=''; resp.on('data',c=>d+=c); resp.on('end',()=>resolve(JSON.parse(d))); });
+                r.on('error', reject); r.write(tokenBody); r.end();
+            });
+
+            const token = tokenResp.access_token;
+            const notifResp = await new Promise((resolve, reject) => {
+                const r = https.request({
+                    hostname: 'cobrancas.api.efipay.com.br', path: `/v1/notification/${body.notification}`, method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    pfx: certBuffer, passphrase: certPass
+                }, (resp) => { let d=''; resp.on('data',c=>d+=c); resp.on('end',()=>resolve(JSON.parse(d))); });
+                r.on('error', reject); r.end();
+            });
+
+            const data = notifResp.data;
+            if (!data) return res.status(200).json({ ok: true });
+
+            for (const item of (Array.isArray(data) ? data : [data])) {
+                if (item.status?.current === 'paid' || item.status?.current === 'settled') {
+                    const chargeId = item.charge?.id || item.id;
+                    if (!chargeId) continue;
+                    const snap = await db.collection('exame_cobrancas').doc(`c${chargeId}`).get();
+                    if (!snap.exists) continue;
+                    const { alunoId } = snap.data();
+                    await Promise.all([
+                        db.collection('alunos').doc(alunoId).update({ taxaExamePaga: true, taxaExamePagaEm: new Date().toISOString() }),
+                        snap.ref.update({ status: 'pago', pagoEm: new Date().toISOString() })
+                    ]);
+                }
+            }
         }
 
         return res.status(200).json({ ok: true });
     } catch (e) {
         console.error('efi-webhook error:', e.message);
-        return res.status(200).json({ ok: true }); // sempre 200 para Efí não retentar
+        return res.status(200).json({ ok: true });
     }
 }

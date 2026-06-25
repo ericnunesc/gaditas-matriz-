@@ -10338,10 +10338,10 @@ const exame = {
         const orig = btn?.textContent;
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
         try {
-            const res = await fetch('/api/efi-cartao-criar', {
+            const res = await fetch('/api/efi-pix-criar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ alunoId, valor, nomeAluno: auth.currentUser?.nome || '' })
+                body: JSON.stringify({ alunoId, valor, nomeAluno: auth.currentUser?.nome || '', tipo: 'cartao' })
             });
             const data = await res.json();
             if (!data.link) throw new Error(data.error || 'Erro ao gerar link de pagamento');

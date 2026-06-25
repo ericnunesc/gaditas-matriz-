@@ -58,6 +58,10 @@ body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFo
 .vazio{text-align:center;padding:40px;color:#475569;font-size:0.8rem}
 .loading-msg{text-align:center;padding:30px;color:#64748b;font-size:0.8rem}
 .badge-total{font-size:0.7rem;color:#64748b;margin-bottom:12px}
+.foto-aluno{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid currentColor;flex-shrink:0;cursor:pointer;transition:opacity .15s}
+.foto-aluno:hover{opacity:.75}
+.foto-placeholder{width:44px;height:44px;border-radius:50%;background:#334155;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.2rem;cursor:pointer;border:2px solid #475569;transition:opacity .15s}
+.foto-placeholder:hover{opacity:.75}
 </style>
 </head>
 <body>
@@ -282,8 +286,12 @@ function renderExame(alunos) {
     const prox = _getProxFaixa(a);
     const grauAtual = a.grau || 0;
     const maxGrau = graduacao.getMaxGraus(a.faixa || 'Branca');
+    const fotoEl = a.fotoPerfil
+      ? `<img class="foto-aluno" src="${a.fotoPerfil}" style="border-color:${cor}" onclick="abrirModalFoto('${a.id}','${(a.nome||'').replace(/'/g,"\\'")}',this)" title="Alterar foto">`
+      : `<div class="foto-placeholder" style="border-color:${cor}" onclick="abrirModalFoto('${a.id}','${(a.nome||'').replace(/'/g,"\\'")}',this)" title="Adicionar foto">📷</div>`;
     return `
       <div class="card-aluno" id="card-exame-${a.id}" style="border-left-color:${cor}">
+        ${fotoEl}
         <div class="card-info">
           <div class="card-nome">${a.nome || '—'}</div>
           <div class="card-faixa-label" style="color:${cor}">${a.faixa || '?'}${grauAtual > 0 ? ` ${grauAtual}º grau` : ''}</div>
@@ -383,8 +391,12 @@ function renderGraus(alunos) {
     const maxGrau = graduacao.getMaxGraus(a.faixa || 'Branca');
     const podeInc = grauAtual < maxGrau;
     const podeDec = grauAtual > 0;
+    const fotoEl = a.fotoPerfil
+      ? `<img class="foto-aluno" src="${a.fotoPerfil}" style="border-color:${cor}" onclick="abrirModalFoto('${a.id}','${(a.nome||'').replace(/'/g,"\\'")}',this)" title="Alterar foto">`
+      : `<div class="foto-placeholder" style="border-color:${cor}" onclick="abrirModalFoto('${a.id}','${(a.nome||'').replace(/'/g,"\\'")}',this)" title="Adicionar foto">📷</div>`;
     return `
       <div class="card-aluno" id="card-grau-${a.id}" style="border-left-color:${cor}">
+        ${fotoEl}
         <div class="card-info">
           <div class="card-nome">${a.nome || '—'}</div>
           <div class="card-faixa-label" style="color:${cor}">${a.faixa || '?'}</div>
@@ -581,6 +593,84 @@ async function _gerarCertificado(alunoId, isPreta) {
     alert('Erro ao gerar certificado: ' + e.message);
     if (btn) { btn.disabled = false; btn.textContent = '🎓 GERAR E BAIXAR CERTIFICADO'; }
   }
+}
+
+// ── MODAL FOTO DO ALUNO ──────────────────────────────────────────────────────
+function abrirModalFoto(alunoId, nome, fotoEl) {
+  document.getElementById('modal-foto-homolog')?.remove();
+
+  const fotoAtual = fotoEl?.tagName === 'IMG' ? fotoEl.src : '';
+  const modal = document.createElement('div');
+  modal.id = 'modal-foto-homolog';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(2,6,23,0.97);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+  modal.innerHTML = `
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:20px;padding:24px;max-width:340px;width:100%;text-align:center;">
+      <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:2px;margin-bottom:10px;">FOTO DO ALUNO</div>
+      <div style="font-size:0.95rem;font-weight:800;color:white;margin-bottom:16px;">${nome.toUpperCase()}</div>
+      <img id="mfh-preview" src="${fotoAtual || `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=1e3a8a&color=fff&size=200`}"
+        style="width:130px;height:130px;border-radius:50%;object-fit:cover;border:3px solid #3b82f6;display:block;margin:0 auto 20px auto;">
+      <input type="file" id="mfh-galeria" accept="image/*" style="display:none">
+      <input type="file" id="mfh-camera" accept="image/*" capture="environment" style="display:none">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+        <button onclick="document.getElementById('mfh-galeria').click()" style="padding:12px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;">📷 GALERIA</button>
+        <button onclick="document.getElementById('mfh-camera').click()" style="padding:12px;background:#064e3b;border:1px solid #10b981;color:#6ee7b7;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;">📸 CÂMERA</button>
+        <button id="mfh-salvar" style="display:none;padding:12px;background:#10b981;border:none;color:#000;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;">💾 SALVAR FOTO</button>
+        ${fotoAtual ? `<button onclick="_removerFotoHomolog('${alunoId}')" style="padding:10px;background:#2a0808;border:1px solid #ef444455;color:#ef4444;border-radius:10px;font-weight:800;font-size:0.75rem;cursor:pointer;">🗑 REMOVER FOTO</button>` : ''}
+      </div>
+      <button onclick="document.getElementById('modal-foto-homolog').remove()" style="width:100%;padding:10px;background:none;border:1px solid #334155;color:#64748b;border-radius:10px;font-size:0.8rem;cursor:pointer;">FECHAR</button>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  let _novaFoto = null;
+  const processar = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const maxL = 600, c = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > maxL || h > maxL) { if (w > h) { h = Math.round(h*maxL/w); w = maxL; } else { w = Math.round(w*maxL/h); h = maxL; } }
+        c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h);
+        _novaFoto = c.toDataURL('image/jpeg', 0.82);
+        document.getElementById('mfh-preview').src = _novaFoto;
+        document.getElementById('mfh-salvar').style.display = 'block';
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  document.getElementById('mfh-galeria').addEventListener('change', e => processar(e.target.files[0]));
+  document.getElementById('mfh-camera').addEventListener('change', e => processar(e.target.files[0]));
+  document.getElementById('mfh-salvar').addEventListener('click', async () => {
+    if (!_novaFoto) return;
+    const btn = document.getElementById('mfh-salvar');
+    btn.textContent = '⏳ Salvando...'; btn.disabled = true;
+    try {
+      await db.collection('alunos').doc(alunoId).update({ fotoPerfil: _novaFoto });
+      // Atualiza o elemento de foto no card sem re-renderizar tudo
+      if (fotoEl) {
+        const novaImg = document.createElement('img');
+        novaImg.className = 'foto-aluno';
+        novaImg.src = _novaFoto;
+        novaImg.style.borderColor = fotoEl.style.borderColor || '#475569';
+        novaImg.title = 'Alterar foto';
+        novaImg.onclick = () => abrirModalFoto(alunoId, nome, novaImg);
+        fotoEl.replaceWith(novaImg);
+      }
+      document.getElementById('modal-foto-homolog').remove();
+    } catch(e) {
+      btn.textContent = '❌ Erro. Tente novamente.'; btn.disabled = false;
+    }
+  });
+}
+
+async function _removerFotoHomolog(alunoId) {
+  if (!confirm('Remover a foto deste aluno?')) return;
+  await db.collection('alunos').doc(alunoId).update({ fotoPerfil: firebase.firestore.FieldValue.delete() });
+  document.getElementById('modal-foto-homolog')?.remove();
 }
 </script>
 </body>

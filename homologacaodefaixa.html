@@ -547,8 +547,11 @@ async function abrirEmitirCertificado(alunoId, nome, faixa, data) {
       </label>` : ''}
       ${profHtml}
       <div style="height:8px;"></div>` : ''}
-      <button onclick="_gerarCertificado('${alunoId}','${isPreta}')" style="width:100%;padding:13px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;margin-bottom:8px;">
+      <button id="btn-gerar-cert" onclick="_gerarCertificado('${alunoId}','${isPreta}')" style="width:100%;padding:13px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;margin-bottom:8px;">
         🎓 GERAR E BAIXAR CERTIFICADO
+      </button>
+      <button id="btn-salvar-cert" onclick="_salvarCertificadoPerfil('${alunoId}','${isPreta}')" style="width:100%;padding:11px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.78rem;">
+        ☁️ SALVAR NO PERFIL DO ALUNO
       </button>
     </div>`;
 
@@ -583,122 +586,135 @@ function _ptData(dataStr, cidade) {
   return `${cid}${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
 }
 
-async function _gerarCertificado(alunoId, isPreta) {
+async function _montarCanvasCert(isPreta) {
   const cfg = _certCfgCache || {};
   const nome       = document.getElementById('cert-nome')?.value.trim() || '';
   const faixaTexto = document.getElementById('cert-faixa-texto')?.value.trim() || '';
   const cidade     = document.getElementById('cert-cidade')?.value.trim() || '';
   const dataStr    = document.getElementById('cert-data')?.value || '';
-  const templateUrl = _certTemplateUrl;
 
-  const btn = document.querySelector('#modal-certificado-emitir button[onclick*="_gerarCertificado"]');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+  const camposPadrao = isPreta
+    ? { nome: { xPct:50, yPct:52, fontSize:62, bold:true, italic:false, color:'#1a1a1a' },
+        faixa:{ xPct:50, yPct:62, fontSize:40, bold:false, italic:true,  color:'#1a1a1a' },
+        data: { xPct:50, yPct:76, fontSize:26, bold:false, italic:false, color:'#444' } }
+    : { nome: { xPct:50, yPct:52, fontSize:56, bold:true, italic:false, color:'#1a1a1a' },
+        faixa:{ xPct:50, yPct:61, fontSize:36, bold:false, italic:true,  color:'#1a1a1a' },
+        data: { xPct:50, yPct:74, fontSize:24, bold:false, italic:false, color:'#444' } };
+  const campos = isPreta
+    ? (cfg.camposA3 || camposPadrao)
+    : (cfg.camposA4 || cfg.campos || camposPadrao);
 
-  try {
-    // Campos de posicionamento de texto (vêm do Firestore config, com padrões)
-    const camposPadrao = isPreta
-      ? { nome: { xPct:50, yPct:52, fontSize:62, bold:true, italic:false, color:'#1a1a1a' },
-          faixa:{ xPct:50, yPct:62, fontSize:40, bold:false, italic:true,  color:'#1a1a1a' },
-          data: { xPct:50, yPct:76, fontSize:26, bold:false, italic:false, color:'#444' } }
-      : { nome: { xPct:50, yPct:52, fontSize:56, bold:true, italic:false, color:'#1a1a1a' },
-          faixa:{ xPct:50, yPct:61, fontSize:36, bold:false, italic:true,  color:'#1a1a1a' },
-          data: { xPct:50, yPct:74, fontSize:24, bold:false, italic:false, color:'#444' } };
-    const campos = isPreta
-      ? (cfg.camposA3 || camposPadrao)
-      : (cfg.camposA4 || cfg.campos || camposPadrao);
+  const dataFormatada = _ptData(dataStr, cidade);
+  const dataUrl = await _carregarImagemDataUrl(_certTemplateUrl);
 
-    const dataFormatada = _ptData(dataStr, cidade);
-    const dataUrl = await _carregarImagemDataUrl(templateUrl);
+  const canvas = await new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = async () => {
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const W = c.width, H = c.height;
+      const escala = W / 1754;
 
-    const canvas = await new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = async () => {
-        const c = document.createElement('canvas');
-        c.width = img.width; c.height = img.height;
-        const ctx = c.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const W = c.width, H = c.height;
-        const escala = W / 1754;
-
-        const escrever = (texto, campo) => {
-          const fs = Math.round(campo.fontSize * escala);
-          ctx.font = `${campo.italic?'italic ':''}${campo.bold?'bold ':''}${fs}px 'Georgia','Times New Roman',serif`;
-          ctx.fillStyle = campo.color;
-          ctx.textAlign = 'center';
-          ctx.fillText(texto, W * campo.xPct / 100, H * campo.yPct / 100);
-        };
-        escrever(nome, campos.nome);
-        escrever(faixaTexto, campos.faixa);
-        escrever(dataFormatada, campos.data);
-
-        // Assinaturas
-        const assinaturas = [];
-        if (cfg.assinaturaPrincipalUrl && document.getElementById('cert-prof-principal')?.checked) {
-          assinaturas.push({ url: cfg.assinaturaPrincipalUrl, nome: cfg.assinaturaPrincipalNome || '' });
-        }
-        (cfg.professores || []).forEach((p, i) => {
-          if (document.getElementById(`cert-prof-${i}`)?.checked) assinaturas.push(p);
-        });
-
-        if (assinaturas.length > 0) {
-          const assCfg = cfg.camposAssinatura || { yPct: 80, alturaPct: 9 };
-          const assH = H * assCfg.alturaPct / 100;
-          const espaco = W / (assinaturas.length + 1);
-          await Promise.all(assinaturas.map((p, i) => new Promise(async res2 => {
-            try {
-              const assDataUrl = await _carregarImagemDataUrl(p.assinaturaUrl || p.url || '');
-              const ai = new Image();
-              ai.onload = () => {
-                const assW = assH * (ai.width / ai.height);
-                ctx.drawImage(ai, espaco*(i+1) - assW/2, H * assCfg.yPct / 100, assW, assH);
-                res2();
-              };
-              ai.onerror = () => res2();
-              ai.src = assDataUrl;
-            } catch { res2(); }
-          })));
-        }
-        resolve(c);
+      const escrever = (texto, campo) => {
+        const fs = Math.round(campo.fontSize * escala);
+        ctx.font = `${campo.italic?'italic ':''}${campo.bold?'bold ':''}${fs}px 'Georgia','Times New Roman',serif`;
+        ctx.fillStyle = campo.color;
+        ctx.textAlign = 'center';
+        ctx.fillText(texto, W * campo.xPct / 100, H * campo.yPct / 100);
       };
-      img.onerror = () => reject(new Error('Erro ao carregar template'));
-      img.src = dataUrl;
-    });
+      escrever(nome, campos.nome);
+      escrever(faixaTexto, campos.faixa);
+      escrever(dataFormatada, campos.data);
 
+      const assinaturas = [];
+      if (cfg.assinaturaPrincipalUrl && document.getElementById('cert-prof-principal')?.checked) {
+        assinaturas.push({ url: cfg.assinaturaPrincipalUrl, nome: cfg.assinaturaPrincipalNome || '' });
+      }
+      (cfg.professores || []).forEach((p, i) => {
+        if (document.getElementById(`cert-prof-${i}`)?.checked) assinaturas.push(p);
+      });
+
+      if (assinaturas.length > 0) {
+        const assCfg = cfg.camposAssinatura || { yPct: 80, alturaPct: 9 };
+        const assH = H * assCfg.alturaPct / 100;
+        const espaco = W / (assinaturas.length + 1);
+        await Promise.all(assinaturas.map((p, i) => new Promise(async res2 => {
+          try {
+            const assDataUrl = await _carregarImagemDataUrl(p.assinaturaUrl || p.url || '');
+            const ai = new Image();
+            ai.onload = () => {
+              const assW = assH * (ai.width / ai.height);
+              ctx.drawImage(ai, espaco*(i+1) - assW/2, H * assCfg.yPct / 100, assW, assH);
+              res2();
+            };
+            ai.onerror = () => res2();
+            ai.src = assDataUrl;
+          } catch { res2(); }
+        })));
+      }
+      resolve(c);
+    };
+    img.onerror = () => reject(new Error('Erro ao carregar template'));
+    img.src = dataUrl;
+  });
+
+  const faixaTextoVal = document.getElementById('cert-faixa-texto')?.value.trim() || '';
+  const dataStrVal    = document.getElementById('cert-data')?.value || '';
+  const nomeVal       = document.getElementById('cert-nome')?.value.trim() || '';
+  return { canvas, nome: nomeVal, faixaTexto: faixaTextoVal, dataStr: dataStrVal };
+}
+
+async function _gerarCertificado(alunoId, isPreta) {
+  const btn = document.getElementById('btn-gerar-cert');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+  try {
+    const { canvas, nome, faixaTexto } = await _montarCanvasCert(isPreta);
     const pngDataUrl = canvas.toDataURL('image/png');
-
-    // Baixa localmente
     const link = document.createElement('a');
     link.download = `certificado-${nome.replace(/\s+/g,'-')}-${faixaTexto.replace(/\s+/g,'-')}.png`;
     link.href = pngDataUrl;
     link.click();
-
-    // Salva no perfil do aluno (Storage + Firestore)
-    try {
-      const storagePath = `certificados/${alunoId}/graduacao-${faixaTexto.replace(/\s+/g,'-')}-${dataStr}.jpg`;
-      const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.88);
-      const upRes = await fetch('/api/upload-certificado', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageBase64: jpgDataUrl, path: storagePath, contentType: 'image/jpeg',
-          firestoreDoc: `alunos/${alunoId}`, firestoreData: '__CERTS__'
-        })
-      });
-      const upData = await upRes.json();
-      if (upData.ok && upData.url) {
-        // Adiciona à lista de certificados do aluno
-        const alunoSnap = await db.collection('alunos').doc(alunoId).get();
-        const certs = alunoSnap.data()?.certificados || [];
-        certs.unshift({ tipo: 'graduacao', faixa: faixaTexto, data: dataStr, url: upData.url, emitidoEm: new Date().toISOString() });
-        await db.collection('alunos').doc(alunoId).update({ certificados: certs });
-      }
-    } catch(saveErr) {
-      console.warn('Certificado gerado mas não salvo no perfil:', saveErr.message);
-    }
-
-    document.getElementById('modal-certificado-emitir')?.remove();
+    if (btn) { btn.disabled = false; btn.textContent = '🎓 GERAR E BAIXAR CERTIFICADO'; }
   } catch(e) {
     alert('Erro ao gerar certificado: ' + e.message);
     if (btn) { btn.disabled = false; btn.textContent = '🎓 GERAR E BAIXAR CERTIFICADO'; }
+  }
+}
+
+async function _salvarCertificadoPerfil(alunoId, isPreta) {
+  const btn = document.getElementById('btn-salvar-cert');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+  try {
+    const { canvas, faixaTexto, dataStr } = await _montarCanvasCert(isPreta);
+    const jpgB64 = canvas.toDataURL('image/jpeg', 0.88);
+    const storagePath = `certificados/${alunoId}/graduacao-${faixaTexto.replace(/\s+/g,'-')}-${dataStr}.jpg`;
+
+    const upRes = await fetch('/api/upload-certificado', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: jpgB64, path: storagePath, contentType: 'image/jpeg' })
+    });
+    const upData = await upRes.json();
+    if (!upData.ok || !upData.url) throw new Error(upData.error || 'Falha no upload');
+
+    const alunoSnap = await db.collection('alunos').doc(alunoId).get();
+    const certs = alunoSnap.data()?.certificados || [];
+    certs.unshift({ tipo: 'graduacao', faixa: faixaTexto, data: dataStr, url: upData.url, emitidoEm: new Date().toISOString() });
+
+    await fetch('/api/upload-certificado', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: 'noop', path: 'noop', skipStorage: true,
+        firestoreDoc: `alunos/${alunoId}`, firestoreData: { certificados: certs }
+      })
+    });
+
+    document.getElementById('modal-certificado-emitir')?.remove();
+    alert('✅ Certificado salvo no perfil do aluno!');
+  } catch(e) {
+    alert('Erro ao salvar certificado: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '☁️ SALVAR NO PERFIL DO ALUNO'; }
   }
 }
 

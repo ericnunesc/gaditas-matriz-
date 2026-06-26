@@ -326,14 +326,19 @@ async function graduarAluno(alunoId) {
 
     const hoje = new Date();
     const dataFormatada = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
+    // "Preta 4º Grau" → faixa="Preta", grau=4 | "Preta" → faixa="Preta", grau=0
+    let faixaReal = faixaDestino, grauReal = 0;
+    const mPreta = faixaDestino.match(/^Preta (\d+)º Grau$/);
+    if (mPreta) { faixaReal = 'Preta'; grauReal = parseInt(mPreta[1]); }
+
     const historicoGrad = dados.historicoGraduacao || [];
-    historicoGrad.push({ faixa: faixaDestino, grau: 0, faixaMT: null, modalidade: 'jiujitsu', data: dataFormatada });
+    historicoGrad.push({ faixa: faixaReal, grau: grauReal, faixaMT: null, modalidade: 'jiujitsu', data: dataFormatada });
 
     await docRef.update({
-      faixa: faixaDestino,
-      grau: 0,
+      faixa: faixaReal,
+      grau: grauReal,
       aspiranteGraduacao: false,
-      graduacaoPendente: { faixa: faixaDestino, grau: 0, faixaMT: null, modalidadeAlterada: 'jiujitsu' },
+      graduacaoPendente: { faixa: faixaReal, grau: grauReal, faixaMT: null, modalidadeAlterada: 'jiujitsu' },
       historicoGraduacao: historicoGrad,
       aulas: 0
     });
@@ -660,9 +665,37 @@ async function _gerarCertificado(alunoId, isPreta) {
     });
 
     const link = document.createElement('a');
+    const pngDataUrl = canvas.toDataURL('image/png');
+
+    // Baixa localmente
+    const link = document.createElement('a');
     link.download = `certificado-${nome.replace(/\s+/g,'-')}-${faixaTexto.replace(/\s+/g,'-')}.png`;
-    link.href = canvas.toDataURL('image/png');
+    link.href = pngDataUrl;
     link.click();
+
+    // Salva no perfil do aluno (Storage + Firestore)
+    try {
+      const storagePath = `certificados/${alunoId}/graduacao-${faixaTexto.replace(/\s+/g,'-')}-${dataStr}.jpg`;
+      const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+      const upRes = await fetch('/api/upload-certificado', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: jpgDataUrl, path: storagePath, contentType: 'image/jpeg',
+          firestoreDoc: `alunos/${alunoId}`, firestoreData: '__CERTS__'
+        })
+      });
+      const upData = await upRes.json();
+      if (upData.ok && upData.url) {
+        // Adiciona à lista de certificados do aluno
+        const alunoSnap = await db.collection('alunos').doc(alunoId).get();
+        const certs = alunoSnap.data()?.certificados || [];
+        certs.unshift({ tipo: 'graduacao', faixa: faixaTexto, data: dataStr, url: upData.url, emitidoEm: new Date().toISOString() });
+        await db.collection('alunos').doc(alunoId).update({ certificados: certs });
+      }
+    } catch(saveErr) {
+      console.warn('Certificado gerado mas não salvo no perfil:', saveErr.message);
+    }
+
     document.getElementById('modal-certificado-emitir')?.remove();
   } catch(e) {
     alert('Erro ao gerar certificado: ' + e.message);

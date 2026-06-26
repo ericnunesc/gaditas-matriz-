@@ -555,39 +555,114 @@ async function abrirEmitirCertificado(alunoId, nome, faixa, data) {
 
 let _certAlunoId, _certTemplateUrl, _certIsPreta, _certCfgCache;
 
+async function _carregarImagemDataUrl(url) {
+  const match = url.match(/storage\.googleapis\.com\/[^/]+\/(.+)/);
+  if (match) {
+    const path = decodeURIComponent(match[1]);
+    const r = await fetch(`/api/cert-imagem?path=${encodeURIComponent(path)}`);
+    const d = await r.json();
+    if (!r.ok || !d.dataUrl) throw new Error(d.error || 'Erro ao carregar imagem');
+    return d.dataUrl;
+  }
+  // URL externa — tenta direto
+  const r = await fetch(url);
+  const blob = await r.blob();
+  return new Promise(res => { const fr = new FileReader(); fr.onload = e => res(e.target.result); fr.readAsDataURL(blob); });
+}
+
+function _ptData(dataStr, cidade) {
+  if (!dataStr) return '';
+  const [y, m, d] = dataStr.split('-');
+  const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const cid = cidade ? `${cidade}, ` : '';
+  return `${cid}${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
+}
+
 async function _gerarCertificado(alunoId, isPreta) {
   const cfg = _certCfgCache || {};
   const nome       = document.getElementById('cert-nome')?.value.trim() || '';
   const faixaTexto = document.getElementById('cert-faixa-texto')?.value.trim() || '';
   const cidade     = document.getElementById('cert-cidade')?.value.trim() || '';
-  const data       = document.getElementById('cert-data')?.value || '';
+  const dataStr    = document.getElementById('cert-data')?.value || '';
   const templateUrl = _certTemplateUrl;
-
-  const assinaturas = [];
-  if (isPreta && cfg.assinaturaPrincipalUrl && document.getElementById('cert-prof-principal')?.checked) {
-    assinaturas.push({ url: cfg.assinaturaPrincipalUrl, nome: cfg.assinaturaPrincipalNome || 'Prof. Principal' });
-  }
-  (cfg.professores || []).forEach((p, i) => {
-    if (document.getElementById(`cert-prof-${i}`)?.checked) {
-      assinaturas.push({ url: p.assinaturaUrl, nome: p.nome });
-    }
-  });
 
   const btn = document.querySelector('#modal-certificado-emitir button[onclick*="_gerarCertificado"]');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
 
   try {
-    const payload = { alunoId, nome, faixaTexto, cidade, data, templateUrl, assinaturas, isPreta };
-    const res = await fetch('/api/gerar-certificado', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    // Campos de posicionamento de texto (vêm do Firestore config, com padrões)
+    const camposPadrao = isPreta
+      ? { nome: { xPct:50, yPct:52, fontSize:62, bold:true, italic:false, color:'#1a1a1a' },
+          faixa:{ xPct:50, yPct:62, fontSize:40, bold:false, italic:true,  color:'#1a1a1a' },
+          data: { xPct:50, yPct:76, fontSize:26, bold:false, italic:false, color:'#444' } }
+      : { nome: { xPct:50, yPct:52, fontSize:56, bold:true, italic:false, color:'#1a1a1a' },
+          faixa:{ xPct:50, yPct:61, fontSize:36, bold:false, italic:true,  color:'#1a1a1a' },
+          data: { xPct:50, yPct:74, fontSize:24, bold:false, italic:false, color:'#444' } };
+    const campos = isPreta
+      ? (cfg.camposA3 || camposPadrao)
+      : (cfg.camposA4 || cfg.campos || camposPadrao);
+
+    const dataFormatada = _ptData(dataStr, cidade);
+    const dataUrl = await _carregarImagemDataUrl(templateUrl);
+
+    const canvas = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = async () => {
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const W = c.width, H = c.height;
+        const escala = W / 1754;
+
+        const escrever = (texto, campo) => {
+          const fs = Math.round(campo.fontSize * escala);
+          ctx.font = `${campo.italic?'italic ':''}${campo.bold?'bold ':''}${fs}px 'Georgia','Times New Roman',serif`;
+          ctx.fillStyle = campo.color;
+          ctx.textAlign = 'center';
+          ctx.fillText(texto, W * campo.xPct / 100, H * campo.yPct / 100);
+        };
+        escrever(nome, campos.nome);
+        escrever(faixaTexto, campos.faixa);
+        escrever(dataFormatada, campos.data);
+
+        // Assinaturas
+        const assinaturas = [];
+        if (cfg.assinaturaPrincipalUrl && document.getElementById('cert-prof-principal')?.checked) {
+          assinaturas.push({ url: cfg.assinaturaPrincipalUrl, nome: cfg.assinaturaPrincipalNome || '' });
+        }
+        (cfg.professores || []).forEach((p, i) => {
+          if (document.getElementById(`cert-prof-${i}`)?.checked) assinaturas.push(p);
+        });
+
+        if (assinaturas.length > 0) {
+          const assCfg = cfg.camposAssinatura || { yPct: 80, alturaPct: 9 };
+          const assH = H * assCfg.alturaPct / 100;
+          const espaco = W / (assinaturas.length + 1);
+          await Promise.all(assinaturas.map((p, i) => new Promise(async res2 => {
+            try {
+              const assDataUrl = await _carregarImagemDataUrl(p.assinaturaUrl || p.url || '');
+              const ai = new Image();
+              ai.onload = () => {
+                const assW = assH * (ai.width / ai.height);
+                ctx.drawImage(ai, espaco*(i+1) - assW/2, H * assCfg.yPct / 100, assW, assH);
+                res2();
+              };
+              ai.onerror = () => res2();
+              ai.src = assDataUrl;
+            } catch { res2(); }
+          })));
+        }
+        resolve(c);
+      };
+      img.onerror = () => reject(new Error('Erro ao carregar template'));
+      img.src = dataUrl;
     });
-    if (!res.ok) throw new Error(await res.text());
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `certificado_${nome.replace(/\s+/g,'_')}.pdf`;
-    a.click(); URL.revokeObjectURL(url);
+
+    const link = document.createElement('a');
+    link.download = `certificado-${nome.replace(/\s+/g,'-')}-${faixaTexto.replace(/\s+/g,'-')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
     document.getElementById('modal-certificado-emitir')?.remove();
   } catch(e) {
     alert('Erro ao gerar certificado: ' + e.message);

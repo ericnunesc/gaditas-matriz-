@@ -586,7 +586,8 @@ function _ptData(dataStr, cidade) {
   return `${cid}${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
 }
 
-async function _montarCanvasCert(isPreta) {
+async function _montarCanvasCert(isPretaParam) {
+  const isPreta = isPretaParam === true || isPretaParam === 'true';
   const cfg = _certCfgCache || {};
   const nome       = document.getElementById('cert-nome')?.value.trim() || '';
   const faixaTexto = document.getElementById('cert-faixa-texto')?.value.trim() || '';

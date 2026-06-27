@@ -486,10 +486,16 @@ const GaditasFiltros = {
             }
 
             const customerId = dadosCliente.data[0].id;
-            const resCobrancas = await fetch(`${this.asaasUrl}?endpoint=payments&customer=${customerId}&status=PENDING&limit=20`);
-            const dadosCobrancas = await resCobrancas.json();
+            const [resPending, resOverdue] = await Promise.all([
+                fetch(`${this.asaasUrl}?endpoint=payments&customer=${customerId}&status=PENDING&limit=20`),
+                fetch(`${this.asaasUrl}?endpoint=payments&customer=${customerId}&status=OVERDUE&limit=20`)
+            ]);
+            const [dataPending, dataOverdue] = await Promise.all([resPending.json(), resOverdue.json()]);
+            const dadosCobrancas = {
+                data: [...(dataOverdue.data || []), ...(dataPending.data || [])]
+            };
 
-            if(document.getElementById('financeiro-loading')) document.getElementById('financeiro-loading').classList.add('hidden'); 
+            if(document.getElementById('financeiro-loading')) document.getElementById('financeiro-loading').classList.add('hidden');
             conteudo.classList.remove('hidden');
 
             if (!dadosCobrancas.data || dadosCobrancas.data.length === 0) {

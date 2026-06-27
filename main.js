@@ -9,6 +9,16 @@
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+function verFotoAluno(src, nome) {
+    document.getElementById('modal-ver-foto')?.remove();
+    const m = document.createElement('div');
+    m.id = 'modal-ver-foto';
+    m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;';
+    m.onclick = () => m.remove();
+    m.innerHTML = `<img src="${src}" style="max-width:88vw;max-height:78vh;border-radius:14px;object-fit:contain;box-shadow:0 8px 32px rgba(0,0,0,0.6);"><div style="color:#e2e8f0;font-size:0.9rem;font-weight:700;">${nome}</div><small style="color:#64748b;font-size:0.7rem;">Toque para fechar</small>`;
+    document.body.appendChild(m);
+}
 // Storage inicializado de forma lazy para não quebrar se o script carregar fora de ordem
 let _storage = null;
 function getStorage() { if (!_storage) _storage = firebase.storage(); return _storage; }
@@ -2460,7 +2470,8 @@ const academia = {
             h += g[t].map(c => {
                 const al = info[c.alunoId] || {};
                 const cor = ui.getCorFaixa(al.faixa || 'Branca');
-                const foto = al.fotoPerfil ? `<img src="${al.fotoPerfil}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid ${cor};flex-shrink:0;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#334155;border:2px solid ${cor};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">👤</div>`;
+                const nomeEsc = (al.nome||c.alunoNome||'').replace(/'/g,'');
+                const foto = al.fotoPerfil ? `<img src="${al.fotoPerfil}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid ${cor};flex-shrink:0;cursor:pointer;" onclick="verFotoAluno('${al.fotoPerfil}','${nomeEsc}')">` : `<div style="width:40px;height:40px;border-radius:50%;background:#334155;border:2px solid ${cor};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">👤</div>`;
                 return `<div class="item-card" style="border-left:4px solid ${cor};display:flex;align-items:center;gap:10px;">${foto}<span style="font-size:0.85rem;color:#e2e8f0;font-weight:600;flex:1;">${c.alunoNome}</span><div style="display:flex;gap:6px;"><button onclick="academia.aprovar('${c.id}','${c.alunoId}','${c.turma}')" style="background:#062f1d;color:#10b981;border:none;padding:8px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;"><i class="fas fa-check"></i></button><button onclick="academia.recusarCheckin('${c.id}')" style="background:#3b0707;color:#ef4444;border:none;padding:8px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;"><i class="fas fa-times"></i></button></div></div>`;
             }).join('');
         }
@@ -3073,10 +3084,11 @@ const academia = {
             const ordenado = listasJJ[id].sort((x, y) => y._aulasRanking - x._aulasRanking);
             c.innerHTML = ordenado.slice(0, 5).map((a, i) => {
                 const cor = ui.getCorFaixa(a.faixa || 'Branca');
+                const nomeEscJJ = (a.nome||'').replace(/'/g,'');
                 const fotoEl = a.fotoPerfil
-                    ? `<img src="${a.fotoPerfil}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid ${cor};flex-shrink:0;">`
+                    ? `<img src="${a.fotoPerfil}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid ${cor};flex-shrink:0;cursor:pointer;" onclick="verFotoAluno('${a.fotoPerfil}','${nomeEscJJ}')">`
                     : `<div style="width:32px;height:32px;border-radius:50%;background:#334155;border:2px solid ${cor};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.85rem;">👤</div>`;
-                return `<div class="ranking-item"><div style="display:flex;align-items:center;gap:8px;""><span style="font-size:0.85rem;font-weight:700;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>${fotoEl}<span style="font-weight:600;color:#cbd5e1;font-size:0.8rem;">${a.nome}</span></div><div style="text-align:right;"><b style="color:#3b82f6;font-size:0.85rem;font-weight:800;">${a._aulasRanking}</b></div></div>`;
+                return `<div class="ranking-item"><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.85rem;font-weight:700;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>${fotoEl}<span style="font-weight:600;color:#cbd5e1;font-size:0.8rem;">${a.nome}</span></div><div style="text-align:right;"><b style="color:#3b82f6;font-size:0.85rem;font-weight:800;">${a._aulasRanking}</b></div></div>`;
             }).join('') || "<small style='color:var(--text-muted);'>Nenhum treino em " + nomeMes + ".</small>";
         });
 
@@ -3096,8 +3108,9 @@ const academia = {
             const ordenadoMT = listaMTGeral.sort((x, y) => y._aulasRanking - x._aulasRanking);
             cMTG.innerHTML = ordenadoMT.slice(0, 5).map((a, i) => {
                 const cor = ui.getCorFaixa(a.faixa || 'Branca');
+                const nomeEscMT = (a.nome||'').replace(/'/g,'');
                 const fotoEl = a.fotoPerfil
-                    ? `<img src="${a.fotoPerfil}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid ${cor};flex-shrink:0;">`
+                    ? `<img src="${a.fotoPerfil}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid ${cor};flex-shrink:0;cursor:pointer;" onclick="verFotoAluno('${a.fotoPerfil}','${nomeEscMT}')">`
                     : `<div style="width:32px;height:32px;border-radius:50%;background:#334155;border:2px solid ${cor};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.85rem;">👤</div>`;
                 return `<div class="ranking-item"><div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;"><span style="font-size:0.85rem;font-weight:700;flex-shrink:0;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>${fotoEl}<span style="font-weight:600;color:#cbd5e1;font-size:0.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome}${a._tag}</span></div><div style="text-align:right;flex-shrink:0;"><b style="color:#f43f5e;font-size:0.85rem;font-weight:800;">${a._aulasRanking}</b></div></div>`;
             }).join('') || `<small style='color:var(--text-muted);'>Nenhum treino em ${nomeMes}.</small>`;

@@ -3071,14 +3071,13 @@ const academia = {
         ['kids1','kids2','adulto'].forEach(id => {
             const c = document.getElementById(`lista-ranking-${id}`); if (!c) return;
             const ordenado = listasJJ[id].sort((x, y) => y._aulasRanking - x._aulasRanking);
-            c.innerHTML = ordenado.slice(0, 5).map((a, i) => `
-                <div class="ranking-item">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:0.85rem; font-weight:700;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>
-                        <span style="font-weight:600; color:#cbd5e1; font-size:0.8rem;">${a.nome}</span>
-                    </div>
-                    <div style="text-align:right;"><b style="color:#3b82f6; font-size:0.85rem; font-weight:800;">${a._aulasRanking}</b></div>
-                </div>`).join('') || "<small style='color:var(--text-muted);'>Nenhum treino em " + nomeMes + ".</small>";
+            c.innerHTML = ordenado.slice(0, 5).map((a, i) => {
+                const cor = ui.getCorFaixa(a.faixa || 'Branca');
+                const fotoEl = a.fotoPerfil
+                    ? `<img src="${a.fotoPerfil}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid ${cor};flex-shrink:0;">`
+                    : `<div style="width:32px;height:32px;border-radius:50%;background:#334155;border:2px solid ${cor};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.85rem;">👤</div>`;
+                return `<div class="ranking-item"><div style="display:flex;align-items:center;gap:8px;""><span style="font-size:0.85rem;font-weight:700;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>${fotoEl}<span style="font-weight:600;color:#cbd5e1;font-size:0.8rem;">${a.nome}</span></div><div style="text-align:right;"><b style="color:#3b82f6;font-size:0.85rem;font-weight:800;">${a._aulasRanking}</b></div></div>`;
+            }).join('') || "<small style='color:var(--text-muted);'>Nenhum treino em " + nomeMes + ".</small>";
         });
 
         // ── MUAY THAI — lista única (kids + adulto juntos) ───────────
@@ -3095,14 +3094,13 @@ const academia = {
         const cMTG = document.getElementById('lista-ranking-mt-geral');
         if (cMTG) {
             const ordenadoMT = listaMTGeral.sort((x, y) => y._aulasRanking - x._aulasRanking);
-            cMTG.innerHTML = ordenadoMT.slice(0, 5).map((a, i) => `
-                <div class="ranking-item">
-                    <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:0;">
-                        <span style="font-size:0.85rem; font-weight:700; flex-shrink:0;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>
-                        <span style="font-weight:600; color:#cbd5e1; font-size:0.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}${a._tag}</span>
-                    </div>
-                    <div style="text-align:right; flex-shrink:0;"><b style="color:#f43f5e; font-size:0.85rem; font-weight:800;">${a._aulasRanking}</b></div>
-                </div>`).join('') || `<small style='color:var(--text-muted);'>Nenhum treino em ${nomeMes}.</small>`;
+            cMTG.innerHTML = ordenadoMT.slice(0, 5).map((a, i) => {
+                const cor = ui.getCorFaixa(a.faixa || 'Branca');
+                const fotoEl = a.fotoPerfil
+                    ? `<img src="${a.fotoPerfil}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid ${cor};flex-shrink:0;">`
+                    : `<div style="width:32px;height:32px;border-radius:50%;background:#334155;border:2px solid ${cor};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.85rem;">👤</div>`;
+                return `<div class="ranking-item"><div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;"><span style="font-size:0.85rem;font-weight:700;flex-shrink:0;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>${fotoEl}<span style="font-weight:600;color:#cbd5e1;font-size:0.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome}${a._tag}</span></div><div style="text-align:right;flex-shrink:0;"><b style="color:#f43f5e;font-size:0.85rem;font-weight:800;">${a._aulasRanking}</b></div></div>`;
+            }).join('') || `<small style='color:var(--text-muted);'>Nenhum treino em ${nomeMes}.</small>`;
         }
     },
 

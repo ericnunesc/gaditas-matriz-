@@ -324,6 +324,27 @@ const auth = {
         if (this.role === 'aluno') {
             setTimeout(() => enquetes.verificarEnqueteAtiva(), 2000);
         }
+
+        // ── BANNER ATIVE AS NOTIFICAÇÕES (só para alunos) ─
+        if (this.role === 'aluno') {
+            setTimeout(() => {
+                if (typeof Notification === 'undefined' || Notification.permission === 'granted') return;
+                if (document.getElementById('banner-notif-ativar')) return;
+                const banner = document.createElement('div');
+                banner.id = 'banner-notif-ativar';
+                banner.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:9999;width:calc(100% - 32px);max-width:420px;';
+                banner.innerHTML = `<div style="background:#1e293b;border:1px solid #f59e0b;border-radius:14px;padding:14px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:1.4rem;flex-shrink:0;">🔔</span>
+                    <div style="flex:1;">
+                        <div style="font-size:0.72rem;font-weight:800;color:#f59e0b;margin-bottom:2px;">ATIVE AS NOTIFICAÇÕES</div>
+                        <div style="font-size:0.68rem;color:#94a3b8;line-height:1.4;">Para receber avisos de eventos e presenças, ative as notificações nas configurações do seu navegador.</div>
+                    </div>
+                    <button onclick="document.getElementById('banner-notif-ativar').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.1rem;flex-shrink:0;padding:0;">✕</button>
+                </div>`;
+                document.body.appendChild(banner);
+                setTimeout(() => { if (banner.parentNode) banner.remove(); }, 12000);
+            }, 3000);
+        }
         if (this.role === 'aluno' || this.role === 'professor') {
             setTimeout(() => academia.verificarDisparoEvento(), 3500);
         }

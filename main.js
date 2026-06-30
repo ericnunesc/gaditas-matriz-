@@ -5328,6 +5328,7 @@ Ele voltará a ser aluno normal.`)) return;
                     ? { icon:'fa-book-open', label:'Boletim',  cor:'#a78bfa', fn:`boletim.abrir(auth.currentUser.id)` }
                     : { icon:'fa-book',      label:'Diário',   cor:'#a78bfa', fn:`treinoPost.abrirDiario()` },
                 { icon:'fa-medal',        label:'Conquistas', cor:'#f59e0b', fn:`document.getElementById('mural-conquistas').scrollIntoView({behavior:'smooth'})` },
+                { icon:'fa-graduation-cap', label:'Exame',    cor:'#a855f7', fn:`ui.showTab('tab-exame')` },
             ];
 
             const cardsHtml = cards.map(c => `

@@ -10081,13 +10081,23 @@ const aniversario = {
                     d.setDate(hoje.getDate() + a._diasRestantes);
                     return diasSemana[d.getDay()] + ' ' + d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
                 })();
+                const nomeEsc  = a.nome.replace(/'/g,"\\'");
+                const fotoEsc  = (a.fotoPerfil||'').replace(/'/g,"\\'");
+                const btnCard  = isHoje
+                    ? `<button onclick="aniversario.gerarCardAniversario('${nomeEsc}','${fotoEsc}',${a._idade})"
+                        style="background:#78350f;border:1px solid #f59e0b;color:#fbbf24;padding:5px 10px;border-radius:7px;font-size:0.58rem;font-weight:800;cursor:pointer;white-space:nowrap;margin-left:8px;">
+                        📸 Card</button>`
+                    : '';
                 return `
                     <div style="display:flex;justify-content:space-between;align-items:center;background:${isHoje ? '#1c1400' : '#0f172a'};border:1px solid ${isHoje ? '#f59e0b' : '#334155'};border-radius:8px;padding:9px 12px;margin-bottom:6px;">
                         <div>
                             <div style="font-size:0.75rem;font-weight:800;color:${isHoje ? '#f59e0b' : 'white'};">${a.nome}</div>
                             <div style="font-size:0.58rem;color:#64748b;margin-top:2px;">${a.faixa || '—'} · ${a._idade} anos</div>
                         </div>
-                        <div style="font-size:0.6rem;font-weight:800;color:${isHoje ? '#f59e0b' : '#64748b'};white-space:nowrap;">${diaRef}</div>
+                        <div style="display:flex;align-items:center;">
+                            <div style="font-size:0.6rem;font-weight:800;color:${isHoje ? '#f59e0b' : '#64748b'};white-space:nowrap;">${diaRef}</div>
+                            ${btnCard}
+                        </div>
                     </div>`;
             };
 
@@ -10104,6 +10114,133 @@ const aniversario = {
             container.innerHTML = html;
         } catch(e) {
             container.innerHTML = `<small style="color:#ef4444;font-size:0.65rem;">Erro: ${e.message}</small>`;
+        }
+    },
+
+    gerarCardAniversario(nome, fotoUrl, idade) {
+        const W = 1080, H = 1080;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+
+        const desenhar = (fotoImg) => {
+            // Fundo degradê escuro
+            const bg = ctx.createLinearGradient(0, 0, W, H);
+            bg.addColorStop(0, '#0a0f1a');
+            bg.addColorStop(1, '#1a0a00');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, W, H);
+
+            // Partículas douradas decorativas
+            ctx.fillStyle = '#f59e0b22';
+            for (let i = 0; i < 12; i++) {
+                const r = 20 + Math.random() * 80;
+                const x = Math.random() * W;
+                const y = Math.random() * H;
+                ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // Bordas douradas
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 12;
+            ctx.strokeRect(20, 20, W - 40, H - 40);
+            ctx.strokeStyle = '#f59e0b55';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(34, 34, W - 68, H - 68);
+
+            // Logo / nome academia
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = 'bold 36px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('GADITAS ACADEMY', W / 2, 90);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '24px Arial';
+            ctx.fillText('🥋 OSS!', W / 2, 128);
+
+            // Foto em círculo
+            const cx = W / 2, cy = 420, raio = 220;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, raio, 0, Math.PI * 2);
+            ctx.clip();
+            if (fotoImg) {
+                ctx.drawImage(fotoImg, cx - raio, cy - raio, raio * 2, raio * 2);
+            } else {
+                ctx.fillStyle = '#1e293b';
+                ctx.fill();
+                ctx.fillStyle = '#f59e0b';
+                ctx.font = `bold ${raio}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(nome.charAt(0).toUpperCase(), cx, cy);
+            }
+            ctx.restore();
+
+            // Anel dourado em volta da foto
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.arc(cx, cy, raio + 8, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Emoji bolo
+            ctx.font = '72px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillText('🎂', W / 2, 700);
+
+            // Nome do aluno
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${nome.length > 18 ? '52' : '64'}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText(nome.split(' ').slice(0,2).join(' '), W / 2, 790);
+
+            // Mensagem
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = 'bold 48px Arial';
+            ctx.fillText('Feliz Aniversário!', W / 2, 864);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '30px Arial';
+            ctx.fillText(`${idade} anos de muito tatame! 🥋`, W / 2, 920);
+
+            // Linha decorativa base
+            ctx.strokeStyle = '#f59e0b44';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(80, 960); ctx.lineTo(W - 80, 960);
+            ctx.stroke();
+            ctx.fillStyle = '#475569';
+            ctx.font = '22px Arial';
+            ctx.fillText('gaditas-matriz.vercel.app', W / 2, 1000);
+
+            // Gerar download / compartilhar
+            canvas.toBlob(blob => {
+                const url  = URL.createObjectURL(blob);
+                const nome1 = nome.split(' ')[0];
+                if (navigator.share && navigator.canShare({ files: [new File([blob], 'aniversario.png', { type: 'image/png' })] })) {
+                    navigator.share({
+                        files: [new File([blob], `aniversario_${nome1}.png`, { type: 'image/png' })],
+                        title: `🎂 Feliz Aniversário ${nome1}!`,
+                        text: `Feliz Aniversário ${nome}! ${idade} anos de tatame! OSS! 🥋`
+                    }).catch(() => {});
+                } else {
+                    const a = document.createElement('a');
+                    a.href = url; a.download = `aniversario_${nome1}.png`; a.click();
+                }
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+            }, 'image/png');
+        };
+
+        if (fotoUrl) {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload  = () => desenhar(img);
+            img.onerror = () => desenhar(null);
+            img.src = fotoUrl;
+        } else {
+            desenhar(null);
         }
     },
 

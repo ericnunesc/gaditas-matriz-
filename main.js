@@ -11157,6 +11157,15 @@ const exame = {
                         </div>
                     </div>
 
+                    <!-- Valor a receber -->
+                    <div style="background:#0f172a;border:1px solid #22c55e30;border-radius:10px;padding:10px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+                        <div>
+                            <div style="font-size:0.55rem;color:#64748b;font-weight:700;">💰 VALOR A RECEBER</div>
+                            <div style="font-size:0.6rem;color:#475569;margin-top:1px;">baseado nas taxas configuradas</div>
+                        </div>
+                        <div style="font-size:1.3rem;font-weight:900;color:#22c55e;">R$ ${receber.toFixed(2).replace('.',',')}</div>
+                    </div>
+
                     <!-- Pagamentos -->
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
                         <div style="background:#0f172a;border:1px solid #22c55e44;border-radius:10px;padding:10px;text-align:center;">

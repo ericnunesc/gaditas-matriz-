@@ -10123,111 +10123,189 @@ const aniversario = {
         canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext('2d');
 
-        const desenhar = (fotoImg) => {
-            // Fundo degradê escuro
-            const bg = ctx.createLinearGradient(0, 0, W, H);
-            bg.addColorStop(0, '#0a0f1a');
-            bg.addColorStop(1, '#1a0a00');
-            ctx.fillStyle = bg;
-            ctx.fillRect(0, 0, W, H);
+        const estrela = (x, y, r, pts, cor, alpha) => {
+            ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = cor;
+            ctx.beginPath();
+            for (let i = 0; i < pts * 2; i++) {
+                const a = (i * Math.PI) / pts - Math.PI / 2;
+                const ri = i % 2 === 0 ? r : r * 0.4;
+                i === 0 ? ctx.moveTo(x + ri * Math.cos(a), y + ri * Math.sin(a))
+                        : ctx.lineTo(x + ri * Math.cos(a), y + ri * Math.sin(a));
+            }
+            ctx.closePath(); ctx.fill(); ctx.restore();
+        };
 
-            // Partículas douradas decorativas
-            ctx.fillStyle = '#f59e0b22';
-            for (let i = 0; i < 12; i++) {
-                const r = 20 + Math.random() * 80;
-                const x = Math.random() * W;
-                const y = Math.random() * H;
-                ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        const desenhar = (fotoImg) => {
+            // ── Fundo ──────────────────────────────────────────
+            const bg = ctx.createLinearGradient(0, 0, W, H);
+            bg.addColorStop(0,   '#05010d');
+            bg.addColorStop(0.4, '#0d0a1f');
+            bg.addColorStop(1,   '#150800');
+            ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+            // Brilho radial central suave
+            const glow = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, 600);
+            glow.addColorStop(0,   'rgba(245,158,11,0.08)');
+            glow.addColorStop(0.5, 'rgba(245,158,11,0.03)');
+            glow.addColorStop(1,   'transparent');
+            ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+            // Estrelas / brilhos espalhados
+            const pts = [[80,60],[200,180],[950,100],[1000,320],[60,500],[30,800],[100,950],
+                         [980,750],[900,950],[540,40],[540,1040],[W/2-300,H/2+280],[W/2+300,H/2+280]];
+            pts.forEach(([x,y],i) => estrela(x, y, 18+i%3*8, 4, '#f59e0b', 0.35+i%4*0.1));
+
+            // Confetes coloridos (losangos pequenos)
+            const cores = ['#f59e0b','#ec4899','#3b82f6','#10b981','#a78bfa','#f97316'];
+            for (let i = 0; i < 60; i++) {
+                ctx.save();
+                ctx.globalAlpha = 0.25 + Math.random()*0.35;
+                ctx.fillStyle = cores[i % cores.length];
+                ctx.translate(Math.random()*W, Math.random()*H);
+                ctx.rotate(Math.random()*Math.PI);
+                ctx.fillRect(-5, -5, 10 + Math.random()*8, 10 + Math.random()*8);
+                ctx.restore();
             }
 
-            // Bordas douradas
-            ctx.strokeStyle = '#f59e0b';
-            ctx.lineWidth = 12;
-            ctx.strokeRect(20, 20, W - 40, H - 40);
-            ctx.strokeStyle = '#f59e0b55';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(34, 34, W - 68, H - 68);
+            // ── Borda tripla ───────────────────────────────────
+            // Borda externa brilhante
+            const bordaGrad = ctx.createLinearGradient(0,0,W,H);
+            bordaGrad.addColorStop(0,   '#fbbf24');
+            bordaGrad.addColorStop(0.5, '#f59e0b');
+            bordaGrad.addColorStop(1,   '#d97706');
+            ctx.strokeStyle = bordaGrad; ctx.lineWidth = 16;
+            ctx.strokeRect(14, 14, W-28, H-28);
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 3;
+            ctx.strokeRect(30, 30, W-60, H-60);
+            ctx.strokeStyle = 'rgba(245,158,11,0.35)'; ctx.lineWidth = 2;
+            ctx.strokeRect(40, 40, W-80, H-80);
 
-            // Logo / nome academia
-            ctx.fillStyle = '#f59e0b';
-            ctx.font = 'bold 36px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('GADITAS ACADEMY', W / 2, 90);
-
-            ctx.fillStyle = '#64748b';
-            ctx.font = '24px Arial';
-            ctx.fillText('🥋 OSS!', W / 2, 128);
-
-            // Foto em círculo
-            const cx = W / 2, cy = 420, raio = 220;
+            // ── Topo: nome da academia ─────────────────────────
             ctx.save();
-            ctx.beginPath();
-            ctx.arc(cx, cy, raio, 0, Math.PI * 2);
-            ctx.clip();
-            if (fotoImg) {
-                ctx.drawImage(fotoImg, cx - raio, cy - raio, raio * 2, raio * 2);
-            } else {
-                ctx.fillStyle = '#1e293b';
-                ctx.fill();
+            ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 20;
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 38px Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+            ctx.fillText('✦  GADITAS ACADEMY  ✦', W/2, 88);
+            ctx.restore();
+
+            // Linha separadora topo
+            const linGrad = ctx.createLinearGradient(80,0,W-80,0);
+            linGrad.addColorStop(0,'transparent'); linGrad.addColorStop(0.5,'#f59e0b'); linGrad.addColorStop(1,'transparent');
+            ctx.strokeStyle = linGrad; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(80,108); ctx.lineTo(W-80,108); ctx.stroke();
+
+            // ── Faixa titulo "Feliz Aniversário" ──────────────
+            ctx.save();
+            ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 30;
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 26px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('🎉  F E L I Z   A N I V E R S Á R I O  🎉', W/2, 152);
+            ctx.restore();
+
+            // ── Foto em círculo ────────────────────────────────
+            const cx = W/2, cy = 430, raio = 210;
+
+            // Halo externo pulsante (camadas)
+            [380, 360, 340].forEach((r, i) => {
+                ctx.save();
+                ctx.globalAlpha = 0.08 - i*0.02;
                 ctx.fillStyle = '#f59e0b';
-                ctx.font = `bold ${raio}px Arial`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
+                ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+            });
+
+            // Anel colorido duplo
+            const ringGrad = ctx.createLinearGradient(cx-raio, cy-raio, cx+raio, cy+raio);
+            ringGrad.addColorStop(0, '#fbbf24');
+            ringGrad.addColorStop(0.5, '#f97316');
+            ringGrad.addColorStop(1, '#ec4899');
+            ctx.strokeStyle = ringGrad; ctx.lineWidth = 14;
+            ctx.beginPath(); ctx.arc(cx, cy, raio+10, 0, Math.PI*2); ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(cx, cy, raio+20, 0, Math.PI*2); ctx.stroke();
+
+            // Foto ou inicial
+            ctx.save();
+            ctx.beginPath(); ctx.arc(cx, cy, raio, 0, Math.PI*2); ctx.clip();
+            if (fotoImg) {
+                ctx.drawImage(fotoImg, cx-raio, cy-raio, raio*2, raio*2);
+            } else {
+                const fbg = ctx.createRadialGradient(cx,cy,0,cx,cy,raio);
+                fbg.addColorStop(0,'#1e293b'); fbg.addColorStop(1,'#0f172a');
+                ctx.fillStyle = fbg; ctx.fillRect(cx-raio, cy-raio, raio*2, raio*2);
+                ctx.fillStyle = '#f59e0b'; ctx.font = `bold ${raio}px Arial`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.fillText(nome.charAt(0).toUpperCase(), cx, cy);
             }
             ctx.restore();
 
-            // Anel dourado em volta da foto
-            ctx.strokeStyle = '#f59e0b';
-            ctx.lineWidth = 10;
-            ctx.beginPath();
-            ctx.arc(cx, cy, raio + 8, 0, Math.PI * 2);
-            ctx.stroke();
+            // Estrelinhas nos 4 cantos da foto
+            [[cx-raio-20, cy-raio+20],[cx+raio+20,cy-raio+20],[cx-raio,cy+raio+10],[cx+raio,cy+raio+10]]
+                .forEach(([x,y]) => estrela(x,y,16,4,'#fbbf24',0.9));
 
-            // Emoji bolo
-            ctx.font = '72px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'alphabetic';
-            ctx.fillText('🎂', W / 2, 700);
+            // ── Nome do aluno ──────────────────────────────────
+            const primeiroNome = nome.split(' ').slice(0,2).join(' ');
+            const tamanhoNome  = primeiroNome.length > 16 ? 58 : primeiroNome.length > 12 ? 68 : 78;
 
-            // Nome do aluno
+            ctx.save();
+            ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 25;
+            // Sombra texto
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.font = `bold ${tamanhoNome}px Arial`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+            ctx.fillText(primeiroNome, W/2+3, 723);
+            // Texto branco principal
             ctx.fillStyle = '#ffffff';
-            ctx.font = `bold ${nome.length > 18 ? '52' : '64'}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.fillText(nome.split(' ').slice(0,2).join(' '), W / 2, 790);
+            ctx.fillText(primeiroNome, W/2, 720);
+            ctx.restore();
 
-            // Mensagem
+            // Linha decorativa sob o nome
+            ctx.strokeStyle = linGrad; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(160,740); ctx.lineTo(W-160,740); ctx.stroke();
+
+            // ── Mensagem principal ─────────────────────────────
+            ctx.save();
+            ctx.shadowColor = '#f97316'; ctx.shadowBlur = 18;
+            const msgGrad = ctx.createLinearGradient(200,0,W-200,0);
+            msgGrad.addColorStop(0,'#fbbf24'); msgGrad.addColorStop(0.5,'#f97316'); msgGrad.addColorStop(1,'#fbbf24');
+            ctx.fillStyle = msgGrad;
+            ctx.font = 'bold 52px Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+            ctx.fillText('Feliz Aniversário! 🎂', W/2, 812);
+            ctx.restore();
+
+            // ── Mensagem do tatame ─────────────────────────────
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.font = '32px Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+            ctx.fillText(`Que seu dia seja tão especial`, W/2, 866);
+            ctx.fillText(`quanto cada treino no tatame! 🥋`, W/2, 908);
+
+            // Idade
             ctx.fillStyle = '#f59e0b';
-            ctx.font = 'bold 48px Arial';
-            ctx.fillText('Feliz Aniversário!', W / 2, 864);
+            ctx.font = 'bold 28px Arial';
+            ctx.fillText(`${idade} anos de dedicação e evolução`, W/2, 952);
 
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = '30px Arial';
-            ctx.fillText(`${idade} anos de muito tatame! 🥋`, W / 2, 920);
-
-            // Linha decorativa base
-            ctx.strokeStyle = '#f59e0b44';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(80, 960); ctx.lineTo(W - 80, 960);
-            ctx.stroke();
-            ctx.fillStyle = '#475569';
+            // ── Rodapé ─────────────────────────────────────────
+            ctx.strokeStyle = linGrad; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(80,972); ctx.lineTo(W-80,972); ctx.stroke();
+            ctx.fillStyle = 'rgba(255,255,255,0.35)';
             ctx.font = '22px Arial';
-            ctx.fillText('gaditas-matriz.vercel.app', W / 2, 1000);
+            ctx.fillText('OSS!  •  Gaditas Academy  •  OSS!', W/2, 1010);
 
-            // Gerar download / compartilhar
+            // ── Gerar imagem ───────────────────────────────────
             canvas.toBlob(blob => {
-                const url  = URL.createObjectURL(blob);
+                const url   = URL.createObjectURL(blob);
                 const nome1 = nome.split(' ')[0];
-                if (navigator.share && navigator.canShare({ files: [new File([blob], 'aniversario.png', { type: 'image/png' })] })) {
-                    navigator.share({
-                        files: [new File([blob], `aniversario_${nome1}.png`, { type: 'image/png' })],
-                        title: `🎂 Feliz Aniversário ${nome1}!`,
-                        text: `Feliz Aniversário ${nome}! ${idade} anos de tatame! OSS! 🥋`
-                    }).catch(() => {});
+                const file  = new File([blob], `aniversario_${nome1}.png`, { type:'image/png' });
+                if (navigator.share && navigator.canShare({ files:[file] })) {
+                    navigator.share({ files:[file], title:`🎂 Feliz Aniversário ${nome1}!`,
+                        text:`Feliz Aniversário, ${nome}! 🎉🥋 Que seu dia seja incrível! OSS!` }).catch(()=>{});
                 } else {
                     const a = document.createElement('a');
-                    a.href = url; a.download = `aniversario_${nome1}.png`; a.click();
+                    a.href = url; a.download = file.name; a.click();
                 }
                 setTimeout(() => URL.revokeObjectURL(url), 5000);
             }, 'image/png');

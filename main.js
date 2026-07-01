@@ -11091,7 +11091,7 @@ const exame = {
             };
 
             let total = 0, confirmados = 0, pendentes = 0;
-            let receber = 0;
+            let receber = 0, pagaram = 0, totalPago = 0;
             const porFaixa = {};
 
             snap.docs.forEach(doc => {
@@ -11110,6 +11110,7 @@ const exame = {
                     ? parseFloat((preta?.valor2 || '0').toString().replace(',','.')) || 0
                     : parseFloat((preta?.valor  || '0').toString().replace(',','.')) || 0;
                 receber += taxa;
+                if (a.taxaExamePaga) { pagaram++; totalPago += taxa; }
 
                 porFaixa[faixaDestino] = (porFaixa[faixaDestino] || 0) + 1;
             });
@@ -11156,13 +11157,18 @@ const exame = {
                         </div>
                     </div>
 
-                    <!-- Valor a receber -->
-                    <div style="background:#0f172a;border:1px solid #22c55e30;border-radius:10px;padding:10px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
-                        <div>
-                            <div style="font-size:0.55rem;color:#64748b;font-weight:700;">💰 VALOR A RECEBER</div>
-                            <div style="font-size:0.6rem;color:#475569;margin-top:1px;">baseado nas taxas configuradas</div>
+                    <!-- Pagamentos -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                        <div style="background:#0f172a;border:1px solid #22c55e44;border-radius:10px;padding:10px;text-align:center;">
+                            <div style="font-size:0.5rem;color:#4ade80;font-weight:800;margin-bottom:3px;">✅ PAGARAM</div>
+                            <div style="font-size:1.4rem;font-weight:900;color:#22c55e;">${pagaram}</div>
+                            <div style="font-size:0.55rem;color:#64748b;">de ${total} convocados</div>
                         </div>
-                        <div style="font-size:1.3rem;font-weight:900;color:#22c55e;">R$ ${receber.toFixed(2).replace('.',',')}</div>
+                        <div style="background:#0f172a;border:1px solid #22c55e44;border-radius:10px;padding:10px;text-align:center;">
+                            <div style="font-size:0.5rem;color:#4ade80;font-weight:800;margin-bottom:3px;">💵 TOTAL PAGO</div>
+                            <div style="font-size:1.1rem;font-weight:900;color:#22c55e;">R$&nbsp;${totalPago.toFixed(2).replace('.',',')}</div>
+                            <div style="font-size:0.55rem;color:#64748b;">de R$&nbsp;${receber.toFixed(2).replace('.',',')} esperado</div>
+                        </div>
                     </div>
 
                     <!-- Barra de confirmação -->

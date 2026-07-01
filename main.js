@@ -880,27 +880,33 @@ const academia = {
             const corPct = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#ef4444';
 
             el.innerHTML = `
-            <div style="background:#1e293b;border:1px solid #22c55e44;border-radius:12px;padding:15px;">
-                <div style="font-size:0.65rem;font-weight:800;color:#22c55e;margin-bottom:12px;letter-spacing:0.5px;">💰 FINANCEIRO — ${nomeMes.toUpperCase()} ${ano}</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-                    <div style="background:#052e1622;border:1px solid #22c55e44;border-radius:10px;padding:12px;text-align:center;">
-                        <span style="font-size:0.5rem;color:#4ade80;font-weight:800;display:block;margin-bottom:3px;">✅ COM PLANO ATIVO</span>
-                        <span style="font-size:2rem;font-weight:900;color:#22c55e;">${pagantes}</span>
-                        <span style="font-size:0.55rem;color:#64748b;display:block;">${pct}% dos ativos</span>
-                    </div>
-                    <div style="background:#052e1622;border:1px solid #22c55e44;border-radius:10px;padding:12px;text-align:center;">
-                        <span style="font-size:0.5rem;color:#4ade80;font-weight:800;display:block;margin-bottom:3px;">💵 MRR TOTAL</span>
-                        <span style="font-size:1.4rem;font-weight:900;color:#22c55e;">R$&nbsp;${totalPago.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
-                    </div>
+            <div style="background:#1e293b;border:1px solid #22c55e44;border-radius:12px;overflow:hidden;">
+                <div onclick="const b=this.nextElementSibling;const c=this.querySelector('i');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='none'?'rotate(0deg)':'rotate(180deg)';"
+                    style="padding:15px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none;">
+                    <span style="font-size:0.65rem;font-weight:800;color:#22c55e;letter-spacing:0.5px;">💰 FINANCEIRO — ${nomeMes.toUpperCase()} ${ano}</span>
+                    <i class="fas fa-chevron-down" style="color:#22c55e;font-size:0.75rem;transition:transform 0.2s;"></i>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
-                        <span style="font-size:0.5rem;color:#94a3b8;font-weight:800;display:block;margin-bottom:3px;">🧑‍🤝‍🧑 TOTAL ATIVOS</span>
-                        <span style="font-size:1rem;font-weight:900;color:#60a5fa;">${totalAtivos}</span>
+                <div style="display:none;padding:0 15px 15px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                        <div style="background:#052e1622;border:1px solid #22c55e44;border-radius:10px;padding:12px;text-align:center;">
+                            <span style="font-size:0.5rem;color:#4ade80;font-weight:800;display:block;margin-bottom:3px;">✅ COM PLANO ATIVO</span>
+                            <span style="font-size:2rem;font-weight:900;color:#22c55e;">${pagantes}</span>
+                            <span style="font-size:0.55rem;color:#64748b;display:block;">${pct}% dos ativos</span>
+                        </div>
+                        <div style="background:#052e1622;border:1px solid #22c55e44;border-radius:10px;padding:12px;text-align:center;">
+                            <span style="font-size:0.5rem;color:#4ade80;font-weight:800;display:block;margin-bottom:3px;">💵 MRR TOTAL</span>
+                            <span style="font-size:1.4rem;font-weight:900;color:#22c55e;">R$&nbsp;${totalPago.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                        </div>
                     </div>
-                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
-                        <span style="font-size:0.5rem;color:#94a3b8;font-weight:800;display:block;margin-bottom:3px;">⚠️ SEM VALOR</span>
-                        <span style="font-size:1rem;font-weight:900;color:${semValor > 0 ? '#f59e0b' : '#10b981'};">${semValor}</span>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
+                            <span style="font-size:0.5rem;color:#94a3b8;font-weight:800;display:block;margin-bottom:3px;">🧑‍🤝‍🧑 TOTAL ATIVOS</span>
+                            <span style="font-size:1rem;font-weight:900;color:#60a5fa;">${totalAtivos}</span>
+                        </div>
+                        <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
+                            <span style="font-size:0.5rem;color:#94a3b8;font-weight:800;display:block;margin-bottom:3px;">⚠️ SEM VALOR</span>
+                            <span style="font-size:1rem;font-weight:900;color:${semValor > 0 ? '#f59e0b' : '#10b981'};">${semValor}</span>
+                        </div>
                     </div>
                 </div>
             </div>`;

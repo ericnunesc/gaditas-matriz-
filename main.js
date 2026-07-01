@@ -853,6 +853,60 @@ const academia = {
         if(lbl) lbl.innerText = novo;
     },
 
+    async renderResumoFinanceiroMes() {
+        const el = document.getElementById('resumo-financeiro-mes');
+        if (!el) return;
+        try {
+            const agora = new Date();
+            const ano   = String(agora.getFullYear());
+            const mes   = String(agora.getMonth() + 1).padStart(2, '0');
+            const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                           'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            const nomeMes = MESES[agora.getMonth()];
+
+            const snap = await db.collection('alunos').get();
+            let pagantes = 0, totalPago = 0, semValor = 0, totalAtivos = 0;
+
+            snap.forEach(doc => {
+                const a = doc.data();
+                if (a.status === 'trancado' || a.status === 'inativo') return;
+                totalAtivos++;
+                const v = parseFloat(a.planoValor) || 0;
+                if (v > 0) { pagantes++; totalPago += v; }
+                else semValor++;
+            });
+
+            const pct = totalAtivos > 0 ? Math.round((pagantes / totalAtivos) * 100) : 0;
+            const corPct = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#ef4444';
+
+            el.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #22c55e44;border-radius:12px;padding:15px;">
+                <div style="font-size:0.65rem;font-weight:800;color:#22c55e;margin-bottom:12px;letter-spacing:0.5px;">💰 FINANCEIRO — ${nomeMes.toUpperCase()} ${ano}</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                    <div style="background:#052e1622;border:1px solid #22c55e44;border-radius:10px;padding:12px;text-align:center;">
+                        <span style="font-size:0.5rem;color:#4ade80;font-weight:800;display:block;margin-bottom:3px;">✅ COM PLANO ATIVO</span>
+                        <span style="font-size:2rem;font-weight:900;color:#22c55e;">${pagantes}</span>
+                        <span style="font-size:0.55rem;color:#64748b;display:block;">${pct}% dos ativos</span>
+                    </div>
+                    <div style="background:#052e1622;border:1px solid #22c55e44;border-radius:10px;padding:12px;text-align:center;">
+                        <span style="font-size:0.5rem;color:#4ade80;font-weight:800;display:block;margin-bottom:3px;">💵 MRR TOTAL</span>
+                        <span style="font-size:1.4rem;font-weight:900;color:#22c55e;">R$&nbsp;${totalPago.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
+                        <span style="font-size:0.5rem;color:#94a3b8;font-weight:800;display:block;margin-bottom:3px;">🧑‍🤝‍🧑 TOTAL ATIVOS</span>
+                        <span style="font-size:1rem;font-weight:900;color:#60a5fa;">${totalAtivos}</span>
+                    </div>
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
+                        <span style="font-size:0.5rem;color:#94a3b8;font-weight:800;display:block;margin-bottom:3px;">⚠️ SEM VALOR</span>
+                        <span style="font-size:1rem;font-weight:900;color:${semValor > 0 ? '#f59e0b' : '#10b981'};">${semValor}</span>
+                    </div>
+                </div>
+            </div>`;
+        } catch(e) { console.error('resumoFinanceiro', e); }
+    },
+
     async calcularAnalyticsFrequencia() {
         const container = document.getElementById('analytics-frequencia-container'); if (!container) return;
         try {
@@ -8581,7 +8635,7 @@ const ui = {
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); if(auth.role === 'aluno') setTimeout(() => academia.verificarDisparoEvento(), 600); }
         if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
-        if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); boletim.renderPainelAdmin(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
+        if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); academia.renderResumoFinanceiroMes(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); boletim.renderPainelAdmin(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); if(auth.role === 'professor') profComms.renderPainelDispensas(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }
     },

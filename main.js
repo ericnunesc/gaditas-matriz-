@@ -643,23 +643,85 @@ const academia = {
         }
     },
 
-    async renderRankingGeral(filtro) {
+    _rankingFiltroAtual: 'todos',
+
+    setRankingFiltro(filtro) {
+        this._rankingFiltroAtual = filtro;
+        ['todos','adulto','kids','muaythai','faixa'].forEach(k => {
+            const btn = document.getElementById(`rbtn-${k}`);
+            if (!btn) return;
+            btn.style.opacity = k === filtro ? '1' : '0.45';
+            btn.style.transform = k === filtro ? 'scale(1.05)' : 'scale(1)';
+        });
+        this.renderRankingGeral();
+    },
+
+    async renderRankingGeral() {
         const container = document.getElementById('ranking-geral-container');
         if (!container) return;
         container.innerHTML = '<small style="color:#64748b;font-size:0.72rem;">⏳ Carregando...</small>';
 
-        const snap = await db.collection('alunos').get();
+        const filtro = this._rankingFiltroAtual || 'todos';
         const anoAtual = new Date().getFullYear();
+        const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                       'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-        const totalPresencas = (historico, isMT) => {
+        // Mês selecionado no select ('' = todos os meses)
+        const selMes = document.getElementById('ranking-mes-select');
+        const mesFiltro = selMes ? selMes.value : ''; // formato "YYYY-MM" ou ''
+
+        const snap = await db.collection('alunos').get();
+
+        // Popula o select de meses com os meses que têm dados (só na primeira vez)
+        if (selMes && selMes.options.length <= 1) {
+            const mesesSet = new Set();
+            snap.forEach(doc => {
+                (doc.data().historico || []).forEach(h => {
+                    if (!h.data) return;
+                    const p = h.data.split('/');
+                    if (p.length >= 3) mesesSet.add(`${p[2].substring(0,4)}-${p[1].padStart(2,'0')}`);
+                });
+            });
+            [...mesesSet].sort().reverse().forEach(ym => {
+                const [ano, mes] = ym.split('-');
+                const opt = document.createElement('option');
+                opt.value = ym;
+                opt.textContent = `${MESES[parseInt(mes)-1]} ${ano}`;
+                selMes.appendChild(opt);
+            });
+        }
+
+        // Helper: conta presenças (filtrando mês se selecionado)
+        const contarPresencas = (historico, isMTFiltro) => {
             if (!historico?.length) return 0;
             return historico.filter(h => {
+                if (!h.data) return false;
+                // Filtro de mês
+                if (mesFiltro) {
+                    const p = h.data.split('/');
+                    if (p.length < 3) return false;
+                    const ym = `${p[2].substring(0,4)}-${p[1].padStart(2,'0')}`;
+                    if (ym !== mesFiltro) return false;
+                }
+                if (isMTFiltro === null) return true;
                 const ehMT = this._isTurmaMT(h.turma || '');
-                return isMT === null ? true : (isMT ? ehMT : !ehMT);
+                return isMTFiltro ? ehMT : !ehMT;
             }).length;
         };
 
         const FAIXAS_ORDEM = ['Branca','Cinza','Amarela','Laranja','Verde','Azul','Roxa','Marrom','Preta'];
+
+        const _itemRanking = (a, i) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#0f172a;border-radius:8px;margin-bottom:4px;border-left:3px solid ${ui.getCorFaixa(a.faixa)};">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:0.78rem;font-weight:700;color:#94a3b8;min-width:22px;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>
+                    <div>
+                        <div style="font-size:0.78rem;font-weight:700;color:#e2e8f0;">${a.nome}</div>
+                        <div style="font-size:0.58rem;color:#64748b;">${a.faixa}${a.isKids?' · Kids':''}${a.isMT?' · MT':''}</div>
+                    </div>
+                </div>
+                <span style="font-size:0.85rem;font-weight:800;color:#3b82f6;">${a.total}</span>
+            </div>`;
 
         let alunos = [];
         snap.forEach(doc => {
@@ -672,20 +734,15 @@ const academia = {
             alunos.push({ nome: a.nome, faixa, idade, isKids, isMT, historico: a.historico || [] });
         });
 
-        if (filtro === 'adulto')   alunos = alunos.filter(a => !a.isKids && !a.isMT);
-        else if (filtro === 'kids')      alunos = alunos.filter(a => a.isKids);
-        else if (filtro === 'muaythai')  alunos = alunos.filter(a => a.isMT);
-        else if (filtro !== 'faixa')     alunos = alunos.filter(a => true); // todos
-
-        const isMTFiltro = filtro === 'muaythai' ? true : filtro === 'faixa' || filtro === 'todos' || filtro === 'adulto' || filtro === 'kids' ? null : null;
+        if      (filtro === 'adulto')   alunos = alunos.filter(a => !a.isKids && !a.isMT);
+        else if (filtro === 'kids')     alunos = alunos.filter(a => a.isKids);
+        else if (filtro === 'muaythai') alunos = alunos.filter(a => a.isMT);
 
         if (filtro === 'faixa') {
-            // Agrupa por faixa
             const grupos = {};
             alunos.forEach(a => {
-                const f = a.faixa;
-                if (!grupos[f]) grupos[f] = [];
-                grupos[f].push({ ...a, total: totalPresencas(a.historico, null) });
+                if (!grupos[a.faixa]) grupos[a.faixa] = [];
+                grupos[a.faixa].push({ ...a, total: contarPresencas(a.historico, null) });
             });
             let html = '';
             FAIXAS_ORDEM.filter(f => grupos[f]?.length).forEach(faixa => {
@@ -700,21 +757,10 @@ const academia = {
             return;
         }
 
+        const isMTFiltro = filtro === 'muaythai' ? true : filtro === 'adulto' || filtro === 'kids' ? false : null;
         const lista = alunos
-            .map(a => ({ ...a, total: totalPresencas(a.historico, filtro === 'muaythai' ? true : filtro === 'adulto' || filtro === 'kids' ? false : null) }))
+            .map(a => ({ ...a, total: contarPresencas(a.historico, isMTFiltro) }))
             .sort((x, y) => y.total - x.total);
-
-        const _itemRanking = (a, i) => `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#0f172a;border-radius:8px;margin-bottom:4px;border-left:3px solid ${ui.getCorFaixa(a.faixa)};">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:0.78rem;font-weight:700;color:#94a3b8;min-width:22px;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>
-                    <div>
-                        <div style="font-size:0.78rem;font-weight:700;color:#e2e8f0;">${a.nome}</div>
-                        <div style="font-size:0.58rem;color:#64748b;">${a.faixa}${a.isKids?' · Kids':''}${a.isMT?' · MT':''}</div>
-                    </div>
-                </div>
-                <span style="font-size:0.85rem;font-weight:800;color:#3b82f6;">${a.total}</span>
-            </div>`;
 
         container.innerHTML = lista.length
             ? lista.map((a, i) => _itemRanking(a, i)).join('')

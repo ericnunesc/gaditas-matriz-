@@ -972,12 +972,17 @@
                         <span><i class="fas fa-trophy" style="margin-right:7px;color:#f59e0b;"></i>Ranking de Presenças</span><span class="rel-acc-arr">›</span>
                     </button>
                     <div class="rel-acc-body">
-                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-                            <button onclick="academia.renderRankingGeral('todos')" style="padding:7px 12px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🏅 Todos</button>
-                            <button onclick="academia.renderRankingGeral('adulto')" style="padding:7px 12px;background:#1a2a1a;border:1px solid #10b981;color:#6ee7b7;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">👤 Adulto</button>
-                            <button onclick="academia.renderRankingGeral('kids')" style="padding:7px 12px;background:#2a1a00;border:1px solid #f59e0b;color:#fcd34d;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">👦 Kids</button>
-                            <button onclick="academia.renderRankingGeral('muaythai')" style="padding:7px 12px;background:#2a001a;border:1px solid #f43f5e;color:#fda4af;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🥊 Muay Thai</button>
-                            <button onclick="academia.renderRankingGeral('faixa')" style="padding:7px 12px;background:#1a1040;border:1px solid #a78bfa;color:#c4b5fd;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🥋 Por Faixa</button>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+                            <button id="rbtn-todos"    onclick="academia.setRankingFiltro('todos')"    style="padding:7px 12px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🏅 Todos</button>
+                            <button id="rbtn-adulto"   onclick="academia.setRankingFiltro('adulto')"   style="padding:7px 12px;background:#1a2a1a;border:1px solid #10b981;color:#6ee7b7;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">👤 Adulto</button>
+                            <button id="rbtn-kids"     onclick="academia.setRankingFiltro('kids')"     style="padding:7px 12px;background:#2a1a00;border:1px solid #f59e0b;color:#fcd34d;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">👦 Kids</button>
+                            <button id="rbtn-muaythai" onclick="academia.setRankingFiltro('muaythai')" style="padding:7px 12px;background:#2a001a;border:1px solid #f43f5e;color:#fda4af;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🥊 Muay Thai</button>
+                            <button id="rbtn-faixa"    onclick="academia.setRankingFiltro('faixa')"    style="padding:7px 12px;background:#1a1040;border:1px solid #a78bfa;color:#c4b5fd;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🥋 Por Faixa</button>
+                        </div>
+                        <div style="margin-bottom:10px;">
+                            <select id="ranking-mes-select" onchange="academia.renderRankingGeral()" style="width:100%;padding:8px 10px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;outline:none;">
+                                <option value="">📅 Todos os meses</option>
+                            </select>
                         </div>
                         <div id="ranking-geral-container"><small style="color:#475569;font-size:0.72rem;">Selecione um filtro acima.</small></div>
                     </div>

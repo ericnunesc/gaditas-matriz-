@@ -8924,8 +8924,10 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         const ehJJ       = modAluno === 'jiujitsu'  || modAluno === 'ambos';
 
         // Filtra turmas visíveis para este aluno
+        const dia = new Date().getDay();
         const visiveis = todas.filter(turma => {
             if (!turma || turma.toLowerCase().includes('sem treino')) return false;
+            if (academia._aulaDesativada(dia, turma)) return false;
             const ehKids = academia._isTurmaKids(turma);
             const ehMTt  = academia._isTurmaMT(turma);
             if (isInter) return true; // 14-15 vê tudo

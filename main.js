@@ -10524,7 +10524,9 @@ const exame = {
             const isKids     = categoria === 'kids';
 
             const labelCat   = isKids ? '🧒 KIDS' : categoria === 'preta' ? '⬛ FAIXA PRETA' : '🥋 16+';
-            const jaConfirmou = localStorage.getItem(`exame_confirmado_${alunoId}`) === '1';
+            // Sincroniza localStorage com Firestore (reseta se admin reconvocou)
+            if (aluno.examePresencaConfirmada === false) localStorage.removeItem(`exame_confirmado_${alunoId}`);
+            const jaConfirmou = aluno.examePresencaConfirmada === true || localStorage.getItem(`exame_confirmado_${alunoId}`) === '1';
 
             // Datas
             const dataExameFmt = cfg.dataExame

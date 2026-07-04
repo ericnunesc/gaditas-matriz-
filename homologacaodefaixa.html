@@ -251,12 +251,56 @@ let todosConvocados = [];
 
 async function carregarExame() {
   try {
-    const snap = await db.collection('alunos').where('aspiranteGraduacao', '==', true).get();
+    const [snap, snapPend] = await Promise.all([
+      db.collection('alunos').where('aspiranteGraduacao', '==', true).get(),
+      db.collection('alunos').where('taxaExamePendentePagamento', '==', true).get()
+    ]);
     todosConvocados = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Renderiza cards de taxa pendente acima da lista
+    document.getElementById('pend-taxa-lista')?.remove();
+    const pendDocs = snapPend.docs.filter(d => !todosConvocados.find(c => c.id === d.id));
+    if (pendDocs.length) {
+      const pendDiv = document.createElement('div');
+      pendDiv.id = 'pend-taxa-lista';
+      pendDiv.innerHTML = pendDocs.map(doc => {
+        const a = doc.data(); const id = doc.id;
+        return `<div class="card-aluno" id="card-exame-${id}" style="border-left-color:#f59e0b;background:#1c1000;">
+          <div class="card-info" style="flex:1;">
+            <div class="card-nome" style="color:#10b981;">✅ ${a.nome} — ${a.faixa}</div>
+            <div style="font-size:0.6rem;color:#f59e0b;font-weight:700;margin-top:2px;">⚠️ Taxa do exame ainda não paga</div>
+          </div>
+          <button onclick="toggleTaxaHomolog('${id}', this)"
+            style="padding:8px 12px;background:#1e293b;border:1px solid #f59e0b55;color:#f59e0b;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;white-space:nowrap;">
+            💸 Marcar paga
+          </button>
+        </div>`;
+      }).join('');
+      const lista = document.getElementById('exame-lista');
+      lista.parentNode.insertBefore(pendDiv, lista);
+    }
+
     popularFiltroFaixas(todosConvocados, 'exame-faixa');
     filtrarExame();
   } catch(e) {
     document.getElementById('exame-lista').innerHTML = `<div class="vazio">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+async function toggleTaxaHomolog(alunoId, btn) {
+  if (!confirm('Confirmar pagamento da taxa do exame?')) return;
+  btn.disabled = true;
+  btn.textContent = '⏳...';
+  try {
+    await db.collection('alunos').doc(alunoId).update({
+      taxaExamePaga: true,
+      taxaExamePendentePagamento: firebase.firestore.FieldValue.delete()
+    });
+    document.getElementById(`card-exame-${alunoId}`)?.remove();
+  } catch(e) {
+    alert('Erro: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '💸 Marcar paga';
   }
 }
 
@@ -343,8 +387,28 @@ async function graduarAluno(alunoId) {
       aulas: 0
     });
 
-    card?.remove();
     todosConvocados = todosConvocados.filter(a => a.id !== alunoId);
+
+    const taxaPaga = dados.taxaExamePaga === true;
+    if (!taxaPaga) {
+      await docRef.update({ taxaExamePendentePagamento: true });
+      // Transforma card em modo simplificado
+      if (card) {
+        card.style.borderLeftColor = '#f59e0b';
+        card.style.background = '#1c1000';
+        card.innerHTML = `
+          <div class="card-info" style="flex:1;">
+            <div class="card-nome" style="color:#10b981;">✅ ${nomeAluno} — ${faixaDestino}</div>
+            <div style="font-size:0.6rem;color:#f59e0b;font-weight:700;margin-top:2px;">⚠️ Taxa do exame ainda não paga</div>
+          </div>
+          <button onclick="toggleTaxaHomolog('${alunoId}', this)"
+            style="padding:8px 12px;background:#1e293b;border:1px solid #f59e0b55;color:#f59e0b;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;white-space:nowrap;">
+            💸 Marcar paga
+          </button>`;
+      }
+    } else {
+      card?.remove();
+    }
 
     const dataGrad = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
     setTimeout(() => abrirEmitirCertificado(alunoId, nomeAluno, faixaDestino, dataGrad), 300);

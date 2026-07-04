@@ -13429,9 +13429,46 @@ const graduacaoHistorico = {
 
                     ${hist.length === 0 ? `<p style="color:#475569;text-align:center;font-size:0.8rem;padding:20px 0;">Nenhuma graduação registrada ainda.</p>` : ''}
                 </div>
+
+                ${isAdmin ? `<div id="certs-grad-modal" style="margin-top:16px;background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:16px;">
+                    <div style="font-size:0.6rem;font-weight:800;color:#64748b;letter-spacing:0.5px;margin-bottom:10px;">📋 CERTIFICADOS EMITIDOS</div>
+                    <div id="certs-grad-lista">⏳</div>
+                </div>` : ''}
             </div>`;
 
         document.body.appendChild(modal);
+        if (isAdmin) this._renderCertsGrad(alunoId);
+    },
+
+    async _renderCertsGrad(alunoId) {
+        const container = document.getElementById('certs-grad-lista');
+        if (!container) return;
+        const snap = await db.collection('alunos').doc(alunoId).get();
+        const certs = snap.data()?.certificados || [];
+        if (certs.length === 0) { container.innerHTML = '<div style="color:#475569;font-size:0.72rem;text-align:center;padding:8px;">Nenhum certificado emitido.</div>'; return; }
+        container.innerHTML = certs.map((c, i) => {
+            const [ano, mes, dia] = (c.data || '').split('-');
+            const dataFmt = (dia && mes && ano) ? `${dia}/${mes}/${ano}` : c.data || '';
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#1e293b;border-radius:8px;margin-bottom:6px;">
+                <div>
+                    <div style="font-size:0.72rem;font-weight:700;color:white;">🏆 ${c.faixa}</div>
+                    <div style="font-size:0.58rem;color:#64748b;">${dataFmt}</div>
+                </div>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <a href="${c.url}" target="_blank" style="font-size:0.65rem;color:#60a5fa;font-weight:700;text-decoration:none;">⬇️</a>
+                    <button onclick="graduacaoHistorico.deletarCert('${alunoId}',${i})" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.9rem;padding:2px 6px;">✕</button>
+                </div>
+            </div>`;
+        }).join('');
+    },
+
+    async deletarCert(alunoId, index) {
+        if (!confirm('Apagar este certificado do perfil do aluno?')) return;
+        const snap = await db.collection('alunos').doc(alunoId).get();
+        const certs = snap.data()?.certificados || [];
+        certs.splice(index, 1);
+        await db.collection('alunos').doc(alunoId).update({ certificados: certs });
+        this._renderCertsGrad(alunoId);
     },
 
     _renderTimeline(hist, alunoId, isAdmin) {

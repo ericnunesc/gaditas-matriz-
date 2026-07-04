@@ -1678,7 +1678,7 @@ const academia = {
 
     async marcarParaExame(id, nome) {
         if (!confirm(`Convocar ${nome} para o exame de faixa?\n\nEle(a) verá um aviso fixo no perfil até ser graduado(a).`)) return;
-        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, convocacaoPendente: true });
+        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, convocacaoPendente: true, taxaExamePaga: false });
         push.paraAluno(id, '🏆 Você foi convocado(a)!', `Parabéns! Seu professor te indicou para o exame de faixa. OSS! 🥋`);
         alert(`✅ ${nome} foi convocado(a) para o exame de faixa! OSS!`);
         this.generarRelatorioGraduacao();

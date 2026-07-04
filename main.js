@@ -1678,7 +1678,7 @@ const academia = {
 
     async marcarParaExame(id, nome) {
         if (!confirm(`Convocar ${nome} para o exame de faixa?\n\nEle(a) verá um aviso fixo no perfil até ser graduado(a).`)) return;
-        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, convocacaoPendente: true, taxaExamePaga: false });
+        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, convocacaoPendente: true, taxaExamePaga: false, examePresencaConfirmada: false });
         push.paraAluno(id, '🏆 Você foi convocado(a)!', `Parabéns! Seu professor te indicou para o exame de faixa. OSS! 🥋`);
         alert(`✅ ${nome} foi convocado(a) para o exame de faixa! OSS!`);
         this.generarRelatorioGraduacao();
@@ -17010,7 +17010,40 @@ const certificado = {
                 <button onclick="certificado._gerarESalvar('${alunoId}','${isPreta}')" style="width:100%;padding:11px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.78rem;" id="btn-salvar-cert">
                     ☁️ SALVAR NO PERFIL DO ALUNO
                 </button>
+                <div id="certs-existentes-modal" style="margin-top:16px;"></div>
             </div>`;
+        this._renderCertsExistentes(alunoId);
+    },
+
+    async _renderCertsExistentes(alunoId) {
+        const container = document.getElementById('certs-existentes-modal');
+        if (!container) return;
+        const snap = await db.collection('alunos').doc(alunoId).get();
+        const certs = snap.data()?.certificados || [];
+        if (certs.length === 0) { container.innerHTML = ''; return; }
+        container.innerHTML = `
+            <div style="font-size:0.58rem;font-weight:800;color:#64748b;letter-spacing:0.5px;margin-bottom:8px;">📋 CERTIFICADOS EMITIDOS</div>
+            ${certs.map((c, i) => {
+                const [ano, mes, dia] = (c.data || '').split('-');
+                const dataFmt = (dia && mes && ano) ? `${dia}/${mes}/${ano}` : c.data || '';
+                return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#0f172a;border:1px solid #1e293b;border-radius:8px;margin-bottom:6px;">
+                    <div>
+                        <div style="font-size:0.72rem;font-weight:700;color:white;">🏆 ${c.faixa}</div>
+                        <div style="font-size:0.58rem;color:#64748b;">${dataFmt}</div>
+                    </div>
+                    <button onclick="certificado.deletarCertificado('${alunoId}',${i})" title="Apagar certificado"
+                        style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:1rem;padding:4px 8px;">✕</button>
+                </div>`;
+            }).join('')}`;
+    },
+
+    async deletarCertificado(alunoId, index) {
+        if (!confirm('Apagar este certificado do perfil do aluno?')) return;
+        const snap = await db.collection('alunos').doc(alunoId).get();
+        const certs = snap.data()?.certificados || [];
+        certs.splice(index, 1);
+        await db.collection('alunos').doc(alunoId).update({ certificados: certs });
+        this._renderCertsExistentes(alunoId);
     },
 
     _lerCamposModal() {

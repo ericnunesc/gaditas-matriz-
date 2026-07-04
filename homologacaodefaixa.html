@@ -388,26 +388,11 @@ async function graduarAluno(alunoId) {
     });
 
     todosConvocados = todosConvocados.filter(a => a.id !== alunoId);
+    card?.remove();
 
-    const taxaPaga = dados.taxaExamePaga === true;
-    if (!taxaPaga) {
+    // Marca taxa pendente para o admin ver na guia Exame
+    if (dados.taxaExamePaga !== true) {
       await docRef.update({ taxaExamePendentePagamento: true });
-      // Transforma card em modo simplificado
-      if (card) {
-        card.style.borderLeftColor = '#f59e0b';
-        card.style.background = '#1c1000';
-        card.innerHTML = `
-          <div class="card-info" style="flex:1;">
-            <div class="card-nome" style="color:#10b981;">✅ ${nomeAluno} — ${faixaDestino}</div>
-            <div style="font-size:0.6rem;color:#f59e0b;font-weight:700;margin-top:2px;">⚠️ Taxa do exame ainda não paga</div>
-          </div>
-          <button onclick="toggleTaxaHomolog('${alunoId}', this)"
-            style="padding:8px 12px;background:#1e293b;border:1px solid #f59e0b55;color:#f59e0b;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;white-space:nowrap;">
-            💸 Marcar paga
-          </button>`;
-      }
-    } else {
-      card?.remove();
     }
 
     const dataGrad = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;

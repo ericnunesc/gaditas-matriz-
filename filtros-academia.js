@@ -547,7 +547,7 @@ const GaditasFiltros = {
                     <div style="background:${corFundo}; border:1px solid ${corBorda}; border-radius:20px; overflow:hidden; margin-bottom:14px; box-shadow:0 4px 16px rgba(0,0,0,0.4);">
                         <div style="padding:12px 16px 10px; border-bottom:1px solid ${corBorda}44; display:flex; align-items:center; justify-content:space-between;">
                             <span style="font-size:0.52rem; font-weight:800; color:${corTextoTag}; letter-spacing:0.8px;">${textoTag}</span>
-                            <span style="font-size:0.55rem; font-weight:700; color:#94a3b8;">VENCE ${dataVencimento}</span>
+                            <span style="font-size:0.78rem; font-weight:900; color:${corTextoTag}; background:${corTextoTag}22; border:1px solid ${corTextoTag}55; border-radius:8px; padding:4px 10px; letter-spacing:0.5px;">📅 ${dataVencimento}</span>
                         </div>
                         <div style="padding:16px 16px 14px; display:flex; justify-content:space-between; align-items:flex-end;">
                             <div>

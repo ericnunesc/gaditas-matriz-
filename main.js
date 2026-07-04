@@ -11477,7 +11477,8 @@ const exame = {
         const label  = document.getElementById(`taxa-label-${alunoId}`);
         if (toggle) {
             toggle.style.background = novo ? '#10b981' : '#334155';
-            toggle.querySelector('div').style.left = novo ? '14px' : '2px';
+            const inner = toggle.querySelector('div');
+            if (inner) inner.style.left = novo ? '14px' : '2px';
         }
         if (label) {
             label.style.color = novo ? '#10b981' : '#94a3b8';

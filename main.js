@@ -9599,6 +9599,7 @@ const aniversario = {
         if (this._convocacaoListener) { this._convocacaoListener(); this._convocacaoListener = null; }
 
         let _aulasAntes = null; // rastreia aulas para detectar presença computada
+        let _taxaPendenteAntes = null;
 
         this._convocacaoListener = db.collection('alunos').doc(alunoId)
             .onSnapshot(async snap => {
@@ -9611,6 +9612,22 @@ const aniversario = {
                     if (dados.aspiranteGraduacao === true) btn.classList.remove('nav-item-hidden');
                     else btn.classList.add('nav-item-hidden');
                 }
+
+                // 1b. Pagamento da taxa confirmado pelo admin → limpa aba exame do aluno
+                const taxaPendenteAgora = dados.taxaExamePendentePagamento === true;
+                if (_taxaPendenteAntes === true && !taxaPendenteAgora) {
+                    const container = document.getElementById('exame-aluno-container');
+                    if (container) {
+                        container.innerHTML = `
+                            <div style="text-align:center;padding:40px 20px;">
+                                <div style="font-size:3rem;margin-bottom:12px;">🏆</div>
+                                <div style="font-size:1rem;font-weight:800;color:#10b981;margin-bottom:6px;">Pagamento confirmado!</div>
+                                <div style="font-size:0.75rem;color:#64748b;">Sua taxa foi registrada. Parabéns pela graduação! OSS! 🥋</div>
+                            </div>`;
+                        setTimeout(() => btn?.classList.add('nav-item-hidden'), 2000);
+                    }
+                }
+                _taxaPendenteAntes = taxaPendenteAgora;
 
                 // 2. Popup de convocação
                 if (dados.convocacaoPendente) {

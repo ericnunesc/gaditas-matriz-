@@ -6506,7 +6506,8 @@ Ele voltará a ser aluno normal.`)) return;
     },
 
     async _receberEspecieModal(faturaId, valor) {
-        const hoje = new Date().toISOString().split('T')[0];
+        const _h = new Date();
+        const hoje = `${_h.getFullYear()}-${String(_h.getMonth()+1).padStart(2,'0')}-${String(_h.getDate()).padStart(2,'0')}`;
         const valorFmt = parseFloat(valor).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
         if (!confirm(`Confirmar recebimento em espécie de ${valorFmt}?\n\nIsso dará baixa imediata no Asaas.`)) return;
         try {

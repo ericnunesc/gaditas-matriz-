@@ -3436,11 +3436,6 @@ const academia = {
     },
 
     async abrirModalEditarAluno(id) {
-        // Expande o form de matrícula
-        const _fb = document.getElementById('form-matricula-body');
-        const _fc = document.getElementById('chev-matricula');
-        if (_fb) { _fb.style.display = 'block'; if (_fc) _fc.style.transform = 'rotate(180deg)'; }
-
         const docSnap = await db.collection('alunos').doc(id).get();
         if (!docSnap.exists) return alert('Atleta não encontrado.');
         const a = docSnap.data();
@@ -3880,10 +3875,6 @@ Ele voltará a ser aluno normal.`)) return;
         // Reset modalidade para JJ (padrão)
         this._modalidadeAtual = 'jiujitsu';
         this.selecionarModalidade('jiujitsu');
-        // Recolhe form após limpar
-        const _fb = document.getElementById('form-matricula-body');
-        const _fc = document.getElementById('chev-matricula');
-        if (_fb) { _fb.style.display = 'none'; if (_fc) _fc.style.transform = ''; }
     },
 
     _selecionarTipoProf(tipo) {

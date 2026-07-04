@@ -751,8 +751,12 @@
                 </div>
                 <div id="gestao-aluno-body" class="hidden">
 
-                <div id="card-gestao-atleta" class="card" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-bottom:15px;">
-                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-user-plus"></i> Matricular/Editar Atleta</div>
+                <div id="card-gestao-atleta" class="card" style="background:#1e293b; border:1px solid #334155; border-radius:12px; margin-bottom:15px; overflow:hidden;">
+                    <div class="card-title" onclick="(()=>{const b=document.getElementById('form-matricula-body');const c=document.getElementById('chev-matricula');const open=b.style.display==='block';b.style.display=open?'none':'block';c.style.transform=open?'':'rotate(180deg)'})()" style="color:white; font-weight:800; font-size:0.85rem; padding:15px; margin:0; cursor:pointer; user-select:none; display:flex; justify-content:space-between; align-items:center;">
+                        <span><i class="fas fa-user-plus"></i> Matricular/Editar Atleta</span>
+                        <i id="chev-matricula" class="fas fa-chevron-down" style="font-size:0.75rem; color:#64748b; transition:transform 0.25s;"></i>
+                    </div>
+                    <div id="form-matricula-body" style="display:none; padding:0 15px 15px;">
                     <input type="hidden" id="edit-aluno-id"/>
                     <input type="text" id="nome-aluno" placeholder="Nome Completo do Atleta" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <input type="email" id="email-aluno" placeholder="E-mail de Login do Atleta" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
@@ -845,6 +849,7 @@
                         <button onclick="academia.limparAl()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">LIMPAR</button>
                     </div>
                     <button id="btn-alterar-senha-aluno" onclick="academia.abrirAlterarSenha()" style="display:none; width:100%; margin-top:8px; padding:10px; background:#0f172a; border:1px solid #f59e0b55; color:#fbbf24; border-radius:8px; font-size:0.72rem; font-weight:700; cursor:pointer;">🔑 Alterar Senha do Aluno</button>
+                    </div><!-- /form-matricula-body -->
                 </div>
 
                 <h4 style="color: #94a3b8; font-size: 0.7rem; margin: 20px 0 8px 4px; font-weight: 800; text-transform:uppercase;">ATLETAS MATRICULADOS</h4>

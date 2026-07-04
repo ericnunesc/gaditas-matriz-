@@ -11464,6 +11464,14 @@ const exame = {
             wrapEl.style.background = novo ? '#05200f' : '#1e293b';
             wrapEl.style.borderColor = novo ? '#10b98155' : '#334155';
         }
+        // Se taxa marcada como paga e card está no modo simplificado pós-graduação → remove
+        if (novo) {
+            const card = document.getElementById(`card-conv-${alunoId}`);
+            const eraSimplificado = !!document.getElementById(`taxa-wrap-${alunoId}`);
+            if (card && eraSimplificado) {
+                setTimeout(() => card.remove(), 600);
+            }
+        }
     },
 
     // ── Graduar aluno direto pela lista de convocados ────────
@@ -11504,8 +11512,28 @@ const exame = {
             // Push de parabéns
             push.paraAluno(alunoId, '🏆 Parabéns! Nova faixa!', `Você foi graduado(a) para a faixa ${faixaDestino}! Muito orgulho! OSS! 🥋`);
 
-            // Remove card da lista
-            card?.remove();
+            // Se taxa não paga: mantém card simplificado aguardando pagamento
+            const taxaPaga = dados.taxaExamePaga === true;
+            if (!taxaPaga && card) {
+                card.style.borderColor = '#f59e0b';
+                card.style.background  = '#1c1000';
+                card.innerHTML = `
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <div>
+                            <div style="font-size:0.75rem;font-weight:800;color:#10b981;">✅ ${nome} — Graduado para ${faixaDestino}</div>
+                            <div style="font-size:0.6rem;color:#f59e0b;font-weight:700;margin-top:2px;">⚠️ Taxa do exame ainda não paga</div>
+                        </div>
+                    </div>
+                    <div id="taxa-wrap-${alunoId}" onclick="exame.toggleTaxaPaga('${alunoId}', this)"
+                        style="display:flex;align-items:center;gap:8px;background:#1e293b;border:1px solid #f59e0b55;border-radius:8px;padding:8px 12px;cursor:pointer;transition:all 0.2s;">
+                        <div style="width:28px;height:16px;background:#334155;border-radius:999px;position:relative;flex-shrink:0;transition:background 0.2s;">
+                            <div id="taxa-toggle-${alunoId}" style="width:12px;height:12px;background:white;border-radius:50%;position:absolute;top:2px;left:2px;transition:left 0.2s;"></div>
+                        </div>
+                        <span id="taxa-label-${alunoId}" style="font-size:0.7rem;font-weight:800;color:#94a3b8;">💸 Taxa não paga — clique para confirmar</span>
+                    </div>`;
+            } else {
+                card?.remove();
+            }
 
             // Oferece emitir certificado
             const hoje2 = new Date();

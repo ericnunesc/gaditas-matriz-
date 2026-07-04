@@ -11336,8 +11336,17 @@ const exame = {
         const el = document.getElementById('relatorio-exame');
         if (!el) return;
         try {
-            const snap = await db.collection('alunos').where('aspiranteGraduacao', '==', true).get();
-            if (snap.empty) { el.innerHTML = ''; return; }
+            const [snap, snapPend] = await Promise.all([
+                db.collection('alunos').where('aspiranteGraduacao', '==', true).get(),
+                db.collection('alunos').where('taxaExamePendentePagamento', '==', true).get()
+            ]);
+            // Junta os dois conjuntos sem duplicar
+            const docsVistos = new Set();
+            const todosRelatorio = [...snap.docs, ...snapPend.docs].filter(d => {
+                if (docsVistos.has(d.id)) return false;
+                docsVistos.add(d.id); return true;
+            });
+            if (todosRelatorio.length === 0) { el.innerHTML = ''; return; }
 
             const infantil = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
             const coresNome = {
@@ -11352,7 +11361,7 @@ const exame = {
             let receber = 0, pagaram = 0, totalPago = 0;
             const porFaixa = {};
 
-            snap.docs.forEach(doc => {
+            todosRelatorio.forEach(doc => {
                 const a = doc.data();
                 const cat = this._getCategoria(a);
                 const proxFaixa = this._getProxFaixa(a, cat);

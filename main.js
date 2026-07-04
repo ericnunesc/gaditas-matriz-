@@ -11145,8 +11145,29 @@ const exame = {
         const container = document.getElementById('lista-confirmados-exame');
         if (!container) return;
         try {
-            const snap = await db.collection('alunos').where('aspiranteGraduacao', '==', true).get();
-            if (snap.empty) { container.innerHTML = '<small style="color:#475569;font-size:0.65rem;">Nenhum aluno convocado.</small>'; return; }
+            const [snap, snapPend] = await Promise.all([
+                db.collection('alunos').where('aspiranteGraduacao', '==', true).get(),
+                db.collection('alunos').where('taxaExamePendentePagamento', '==', true).get()
+            ]);
+
+            // Alunos já graduados aguardando pagamento da taxa
+            const pendHtml = snapPend.docs.map(doc => {
+                const a = doc.data(); const id = doc.id;
+                return `<div id="card-conv-${id}" style="background:#1c1000;border:1px solid #f59e0b;border-radius:8px;padding:10px 12px;margin-bottom:6px;">
+                    <div style="font-size:0.75rem;font-weight:800;color:#10b981;margin-bottom:4px;">✅ ${a.nome} — Graduado para ${a.faixa}</div>
+                    <div style="font-size:0.6rem;color:#f59e0b;font-weight:700;margin-bottom:8px;">⚠️ Taxa do exame ainda não paga</div>
+                    <div id="taxa-wrap-${id}" onclick="exame.toggleTaxaPaga('${id}', this)"
+                        style="display:flex;align-items:center;gap:8px;background:#1e293b;border:1px solid #f59e0b55;border-radius:8px;padding:8px 12px;cursor:pointer;transition:all 0.2s;">
+                        <div style="width:28px;height:16px;background:#334155;border-radius:999px;position:relative;flex-shrink:0;">
+                            <div id="taxa-toggle-${id}" style="width:12px;height:12px;background:white;border-radius:50%;position:absolute;top:2px;left:2px;transition:left 0.2s;"></div>
+                        </div>
+                        <span id="taxa-label-${id}" style="font-size:0.7rem;font-weight:800;color:#94a3b8;">💸 Taxa não paga — clique para confirmar</span>
+                    </div>
+                </div>`;
+            }).join('');
+
+            if (snap.empty && snapPend.empty) { container.innerHTML = '<small style="color:#475569;font-size:0.65rem;">Nenhum aluno convocado.</small>'; return; }
+            if (snap.empty) { container.innerHTML = pendHtml; return; }
 
             const infantil = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
             const adultoOrder = { 'Azul':10, 'Roxa':20, 'Marrom':30, 'Preta':40 };
@@ -11242,7 +11263,7 @@ const exame = {
                     </div>`;
                 }).join('');
 
-            container.innerHTML = html;
+            container.innerHTML = pendHtml + html;
         } catch(e) {
             container.innerHTML = `<small style="color:#f43f5e;font-size:0.65rem;">Erro: ${e.message}</small>`;
         }
@@ -11464,12 +11485,12 @@ const exame = {
             wrapEl.style.background = novo ? '#05200f' : '#1e293b';
             wrapEl.style.borderColor = novo ? '#10b98155' : '#334155';
         }
-        // Se taxa marcada como paga e card está no modo simplificado pós-graduação → remove
+        // Se taxa marcada como paga e aluno estava no modo "pendente pós-graduação" → remove da lista
         if (novo) {
-            const card = document.getElementById(`card-conv-${alunoId}`);
-            const eraSimplificado = !!document.getElementById(`taxa-wrap-${alunoId}`);
-            if (card && eraSimplificado) {
-                setTimeout(() => card.remove(), 600);
+            const alunoDoc = await ref.get();
+            if (alunoDoc.data()?.taxaExamePendentePagamento === true) {
+                await ref.update({ taxaExamePendentePagamento: firebase.firestore.FieldValue.delete() });
+                setTimeout(() => this.carregarConfirmados(), 400);
             }
         }
     },
@@ -11512,28 +11533,13 @@ const exame = {
             // Push de parabéns
             push.paraAluno(alunoId, '🏆 Parabéns! Nova faixa!', `Você foi graduado(a) para a faixa ${faixaDestino}! Muito orgulho! OSS! 🥋`);
 
-            // Se taxa não paga: mantém card simplificado aguardando pagamento
+            // Se taxa não paga: mantém na lista via campo Firestore
             const taxaPaga = dados.taxaExamePaga === true;
-            if (!taxaPaga && card) {
-                card.style.borderColor = '#f59e0b';
-                card.style.background  = '#1c1000';
-                card.innerHTML = `
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                        <div>
-                            <div style="font-size:0.75rem;font-weight:800;color:#10b981;">✅ ${nome} — Graduado para ${faixaDestino}</div>
-                            <div style="font-size:0.6rem;color:#f59e0b;font-weight:700;margin-top:2px;">⚠️ Taxa do exame ainda não paga</div>
-                        </div>
-                    </div>
-                    <div id="taxa-wrap-${alunoId}" onclick="exame.toggleTaxaPaga('${alunoId}', this)"
-                        style="display:flex;align-items:center;gap:8px;background:#1e293b;border:1px solid #f59e0b55;border-radius:8px;padding:8px 12px;cursor:pointer;transition:all 0.2s;">
-                        <div style="width:28px;height:16px;background:#334155;border-radius:999px;position:relative;flex-shrink:0;transition:background 0.2s;">
-                            <div id="taxa-toggle-${alunoId}" style="width:12px;height:12px;background:white;border-radius:50%;position:absolute;top:2px;left:2px;transition:left 0.2s;"></div>
-                        </div>
-                        <span id="taxa-label-${alunoId}" style="font-size:0.7rem;font-weight:800;color:#94a3b8;">💸 Taxa não paga — clique para confirmar</span>
-                    </div>`;
-            } else {
-                card?.remove();
+            if (!taxaPaga) {
+                await docRef.update({ taxaExamePendentePagamento: true });
             }
+            // Re-renderiza a lista (remove convocado normal, mostra pendente se necessário)
+            this.carregarConfirmados();
 
             // Oferece emitir certificado
             const hoje2 = new Date();

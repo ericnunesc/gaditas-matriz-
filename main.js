@@ -11350,6 +11350,12 @@ const exame = {
                             </div>
                             ${seletorKids}
                             ${seletorTamanho}
+                            <div style="margin-top:5px;display:flex;gap:6px;align-items:center;">
+                                <small style="color:#94a3b8;font-size:0.55rem;font-weight:800;white-space:nowrap;">🏷️ Etiqueta:</small>
+                                <input type="text" value="${(a.nomeEtiqueta||'').replace(/"/g,'&quot;')}" placeholder="nome na etiqueta"
+                                    onblur="if(this.value.trim()!=='${(a.nomeEtiqueta||'').replace(/'/g,"\\'")}')exame.salvarEtiquetaAdmin('${id}',this.value.trim())"
+                                    style="flex:1;padding:3px 8px;background:#1e293b;border:1px solid #334155;color:white;border-radius:6px;font-size:0.68rem;outline:none;"/>
+                            </div>
                             <div onclick="exame.toggleTaxaPaga('${id}', this)"
                                 style="margin-top:8px;display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 10px;background:${taxaPaga?'#05200f':'#1e293b'};border:1px solid ${taxaPaga?'#10b98155':'#334155'};border-radius:8px;transition:all 0.2s;">
                                 <div id="taxa-toggle-${id}" style="width:32px;height:18px;border-radius:9px;background:${taxaPaga?'#10b981':'#334155'};position:relative;transition:all 0.2s;flex-shrink:0;">
@@ -11594,6 +11600,10 @@ const exame = {
         const novo = !atual;
         await db.collection('alunos').doc(alunoId).update({ examePresencaConfirmada: novo });
         this.carregarConfirmados();
+    },
+
+    async salvarEtiquetaAdmin(alunoId, valor) {
+        await db.collection('alunos').doc(alunoId).update({ nomeEtiqueta: valor });
     },
 
     async toggleTaxaPaga(alunoId, wrapEl) {

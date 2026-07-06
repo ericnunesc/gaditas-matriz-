@@ -11344,7 +11344,9 @@ const exame = {
                                     <div id="nome-conv-${id}" style="font-size:0.82rem;font-weight:800;color:${corNome};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome}</div>
                                     <div id="sub-conv-${id}" data-faixa-atual="${a.faixa}" style="font-size:0.6rem;color:#64748b;margin-top:1px;">${a.faixa} → <span style="color:${corNome};font-weight:700;">${faixaDestino}</span> • ${a.aulas||0} aulas</div>
                                 </div>
-                                <span style="font-size:0.58rem;font-weight:800;color:${confirmou?'#10b981':'#f59e0b'};white-space:nowrap;margin-left:8px;">${confirmou?'✅ CONF.':'⏳ PEND.'}</span>
+                                <button onclick="exame.togglePresencaAdmin('${id}',${confirmou})"
+                                    style="font-size:0.58rem;font-weight:800;color:${confirmou?'#10b981':'#f59e0b'};white-space:nowrap;margin-left:8px;background:${confirmou?'#05200f':'#1c1400'};border:1px solid ${confirmou?'#10b98155':'#f59e0b55'};border-radius:6px;padding:4px 8px;cursor:pointer;">
+                                    ${confirmou?'✅ CONF.':'⏳ PEND.'}</button>
                             </div>
                             ${seletorKids}
                             ${seletorTamanho}
@@ -11588,6 +11590,12 @@ const exame = {
     },
 
     // ── Toggle taxa do exame paga/não paga ───────────────────
+    async togglePresencaAdmin(alunoId, atual) {
+        const novo = !atual;
+        await db.collection('alunos').doc(alunoId).update({ examePresencaConfirmada: novo });
+        this.carregarConfirmados();
+    },
+
     async toggleTaxaPaga(alunoId, wrapEl) {
         const ref = db.collection('alunos').doc(alunoId);
         const doc = await ref.get();

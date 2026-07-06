@@ -10815,6 +10815,10 @@ const exame = {
                         style="padding:12px;background:#0f172a;border:1px solid #a855f755;color:#d8b4fe;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;text-align:left;">
                         🌟 Somente Kids (até 15 anos)
                     </button>
+                    <button onclick="document.getElementById('modal-filtro-costureira').remove();exame.abrirRelatorioCostureiraPorCor()"
+                        style="padding:12px;background:#0f172a;border:1px solid #10b98155;color:#6ee7b7;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;text-align:left;">
+                        🎨 Por Cor e Tamanho (Kids → Adulto)
+                    </button>
                     <button onclick="document.getElementById('modal-filtro-costureira').remove()"
                         style="padding:10px;background:transparent;border:none;color:#64748b;font-size:0.7rem;cursor:pointer;">Cancelar</button>
                 </div>
@@ -10887,6 +10891,98 @@ const exame = {
 
         const w = window.open('', '_blank');
         w.document.write(html);
+        w.document.close();
+    },
+
+    async abrirRelatorioCostureiraPorCor() {
+        const snap = await db.collection('alunos').where('aspiranteGraduacao','==',true).get();
+        if (snap.empty) return alert('Nenhum atleta convocado.');
+
+        const ano = new Date().getFullYear();
+        const ORDEM_FAIXAS = ['Branca','Cinza/Branca','Cinza','Amarela/Branca','Amarela','Laranja/Branca','Laranja','Verde','Azul','Roxa','Marrom','Preta'];
+        const corFaixaHex = f => ({
+            'Branca':'#e2e8f0','Cinza/Branca':'#94a3b8','Cinza':'#64748b',
+            'Amarela/Branca':'#fbbf24','Amarela':'#f59e0b',
+            'Laranja/Branca':'#fb923c','Laranja':'#f97316',
+            'Verde':'#22c55e','Azul':'#3b82f6','Roxa':'#a855f7',
+            'Marrom':'#92400e','Preta':'#374151'
+        }[f] || '#64748b');
+
+        const kids = {}, adultos = {};
+        snap.forEach(doc => {
+            const a = doc.data();
+            const idade = a.nascimento ? (ano - new Date(a.nascimento).getFullYear()) : 99;
+            const isKids = idade < 16;
+            const cat = isKids ? 'kids' : (a.faixa === 'Marrom' || a.faixa === 'Preta' ? 'preta' : 'adulto');
+            const proxFaixa = this._getProxFaixa(a, cat) || '—';
+            const tam = (a.tamanhoFaixa || '').trim() || 'SEM TAMANHO';
+            const grupo = isKids ? kids : adultos;
+            if (!grupo[proxFaixa]) grupo[proxFaixa] = {};
+            grupo[proxFaixa][tam] = (grupo[proxFaixa][tam] || 0) + 1;
+        });
+
+        const gerarSecao = (titulo, grupo, corTitulo) => {
+            const faixas = ORDEM_FAIXAS.filter(f => grupo[f]);
+            if (!faixas.length) return '';
+            let html = `<tr><td colspan="3" style="background:${corTitulo};color:white;font-weight:900;font-size:1rem;padding:10px 14px;letter-spacing:1px;">${titulo}</td></tr>`;
+            let totalSecao = 0;
+            faixas.forEach(faixa => {
+                const tam = grupo[faixa];
+                const cor = corFaixaHex(faixa);
+                const tamanhos = Object.keys(tam).sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
+                const totalFaixa = tamanhos.reduce((s,t) => s + tam[t], 0);
+                totalSecao += totalFaixa;
+                html += `<tr style="background:#f1f5f9;">
+                    <td colspan="3" style="padding:7px 14px;font-weight:800;color:${cor === '#e2e8f0' ? '#475569' : cor};border-left:5px solid ${cor};font-size:0.9rem;">
+                        ${faixa} <span style="color:#64748b;font-weight:500;font-size:0.8rem;">(${totalFaixa} ${totalFaixa===1?'unidade':'unidades'})</span>
+                    </td>
+                </tr>`;
+                tamanhos.forEach(t => {
+                    html += `<tr>
+                        <td style="padding:5px 14px 5px 28px;color:#475569;font-size:0.85rem;">${t}</td>
+                        <td style="padding:5px 14px;font-weight:900;font-size:1.1rem;text-align:center;">${tam[t]}</td>
+                        <td style="padding:5px 14px;color:#94a3b8;font-size:0.8rem;">${tam[t]===1?'unidade':'unidades'}</td>
+                    </tr>`;
+                });
+            });
+            html += `<tr style="background:#e2e8f0;border-top:2px solid #cbd5e1;">
+                <td colspan="2" style="padding:8px 14px;font-weight:900;font-size:0.9rem;">TOTAL ${titulo.replace(/[^A-Z ]/g,'').trim()}</td>
+                <td style="padding:8px 14px;font-weight:900;font-size:1rem;text-align:center;">${totalSecao}</td>
+            </tr>`;
+            return html;
+        };
+
+        const totalGeral = [...Object.values(kids), ...Object.values(adultos)]
+            .reduce((s, tam) => s + Object.values(tam).reduce((a,b) => a+b, 0), 0);
+
+        const htmlDoc = `<!DOCTYPE html><html><head><meta charset="utf-8">
+        <title>Pedido Costureira — Por Cor e Tamanho</title>
+        <style>
+            body{font-family:Arial,sans-serif;padding:24px;color:#1e293b;max-width:700px;margin:0 auto;}
+            h2{margin-bottom:4px;} p{color:#64748b;font-size:0.85rem;margin-bottom:16px;}
+            table{width:100%;border-collapse:collapse;border:1px solid #cbd5e1;margin-bottom:24px;}
+            td{border-bottom:1px solid #e2e8f0;}
+            @media print{button{display:none!important;}}
+        </style></head><body>
+        <h2>🧵 Pedido de Faixas — Por Cor e Tamanho</h2>
+        <p>Gerado em: ${new Date().toLocaleString('pt-BR')} · Total geral: ${totalGeral} faixas</p>
+        <button onclick="window.print()" style="margin-bottom:16px;padding:10px 20px;background:#1e293b;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">🖨️ IMPRIMIR</button>
+        <button onclick="window.close()" style="margin-bottom:16px;margin-left:8px;padding:10px 20px;background:#ef4444;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">✕ Fechar</button>
+        <table>
+            <thead><tr style="background:#1e293b;color:white;">
+                <th style="padding:8px 14px;text-align:left;">Tamanho</th>
+                <th style="padding:8px 14px;text-align:center;">Qtd</th>
+                <th style="padding:8px 14px;text-align:left;"></th>
+            </tr></thead>
+            <tbody>
+                ${gerarSecao('🌟 KIDS', kids, '#7c3aed')}
+                ${gerarSecao('🥋 ADULTOS', adultos, '#1d4ed8')}
+            </tbody>
+        </table>
+        </body></html>`;
+
+        const w = window.open('', '_blank');
+        w.document.write(htmlDoc);
         w.document.close();
     },
 

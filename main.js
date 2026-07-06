@@ -10819,6 +10819,10 @@ const exame = {
                         style="padding:12px;background:#0f172a;border:1px solid #10b98155;color:#6ee7b7;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;text-align:left;">
                         🎨 Por Cor e Tamanho (Kids → Adulto)
                     </button>
+                    <button onclick="document.getElementById('modal-filtro-costureira').remove();exame.abrirSeletorExcelCostureira()"
+                        style="padding:12px;background:#0f172a;border:1px solid #22c55e55;color:#86efac;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;text-align:left;">
+                        📊 Exportar Excel (escolher colunas)
+                    </button>
                     <button onclick="document.getElementById('modal-filtro-costureira').remove()"
                         style="padding:10px;background:transparent;border:none;color:#64748b;font-size:0.7rem;cursor:pointer;">Cancelar</button>
                 </div>
@@ -10892,6 +10896,120 @@ const exame = {
         const w = window.open('', '_blank');
         w.document.write(html);
         w.document.close();
+    },
+
+    abrirSeletorExcelCostureira() {
+        document.getElementById('modal-excel-costureira')?.remove();
+        const m = document.createElement('div');
+        m.id = 'modal-excel-costureira';
+        m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:10010;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;';
+        m.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:24px;width:100%;max-width:340px;">
+                <div style="font-size:0.85rem;font-weight:800;color:white;margin-bottom:4px;">📊 Exportar Excel — Costureira</div>
+                <div style="font-size:0.62rem;color:#64748b;margin-bottom:16px;">Selecione as colunas e o grupo:</div>
+                <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;margin-bottom:8px;letter-spacing:0.5px;">COLUNAS</div>
+                <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+                    ${[
+                        ['col-categoria','Categoria (Kids/Adulto)',true],
+                        ['col-faixa','Faixa Destino',true],
+                        ['col-tamanho','Tamanho',true],
+                        ['col-nome','Nome do Aluno',true],
+                        ['col-etiqueta','Nome na Etiqueta',true],
+                        ['col-aulas','Qtd. de Aulas',false],
+                    ].map(([id,label,checked])=>`
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;background:#0f172a;border-radius:8px;border:1px solid #334155;">
+                            <input type="checkbox" id="${id}" ${checked?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:#22c55e;">
+                            <span style="font-size:0.72rem;color:white;">${label}</span>
+                        </label>`).join('')}
+                </div>
+                <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;margin-bottom:8px;letter-spacing:0.5px;">GRUPO</div>
+                <select id="excel-filtro-grupo" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;margin-bottom:16px;">
+                    <option value="todos">👥 Todos os atletas</option>
+                    <option value="adulto">🥋 Somente Adultos (16+)</option>
+                    <option value="kids">🌟 Somente Kids (até 15 anos)</option>
+                </select>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="exame.exportarExcelCostureira()"
+                        style="flex:1;padding:11px;background:#16a34a;border:none;color:white;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;">
+                        ⬇️ BAIXAR EXCEL
+                    </button>
+                    <button onclick="document.getElementById('modal-excel-costureira').remove()"
+                        style="padding:11px 16px;background:transparent;border:1px solid #334155;color:#64748b;border-radius:10px;font-size:0.72rem;cursor:pointer;">
+                        Cancelar
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(m);
+    },
+
+    async exportarExcelCostureira() {
+        const filtro = document.getElementById('excel-filtro-grupo')?.value || 'todos';
+        const usarCategoria = document.getElementById('col-categoria')?.checked;
+        const usarFaixa     = document.getElementById('col-faixa')?.checked;
+        const usarTamanho   = document.getElementById('col-tamanho')?.checked;
+        const usarNome      = document.getElementById('col-nome')?.checked;
+        const usarEtiqueta  = document.getElementById('col-etiqueta')?.checked;
+        const usarAulas     = document.getElementById('col-aulas')?.checked;
+
+        const snap = await db.collection('alunos').where('aspiranteGraduacao','==',true).get();
+        if (snap.empty) return alert('Nenhum atleta convocado.');
+
+        const ano = new Date().getFullYear();
+        const linhas = [];
+        snap.forEach(doc => {
+            const a = doc.data();
+            const idade = a.nascimento ? (ano - new Date(a.nascimento).getFullYear()) : 99;
+            const isKids = idade < 16;
+            if (filtro === 'adulto' && isKids) return;
+            if (filtro === 'kids' && !isKids) return;
+            const cat = isKids ? 'kids' : (a.faixa === 'Marrom' || a.faixa === 'Preta' ? 'preta' : 'adulto');
+            const proxFaixa = this._getProxFaixa(a, cat) || '—';
+            linhas.push({
+                categoria: isKids ? 'Kids' : 'Adulto',
+                faixa:     proxFaixa,
+                tamanho:   a.tamanhoFaixa || '—',
+                nome:      a.nome || '—',
+                etiqueta:  a.nomeEtiqueta || '—',
+                aulas:     a.aulas || 0,
+            });
+        });
+
+        linhas.sort((a,b) => {
+            if (a.categoria !== b.categoria) return a.categoria === 'Kids' ? -1 : 1;
+            return a.faixa.localeCompare(b.faixa) || a.tamanho.localeCompare(b.tamanho);
+        });
+
+        const cabecalho = [];
+        if (usarCategoria) cabecalho.push('Categoria');
+        if (usarFaixa)     cabecalho.push('Faixa Destino');
+        if (usarTamanho)   cabecalho.push('Tamanho');
+        if (usarNome)      cabecalho.push('Nome do Aluno');
+        if (usarEtiqueta)  cabecalho.push('Nome na Etiqueta');
+        if (usarAulas)     cabecalho.push('Aulas');
+
+        const csvEscape = v => `"${String(v).replace(/"/g,'""')}"`;
+        const rows = [cabecalho.map(csvEscape).join(';')];
+        linhas.forEach(l => {
+            const row = [];
+            if (usarCategoria) row.push(csvEscape(l.categoria));
+            if (usarFaixa)     row.push(csvEscape(l.faixa));
+            if (usarTamanho)   row.push(csvEscape(l.tamanho));
+            if (usarNome)      row.push(csvEscape(l.nome));
+            if (usarEtiqueta)  row.push(csvEscape(l.etiqueta));
+            if (usarAulas)     row.push(csvEscape(l.aulas));
+            rows.push(row.join(';'));
+        });
+
+        const bom = '﻿';
+        const csv = bom + rows.join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `costureira_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+        document.getElementById('modal-excel-costureira')?.remove();
     },
 
     async abrirRelatorioCostureiraPorCor() {

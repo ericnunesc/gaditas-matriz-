@@ -10830,9 +10830,19 @@ const exame = {
         document.body.appendChild(m);
     },
 
+    async _snapCostureira() {
+        const [s1, s2] = await Promise.all([
+            db.collection('alunos').where('aspiranteGraduacao','==',true).get(),
+            db.collection('alunos').where('taxaExamePendentePagamento','==',true).get()
+        ]);
+        const vistos = new Set();
+        return [...s1.docs, ...s2.docs].filter(d => { if (vistos.has(d.id)) return false; vistos.add(d.id); return true; });
+    },
+
     async abrirRelatorioCostureira(filtro = 'todos') {
-        const snap = await db.collection('alunos').where('aspiranteGraduacao','==',true).get();
-        if (snap.empty) return alert('Nenhum atleta convocado.');
+        const docs = await this._snapCostureira();
+        if (!docs.length) return alert('Nenhum atleta convocado.');
+        const snap = { docs, forEach: fn => docs.forEach(fn) };
 
         const ano = new Date().getFullYear();
         const linhas = [];
@@ -10951,12 +10961,12 @@ const exame = {
         const usarEtiqueta  = document.getElementById('col-etiqueta')?.checked;
         const usarAulas     = document.getElementById('col-aulas')?.checked;
 
-        const snap = await db.collection('alunos').where('aspiranteGraduacao','==',true).get();
-        if (snap.empty) return alert('Nenhum atleta convocado.');
+        const docs = await this._snapCostureira();
+        if (!docs.length) return alert('Nenhum atleta convocado.');
 
         const ano = new Date().getFullYear();
         const linhas = [];
-        snap.forEach(doc => {
+        docs.forEach(doc => {
             const a = doc.data();
             const idade = a.nascimento ? (ano - new Date(a.nascimento).getFullYear()) : 99;
             const isKids = idade < 16;
@@ -11013,8 +11023,8 @@ const exame = {
     },
 
     async abrirRelatorioCostureiraPorCor() {
-        const snap = await db.collection('alunos').where('aspiranteGraduacao','==',true).get();
-        if (snap.empty) return alert('Nenhum atleta convocado.');
+        const docs = await this._snapCostureira();
+        if (!docs.length) return alert('Nenhum atleta convocado.');
 
         const ano = new Date().getFullYear();
         const ORDEM_FAIXAS = ['Branca','Cinza/Branca','Cinza','Amarela/Branca','Amarela','Laranja/Branca','Laranja','Verde','Azul','Roxa','Marrom','Preta'];
@@ -11027,7 +11037,7 @@ const exame = {
         }[f] || '#64748b');
 
         const kids = {}, adultos = {};
-        snap.forEach(doc => {
+        docs.forEach(doc => {
             const a = doc.data();
             const idade = a.nascimento ? (ano - new Date(a.nascimento).getFullYear()) : 99;
             const isKids = idade < 16;

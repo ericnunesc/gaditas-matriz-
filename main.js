@@ -11027,13 +11027,23 @@ const exame = {
         if (!docs.length) return alert('Nenhum atleta convocado.');
 
         const ano = new Date().getFullYear();
-        const ORDEM_FAIXAS = ['Branca','Cinza/Branca','Cinza','Amarela/Branca','Amarela','Laranja/Branca','Laranja','Verde','Azul','Roxa','Marrom','Preta'];
+        const ORDEM_FAIXAS = [
+            'Branca','Cinza/Branca','Cinza','Cinza/Preta',
+            'Amarela/Branca','Amarela','Amarela/Preta',
+            'Laranja/Branca','Laranja','Laranja/Preta',
+            'Verde/Branca','Verde','Verde/Preta',
+            'Azul','Roxa','Marrom','Preta',
+            'Preta 1º Grau','Preta 2º Grau','Preta 3º Grau','Preta 4º Grau','Preta 5º Grau',
+            'Preta 6º Grau','Preta 7º Grau'
+        ];
         const corFaixaHex = f => ({
-            'Branca':'#e2e8f0','Cinza/Branca':'#94a3b8','Cinza':'#64748b',
-            'Amarela/Branca':'#fbbf24','Amarela':'#f59e0b',
-            'Laranja/Branca':'#fb923c','Laranja':'#f97316',
-            'Verde':'#22c55e','Azul':'#3b82f6','Roxa':'#a855f7',
-            'Marrom':'#92400e','Preta':'#374151'
+            'Branca':'#e2e8f0','Cinza/Branca':'#94a3b8','Cinza':'#64748b','Cinza/Preta':'#607d8b',
+            'Amarela/Branca':'#fbbf24','Amarela':'#f59e0b','Amarela/Preta':'#d97706',
+            'Laranja/Branca':'#fb923c','Laranja':'#f97316','Laranja/Preta':'#ea580c',
+            'Verde/Branca':'#4ade80','Verde':'#22c55e','Verde/Preta':'#15803d',
+            'Azul':'#3b82f6','Roxa':'#a855f7','Marrom':'#92400e',
+            'Preta':'#374151','Preta 1º Grau':'#1e293b','Preta 2º Grau':'#1e293b',
+            'Preta 3º Grau':'#1e293b','Preta 4º Grau':'#1e293b','Preta 5º Grau':'#1e293b',
         }[f] || '#64748b');
 
         const kids = {}, adultos = {};
@@ -11050,7 +11060,9 @@ const exame = {
         });
 
         const gerarSecao = (titulo, grupo, corTitulo) => {
-            const faixas = ORDEM_FAIXAS.filter(f => grupo[f]);
+            const conhecidas = ORDEM_FAIXAS.filter(f => grupo[f]);
+            const extras = Object.keys(grupo).filter(f => !ORDEM_FAIXAS.includes(f));
+            const faixas = [...conhecidas, ...extras];
             if (!faixas.length) return '';
             let html = `<tr><td colspan="3" style="background:${corTitulo};color:white;font-weight:900;font-size:1rem;padding:10px 14px;letter-spacing:1px;">${titulo}</td></tr>`;
             let totalSecao = 0;

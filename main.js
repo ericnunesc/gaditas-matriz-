@@ -10526,7 +10526,8 @@ const exame = {
             const convocado = aluno.aspiranteGraduacao === true;
             const provaConfig = provaDoc.exists ? provaDoc.data() : {};
             const provaAtiva = provaConfig.liberada && this._matchesProvaTarget(aluno, this._getProvaTargets(provaConfig));
-            if (convocado || provaAtiva) {
+            const temResultado = aluno.provaRegras?.resultadoLiberado === true;
+            if (convocado || provaAtiva || temResultado) {
                 btn.classList.remove('nav-item-hidden');
                 btn.style.display = 'flex';
             } else {
@@ -10563,11 +10564,12 @@ const exame = {
             const aluno = alunoDoc.data();
             const provaConfig = provaDoc.exists ? provaDoc.data() : {};
             const provaAtiva = provaConfig.liberada && this._matchesProvaTarget(aluno, this._getProvaTargets(provaConfig));
+            const temResultado = aluno.provaRegras?.resultadoLiberado === true;
 
-            // Aluno NÃO convocado: se prova ativa → mostra só prova + mostra nav; senão → esconde e vai para home
+            // Aluno NÃO convocado: se prova ativa ou tem resultado liberado → mostra seção prova; senão → esconde e vai para home
             if (!aluno.aspiranteGraduacao) {
                 const btnEx = document.getElementById('menu-exame');
-                if (provaAtiva) {
+                if (provaAtiva || temResultado) {
                     if (btnEx) btnEx.style.display = 'flex';
                     container.innerHTML = `
                     <div style="padding:4px 0;">

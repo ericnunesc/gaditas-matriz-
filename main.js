@@ -10557,6 +10557,14 @@ const exame = {
                 return;
             }
 
+            // Não está convocado e sem prova ativa → esconde aba e volta para home
+            if (!aluno.aspiranteGraduacao) {
+                const btnEx = document.getElementById('menu-exame');
+                if (btnEx) btnEx.style.display = 'none';
+                ui.showTab('tab-checkin');
+                return;
+            }
+
             const categoria  = this._getCategoria(aluno);
             const [configDoc, efiDoc] = await Promise.all([
                 db.collection('configuracoes').doc(this._docId(categoria)).get(),
@@ -11918,7 +11926,7 @@ const exame = {
         const targets = this._getProvaTargets(prova);
         const isSel = (tipo, valor) => targets.some(t => t.tipo === tipo && t.valor === valor);
         const targetLabel = targets.length
-            ? targets.map(t => t.tipo==='categoria'?({adulto:'Adulto',kids:'Kids',preta:'Faixa Preta'}[t.valor]||t.valor):t.valor).join(', ')
+            ? targets.map(t => t.tipo==='indicados'?'Todos os indicados':t.tipo==='categoria'?({adulto:'Adulto',kids:'Kids',preta:'Faixa Preta'}[t.valor]||t.valor):t.valor).join(', ')
             : '—';
         el.innerHTML = `
             <div style="margin-bottom:12px;">
@@ -11978,7 +11986,12 @@ const exame = {
         if (!atual) {
             const prova = await this._loadProva();
             const targets = this._getProvaTargets(prova);
-            if (!targets.length) return alert('Selecione pelo menos um alvo antes de liberar.');
+            if (!targets.length) {
+                await db.collection('configuracoes').doc('prova_regras').set(
+                    { targets: [{ tipo: 'indicados' }], liberada: true }, { merge: true });
+                this.carregarPainelProvaRegras();
+                return;
+            }
         }
         await db.collection('configuracoes').doc('prova_regras').set({ liberada: !atual }, { merge: true });
         this.carregarPainelProvaRegras();
@@ -11993,6 +12006,7 @@ const exame = {
     _matchesProvaTarget(aluno, targets) {
         if (!targets || !targets.length) return false;
         return targets.some(target => {
+            if (target.tipo === 'indicados') return aluno.aspiranteGraduacao === true;
             if (target.tipo === 'categoria') return this._getCategoria(aluno) === target.valor;
             if (target.tipo === 'faixa') {
                 const f = aluno.faixa || 'Branca';

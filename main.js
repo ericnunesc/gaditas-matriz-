@@ -10927,13 +10927,17 @@ const exame = {
         </div>`;
 
         try {
-            // Buscar alunos e check-ins recentes em paralelo
+            // Buscar alunos e check-ins em paralelo; filtrar data no cliente (mesmo padrão do app)
             const trinta = Date.now() - 31 * 24 * 60 * 60 * 1000;
             const [snapAlunos, snapCI] = await Promise.all([
                 db.collection('alunos').get(),
-                db.collection('checkins').where('data', '>=', trinta).get(),
+                db.collection('checkins').get(),
             ]);
-            const ativosRecentes = new Set(snapCI.docs.map(d => d.data().alunoId).filter(Boolean));
+            const ativosRecentes = new Set(
+                snapCI.docs
+                    .filter(d => { const ci = d.data(); return (ci.data || 0) >= trinta && ci.alunoId && ci.alunoId !== 'admin_visual'; })
+                    .map(d => d.data().alunoId)
+            );
 
             let alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false);
 

@@ -11899,8 +11899,8 @@ const exame = {
         const pergs = prova.perguntas || [];
         const liberada = prova.liberada === true;
 
-        // Busca respostas dos alunos
-        const snapAlunos = await db.collection('alunos').where('aspiranteGraduacao','==',true).get();
+        // Busca respostas dos alunos (todos que responderam, independente de serem convocados)
+        const snapAlunos = await db.collection('alunos').get();
         const responderam = snapAlunos.docs.filter(d => d.data().provaRegras?.enviadaEm);
 
         const listPergs = pergs.length ? pergs.map((p, i) => `

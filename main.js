@@ -10550,26 +10550,27 @@ const exame = {
             if (!alunoDoc.exists) { container.innerHTML = `<p style="color:#64748b;text-align:center;padding:30px;font-size:0.8rem;">Dados não encontrados.</p>`; return; }
             const aluno = alunoDoc.data();
             const provaConfig = provaDoc.exists ? provaDoc.data() : {};
+            const provaAtiva = provaConfig.liberada && this._matchesProvaTarget(aluno, this._getProvaTargets(provaConfig));
 
-            // Prova ativa para o grupo deste aluno → mostra só a prova
-            if (provaConfig.liberada && this._matchesProvaTarget(aluno, this._getProvaTargets(provaConfig))) {
-                const pr = aluno.provaRegras || null;
-                container.innerHTML = `
-                <div style="padding:4px 0;">
-                    <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:1px;margin-bottom:12px;">📝 PROVA DE REGRAS</div>
-                    <div id="prova-aluno-section"></div>
-                </div>`;
-                this._renderProvaAluno(alunoId, pr);
-                return;
-            }
-
-            // Não está convocado e sem prova ativa → esconde aba e volta para home
+            // Aluno NÃO convocado: se prova ativa → mostra só prova + mostra nav; senão → esconde e vai para home
             if (!aluno.aspiranteGraduacao) {
                 const btnEx = document.getElementById('menu-exame');
-                if (btnEx) btnEx.style.display = 'none';
-                ui.showTab('tab-checkin');
+                if (provaAtiva) {
+                    if (btnEx) btnEx.style.display = 'flex';
+                    container.innerHTML = `
+                    <div style="padding:4px 0;">
+                        <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:1px;margin-bottom:12px;">📝 PROVA DE REGRAS</div>
+                        <div id="prova-aluno-section"></div>
+                    </div>`;
+                    this._renderProvaAluno(alunoId, aluno.provaRegras || null, aluno);
+                } else {
+                    if (btnEx) btnEx.style.display = 'none';
+                    ui.showTab('tab-checkin');
+                }
                 return;
             }
+            // Aluno convocado → segue para a view de graduação normalmente
+            // (a prova aparece dentro via #prova-aluno-section se for do grupo alvo)
 
             const categoria  = this._getCategoria(aluno);
             const [configDoc, efiDoc] = await Promise.all([
@@ -10757,8 +10758,8 @@ const exame = {
                 <div id="btn-tecnicas-exame-aluno"></div>
                 <div style="text-align:center; margin-top:20px; font-size:0.7rem; color:#475569; font-style:italic;">"A faixa é o reconhecimento de quem você se tornou. OSS!" 🦁</div>`;
 
-        // Prova de regras
-        this._renderProvaAluno(alunoId, aluno.provaRegras || null);
+        // Prova de regras (só renderiza se prova ativa para este aluno ou já enviou)
+        this._renderProvaAluno(alunoId, aluno.provaRegras || null, aluno);
         // Carrega pré-requisitos do aluno
         this._renderPreReqsAluno(alunoId, proxFaixa, aluno.examePreReqs || {});
         // Mostra resultado da avaliação (se existir)
@@ -12156,13 +12157,15 @@ const exame = {
     },
 
     // ── VIEW DO ALUNO ────────────────────────────────────────────────────────
-    async _renderProvaAluno(alunoId, provaRegrasAluno) {
+    async _renderProvaAluno(alunoId, provaRegrasAluno, aluno = null) {
         const el = document.getElementById('prova-aluno-section');
         if (!el) return;
         const prova = await this._loadProva();
-        if (!prova.liberada && !provaRegrasAluno?.enviadaEm) return;
+        const jaEnviou = !!provaRegrasAluno?.enviadaEm;
+        const noAlvo = !aluno || this._matchesProvaTarget(aluno, this._getProvaTargets(prova));
+        if (!jaEnviou && (!prova.liberada || !noAlvo)) return;
         const pergs = prova.perguntas || [];
-        if (!pergs.length && !provaRegrasAluno?.enviadaEm) return;
+        if (!pergs.length && !jaEnviou) return;
 
         const pr = provaRegrasAluno || {};
 

@@ -10864,6 +10864,136 @@ const exame = {
     },
 
     // ── Relatório costureira ──
+    async abrirListaChamada(filtro = 'todos') {
+        document.getElementById('modal-lista-chamada')?.remove();
+        const m = document.createElement('div');
+        m.id = 'modal-lista-chamada';
+        m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:10010;display:flex;flex-direction:column;padding:16px;box-sizing:border-box;overflow-y:auto;';
+        document.body.appendChild(m);
+
+        // Ordens de faixa
+        const ordemKids = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
+        const ordemAdulto = ['Branca','Azul','Roxa','Marrom','Preta','Preta 1° Grau','Preta 2° Grau','Preta 3° Grau','Preta 4° Grau'];
+        const infantilSet = new Set(ordemKids);
+
+        const coresFaixa = {
+            'Branca':'#e2e8f0','Cinza/Branca':'#b0bec5','Cinza':'#94a3b8','Cinza/Preta':'#607d8b',
+            'Amarela/Branca':'#fef08a','Amarela':'#fbbf24','Amarela/Preta':'#d97706',
+            'Laranja/Branca':'#fed7aa','Laranja':'#f97316','Laranja/Preta':'#ea580c',
+            'Verde/Branca':'#bbf7d0','Verde':'#22c55e','Verde/Preta':'#16a34a',
+            'Azul':'#60a5fa','Roxa':'#a78bfa','Marrom':'#92400e','Preta':'#94a3b8',
+            'Preta 1° Grau':'#94a3b8','Preta 2° Grau':'#94a3b8','Preta 3° Grau':'#94a3b8','Preta 4° Grau':'#94a3b8',
+        };
+        const textoFaixa = (f) => ['Branca','Cinza/Branca','Amarela/Branca','Amarela','Laranja/Branca','Laranja','Verde/Branca','Verde/Preta','Verde'].includes(f) ? '#111' : '#fff';
+
+        const isKids = (a) => {
+            let idade = 99;
+            if (a.nascimento) {
+                const d = a.nascimento.toDate ? a.nascimento.toDate() : new Date(a.nascimento);
+                idade = new Date().getFullYear() - d.getFullYear();
+            }
+            if (idade < 16) return true;
+            if ((a.turmas||[]).some(t => /kids/i.test(t))) return true;
+            if (/kids/i.test(a.nome||'')) return true;
+            return infantilSet.has(a.faixa||'Branca') && idade < 18;
+        };
+
+        m.innerHTML = `<div style="max-width:600px;margin:0 auto;width:100%;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <div>
+                    <div style="font-size:0.58rem;color:#22c55e;font-weight:800;letter-spacing:1px;">📋 LISTA DE CHAMADA</div>
+                    <div style="font-size:0.9rem;font-weight:900;color:white;">Por Faixa / Ordem</div>
+                </div>
+                <button onclick="document.getElementById('modal-lista-chamada').remove()"
+                    style="background:#334155;border:none;color:white;padding:8px 14px;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;">✕ Fechar</button>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:14px;">
+                ${['todos','kids','adultos'].map(f => `<button onclick="exame.abrirListaChamada('${f}')"
+                    style="flex:1;padding:8px;font-size:0.65rem;font-weight:800;border-radius:8px;cursor:pointer;border:2px solid ${filtro===f?'#22c55e':'#334155'};background:${filtro===f?'#052e16':'#0f172a'};color:${filtro===f?'#22c55e':'#64748b'};">
+                    ${f==='todos'?'🥋 TODOS':f==='kids'?'🧒 KIDS':'👤 ADULTOS'}
+                </button>`).join('')}
+            </div>
+            <div id="chamada-corpo" style="color:#94a3b8;text-align:center;padding:20px;">⏳ Carregando...</div>
+        </div>`;
+
+        try {
+            const snap = await db.collection('alunos').get();
+            let alunos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                .filter(a => a.nome && a.ativo !== false);
+
+            if (filtro === 'kids') alunos = alunos.filter(a => isKids(a));
+            else if (filtro === 'adultos') alunos = alunos.filter(a => !isKids(a));
+
+            // Separar kids e adultos para ordenação por faixa correta
+            const ordenar = (lista, ordem) => {
+                return lista.slice().sort((a, b) => {
+                    const fa = a.faixa || 'Branca', fb = b.faixa || 'Branca';
+                    const ia = ordem.findIndex(f => fa.startsWith(f.split(' ')[0]));
+                    const ib = ordem.findIndex(f => fb.startsWith(f.split(' ')[0]));
+                    const oa = ia < 0 ? 99 : ia, ob = ib < 0 ? 99 : ib;
+                    if (oa !== ob) return oa - ob;
+                    // mesma faixa base → ordem exata
+                    const ea = ordem.indexOf(fa), eb = ordem.indexOf(fb);
+                    if (ea !== eb) return (ea < 0 ? 99 : ea) - (eb < 0 ? 99 : eb);
+                    return (a.nome||'').localeCompare(b.nome||'', 'pt-BR');
+                });
+            };
+
+            let listaOrdenada = [];
+            if (filtro === 'kids') {
+                listaOrdenada = ordenar(alunos, ordemKids);
+            } else if (filtro === 'adultos') {
+                listaOrdenada = ordenar(alunos, ordemAdulto);
+            } else {
+                // todos: kids primeiro (por faixa kids), depois adultos (por faixa adulto)
+                const kidsLista = ordenar(alunos.filter(a => isKids(a)), ordemKids);
+                const adultosLista = ordenar(alunos.filter(a => !isKids(a)), ordemAdulto);
+                listaOrdenada = [...kidsLista, ...adultosLista];
+            }
+
+            if (!listaOrdenada.length) {
+                document.getElementById('chamada-corpo').innerHTML = '<p style="color:#64748b;">Nenhum aluno encontrado.</p>';
+                return;
+            }
+
+            // Agrupar por faixa para mostrar cabeçalhos
+            const grupos = [];
+            let faixaAtual = null;
+            listaOrdenada.forEach((a, i) => {
+                const f = a.faixa || 'Branca';
+                if (f !== faixaAtual) { grupos.push({ faixa: f, alunos: [] }); faixaAtual = f; }
+                grupos[grupos.length - 1].alunos.push({ ...a, num: i + 1 });
+            });
+
+            let num = 1;
+            const html = grupos.map(g => {
+                const cor = coresFaixa[g.faixa] || '#94a3b8';
+                const txt = textoFaixa(g.faixa);
+                const linhas = g.alunos.map(a => {
+                    const n = num++;
+                    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #0f172a;">
+                        <span style="font-size:0.65rem;font-weight:900;color:#334155;width:22px;text-align:right;flex-shrink:0;">${n}.</span>
+                        <span style="font-size:0.75rem;font-weight:700;color:white;flex:1;">${a.nome}</span>
+                        <span style="font-size:0.55rem;color:#64748b;">${isKids(a)?'🧒':''}</span>
+                    </div>`;
+                }).join('');
+                return `<div style="margin-bottom:10px;border-radius:10px;overflow:hidden;border:1px solid #1e293b;">
+                    <div style="background:${cor};padding:6px 12px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:0.65rem;font-weight:900;color:${txt};">🥋 ${g.faixa.toUpperCase()}</span>
+                        <span style="font-size:0.6rem;font-weight:800;color:${txt};">${g.alunos.length} aluno${g.alunos.length!==1?'s':''}</span>
+                    </div>
+                    <div style="background:#1e293b;">${linhas}</div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('chamada-corpo').innerHTML = `
+                <div style="font-size:0.58rem;color:#64748b;margin-bottom:10px;text-align:right;">${listaOrdenada.length} aluno${listaOrdenada.length!==1?'s':''} no total</div>
+                ${html}`;
+        } catch(e) {
+            document.getElementById('chamada-corpo').innerHTML = `<p style="color:#ef4444;">Erro ao carregar: ${e.message}</p>`;
+        }
+    },
+
     selecionarFiltroCostureira() {
         document.getElementById('modal-filtro-costureira')?.remove();
         const m = document.createElement('div');
@@ -11339,7 +11469,9 @@ const exame = {
                     style="flex:1;padding:9px;font-size:0.62rem;font-weight:800;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;cursor:pointer;">📣 Notificar todos</button>
             </div>
             <button onclick="exame.selecionarFiltroCostureira()"
-                style="width:100%;padding:9px;font-size:0.62rem;font-weight:800;background:#0f172a;border:1px solid #94a3b8;color:#94a3b8;border-radius:8px;cursor:pointer;margin-bottom:8px;">🧵 Relatório para Costureira</button>
+                style="width:100%;padding:9px;font-size:0.62rem;font-weight:800;background:#0f172a;border:1px solid #94a3b8;color:#94a3b8;border-radius:8px;cursor:pointer;margin-bottom:6px;">🧵 Relatório para Costureira</button>
+            <button onclick="exame.abrirListaChamada()"
+                style="width:100%;padding:9px;font-size:0.62rem;font-weight:800;background:#0f172a;border:1px solid #22c55e;color:#22c55e;border-radius:8px;cursor:pointer;margin-bottom:8px;">📋 Lista de Chamada (por Faixa)</button>
             <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:12px;margin-bottom:10px;overflow:hidden;">
                 <div onclick="(()=>{const b=document.getElementById('acc-convocados');const c=document.getElementById('chev-convocados');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='block'?'rotate(180deg)':''})()"
                     style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer;user-select:none;">

@@ -12260,9 +12260,32 @@ const exame = {
         // Prova liberada → mostrar questões
         if (!prova.liberada) return;
 
-        // Timer: registra início se ainda não registrado
         const tempoMin = prova.tempoLimiteMinutos || 0;
         const timerKey = `prova_inicio_${alunoId}`;
+        const jaIniciou = !!localStorage.getItem(timerKey);
+
+        // Se tem timer e ainda não iniciou → mostrar card recolhido com botão
+        if (tempoMin > 0 && !jaIniciou) {
+            el.innerHTML = `
+            <div style="background:#0f172a;border:1px solid #f97316;border-radius:14px;overflow:hidden;margin-bottom:12px;">
+                <div style="background:#f9731622;padding:12px 16px;border-bottom:1px solid #f9731644;">
+                    <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:1px;">📝 PROVA DE REGRAS</div>
+                    <div style="font-size:0.62rem;color:#94a3b8;margin-top:2px;">${pergs.length} pergunta${pergs.length!==1?'s':''}</div>
+                </div>
+                <div style="padding:20px 16px;text-align:center;">
+                    <div style="font-size:2rem;margin-bottom:8px;">⏱</div>
+                    <div style="font-size:0.7rem;font-weight:800;color:white;margin-bottom:4px;">Tempo limite: ${tempoMin} minuto${tempoMin!==1?'s':''}</div>
+                    <div style="font-size:0.62rem;color:#64748b;margin-bottom:16px;">O cronômetro inicia ao clicar em INICIAR PROVA.<br>Após iniciado, não é possível pausar.</div>
+                    <button onclick="exame.iniciarProva('${alunoId}')"
+                        style="padding:13px 32px;background:#f97316;border:none;color:#000;border-radius:10px;font-weight:900;font-size:0.85rem;cursor:pointer;">
+                        ▶ INICIAR PROVA
+                    </button>
+                </div>
+            </div>`;
+            return;
+        }
+
+        // Sem timer ou já iniciou → mostrar questões
         if (tempoMin > 0 && !localStorage.getItem(timerKey)) {
             localStorage.setItem(timerKey, Date.now().toString());
         }
@@ -12332,6 +12355,11 @@ const exame = {
             tick();
             this._provaTimer = setInterval(tick, 1000);
         }
+    },
+
+    iniciarProva(alunoId) {
+        localStorage.setItem(`prova_inicio_${alunoId}`, Date.now().toString());
+        this._renderProvaAluno(alunoId, null);
     },
 
     async submeterProva(alunoId, force = false) {

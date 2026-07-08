@@ -10519,7 +10519,7 @@ const exame = {
             const aluno = doc.data();
             const convocado = aluno.aspiranteGraduacao === true;
             const provaConfig = provaDoc.exists ? provaDoc.data() : {};
-            const provaAtiva = provaConfig.liberada && this._matchesProvaTarget(aluno, provaConfig.target);
+            const provaAtiva = provaConfig.liberada && this._matchesProvaTarget(aluno, this._getProvaTargets(provaConfig));
             if (convocado || provaAtiva) btn.classList.remove('nav-item-hidden');
             else btn.classList.add('nav-item-hidden');
         } catch(e) { btn.classList.add('nav-item-hidden'); }
@@ -10546,7 +10546,7 @@ const exame = {
             const provaConfig = provaDoc.exists ? provaDoc.data() : {};
 
             // Prova ativa para o grupo deste aluno → mostra só a prova
-            if (provaConfig.liberada && this._matchesProvaTarget(aluno, provaConfig.target)) {
+            if (provaConfig.liberada && this._matchesProvaTarget(aluno, this._getProvaTargets(provaConfig))) {
                 const pr = aluno.provaRegras || null;
                 container.innerHTML = `
                 <div style="padding:4px 0;">
@@ -11915,33 +11915,38 @@ const exame = {
             </div>`;
         }).join('') : `<div style="font-size:0.62rem;color:#475569;padding:4px 0;">Nenhum aluno respondeu ainda.</div>`;
 
+        const targets = this._getProvaTargets(prova);
+        const isSel = (tipo, valor) => targets.some(t => t.tipo === tipo && t.valor === valor);
+        const targetLabel = targets.length
+            ? targets.map(t => t.tipo==='categoria'?({adulto:'Adulto',kids:'Kids',preta:'Faixa Preta'}[t.valor]||t.valor):t.valor).join(', ')
+            : '—';
         el.innerHTML = `
             <div style="margin-bottom:12px;">
-                <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:0.5px;margin-bottom:8px;">🎯 ALVO DA PROVA</div>
+                <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:0.5px;margin-bottom:4px;">🎯 ALVO DA PROVA <span style="font-size:0.52rem;color:#64748b;font-weight:500;">(pode marcar vários)</span></div>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">
                     ${['adulto','kids','preta'].map(t => {
                         const lbl = t==='adulto'?'🥋 Adulto':t==='kids'?'🧒 Kids':'⬛ Faixa Preta';
-                        const sel = prova.target?.tipo==='categoria' && prova.target?.valor===t;
+                        const sel = isSel('categoria', t);
                         return `<button onclick="exame.setProvaTarget('categoria','${t}')"
-                            style="padding:7px;font-size:0.6rem;font-weight:800;border-radius:7px;cursor:pointer;border:1px solid ${sel?'#f97316':'#334155'};background:${sel?'#f9731622':'#0f172a'};color:${sel?'#f97316':'#64748b'};">
-                            ${lbl}
+                            style="padding:7px;font-size:0.6rem;font-weight:800;border-radius:7px;cursor:pointer;border:2px solid ${sel?'#f97316':'#334155'};background:${sel?'#f9731622':'#0f172a'};color:${sel?'#f97316':'#64748b'};">
+                            ${sel?'✔ ':''}${lbl}
                         </button>`;
                     }).join('')}
                 </div>
                 <div style="font-size:0.58rem;font-weight:800;color:#64748b;margin-bottom:6px;">OU POR FAIXA ESPECÍFICA:</div>
                 <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">
                     ${['Branca','Cinza','Amarela','Laranja','Verde','Azul','Roxa','Marrom','Preta'].map(f => {
-                        const sel = prova.target?.tipo==='faixa' && prova.target?.valor===f;
+                        const sel = isSel('faixa', f);
                         return `<button onclick="exame.setProvaTarget('faixa','${f}')"
-                            style="padding:4px 8px;font-size:0.58rem;font-weight:800;border-radius:6px;cursor:pointer;border:1px solid ${sel?'#f97316':'#334155'};background:${sel?'#f9731622':'#0f172a'};color:${sel?'#f97316':'#64748b'};">
-                            ${f}
+                            style="padding:4px 8px;font-size:0.58rem;font-weight:800;border-radius:6px;cursor:pointer;border:2px solid ${sel?'#f97316':'#334155'};background:${sel?'#f9731622':'#0f172a'};color:${sel?'#f97316':'#64748b'};">
+                            ${sel?'✔ ':''}${f}
                         </button>`;
                     }).join('')}
                 </div>
                 <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:0.5px;margin-bottom:6px;">⚙️ STATUS</div>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <div style="flex:1;font-size:0.6rem;color:${liberada?'#10b981':'#64748b'};">
-                        ${liberada ? `✅ Liberada para: <strong style="color:#f97316;">${prova.target?.tipo==='indicados'?(prova.target.incluiKids?'Todos os indicados':'Indicados (sem Kids)'):prova.target?.tipo==='categoria'?({adulto:'Adulto',kids:'Kids',preta:'Faixa Preta'}[prova.target.valor]||prova.target.valor):prova.target?.valor||'Todos os indicados'}</strong>` : '🔒 Oculta — alunos não veem'}
+                        ${liberada ? `✅ Liberada para: <strong style="color:#f97316;">${targetLabel}</strong>` : '🔒 Oculta — alunos não veem'}
                     </div>
                     <button onclick="exame.toggleLiberarProva(${liberada})"
                         style="padding:6px 14px;font-size:0.62rem;font-weight:800;border:none;border-radius:8px;cursor:pointer;background:${liberada?'#334155':'#f97316'};color:${liberada?'#94a3b8':'#000'};">
@@ -11960,40 +11965,40 @@ const exame = {
     },
 
     async setProvaTarget(tipo, valor) {
-        await db.collection('configuracoes').doc('prova_regras').set({ target: { tipo, valor } }, { merge: true });
+        const prova = await this._loadProva();
+        const targets = this._getProvaTargets(prova);
+        const idx = targets.findIndex(t => t.tipo === tipo && t.valor === valor);
+        if (idx >= 0) targets.splice(idx, 1); else targets.push({ tipo, valor });
+        await db.collection('configuracoes').doc('prova_regras').set({ targets }, { merge: true });
         this.carregarPainelProvaRegras();
     },
 
     async toggleLiberarProva(atual) {
         if (!atual) {
             const prova = await this._loadProva();
-            if (!prova.target) {
-                const resp = confirm('Liberar para todos os alunos indicados para graduação?\n\nOK = incluir Kids\nCancelar = somente Adulto + Faixa Preta');
-                const incluiKids = resp;
-                const target = { tipo: 'indicados', incluiKids };
-                await db.collection('configuracoes').doc('prova_regras').set({ target, liberada: true }, { merge: true });
-                this.carregarPainelProvaRegras();
-                return;
-            }
+            const targets = this._getProvaTargets(prova);
+            if (!targets.length) return alert('Selecione pelo menos um alvo antes de liberar.');
         }
         await db.collection('configuracoes').doc('prova_regras').set({ liberada: !atual }, { merge: true });
         this.carregarPainelProvaRegras();
     },
 
-    _matchesProvaTarget(aluno, target) {
-        if (!target) return false;
-        if (target.tipo === 'indicados') {
-            if (aluno.aspiranteGraduacao !== true) return false;
-            return target.incluiKids ? true : this._getCategoria(aluno) !== 'kids';
-        }
-        if (target.tipo === 'categoria') {
-            return this._getCategoria(aluno) === target.valor;
-        }
-        if (target.tipo === 'faixa') {
-            const faixaAluno = (aluno.faixa || 'Branca');
-            return faixaAluno === target.valor || faixaAluno.startsWith(target.valor + '/');
-        }
-        return false;
+    _getProvaTargets(prova) {
+        if (prova.targets?.length) return [...prova.targets];
+        if (prova.target) return [prova.target]; // backward compat
+        return [];
+    },
+
+    _matchesProvaTarget(aluno, targets) {
+        if (!targets || !targets.length) return false;
+        return targets.some(target => {
+            if (target.tipo === 'categoria') return this._getCategoria(aluno) === target.valor;
+            if (target.tipo === 'faixa') {
+                const f = aluno.faixa || 'Branca';
+                return f === target.valor || f.startsWith(target.valor + '/');
+            }
+            return false;
+        });
     },
 
     abrirModalPergunta(perguntaId) {

@@ -11966,10 +11966,11 @@ const exame = {
 
     async setProvaTarget(tipo, valor) {
         const prova = await this._loadProva();
-        const targets = this._getProvaTargets(prova);
+        const targets = Array.isArray(prova.targets) ? [...prova.targets] : [];
         const idx = targets.findIndex(t => t.tipo === tipo && t.valor === valor);
         if (idx >= 0) targets.splice(idx, 1); else targets.push({ tipo, valor });
-        await db.collection('configuracoes').doc('prova_regras').set({ targets }, { merge: true });
+        await db.collection('configuracoes').doc('prova_regras').set(
+            { targets, target: firebase.firestore.FieldValue.delete() }, { merge: true });
         this.carregarPainelProvaRegras();
     },
 

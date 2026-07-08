@@ -3168,7 +3168,11 @@ const academia = {
             }
         } catch(e) { console.warn("Verificação duplicado falhou:", e.message); }
 
-        await db.collection("checkins").add({ alunoId: auth.currentUser.id, alunoNome: auth.currentUser.nome, turma: t, data: new Date().getTime() });
+        const agora = new Date().getTime();
+        await Promise.all([
+            db.collection("checkins").add({ alunoId: auth.currentUser.id, alunoNome: auth.currentUser.nome, turma: t, data: agora }),
+            db.collection("alunos").doc(auth.currentUser.id).update({ ultimoCheckin: agora }),
+        ]);
         alert("Check-in enviado! Aguarde a aprovação do professor."); this.atualizarPresencaAntecipada(); this.carregarMeusCheckinsPendentes();
     },
 
@@ -6736,12 +6740,11 @@ Ele voltará a ser aluno normal.`)) return;
                 const snapCI = await db.collection("checkins").where("alunoId", "==", alunoId).get();
                 const jaTemCheckin = snapCI.docs.some(doc => doc.data().turma === turmaQR);
                 if (!jaTemCheckin) {
-                    await db.collection("checkins").add({
-                        alunoId: alunoId,
-                        alunoNome: auth.currentUser.nome,
-                        turma: turmaQR,
-                        data: new Date().getTime()
-                    });
+                    const agora = new Date().getTime();
+                    await Promise.all([
+                        db.collection("checkins").add({ alunoId: alunoId, alunoNome: auth.currentUser.nome, turma: turmaQR, data: agora }),
+                        db.collection("alunos").doc(alunoId).update({ ultimoCheckin: agora }),
+                    ]);
                 }
                 const duracoes = this.gradeFirebase?.duracoes || {};
                 const durQR = duracoes[turmaQR] || (this.gradeFirebase?.duracaoAula) || 90;
@@ -10927,17 +10930,8 @@ const exame = {
         </div>`;
 
         try {
-            // Buscar alunos e check-ins em paralelo; filtrar data no cliente (mesmo padrão do app)
             const trinta = Date.now() - 31 * 24 * 60 * 60 * 1000;
-            const [snapAlunos, snapCI] = await Promise.all([
-                db.collection('alunos').get(),
-                db.collection('checkins').get(),
-            ]);
-            const ativosRecentes = new Set(
-                snapCI.docs
-                    .filter(d => { const ci = d.data(); return (ci.data || 0) >= trinta && ci.alunoId && ci.alunoId !== 'admin_visual'; })
-                    .map(d => d.data().alunoId)
-            );
+            const snapAlunos = await db.collection('alunos').get();
 
             let alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false);
 
@@ -10991,7 +10985,7 @@ const exame = {
 
                 const linhas = g.alunos.map(a => {
                     const n = num++;
-                    const afastado = !ativosRecentes.has(a.id);
+                    const afastado = !a.ultimoCheckin || a.ultimoCheckin < trinta;
                     const grau = parseInt(a.grau) || 0;
                     const grauDots = grau > 0
                         ? `<span style="display:inline-flex;gap:3px;margin-left:5px;vertical-align:middle;">${'<span style="width:9px;height:9px;border-radius:50%;background:#f97316;display:inline-block;border:1px solid #fb923c;"></span>'.repeat(grau)}</span>`

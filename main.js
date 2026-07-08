@@ -10434,6 +10434,9 @@ const exame = {
         const ano = new Date().getFullYear();
         const idade = aluno.nascimento ? (ano - new Date(aluno.nascimento).getFullYear()) : 99;
         if (idade < 16) return 'kids';
+        const turmasKids = (aluno.turmas || []).some(t => /kids/i.test(t));
+        const nomeKids = /kids/i.test(aluno.nome || '');
+        if (turmasKids || nomeKids) return 'kids';
         // Marrom (qualquer grau) OU Preta (subindo grau) → categoria preta
         if (aluno.faixa === 'Marrom' || aluno.faixa === 'Preta') return 'preta';
         return 'adulto';

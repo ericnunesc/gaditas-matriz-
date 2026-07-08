@@ -11941,7 +11941,7 @@ const exame = {
                 <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:0.5px;margin-bottom:6px;">⚙️ STATUS</div>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <div style="flex:1;font-size:0.6rem;color:${liberada?'#10b981':'#64748b'};">
-                        ${liberada ? `✅ Liberada para: <strong style="color:#f97316;">${prova.target?.tipo==='categoria'?({adulto:'Adulto',kids:'Kids',preta:'Faixa Preta'}[prova.target.valor]||prova.target.valor):prova.target?.valor||'?'}</strong>` : '🔒 Oculta — alunos não veem'}
+                        ${liberada ? `✅ Liberada para: <strong style="color:#f97316;">${prova.target?.tipo==='indicados'?(prova.target.incluiKids?'Todos os indicados':'Indicados (sem Kids)'):prova.target?.tipo==='categoria'?({adulto:'Adulto',kids:'Kids',preta:'Faixa Preta'}[prova.target.valor]||prova.target.valor):prova.target?.valor||'Todos os indicados'}</strong>` : '🔒 Oculta — alunos não veem'}
                     </div>
                     <button onclick="exame.toggleLiberarProva(${liberada})"
                         style="padding:6px 14px;font-size:0.62rem;font-weight:800;border:none;border-radius:8px;cursor:pointer;background:${liberada?'#334155':'#f97316'};color:${liberada?'#94a3b8':'#000'};">
@@ -11967,7 +11967,14 @@ const exame = {
     async toggleLiberarProva(atual) {
         if (!atual) {
             const prova = await this._loadProva();
-            if (!prova.target) return alert('Selecione o alvo da prova antes de liberar (Adulto, Kids ou uma faixa).');
+            if (!prova.target) {
+                const resp = confirm('Liberar para todos os alunos indicados para graduação?\n\nOK = incluir Kids\nCancelar = somente Adulto + Faixa Preta');
+                const incluiKids = resp;
+                const target = { tipo: 'indicados', incluiKids };
+                await db.collection('configuracoes').doc('prova_regras').set({ target, liberada: true }, { merge: true });
+                this.carregarPainelProvaRegras();
+                return;
+            }
         }
         await db.collection('configuracoes').doc('prova_regras').set({ liberada: !atual }, { merge: true });
         this.carregarPainelProvaRegras();
@@ -11975,6 +11982,10 @@ const exame = {
 
     _matchesProvaTarget(aluno, target) {
         if (!target) return false;
+        if (target.tipo === 'indicados') {
+            if (aluno.aspiranteGraduacao !== true) return false;
+            return target.incluiKids ? true : this._getCategoria(aluno) !== 'kids';
+        }
         if (target.tipo === 'categoria') {
             return this._getCategoria(aluno) === target.valor;
         }

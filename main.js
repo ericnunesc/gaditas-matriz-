@@ -10704,9 +10704,12 @@ const exame = {
                         ${jaConfirmou ? '✅ PRESENÇA CONFIRMADA' : '🙋 CONFIRMAR MINHA PRESENÇA'}
                     </button>
                 </div>
+                <div id="prereqs-aluno-section"></div>
                 <div id="btn-tecnicas-exame-aluno"></div>
                 <div style="text-align:center; margin-top:20px; font-size:0.7rem; color:#475569; font-style:italic;">"A faixa é o reconhecimento de quem você se tornou. OSS!" 🦁</div>`;
 
+        // Carrega pré-requisitos do aluno
+        this._renderPreReqsAluno(alunoId, proxFaixa, aluno.examePreReqs || {});
         // Carrega botão de técnicas (só aparece se houver técnicas ativas)
         setTimeout(() => tecnicasExame.carregarBotaoAluno(proxFaixa, 'btn-tecnicas-exame-aluno'), 100);
 
@@ -11306,18 +11309,23 @@ const exame = {
                 💾 SALVAR CONFIGURAÇÕES DE PAGAMENTO
             </button>`);
 
+        const prereqsAccordion = accordion('prereqs', '📋 PRÉ-REQUISITOS DO EXAME', '#818cf8',
+            `<div id="prereqs-painel"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>`);
+
         container.innerHTML =
             `<div id="relatorio-exame" style="margin-bottom:10px;"><small style="color:#475569;font-size:0.65rem;">Carregando relatório...</small></div>` +
             efiAccordion +
             secao('🧒 KIDS', '#f59e0b', 'kids', kids) +
             secao('🥋 16+ ATÉ MARROM', '#3b82f6', 'adulto', adulto) +
             secaoPreta() +
+            prereqsAccordion +
             convocadosAccordion +
             `<div id="tecnicas-exame-painel" style="margin-top:10px;"></div>`;
 
         this.carregarConfirmados();
         this.carregarRelatorioExame({ kids, adulto, preta });
         tecnicasExame.carregarPainel();
+        this.carregarPainelPreReqs();
     },
 
     async salvarConfigEfi() {
@@ -11400,10 +11408,14 @@ const exame = {
         const container = document.getElementById('lista-confirmados-exame');
         if (!container) return;
         try {
-            const [snap, snapPend] = await Promise.all([
+            const [snap, snapPend, bibDoc, faixaDoc] = await Promise.all([
                 db.collection('alunos').where('aspiranteGraduacao', '==', true).get(),
-                db.collection('alunos').where('taxaExamePendentePagamento', '==', true).get()
+                db.collection('alunos').where('taxaExamePendentePagamento', '==', true).get(),
+                db.collection('configuracoes').doc('prereqs_biblioteca').get(),
+                db.collection('configuracoes').doc('prereqs_por_faixa').get(),
             ]);
+            const prereqBib    = bibDoc.exists  ? (bibDoc.data().items  || []) : [];
+            const prereqFaixas = faixaDoc.exists ? (faixaDoc.data().faixas || {}) : {};
 
             // Alunos já graduados aguardando pagamento da taxa
             const pendHtml = snapPend.docs.map(doc => {
@@ -11496,6 +11508,33 @@ const exame = {
                                     onblur="if(this.value.trim()!=='${(a.nomeEtiqueta||'').replace(/'/g,"\\'")}')exame.salvarEtiquetaAdmin('${id}',this.value.trim())"
                                     style="flex:1;padding:3px 8px;background:#1e293b;border:1px solid #334155;color:white;border-radius:6px;font-size:0.68rem;outline:none;"/>
                             </div>
+                            ${(() => {
+                                const prereqIds = prereqFaixas[faixaDestino] || [];
+                                const itens = prereqIds.map(pid => prereqBib.find(b => b.id === pid)).filter(Boolean);
+                                if (!itens.length) return '';
+                                const alunoReqs = a.examePreReqs || {};
+                                const feitos = itens.filter(it => alunoReqs[it.id]).length;
+                                const pct = Math.round((feitos / itens.length) * 100);
+                                const corBar = pct === 100 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+                                return `<div style="margin-top:8px;background:#0a0f1a;border:1px solid #1e293b;border-radius:8px;overflow:hidden;">
+                                    <div onclick="(()=>{const b=document.getElementById('pr-list-${id}');b.style.display=b.style.display==='none'?'block':'none'})()"
+                                        style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;cursor:pointer;">
+                                        <span style="font-size:0.6rem;font-weight:800;color:#818cf8;">📋 PRÉ-REQUISITOS</span>
+                                        <span style="font-size:0.58rem;color:${corBar};font-weight:700;">${feitos}/${itens.length} · ${pct}%</span>
+                                    </div>
+                                    <div style="height:3px;background:#1e293b;"><div style="height:3px;width:${pct}%;background:${corBar};transition:width 0.3s;"></div></div>
+                                    <div id="pr-list-${id}" style="display:none;padding:8px 10px;">
+                                        ${itens.map(it => {
+                                            const ok = !!alunoReqs[it.id];
+                                            return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #1e293b;">
+                                                <button id="prereq-btn-${id}-${it.id}" onclick="exame.togglePreReqAluno('${id}','${it.id}',${ok})"
+                                                    style="background:none;border:none;font-size:1rem;cursor:pointer;padding:0;line-height:1;">${ok?'✅':'⬜'}</button>
+                                                <span style="font-size:0.68rem;color:${ok?'#10b981':'#94a3b8'};text-decoration:${ok?'line-through':'none'};">${it.titulo}</span>
+                                            </div>`;
+                                        }).join('')}
+                                    </div>
+                                </div>`;
+                            })()}
                             <div onclick="exame.toggleTaxaPaga('${id}', this)"
                                 style="margin-top:8px;display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 10px;background:${taxaPaga?'#05200f':'#1e293b'};border:1px solid ${taxaPaga?'#10b98155':'#334155'};border-radius:8px;transition:all 0.2s;">
                                 <div id="taxa-toggle-${id}" style="width:32px;height:18px;border-radius:9px;background:${taxaPaga?'#10b981':'#334155'};position:relative;transition:all 0.2s;flex-shrink:0;">
@@ -11744,6 +11783,185 @@ const exame = {
 
     async salvarEtiquetaAdmin(alunoId, valor) {
         await db.collection('alunos').doc(alunoId).update({ nomeEtiqueta: valor });
+    },
+
+    // ── PRÉ-REQUISITOS DO EXAME ──────────────────────────────────────────────
+
+    async _loadPreReqs() {
+        const [bib, pfx] = await Promise.all([
+            db.collection('configuracoes').doc('prereqs_biblioteca').get(),
+            db.collection('configuracoes').doc('prereqs_por_faixa').get(),
+        ]);
+        return {
+            biblioteca: bib.exists ? (bib.data().items || []) : [],
+            porFaixa:   pfx.exists ? (pfx.data().faixas || {}) : {},
+        };
+    },
+
+    async carregarPainelPreReqs() {
+        const el = document.getElementById('prereqs-painel');
+        if (!el) return;
+        const { biblioteca, porFaixa } = await this._loadPreReqs();
+
+        const TODAS_FAIXAS = [
+            'Cinza/Branca','Cinza','Cinza/Preta',
+            'Amarela/Branca','Amarela','Amarela/Preta',
+            'Laranja/Branca','Laranja','Laranja/Preta',
+            'Verde/Branca','Verde','Verde/Preta',
+            'Azul','Roxa','Marrom','Preta',
+            'Preta 1º Grau','Preta 2º Grau','Preta 3º Grau'
+        ];
+
+        const bibHtml = biblioteca.length
+            ? biblioteca.map(it => `
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1e293b;">
+                    <span style="flex:1;font-size:0.72rem;color:white;">${it.titulo}</span>
+                    <button onclick="exame.removerPreReqBiblioteca('${it.id}')"
+                        style="background:transparent;border:none;color:#ef4444;font-size:0.75rem;cursor:pointer;padding:2px 6px;">✕</button>
+                </div>`).join('')
+            : `<div style="font-size:0.65rem;color:#475569;padding:6px 0;">Nenhum pré-requisito cadastrado.</div>`;
+
+        const faixasHtml = TODAS_FAIXAS.map(f => {
+            const ativos = porFaixa[f] || [];
+            const cnt = ativos.length;
+            return `
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;margin-bottom:6px;overflow:hidden;">
+                <div onclick="(()=>{const b=document.getElementById('pf-${f.replace(/[^a-zA-Z0-9]/g,'_')}');b.style.display=b.style.display==='none'?'block':'none'})()"
+                    style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;">
+                    <span style="font-size:0.68rem;font-weight:800;color:#c4b5fd;">${f}</span>
+                    <span style="font-size:0.58rem;color:#64748b;">${cnt} requisito${cnt!==1?'s':''}</span>
+                </div>
+                <div id="pf-${f.replace(/[^a-zA-Z0-9]/g,'_')}" style="display:none;padding:8px 12px;border-top:1px solid #1e293b;">
+                    ${biblioteca.length === 0
+                        ? `<small style="color:#475569;font-size:0.62rem;">Cadastre pré-requisitos primeiro.</small>`
+                        : biblioteca.map(it => `
+                            <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;">
+                                <input type="checkbox" ${ativos.includes(it.id)?'checked':''} onchange="exame.togglePreReqFaixa('${f}',this,'${it.id}')"
+                                    style="width:15px;height:15px;accent-color:#818cf8;cursor:pointer;">
+                                <span style="font-size:0.68rem;color:${ativos.includes(it.id)?'white':'#94a3b8'};">${it.titulo}</span>
+                            </label>`).join('')
+                    }
+                </div>
+            </div>`;
+        }).join('');
+
+        el.innerHTML = `
+            <div style="margin-bottom:12px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#818cf8;margin-bottom:8px;letter-spacing:0.5px;">📚 BIBLIOTECA DE PRÉ-REQUISITOS</div>
+                <div id="prereq-bib-lista" style="margin-bottom:10px;">${bibHtml}</div>
+                <div style="display:flex;gap:6px;">
+                    <input id="novo-prereq-input" type="text" placeholder="Ex: Mínimo 50 aulas"
+                        style="flex:1;padding:7px 10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.7rem;outline:none;"
+                        onkeydown="if(event.key==='Enter')exame.adicionarPreReqBiblioteca()">
+                    <button onclick="exame.adicionarPreReqBiblioteca()"
+                        style="padding:7px 14px;background:#4f46e5;border:none;color:white;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;">+ ADD</button>
+                </div>
+            </div>
+            <div style="font-size:0.6rem;font-weight:800;color:#818cf8;margin-bottom:8px;letter-spacing:0.5px;">🎯 PRÉ-REQUISITOS POR FAIXA</div>
+            ${faixasHtml}`;
+    },
+
+    async adicionarPreReqBiblioteca() {
+        const inp = document.getElementById('novo-prereq-input');
+        const titulo = inp?.value.trim();
+        if (!titulo) return;
+        const { biblioteca } = await this._loadPreReqs();
+        const id = 'pr_' + Date.now();
+        biblioteca.push({ id, titulo });
+        await db.collection('configuracoes').doc('prereqs_biblioteca').set({ items: biblioteca });
+        inp.value = '';
+        this.carregarPainelPreReqs();
+    },
+
+    async removerPreReqBiblioteca(id) {
+        if (!confirm('Remover este pré-requisito da biblioteca?')) return;
+        const { biblioteca, porFaixa } = await this._loadPreReqs();
+        const novaBib = biblioteca.filter(it => it.id !== id);
+        // Remove das faixas também
+        Object.keys(porFaixa).forEach(f => {
+            porFaixa[f] = porFaixa[f].filter(i => i !== id);
+        });
+        await Promise.all([
+            db.collection('configuracoes').doc('prereqs_biblioteca').set({ items: novaBib }),
+            db.collection('configuracoes').doc('prereqs_por_faixa').set({ faixas: porFaixa }),
+        ]);
+        this.carregarPainelPreReqs();
+    },
+
+    async togglePreReqFaixa(faixa, checkbox, prereqId) {
+        const { porFaixa } = await this._loadPreReqs();
+        const atual = porFaixa[faixa] || [];
+        porFaixa[faixa] = checkbox.checked
+            ? [...new Set([...atual, prereqId])]
+            : atual.filter(i => i !== prereqId);
+        await db.collection('configuracoes').doc('prereqs_por_faixa').set({ faixas: porFaixa });
+    },
+
+    async _renderPreReqsAluno(alunoId, faixaDestino, alunoReqs) {
+        const el = document.getElementById('prereqs-aluno-section');
+        if (!el) return;
+        const { biblioteca, porFaixa } = await this._loadPreReqs();
+        const prereqIds = porFaixa[faixaDestino] || [];
+        const itens = prereqIds.map(pid => biblioteca.find(b => b.id === pid)).filter(Boolean);
+        if (!itens.length) return;
+        const feitos = itens.filter(it => alunoReqs[it.id]).length;
+        const pct = Math.round((feitos / itens.length) * 100);
+        const corBar = pct === 100 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+        el.innerHTML = `
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px;margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#818cf8;letter-spacing:0.5px;">📋 PRÉ-REQUISITOS DO EXAME</div>
+                    <div style="font-size:0.65rem;font-weight:800;color:${corBar};">${feitos}/${itens.length} · ${pct}%</div>
+                </div>
+                <div style="background:#1e293b;border-radius:6px;height:6px;margin-bottom:12px;overflow:hidden;">
+                    <div style="height:6px;width:${pct}%;background:${corBar};border-radius:6px;transition:width 0.4s;"></div>
+                </div>
+                ${itens.map(it => {
+                    const ok = !!alunoReqs[it.id];
+                    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b;">
+                        <span style="font-size:1.1rem;">${ok ? '✅' : '⬜'}</span>
+                        <span style="font-size:0.72rem;color:${ok?'#10b981':'#94a3b8'};${ok?'text-decoration:line-through;':''};">${it.titulo}</span>
+                        ${ok ? '' : '<span style="font-size:0.58rem;color:#f59e0b;margin-left:auto;">pendente</span>'}
+                    </div>`;
+                }).join('')}
+            </div>`;
+    },
+
+    async togglePreReqAluno(alunoId, prereqId, atual) {
+        const novo = !atual;
+        const campo = `examePreReqs.${prereqId}`;
+        await db.collection('alunos').doc(alunoId).update({ [campo]: novo });
+        // Atualiza só o botão sem recarregar tudo
+        const btn = document.getElementById(`prereq-btn-${alunoId}-${prereqId}`);
+        if (btn) {
+            btn.textContent = novo ? '✅' : '⬜';
+            btn.style.color = novo ? '#10b981' : '#64748b';
+            btn.onclick = () => exame.togglePreReqAluno(alunoId, prereqId, novo);
+        }
+        // Recalcula progresso
+        const wrap = document.getElementById(`prereq-prog-${alunoId}`);
+        if (wrap) {
+            const btns = wrap.querySelectorAll('[data-prereq-check]');
+            const total = btns.length;
+            const feitos = [...btns].filter(b => b.dataset.prereqCheck === 'true').length
+                + (novo ? 1 : -1) + (atual ? 0 : 0); // será recalculado no próximo render
+            // Mais simples: recarregar só esse card
+            const card = document.getElementById(`card-conv-${alunoId}`);
+            if (card) {
+                const p = card.querySelector(`#prereq-prog-${alunoId}`);
+                if (p) {
+                    const checkBtns = p.querySelectorAll('[data-prereq-check]');
+                    let tot = checkBtns.length, done = 0;
+                    checkBtns.forEach(b => { if (b.dataset.prereqCheck === 'true') done++; });
+                    if (novo) done++;
+                    const pct = tot > 0 ? Math.round((done/tot)*100) : 0;
+                    const barEl = p.querySelector('.prereq-bar-fill');
+                    const pctEl = p.querySelector('.prereq-pct');
+                    if (barEl) barEl.style.width = pct + '%';
+                    if (pctEl) pctEl.textContent = pct + '%';
+                }
+            }
+        }
     },
 
     async toggleTaxaPaga(alunoId, wrapEl) {

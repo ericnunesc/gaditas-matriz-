@@ -11832,6 +11832,12 @@ const exame = {
     // ── PRÉ-REQUISITOS DO EXAME ──────────────────────────────────────────────
 
     // ── PROVA DE REGRAS ─────────────────────────────────────────────────────
+    _youtubeEmbedUrl(url) {
+        if (!url) return null;
+        const m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([^&?\s]+)/);
+        return m ? `https://www.youtube.com/embed/${m[1]}` : null;
+    },
+
     async _loadProva() {
         const doc = await db.collection('configuracoes').doc('prova_regras').get();
         return doc.exists ? doc.data() : { liberada: false, perguntas: [] };
@@ -11851,7 +11857,7 @@ const exame = {
         const listPergs = pergs.length ? pergs.map((p, i) => `
             <div style="background:#0a0f1a;border:1px solid #334155;border-radius:8px;padding:10px 12px;margin-bottom:6px;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-                    <div style="font-size:0.7rem;color:white;font-weight:700;flex:1;">${i+1}. ${p.enunciado}</div>
+                    <div style="font-size:0.7rem;color:white;font-weight:700;flex:1;">${i+1}. ${p.enunciado}${p.videoUrl?` <span style="font-size:0.55rem;background:#7f1d1d;color:#fca5a5;border-radius:4px;padding:1px 5px;margin-left:4px;">▶ vídeo</span>`:''}</div>
                     <div style="display:flex;gap:4px;flex-shrink:0;">
                         <button onclick="exame.abrirModalPergunta('${p.id}')" style="background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;padding:3px 7px;border-radius:5px;font-size:0.6rem;cursor:pointer;">✏️</button>
                         <button onclick="exame.removerPergunta('${p.id}')" style="background:#2a0808;border:1px solid #7f1d1d;color:#f43f5e;padding:3px 7px;border-radius:5px;font-size:0.6rem;cursor:pointer;">✕</button>
@@ -11928,6 +11934,9 @@ const exame = {
                 <div style="flex:1;overflow-y:auto;padding:16px;">
                     <div style="font-size:0.6rem;color:#94a3b8;font-weight:800;margin-bottom:6px;">ENUNCIADO DA PERGUNTA</div>
                     <textarea id="perg-enunciado" rows="3" placeholder="Ex: No jiu-jítsu, o que é guardado pelo árbitro?" style="width:100%;padding:10px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;outline:none;resize:vertical;box-sizing:border-box;margin-bottom:14px;">${p?.enunciado||''}</textarea>
+                    <div style="font-size:0.6rem;color:#94a3b8;font-weight:800;margin-bottom:6px;">🎬 VÍDEO YOUTUBE (opcional)</div>
+                    <input id="perg-video" type="text" value="${p?.videoUrl||''}" placeholder="Cole o link do YouTube aqui"
+                        style="width:100%;padding:9px 10px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;box-sizing:border-box;margin-bottom:14px;">
                     <div style="font-size:0.6rem;color:#94a3b8;font-weight:800;margin-bottom:8px;">OPÇÕES (marque a correta)</div>
                     ${opcoes.map(o => `
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
@@ -11960,13 +11969,14 @@ const exame = {
             id, texto: document.getElementById(`perg-opc-${id}`)?.value.trim() || ''
         }));
         if (opcoes.some(o => !o.texto)) return alert('Preencha todas as 4 opções.');
+        const videoUrl = document.getElementById('perg-video')?.value.trim() || '';
         const prova = await this._loadProva();
         const pergs = prova.perguntas || [];
         if (perguntaId) {
             const idx = pergs.findIndex(p => p.id === perguntaId);
-            if (idx >= 0) pergs[idx] = { ...pergs[idx], enunciado, opcoes, respostaCorreta };
+            if (idx >= 0) pergs[idx] = { ...pergs[idx], enunciado, opcoes, respostaCorreta, videoUrl };
         } else {
-            pergs.push({ id: 'pq_' + Date.now(), enunciado, opcoes, respostaCorreta });
+            pergs.push({ id: 'pq_' + Date.now(), enunciado, opcoes, respostaCorreta, videoUrl });
         }
         await db.collection('configuracoes').doc('prova_regras').set({ ...prova, perguntas: pergs });
         document.getElementById('modal-pergunta-prova')?.remove();
@@ -12063,14 +12073,20 @@ const exame = {
                 <div style="padding:12px 16px;">
                     ${pergs.map((p,i) => {
                         const resp = respostas[p.id]; const acertou = resp === p.respostaCorreta;
+                        const embedUrl = exame._youtubeEmbedUrl(p.videoUrl);
+                        const videoHtml = embedUrl && !acertou ? `
+                            <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:6px;margin-bottom:6px;">
+                                <iframe src="${embedUrl}" frameborder="0" allowfullscreen
+                                    style="position:absolute;top:0;left:0;width:100%;height:100%;border-radius:6px;"></iframe>
+                            </div>` : '';
                         return `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #1e293b;">
+                            ${videoHtml}
                             <div style="font-size:0.68rem;color:${acertou?'#10b981':'#ef4444'};font-weight:700;margin-bottom:4px;">${acertou?'✅':'❌'} ${i+1}. ${p.enunciado}</div>
                             ${p.opcoes.map(o => {
                                 const isCorr = o.id===p.respostaCorreta; const isResp = o.id===resp;
                                 if (!isCorr && !isResp) return '';
                                 return `<div style="font-size:0.62rem;padding:4px 8px;border-radius:5px;margin-bottom:2px;background:${isCorr?'#064e3b':isResp?'#4c0519':'transparent'};color:${isCorr?'#10b981':isResp?'#ef4444':'#94a3b8'};">
-                                    ${isCorr?'✅':isResp?'❌':''} <strong>${o.id.toUpperCase()})</strong> ${o.texto}
-                                    ${isCorr&&!acertou?' ← correta':''}
+                                    ${isCorr?'✅':isResp?'❌':''} <strong>${o.id.toUpperCase()})</strong> ${o.texto}${isCorr&&!acertou?' ← correta':''}
                                 </div>`;
                             }).join('')}
                         </div>`;
@@ -12100,17 +12116,26 @@ const exame = {
                 <div style="font-size:0.62rem;color:#94a3b8;margin-top:2px;">${pergs.length} pergunta${pergs.length!==1?'s':''} — responda com atenção</div>
             </div>
             <div style="padding:12px 16px;" id="prova-questoes">
-                ${pergs.map((p,i) => `
-                <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #1e293b;">
-                    <div style="font-size:0.7rem;font-weight:700;color:white;margin-bottom:8px;">${i+1}. ${p.enunciado}</div>
-                    ${p.opcoes.map(o => `
-                    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;margin-bottom:4px;cursor:pointer;background:#1e293b;border:1px solid #334155;" id="opt-lbl-${p.id}-${o.id}">
-                        <input type="radio" name="prova-resp-${p.id}" value="${o.id}"
-                            onchange="document.querySelectorAll('[id^=opt-lbl-${p.id}-]').forEach(l=>l.style.borderColor='#334155');this.closest('label').style.borderColor='#f97316';"
-                            style="accent-color:#f97316;width:15px;height:15px;flex-shrink:0;cursor:pointer;">
-                        <span style="font-size:0.68rem;color:#94a3b8;"><strong style="color:#f97316;">${o.id.toUpperCase()})</strong> ${o.texto}</span>
-                    </label>`).join('')}
-                </div>`).join('')}
+                ${pergs.map((p,i) => {
+                    const embedUrl = exame._youtubeEmbedUrl(p.videoUrl);
+                    const videoHtml = embedUrl ? `
+                        <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;margin-bottom:10px;">
+                            <iframe src="${embedUrl}" frameborder="0" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen
+                                style="position:absolute;top:0;left:0;width:100%;height:100%;border-radius:8px;"></iframe>
+                        </div>` : '';
+                    return `
+                    <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #1e293b;">
+                        ${videoHtml}
+                        <div style="font-size:0.7rem;font-weight:700;color:white;margin-bottom:8px;">${i+1}. ${p.enunciado}</div>
+                        ${p.opcoes.map(o => `
+                        <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;margin-bottom:4px;cursor:pointer;background:#1e293b;border:1px solid #334155;" id="opt-lbl-${p.id}-${o.id}">
+                            <input type="radio" name="prova-resp-${p.id}" value="${o.id}"
+                                onchange="document.querySelectorAll('[id^=opt-lbl-${p.id}-]').forEach(l=>l.style.borderColor='#334155');this.closest('label').style.borderColor='#f97316';"
+                                style="accent-color:#f97316;width:15px;height:15px;flex-shrink:0;cursor:pointer;">
+                            <span style="font-size:0.68rem;color:#94a3b8;"><strong style="color:#f97316;">${o.id.toUpperCase()})</strong> ${o.texto}</span>
+                        </label>`).join('')}
+                    </div>`;
+                }).join('')}
             </div>
             <div style="padding:12px 16px;border-top:1px solid #1e293b;">
                 <button onclick="exame.submeterProva('${alunoId}')"

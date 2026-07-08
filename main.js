@@ -10871,9 +10871,8 @@ const exame = {
         m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:10010;display:flex;flex-direction:column;padding:16px;box-sizing:border-box;overflow-y:auto;';
         document.body.appendChild(m);
 
-        // Ordens de faixa
         const ordemKids = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
-        const ordemAdulto = ['Branca','Azul','Roxa','Marrom','Preta','Preta 1° Grau','Preta 2° Grau','Preta 3° Grau','Preta 4° Grau'];
+        const ordemAdulto = ['Branca','Azul','Roxa','Marrom','Preta','Preta 1º Grau','Preta 2º Grau','Preta 3º Grau','Preta 4º Grau'];
         const infantilSet = new Set(ordemKids);
 
         const coresFaixa = {
@@ -10881,36 +10880,45 @@ const exame = {
             'Amarela/Branca':'#fef08a','Amarela':'#fbbf24','Amarela/Preta':'#d97706',
             'Laranja/Branca':'#fed7aa','Laranja':'#f97316','Laranja/Preta':'#ea580c',
             'Verde/Branca':'#bbf7d0','Verde':'#22c55e','Verde/Preta':'#16a34a',
-            'Azul':'#60a5fa','Roxa':'#a78bfa','Marrom':'#92400e','Preta':'#94a3b8',
-            'Preta 1° Grau':'#94a3b8','Preta 2° Grau':'#94a3b8','Preta 3° Grau':'#94a3b8','Preta 4° Grau':'#94a3b8',
+            'Azul':'#60a5fa','Roxa':'#a78bfa','Marrom':'#b45309','Preta':'#475569',
+            'Preta 1º Grau':'#475569','Preta 2º Grau':'#475569','Preta 3º Grau':'#475569','Preta 4º Grau':'#475569',
         };
-        const textoFaixa = (f) => ['Branca','Cinza/Branca','Amarela/Branca','Amarela','Laranja/Branca','Laranja','Verde/Branca','Verde/Preta','Verde'].includes(f) ? '#111' : '#fff';
+        const txtFaixa = (f) => ['Branca','Cinza/Branca','Amarela/Branca','Amarela','Laranja/Branca','Laranja','Verde/Branca','Verde','Verde/Preta'].includes(f) ? '#111' : '#fff';
 
         const isKids = (a) => {
-            let idade = 99;
             if (a.nascimento) {
                 const d = a.nascimento.toDate ? a.nascimento.toDate() : new Date(a.nascimento);
-                idade = new Date().getFullYear() - d.getFullYear();
+                if (new Date().getFullYear() - d.getFullYear() < 16) return true;
             }
-            if (idade < 16) return true;
             if ((a.turmas||[]).some(t => /kids/i.test(t))) return true;
             if (/kids/i.test(a.nome||'')) return true;
-            return infantilSet.has(a.faixa||'Branca') && idade < 18;
+            return infantilSet.has(a.faixa||'Branca');
         };
 
+        const getCat = (a) => isKids(a) ? 'kids' : (['Marrom','Preta'].includes(a.faixa) || (a.faixa||'').startsWith('Preta') ? 'preta' : 'adulto');
+
+        const filtros = ['todos','kids','adultos','exame'];
+        const labFiltros = { todos:'🥋 TODOS', kids:'🧒 KIDS', adultos:'👤 ADULTOS', exame:'🏅 EXAME' };
+        const corFiltros = { todos:'#22c55e', kids:'#f59e0b', adultos:'#60a5fa', exame:'#f97316' };
+        const bgFiltros  = { todos:'#052e16', kids:'#1c0a00', adultos:'#1e1b4b', exame:'#1c0f00' };
+
+        const avatarHtml = (a) => a.fotoPerfil
+            ? `<img src="${a.fotoPerfil}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #334155;" onerror="this.outerHTML='<div style=\\'width:38px;height:38px;border-radius:50%;background:#334155;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;\\'>👤</div>'">`
+            : `<div style="width:38px;height:38px;border-radius:50%;background:#1e293b;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;">👤</div>`;
+
         m.innerHTML = `<div style="max-width:600px;margin:0 auto;width:100%;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                 <div>
-                    <div style="font-size:0.58rem;color:#22c55e;font-weight:800;letter-spacing:1px;">📋 LISTA DE CHAMADA</div>
-                    <div style="font-size:0.9rem;font-weight:900;color:white;">Por Faixa / Ordem</div>
+                    <div style="font-size:0.55rem;color:${corFiltros[filtro]};font-weight:800;letter-spacing:1px;">📋 LISTA DE CHAMADA</div>
+                    <div style="font-size:0.88rem;font-weight:900;color:white;">${filtro==='exame'?'Convocados para o Exame':'Por Faixa / Ordem'}</div>
                 </div>
                 <button onclick="document.getElementById('modal-lista-chamada').remove()"
                     style="background:#334155;border:none;color:white;padding:8px 14px;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;">✕ Fechar</button>
             </div>
-            <div style="display:flex;gap:6px;margin-bottom:14px;">
-                ${['todos','kids','adultos'].map(f => `<button onclick="exame.abrirListaChamada('${f}')"
-                    style="flex:1;padding:8px;font-size:0.65rem;font-weight:800;border-radius:8px;cursor:pointer;border:2px solid ${filtro===f?'#22c55e':'#334155'};background:${filtro===f?'#052e16':'#0f172a'};color:${filtro===f?'#22c55e':'#64748b'};">
-                    ${f==='todos'?'🥋 TODOS':f==='kids'?'🧒 KIDS':'👤 ADULTOS'}
+            <div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap;">
+                ${filtros.map(f => `<button onclick="exame.abrirListaChamada('${f}')"
+                    style="flex:1;min-width:60px;padding:7px 4px;font-size:0.6rem;font-weight:800;border-radius:8px;cursor:pointer;border:2px solid ${filtro===f?corFiltros[f]:'#334155'};background:${filtro===f?bgFiltros[f]:'#0f172a'};color:${filtro===f?corFiltros[f]:'#64748b'};">
+                    ${labFiltros[f]}
                 </button>`).join('')}
             </div>
             <div id="chamada-corpo" style="color:#94a3b8;text-align:center;padding:20px;">⏳ Carregando...</div>
@@ -10918,68 +10926,86 @@ const exame = {
 
         try {
             const snap = await db.collection('alunos').get();
-            let alunos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-                .filter(a => a.nome && a.ativo !== false);
+            let alunos = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false);
 
-            if (filtro === 'kids') alunos = alunos.filter(a => isKids(a));
-            else if (filtro === 'adultos') alunos = alunos.filter(a => !isKids(a));
-
-            // Separar kids e adultos para ordenação por faixa correta
-            const ordenar = (lista, ordem) => {
-                return lista.slice().sort((a, b) => {
-                    const fa = a.faixa || 'Branca', fb = b.faixa || 'Branca';
-                    const ia = ordem.findIndex(f => fa.startsWith(f.split(' ')[0]));
-                    const ib = ordem.findIndex(f => fb.startsWith(f.split(' ')[0]));
-                    const oa = ia < 0 ? 99 : ia, ob = ib < 0 ? 99 : ib;
-                    if (oa !== ob) return oa - ob;
-                    // mesma faixa base → ordem exata
-                    const ea = ordem.indexOf(fa), eb = ordem.indexOf(fb);
-                    if (ea !== eb) return (ea < 0 ? 99 : ea) - (eb < 0 ? 99 : eb);
-                    return (a.nome||'').localeCompare(b.nome||'', 'pt-BR');
-                });
-            };
+            const ordenar = (lista, ordem) => lista.slice().sort((a, b) => {
+                const fa = a.faixa||'Branca', fb = b.faixa||'Branca';
+                const ia = ordem.indexOf(fa), ib = ordem.indexOf(fb);
+                const oa = ia < 0 ? 99 : ia, ob = ib < 0 ? 99 : ib;
+                if (oa !== ob) return oa - ob;
+                return (a.nome||'').localeCompare(b.nome||'', 'pt-BR');
+            });
 
             let listaOrdenada = [];
-            if (filtro === 'kids') {
-                listaOrdenada = ordenar(alunos, ordemKids);
-            } else if (filtro === 'adultos') {
-                listaOrdenada = ordenar(alunos, ordemAdulto);
+
+            if (filtro === 'exame') {
+                // Só convocados, ordenados pela PRÓXIMA faixa
+                const convocados = alunos.filter(a => a.aspiranteGraduacao === true);
+                listaOrdenada = convocados.map(a => ({
+                    ...a,
+                    _proxFaixa: this._getProxFaixa(a, getCat(a)),
+                    _isKids: isKids(a),
+                }));
+                // Ordenar: kids antes de adultos, dentro de cada grupo pela próxima faixa, depois nome
+                const proxOrdemKids = ordemKids.map((f,i) => i < ordemKids.length-1 ? ordemKids[i+1] : f);
+                listaOrdenada.sort((a, b) => {
+                    if (a._isKids !== b._isKids) return a._isKids ? -1 : 1;
+                    const ordem = a._isKids ? ordemKids : ordemAdulto;
+                    const ia = ordem.indexOf(a._proxFaixa), ib = ordem.indexOf(b._proxFaixa);
+                    if (ia !== ib) return (ia<0?99:ia) - (ib<0?99:ib);
+                    return (a.nome||'').localeCompare(b.nome||'', 'pt-BR');
+                });
             } else {
-                // todos: kids primeiro (por faixa kids), depois adultos (por faixa adulto)
-                const kidsLista = ordenar(alunos.filter(a => isKids(a)), ordemKids);
-                const adultosLista = ordenar(alunos.filter(a => !isKids(a)), ordemAdulto);
-                listaOrdenada = [...kidsLista, ...adultosLista];
+                if (filtro === 'kids') alunos = alunos.filter(a => isKids(a));
+                else if (filtro === 'adultos') alunos = alunos.filter(a => !isKids(a));
+
+                if (filtro === 'kids') {
+                    listaOrdenada = ordenar(alunos, ordemKids);
+                } else if (filtro === 'adultos') {
+                    listaOrdenada = ordenar(alunos, ordemAdulto);
+                } else {
+                    listaOrdenada = [...ordenar(alunos.filter(a => isKids(a)), ordemKids), ...ordenar(alunos.filter(a => !isKids(a)), ordemAdulto)];
+                }
             }
 
             if (!listaOrdenada.length) {
-                document.getElementById('chamada-corpo').innerHTML = '<p style="color:#64748b;">Nenhum aluno encontrado.</p>';
+                document.getElementById('chamada-corpo').innerHTML = '<p style="color:#64748b;padding:20px;">Nenhum aluno encontrado.</p>';
                 return;
             }
 
-            // Agrupar por faixa para mostrar cabeçalhos
+            // Agrupar por faixa (ou proxFaixa no modo exame)
+            const chaveGrupo = (a) => filtro === 'exame' ? (a._proxFaixa || 'Branca') : (a.faixa || 'Branca');
             const grupos = [];
             let faixaAtual = null;
-            listaOrdenada.forEach((a, i) => {
-                const f = a.faixa || 'Branca';
+            listaOrdenada.forEach(a => {
+                const f = chaveGrupo(a);
                 if (f !== faixaAtual) { grupos.push({ faixa: f, alunos: [] }); faixaAtual = f; }
-                grupos[grupos.length - 1].alunos.push({ ...a, num: i + 1 });
+                grupos[grupos.length - 1].alunos.push(a);
             });
 
             let num = 1;
             const html = grupos.map(g => {
-                const cor = coresFaixa[g.faixa] || '#94a3b8';
-                const txt = textoFaixa(g.faixa);
+                const cor = coresFaixa[g.faixa] || '#475569';
+                const txt = txtFaixa(g.faixa);
                 const linhas = g.alunos.map(a => {
                     const n = num++;
+                    const faixaAtualBadge = filtro === 'exame'
+                        ? `<div style="font-size:0.52rem;color:#64748b;margin-top:1px;">Faixa atual: <strong style="color:#94a3b8;">${a.faixa||'Branca'}</strong></div>`
+                        : '';
                     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #0f172a;">
-                        <span style="font-size:0.65rem;font-weight:900;color:#334155;width:22px;text-align:right;flex-shrink:0;">${n}.</span>
-                        <span style="font-size:0.75rem;font-weight:700;color:white;flex:1;">${a.nome}</span>
-                        <span style="font-size:0.55rem;color:#64748b;">${isKids(a)?'🧒':''}</span>
+                        <span style="font-size:0.6rem;font-weight:900;color:#475569;width:20px;text-align:right;flex-shrink:0;">${n}.</span>
+                        ${avatarHtml(a)}
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:0.72rem;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome}</div>
+                            ${faixaAtualBadge}
+                        </div>
+                        ${filtro==='todos'&&isKids(a)?`<span style="font-size:0.6rem;">🧒</span>`:''}
                     </div>`;
                 }).join('');
+                const labelHeader = filtro === 'exame' ? `🏅 RECEBE: ${g.faixa.toUpperCase()}` : `🥋 ${g.faixa.toUpperCase()}`;
                 return `<div style="margin-bottom:10px;border-radius:10px;overflow:hidden;border:1px solid #1e293b;">
-                    <div style="background:${cor};padding:6px 12px;display:flex;justify-content:space-between;align-items:center;">
-                        <span style="font-size:0.65rem;font-weight:900;color:${txt};">🥋 ${g.faixa.toUpperCase()}</span>
+                    <div style="background:${cor};padding:7px 12px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:0.65rem;font-weight:900;color:${txt};">${labelHeader}</span>
                         <span style="font-size:0.6rem;font-weight:800;color:${txt};">${g.alunos.length} aluno${g.alunos.length!==1?'s':''}</span>
                     </div>
                     <div style="background:#1e293b;">${linhas}</div>
@@ -10990,7 +11016,7 @@ const exame = {
                 <div style="font-size:0.58rem;color:#64748b;margin-bottom:10px;text-align:right;">${listaOrdenada.length} aluno${listaOrdenada.length!==1?'s':''} no total</div>
                 ${html}`;
         } catch(e) {
-            document.getElementById('chamada-corpo').innerHTML = `<p style="color:#ef4444;">Erro ao carregar: ${e.message}</p>`;
+            document.getElementById('chamada-corpo').innerHTML = `<p style="color:#ef4444;">Erro: ${e.message}</p>`;
         }
     },
 

@@ -10871,9 +10871,9 @@ const exame = {
         m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:10010;display:flex;flex-direction:column;padding:16px;box-sizing:border-box;overflow-y:auto;';
         document.body.appendChild(m);
 
-        const ordemKids = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
+        const ordemKids   = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
         const ordemAdulto = ['Branca','Azul','Roxa','Marrom','Preta','Preta 1º Grau','Preta 2º Grau','Preta 3º Grau','Preta 4º Grau'];
-        const infantilSet = new Set(ordemKids);
+        const kidsExclusivos = new Set(['Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta']);
 
         const coresFaixa = {
             'Branca':'#e2e8f0','Cinza/Branca':'#b0bec5','Cinza':'#94a3b8','Cinza/Preta':'#607d8b',
@@ -10885,26 +10885,27 @@ const exame = {
         };
         const txtFaixa = (f) => ['Branca','Cinza/Branca','Amarela/Branca','Amarela','Laranja/Branca','Laranja','Verde/Branca','Verde','Verde/Preta'].includes(f) ? '#111' : '#fff';
 
+        // Kids = nasceu depois de (anoAtual - 16), ou tem 'kids' no turma/nome, ou faixa exclusivamente kids
         const isKids = (a) => {
             if (a.nascimento) {
                 const d = a.nascimento.toDate ? a.nascimento.toDate() : new Date(a.nascimento);
-                if (new Date().getFullYear() - d.getFullYear() < 16) return true;
+                return (new Date().getFullYear() - d.getFullYear()) < 16;
             }
             if ((a.turmas||[]).some(t => /kids/i.test(t))) return true;
             if (/kids/i.test(a.nome||'')) return true;
-            return infantilSet.has(a.faixa||'Branca');
+            return kidsExclusivos.has(a.faixa||'');  // Branca NÃO é exclusivo kids
         };
 
-        const getCat = (a) => isKids(a) ? 'kids' : (['Marrom','Preta'].includes(a.faixa) || (a.faixa||'').startsWith('Preta') ? 'preta' : 'adulto');
+        const getCat = (a) => {
+            if (isKids(a)) return 'kids';
+            if (a.faixa === 'Marrom' || (a.faixa||'').startsWith('Preta')) return 'preta';
+            return 'adulto';
+        };
 
         const filtros = ['todos','kids','adultos','exame'];
         const labFiltros = { todos:'🥋 TODOS', kids:'🧒 KIDS', adultos:'👤 ADULTOS', exame:'🏅 EXAME' };
         const corFiltros = { todos:'#22c55e', kids:'#f59e0b', adultos:'#60a5fa', exame:'#f97316' };
         const bgFiltros  = { todos:'#052e16', kids:'#1c0a00', adultos:'#1e1b4b', exame:'#1c0f00' };
-
-        const avatarHtml = (a) => a.fotoPerfil
-            ? `<img src="${a.fotoPerfil}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #334155;" onerror="this.outerHTML='<div style=\\'width:38px;height:38px;border-radius:50%;background:#334155;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;\\'>👤</div>'">`
-            : `<div style="width:38px;height:38px;border-radius:50%;background:#1e293b;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;">👤</div>`;
 
         m.innerHTML = `<div style="max-width:600px;margin:0 auto;width:100%;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -10915,57 +10916,53 @@ const exame = {
                 <button onclick="document.getElementById('modal-lista-chamada').remove()"
                     style="background:#334155;border:none;color:white;padding:8px 14px;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;">✕ Fechar</button>
             </div>
-            <div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap;">
+            <div style="display:flex;gap:5px;margin-bottom:12px;">
                 ${filtros.map(f => `<button onclick="exame.abrirListaChamada('${f}')"
-                    style="flex:1;min-width:60px;padding:7px 4px;font-size:0.6rem;font-weight:800;border-radius:8px;cursor:pointer;border:2px solid ${filtro===f?corFiltros[f]:'#334155'};background:${filtro===f?bgFiltros[f]:'#0f172a'};color:${filtro===f?corFiltros[f]:'#64748b'};">
+                    style="flex:1;padding:7px 4px;font-size:0.6rem;font-weight:800;border-radius:8px;cursor:pointer;border:2px solid ${filtro===f?corFiltros[f]:'#334155'};background:${filtro===f?bgFiltros[f]:'#0f172a'};color:${filtro===f?corFiltros[f]:'#64748b'};">
                     ${labFiltros[f]}
                 </button>`).join('')}
             </div>
+            <div style="font-size:0.55rem;color:#475569;margin-bottom:10px;">💡 Toque na linha para marcar presença (risca o nome). Toque na foto para ampliar. Vermelho = afastado há mais de 30 dias.</div>
             <div id="chamada-corpo" style="color:#94a3b8;text-align:center;padding:20px;">⏳ Carregando...</div>
         </div>`;
 
         try {
-            const snap = await db.collection('alunos').get();
-            let alunos = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false);
+            // Buscar alunos e check-ins recentes em paralelo
+            const trinta = Date.now() - 31 * 24 * 60 * 60 * 1000;
+            const [snapAlunos, snapCI] = await Promise.all([
+                db.collection('alunos').get(),
+                db.collection('checkins').where('data', '>=', trinta).get(),
+            ]);
+            const ativosRecentes = new Set(snapCI.docs.map(d => d.data().alunoId).filter(Boolean));
+
+            let alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false);
 
             const ordenar = (lista, ordem) => lista.slice().sort((a, b) => {
                 const fa = a.faixa||'Branca', fb = b.faixa||'Branca';
                 const ia = ordem.indexOf(fa), ib = ordem.indexOf(fb);
-                const oa = ia < 0 ? 99 : ia, ob = ib < 0 ? 99 : ib;
-                if (oa !== ob) return oa - ob;
+                if (ia !== ib) return (ia<0?99:ia) - (ib<0?99:ib);
                 return (a.nome||'').localeCompare(b.nome||'', 'pt-BR');
             });
 
             let listaOrdenada = [];
 
             if (filtro === 'exame') {
-                // Só convocados, ordenados pela PRÓXIMA faixa
-                const convocados = alunos.filter(a => a.aspiranteGraduacao === true);
-                listaOrdenada = convocados.map(a => ({
-                    ...a,
-                    _proxFaixa: this._getProxFaixa(a, getCat(a)),
-                    _isKids: isKids(a),
-                }));
-                // Ordenar: kids antes de adultos, dentro de cada grupo pela próxima faixa, depois nome
-                const proxOrdemKids = ordemKids.map((f,i) => i < ordemKids.length-1 ? ordemKids[i+1] : f);
-                listaOrdenada.sort((a, b) => {
+                const convocados = alunos.filter(a => a.aspiranteGraduacao === true)
+                    .map(a => ({ ...a, _proxFaixa: this._getProxFaixa(a, getCat(a)), _isKids: isKids(a) }));
+                convocados.sort((a, b) => {
                     if (a._isKids !== b._isKids) return a._isKids ? -1 : 1;
                     const ordem = a._isKids ? ordemKids : ordemAdulto;
                     const ia = ordem.indexOf(a._proxFaixa), ib = ordem.indexOf(b._proxFaixa);
                     if (ia !== ib) return (ia<0?99:ia) - (ib<0?99:ib);
                     return (a.nome||'').localeCompare(b.nome||'', 'pt-BR');
                 });
+                listaOrdenada = convocados;
             } else {
                 if (filtro === 'kids') alunos = alunos.filter(a => isKids(a));
                 else if (filtro === 'adultos') alunos = alunos.filter(a => !isKids(a));
-
-                if (filtro === 'kids') {
-                    listaOrdenada = ordenar(alunos, ordemKids);
-                } else if (filtro === 'adultos') {
-                    listaOrdenada = ordenar(alunos, ordemAdulto);
-                } else {
-                    listaOrdenada = [...ordenar(alunos.filter(a => isKids(a)), ordemKids), ...ordenar(alunos.filter(a => !isKids(a)), ordemAdulto)];
-                }
+                if (filtro === 'kids') listaOrdenada = ordenar(alunos, ordemKids);
+                else if (filtro === 'adultos') listaOrdenada = ordenar(alunos, ordemAdulto);
+                else listaOrdenada = [...ordenar(alunos.filter(a => isKids(a)), ordemKids), ...ordenar(alunos.filter(a => !isKids(a)), ordemAdulto)];
             }
 
             if (!listaOrdenada.length) {
@@ -10973,7 +10970,6 @@ const exame = {
                 return;
             }
 
-            // Agrupar por faixa (ou proxFaixa no modo exame)
             const chaveGrupo = (a) => filtro === 'exame' ? (a._proxFaixa || 'Branca') : (a.faixa || 'Branca');
             const grupos = [];
             let faixaAtual = null;
@@ -10989,17 +10985,30 @@ const exame = {
                 const txt = txtFaixa(g.faixa);
                 const linhas = g.alunos.map(a => {
                     const n = num++;
-                    const faixaAtualBadge = filtro === 'exame'
-                        ? `<div style="font-size:0.52rem;color:#64748b;margin-top:1px;">Faixa atual: <strong style="color:#94a3b8;">${a.faixa||'Branca'}</strong></div>`
+                    const afastado = !ativosRecentes.has(a.id);
+                    const grau = parseInt(a.grau) || 0;
+                    const grauDots = grau > 0
+                        ? `<span style="display:inline-flex;gap:2px;margin-left:4px;vertical-align:middle;">${'<span style="width:6px;height:6px;border-radius:50%;background:#f97316;display:inline-block;"></span>'.repeat(grau)}</span>`
                         : '';
-                    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #0f172a;">
+                    const grauLabel = grau > 0 ? `${grau} grau${grau>1?'s':''}` : 'sem grau';
+                    const faixaAtualStr = `${a.faixa||'Branca'}${grauDots}`;
+                    const faixaBadge = filtro === 'exame'
+                        ? `<div style="font-size:0.5rem;color:#64748b;margin-top:1px;display:flex;align-items:center;gap:4px;">Atual: <strong style="color:#94a3b8;">${a.faixa||'Branca'}</strong>${grauDots}<span style="color:#475569;">(${grauLabel})</span>${isKids(a)?' 🧒':''}</div>`
+                        : `<div style="font-size:0.5rem;color:#64748b;margin-top:1px;display:flex;align-items:center;gap:4px;">${a.faixa||'Branca'}${grauDots}<span style="color:#475569;">${grau>0?'· '+grauLabel:''}${filtro==='todos'&&isKids(a)?' · 🧒':''}</span></div>`;
+                    const afastadoBadge = afastado ? `<div style="font-size:0.48rem;color:#ef4444;font-weight:800;">⚠ AFASTADO +30d</div>` : '';
+                    const fotoClick = a.fotoPerfil ? `onclick="verFotoAluno('${a.fotoPerfil}','${(a.nome||'').replace(/'/g,"\\'")}');event.stopPropagation();"` : '';
+                    const fotoEl = a.fotoPerfil
+                        ? `<img src="${a.fotoPerfil}" ${fotoClick} style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${afastado?'#ef4444':'#334155'};cursor:zoom-in;" onerror="this.style.display='none'">`
+                        : `<div style="width:40px;height:40px;border-radius:50%;background:${afastado?'#2d0a0a':'#1e293b'};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;border:2px solid ${afastado?'#ef4444':'#1e293b'};">👤</div>`;
+                    return `<div onclick="this.classList.toggle('chamada-presente')" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #0f172a;cursor:pointer;transition:background 0.15s;" class="chamada-linha">
+                        <style>.chamada-linha.chamada-presente{background:#0a1a0a!important;opacity:0.5;}.chamada-linha.chamada-presente .chamada-nome{text-decoration:line-through;color:#475569!important;}</style>
                         <span style="font-size:0.6rem;font-weight:900;color:#475569;width:20px;text-align:right;flex-shrink:0;">${n}.</span>
-                        ${avatarHtml(a)}
+                        ${fotoEl}
                         <div style="flex:1;min-width:0;">
-                            <div style="font-size:0.72rem;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome}</div>
-                            ${faixaAtualBadge}
+                            <div class="chamada-nome" style="font-size:0.72rem;font-weight:700;color:${afastado?'#ef4444':'white'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome}</div>
+                            ${faixaBadge}${afastadoBadge}
                         </div>
-                        ${filtro==='todos'&&isKids(a)?`<span style="font-size:0.6rem;">🧒</span>`:''}
+                        <span style="font-size:1rem;opacity:0;" class="chamada-check">✅</span>
                     </div>`;
                 }).join('');
                 const labelHeader = filtro === 'exame' ? `🏅 RECEBE: ${g.faixa.toUpperCase()}` : `🥋 ${g.faixa.toUpperCase()}`;
@@ -11015,6 +11024,14 @@ const exame = {
             document.getElementById('chamada-corpo').innerHTML = `
                 <div style="font-size:0.58rem;color:#64748b;margin-bottom:10px;text-align:right;">${listaOrdenada.length} aluno${listaOrdenada.length!==1?'s':''} no total</div>
                 ${html}`;
+
+            // Efeito visual no check: mostra ✅ quando marcado
+            document.querySelectorAll('.chamada-linha').forEach(row => {
+                row.addEventListener('click', () => {
+                    const chk = row.querySelector('.chamada-check');
+                    if (chk) chk.style.opacity = row.classList.contains('chamada-presente') ? '1' : '0';
+                });
+            });
         } catch(e) {
             document.getElementById('chamada-corpo').innerHTML = `<p style="color:#ef4444;">Erro: ${e.message}</p>`;
         }

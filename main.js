@@ -11829,7 +11829,7 @@ const exame = {
                 <div onclick="(()=>{const b=document.getElementById('pf-${f.replace(/[^a-zA-Z0-9]/g,'_')}');b.style.display=b.style.display==='none'?'block':'none'})()"
                     style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;">
                     <span style="font-size:0.68rem;font-weight:800;color:#c4b5fd;">${f}</span>
-                    <span style="font-size:0.58rem;color:#64748b;">${cnt} requisito${cnt!==1?'s':''}</span>
+                    <span id="pf-cnt-${f.replace(/[^a-zA-Z0-9]/g,'_')}" style="font-size:0.58rem;color:${cnt>0?'#818cf8':'#64748b'};">${cnt} requisito${cnt!==1?'s':''}</span>
                 </div>
                 <div id="pf-${f.replace(/[^a-zA-Z0-9]/g,'_')}" style="display:none;padding:8px 12px;border-top:1px solid #1e293b;">
                     ${biblioteca.length === 0
@@ -11895,6 +11895,14 @@ const exame = {
             ? [...new Set([...atual, prereqId])]
             : atual.filter(i => i !== prereqId);
         await db.collection('configuracoes').doc('prereqs_por_faixa').set({ faixas: porFaixa });
+        // Atualiza contador no cabeçalho da faixa
+        const chaveId = 'pf-cnt-' + faixa.replace(/[^a-zA-Z0-9]/g,'_');
+        const cntEl = document.getElementById(chaveId);
+        if (cntEl) {
+            const n = porFaixa[faixa].length;
+            cntEl.textContent = `${n} requisito${n!==1?'s':''}`;
+            cntEl.style.color = n > 0 ? '#818cf8' : '#64748b';
+        }
     },
 
     async _renderPreReqsAluno(alunoId, faixaDestino, alunoReqs) {

@@ -14,7 +14,7 @@ function verFotoAluno(src, nome) {
     document.getElementById('modal-ver-foto')?.remove();
     const m = document.createElement('div');
     m.id = 'modal-ver-foto';
-    m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;';
+    m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;';
     m.onclick = () => m.remove();
     m.innerHTML = `<img src="${src}" style="max-width:88vw;max-height:78vh;border-radius:14px;object-fit:contain;box-shadow:0 8px 32px rgba(0,0,0,0.6);"><div style="color:#e2e8f0;font-size:0.9rem;font-weight:700;">${nome}</div><small style="color:#64748b;font-size:0.7rem;">Toque para fechar</small>`;
     document.body.appendChild(m);
@@ -10987,32 +10987,33 @@ const exame = {
             const html = grupos.map(g => {
                 const cor = coresFaixa[g.faixa] || '#475569';
                 const txt = txtFaixa(g.faixa);
+                const marcados = new Set(JSON.parse(localStorage.getItem('chamada_marcados') || '[]'));
+
                 const linhas = g.alunos.map(a => {
                     const n = num++;
                     const afastado = !ativosRecentes.has(a.id);
                     const grau = parseInt(a.grau) || 0;
                     const grauDots = grau > 0
-                        ? `<span style="display:inline-flex;gap:2px;margin-left:4px;vertical-align:middle;">${'<span style="width:6px;height:6px;border-radius:50%;background:#f97316;display:inline-block;"></span>'.repeat(grau)}</span>`
+                        ? `<span style="display:inline-flex;gap:3px;margin-left:5px;vertical-align:middle;">${'<span style="width:9px;height:9px;border-radius:50%;background:#f97316;display:inline-block;border:1px solid #fb923c;"></span>'.repeat(grau)}</span>`
                         : '';
-                    const grauLabel = grau > 0 ? `${grau} grau${grau>1?'s':''}` : 'sem grau';
-                    const faixaAtualStr = `${a.faixa||'Branca'}${grauDots}`;
+                    const grauLabel = grau > 0 ? `<strong style="color:white;font-weight:800;">${grau} grau${grau>1?'s':''}</strong>` : '<span style="color:#475569;">sem grau</span>';
                     const faixaBadge = filtro === 'exame'
-                        ? `<div style="font-size:0.5rem;color:#64748b;margin-top:1px;display:flex;align-items:center;gap:4px;">Atual: <strong style="color:#94a3b8;">${a.faixa||'Branca'}</strong>${grauDots}<span style="color:#475569;">(${grauLabel})</span>${isKids(a)?' 🧒':''}</div>`
-                        : `<div style="font-size:0.5rem;color:#64748b;margin-top:1px;display:flex;align-items:center;gap:4px;">${a.faixa||'Branca'}${grauDots}<span style="color:#475569;">${grau>0?'· '+grauLabel:''}${filtro==='todos'&&isKids(a)?' · 🧒':''}</span></div>`;
-                    const afastadoBadge = afastado ? `<div style="font-size:0.48rem;color:#ef4444;font-weight:800;">⚠ AFASTADO +30d</div>` : '';
-                    const fotoClick = a.fotoPerfil ? `onclick="verFotoAluno('${a.fotoPerfil}','${(a.nome||'').replace(/'/g,"\\'")}');event.stopPropagation();"` : '';
+                        ? `<div style="font-size:0.6rem;color:#94a3b8;margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;">Atual: <strong style="color:white;">${a.faixa||'Branca'}</strong>${grauDots} ${grauLabel}${isKids(a)?' 🧒':''}</div>`
+                        : `<div style="font-size:0.6rem;color:#94a3b8;margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;"><strong style="color:white;">${a.faixa||'Branca'}</strong>${grauDots} ${grauLabel}${filtro==='todos'&&isKids(a)?' · 🧒':''}</div>`;
+                    const afastadoBadge = afastado ? `<div style="font-size:0.52rem;color:#ef4444;font-weight:800;margin-top:1px;">⚠ AFASTADO +30d</div>` : '';
+                    const marcado = marcados.has(a.id);
                     const fotoEl = a.fotoPerfil
-                        ? `<img src="${a.fotoPerfil}" ${fotoClick} style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${afastado?'#ef4444':'#334155'};cursor:zoom-in;" onerror="this.style.display='none'">`
-                        : `<div style="width:40px;height:40px;border-radius:50%;background:${afastado?'#2d0a0a':'#1e293b'};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;border:2px solid ${afastado?'#ef4444':'#1e293b'};">👤</div>`;
-                    return `<div onclick="this.classList.toggle('chamada-presente')" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #0f172a;cursor:pointer;transition:background 0.15s;" class="chamada-linha">
+                        ? `<img src="${a.fotoPerfil}" onclick="verFotoAluno('${a.fotoPerfil.replace(/'/g,"\\'")}','${(a.nome||'').replace(/'/g,"\\'")}');event.stopPropagation();" style="width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${afastado?'#ef4444':'#334155'};cursor:zoom-in;" onerror="this.outerHTML='<div style=\'width:42px;height:42px;border-radius:50%;background:#1e293b;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;border:2px solid ${afastado?'#ef4444':'#1e293b'};\'>👤</div>'">`
+                        : `<div style="width:42px;height:42px;border-radius:50%;background:${afastado?'#2d0a0a':'#1e293b'};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;border:2px solid ${afastado?'#ef4444':'#1e293b'};">👤</div>`;
+                    return `<div data-aluno-id="${a.id}" onclick="exame._toggleChamada(this,'${a.id}')" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #0f172a;cursor:pointer;transition:all 0.15s;${marcado?'background:#0a1a0a;opacity:0.5;':''}" class="chamada-linha">
                         <style>.chamada-linha.chamada-presente{background:#0a1a0a!important;opacity:0.5;}.chamada-linha.chamada-presente .chamada-nome{text-decoration:line-through;color:#475569!important;}</style>
                         <span style="font-size:0.6rem;font-weight:900;color:#475569;width:20px;text-align:right;flex-shrink:0;">${n}.</span>
                         ${fotoEl}
                         <div style="flex:1;min-width:0;">
-                            <div class="chamada-nome" style="font-size:0.72rem;font-weight:700;color:${afastado?'#ef4444':'white'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome}</div>
+                            <div class="chamada-nome" style="font-size:0.72rem;font-weight:700;color:${afastado?'#ef4444':'white'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${marcado?'text-decoration:line-through;color:#475569;':''}">${a.nome}</div>
                             ${faixaBadge}${afastadoBadge}
                         </div>
-                        <span style="font-size:1rem;opacity:0;" class="chamada-check">✅</span>
+                        <span style="font-size:1.1rem;${marcado?'':'opacity:0;'}" class="chamada-check">✅</span>
                     </div>`;
                 }).join('');
                 const labelHeader = filtro === 'exame' ? `🏅 RECEBE: ${g.faixa.toUpperCase()}` : `🥋 ${g.faixa.toUpperCase()}`;
@@ -11026,19 +11027,36 @@ const exame = {
             }).join('');
 
             document.getElementById('chamada-corpo').innerHTML = `
-                <div style="font-size:0.58rem;color:#64748b;margin-bottom:10px;text-align:right;">${listaOrdenada.length} aluno${listaOrdenada.length!==1?'s':''} no total</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <span style="font-size:0.58rem;color:#64748b;">${listaOrdenada.length} aluno${listaOrdenada.length!==1?'s':''} no total</span>
+                    <button onclick="localStorage.removeItem('chamada_marcados');exame.abrirListaChamada('${filtro}')" style="font-size:0.55rem;padding:4px 10px;background:#1e293b;border:1px solid #334155;color:#64748b;border-radius:6px;cursor:pointer;">↺ Limpar marcações</button>
+                </div>
                 ${html}`;
-
-            // Efeito visual no check: mostra ✅ quando marcado
-            document.querySelectorAll('.chamada-linha').forEach(row => {
-                row.addEventListener('click', () => {
-                    const chk = row.querySelector('.chamada-check');
-                    if (chk) chk.style.opacity = row.classList.contains('chamada-presente') ? '1' : '0';
-                });
-            });
         } catch(e) {
             document.getElementById('chamada-corpo').innerHTML = `<p style="color:#ef4444;">Erro: ${e.message}</p>`;
         }
+    },
+
+    _toggleChamada(el, alunoId) {
+        const marcados = new Set(JSON.parse(localStorage.getItem('chamada_marcados') || '[]'));
+        if (marcados.has(alunoId)) {
+            marcados.delete(alunoId);
+            el.style.background = '';
+            el.style.opacity = '';
+            const nome = el.querySelector('.chamada-nome');
+            if (nome) { nome.style.textDecoration = ''; nome.style.color = ''; }
+            const chk = el.querySelector('.chamada-check');
+            if (chk) chk.style.opacity = '0';
+        } else {
+            marcados.add(alunoId);
+            el.style.background = '#0a1a0a';
+            el.style.opacity = '0.5';
+            const nome = el.querySelector('.chamada-nome');
+            if (nome) { nome.style.textDecoration = 'line-through'; nome.style.color = '#475569'; }
+            const chk = el.querySelector('.chamada-check');
+            if (chk) chk.style.opacity = '1';
+        }
+        localStorage.setItem('chamada_marcados', JSON.stringify([...marcados]));
     },
 
     selecionarFiltroCostureira() {

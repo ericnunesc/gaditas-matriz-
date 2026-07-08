@@ -10925,12 +10925,23 @@ const exame = {
                     ${labFiltros[f]}
                 </button>`).join('')}
             </div>
-            <div style="font-size:0.55rem;color:#475569;margin-bottom:10px;">💡 Toque na linha para marcar presença (risca o nome). Toque na foto para ampliar. Vermelho = afastado há mais de 30 dias.</div>
+            <div style="font-size:0.55rem;color:#475569;margin-bottom:10px;">💡 Toque na linha para marcar presença (risca o nome). Toque na foto para ampliar. <span style="color:#f59e0b;">Amarelo = 14-29d sem treinar.</span> <span style="color:#ef4444;">Vermelho = 30+ dias afastado.</span></div>
             <div id="chamada-corpo" style="color:#94a3b8;text-align:center;padding:20px;">⏳ Carregando...</div>
         </div>`;
 
         try {
-            const trinta = Date.now() - 31 * 24 * 60 * 60 * 1000;
+            const agora = Date.now();
+            const d14 = agora - 14 * 86400000;
+            const d30 = agora - 30 * 86400000;
+            const _getUltimaAulaMs = (a) => {
+                const hist = a.historico || [];
+                if (!hist.length) return null;
+                const ultima = hist[0]?.data;
+                if (!ultima) return null;
+                const p = ultima.split(',')[0].split('/');
+                if (p.length < 3) return null;
+                return new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime();
+            };
             const snapAlunos = await db.collection('alunos').get();
 
             let alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false);
@@ -10985,7 +10996,10 @@ const exame = {
 
                 const linhas = g.alunos.map(a => {
                     const n = num++;
-                    const afastado = !a.ultimoCheckin || a.ultimoCheckin < trinta;
+                    const msUltima = _getUltimaAulaMs(a);
+                    const afastado30 = !msUltima || msUltima < d30;
+                    const afastado14 = !afastado30 && msUltima < d14;
+                    const afastado = afastado30 || afastado14;
                     const grau = parseInt(a.grau) || 0;
                     const grauDots = grau > 0
                         ? `<span style="display:inline-flex;gap:3px;margin-left:5px;vertical-align:middle;">${'<span style="width:9px;height:9px;border-radius:50%;background:#f97316;display:inline-block;border:1px solid #fb923c;"></span>'.repeat(grau)}</span>`
@@ -10994,17 +11008,23 @@ const exame = {
                     const faixaBadge = filtro === 'exame'
                         ? `<div style="font-size:0.6rem;color:#94a3b8;margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;">Atual: <strong style="color:white;">${a.faixa||'Branca'}</strong>${grauDots} ${grauLabel}${isKids(a)?' 🧒':''}</div>`
                         : `<div style="font-size:0.6rem;color:#94a3b8;margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;"><strong style="color:white;">${a.faixa||'Branca'}</strong>${grauDots} ${grauLabel}${filtro==='todos'&&isKids(a)?' · 🧒':''}</div>`;
-                    const afastadoBadge = afastado ? `<div style="font-size:0.52rem;color:#ef4444;font-weight:800;margin-top:1px;">⚠ AFASTADO +30d</div>` : '';
+                    const afastadoBadge = afastado30
+                        ? `<div style="font-size:0.52rem;color:#ef4444;font-weight:800;margin-top:1px;">🚨 AFASTADO +30d</div>`
+                        : afastado14
+                            ? `<div style="font-size:0.52rem;color:#f59e0b;font-weight:800;margin-top:1px;">⚠ SEM TREINAR 14-29d</div>`
+                            : '';
                     const marcado = marcados.has(a.id);
+                    const _afBorder = afastado30 ? '#ef4444' : afastado14 ? '#f59e0b' : '#334155';
+                    const _afBg     = afastado30 ? '#2d0a0a' : afastado14 ? '#1c1200' : '#1e293b';
                     const fotoEl = a.fotoPerfil
-                        ? `<img src="${a.fotoPerfil}" onclick="verFotoAluno('${a.fotoPerfil.replace(/'/g,"\\'")}','${(a.nome||'').replace(/'/g,"\\'")}');event.stopPropagation();" style="width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${afastado?'#ef4444':'#334155'};cursor:zoom-in;" onerror="this.outerHTML='<div style=\'width:42px;height:42px;border-radius:50%;background:#1e293b;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;border:2px solid ${afastado?'#ef4444':'#1e293b'};\'>👤</div>'">`
-                        : `<div style="width:42px;height:42px;border-radius:50%;background:${afastado?'#2d0a0a':'#1e293b'};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;border:2px solid ${afastado?'#ef4444':'#1e293b'};">👤</div>`;
+                        ? `<img src="${a.fotoPerfil}" onclick="verFotoAluno('${a.fotoPerfil.replace(/'/g,"\\'")}','${(a.nome||'').replace(/'/g,"\\'")}');event.stopPropagation();" style="width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${_afBorder};cursor:zoom-in;" onerror="this.outerHTML='<div style=\'width:42px;height:42px;border-radius:50%;background:#1e293b;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;border:2px solid ${_afBorder};\'>👤</div>'">`
+                        : `<div style="width:42px;height:42px;border-radius:50%;background:${_afBg};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;border:2px solid ${_afBorder};">👤</div>`;
                     return `<div data-aluno-id="${a.id}" onclick="exame._toggleChamada(this,'${a.id}')" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #0f172a;cursor:pointer;transition:all 0.15s;${marcado?'background:#0a1a0a;opacity:0.5;':''}" class="chamada-linha">
                         <style>.chamada-linha.chamada-presente{background:#0a1a0a!important;opacity:0.5;}.chamada-linha.chamada-presente .chamada-nome{text-decoration:line-through;color:#475569!important;}</style>
                         <span style="font-size:0.6rem;font-weight:900;color:#475569;width:20px;text-align:right;flex-shrink:0;">${n}.</span>
                         ${fotoEl}
                         <div style="flex:1;min-width:0;">
-                            <div class="chamada-nome" style="font-size:0.72rem;font-weight:700;color:${afastado?'#ef4444':'white'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${marcado?'text-decoration:line-through;color:#475569;':''}">${a.nome}</div>
+                            <div class="chamada-nome" style="font-size:0.72rem;font-weight:700;color:${afastado30?'#ef4444':afastado14?'#f59e0b':'white'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${marcado?'text-decoration:line-through;color:#475569;':''}">${a.nome}</div>
                             ${faixaBadge}${afastadoBadge}
                         </div>
                         <span style="font-size:1.1rem;${marcado?'':'opacity:0;'}" class="chamada-check">✅</span>

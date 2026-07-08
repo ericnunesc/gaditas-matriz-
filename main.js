@@ -1958,6 +1958,8 @@ const academia = {
         const hr     = document.getElementById('input-evento-hora').value;
         const v      = parseInt(document.getElementById('input-evento-vagas').value) || 0;
         const p      = document.getElementById('input-evento-pagamento').value.trim();
+        const local  = document.getElementById('input-evento-local')?.value.trim() || '';
+        const mapa   = document.getElementById('input-evento-mapa')?.value.trim() || '';
         const de     = document.getElementById('input-evento-desc').value.trim();
         if (!t || !iso || !v) return alert("Preencha título, data de início e total de vagas.");
 
@@ -1973,7 +1975,7 @@ const academia = {
         if (btn) { btn.disabled = true; btn.innerText = 'Salvando...'; }
 
         const imagemUrl = document.getElementById('input-evento-imagemUrl')?.value || '';
-        const dados = { titulo: t, dataEvento: dataExibicao, dataEventoISO: iso, dataFimISO: isoFim || '', vagasMax: v, linkPay: p, descricao: de, imagemUrl };
+        const dados = { titulo: t, dataEvento: dataExibicao, dataEventoISO: iso, dataFimISO: isoFim || '', vagasMax: v, linkPay: p, local, linkMapa: mapa, descricao: de, imagemUrl };
 
         const publicarStory = document.getElementById('toggle-story-evento')?.dataset.on === 'true';
 
@@ -2084,6 +2086,8 @@ const academia = {
         document.getElementById('input-evento-hora').value = horaMatch ? horaMatch[1] : '';
         document.getElementById('input-evento-vagas').value = ev.vagasMax;
         document.getElementById('input-evento-pagamento').value = ev.linkPay || "";
+        const localEl = document.getElementById('input-evento-local'); if (localEl) localEl.value = ev.local || '';
+        const mapaEl  = document.getElementById('input-evento-mapa');  if (mapaEl)  mapaEl.value  = ev.linkMapa || '';
         document.getElementById('input-evento-desc').value = ev.descricao || "";
         // Mostra imagem existente
         const img = document.getElementById('img-preview-evento');
@@ -2113,6 +2117,8 @@ const academia = {
         document.getElementById('input-evento-hora').value = "";
         document.getElementById('input-evento-vagas').value = "";
         document.getElementById('input-evento-pagamento').value = "";
+        const lEl = document.getElementById('input-evento-local'); if(lEl) lEl.value = '';
+        const mEl = document.getElementById('input-evento-mapa');  if(mEl) mEl.value  = '';
         document.getElementById('input-evento-desc').value = "";
         this.limparImagemEvento();
         const btn = document.getElementById('btn-salvar-evento');
@@ -2135,7 +2141,12 @@ const academia = {
                 let botaoPagamentoAluno = (jaInscrito && ev.linkPay) ? `<button onclick="window.open('${ev.linkPay}', '_blank')" class="btn-infinitepay"><i class="fas fa-credit-card"></i> PAGAR INSCRIÇÃO AGORA 💳</button>` : '';
                 const cartaz = ev.imagemUrl ? `<img src="${ev.imagemUrl}" style="width:100%; border-radius:10px; margin-bottom:10px; max-height:220px; object-fit:cover;" loading="lazy"/>` : '';
                 const descHtml = (ev.descricao || "Sem descrição.").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-                htmlAluno += `<div class="card-evento">${cartaz}<div class="evento-header"><h4 class="evento-titulo">${ev.titulo.toUpperCase()}</h4><span class="evento-vagas-badge">${totalInscritos} / ${ev.vagasMax} VAGAS</span></div><div class="evento-data"><i class="fas fa-clock"></i> ${ev.dataEvento}</div><div class="evento-desc">${descHtml}</div>${botaoAcao}${botaoPagamentoAluno}</div>`;
+                const localHtml = ev.local ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:0.72rem;color:#94a3b8;">
+                    <i class="fas fa-map-marker-alt" style="color:#f43f5e;font-size:0.7rem;flex-shrink:0;"></i>
+                    <span>${ev.local}</span>
+                    ${ev.linkMapa ? `<a href="${ev.linkMapa}" target="_blank" rel="noopener" style="margin-left:auto;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;padding:3px 8px;border-radius:6px;font-size:0.62rem;font-weight:700;text-decoration:none;white-space:nowrap;"><i class="fas fa-directions"></i> VER MAPA</a>` : ''}
+                </div>` : '';
+                htmlAluno += `<div class="card-evento">${cartaz}<div class="evento-header"><h4 class="evento-titulo">${ev.titulo.toUpperCase()}</h4><span class="evento-vagas-badge">${totalInscritos} / ${ev.vagasMax} VAGAS</span></div><div class="evento-data"><i class="fas fa-clock"></i> ${ev.dataEvento}</div>${localHtml}<div class="evento-desc">${descHtml}</div>${botaoAcao}${botaoPagamentoAluno}</div>`;
                 const nomesInscritos = listaInscritos.map((n, idx) => `<div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #ccc; padding: 6px 0; border-bottom: 1px solid #1e293b;"><span>${idx+1}. ${n.nome.toUpperCase()}</span><button onclick="academia.removerAlunoDeEventoAdmin('${evId}', '${n.id}', '${n.nome.replace(/'/g, "\\'")}')" style="background: none; border: none; color: #f43f5e; cursor: pointer; padding: 2px 6px;"><i class="fas fa-user-minus"></i></button></div>`).join('') || "<small style='color:var(--text-muted);'>Ninguém inscrito ainda.</small>";
                 htmlAdmin += `<div style="background:#0f172a; border:1px solid var(--border-light); padding:12px; border-radius:10px; margin-bottom:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid var(--border-light); padding-bottom:5px;">

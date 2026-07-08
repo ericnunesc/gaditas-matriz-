@@ -10511,10 +10511,16 @@ const exame = {
         if (auth.role === 'admin') return;
         if (!alunoId || alunoId === 'admin') { btn.classList.add('nav-item-hidden'); return; }
         try {
-            const doc = await db.collection('alunos').doc(alunoId).get();
+            const [doc, provaDoc] = await Promise.all([
+                db.collection('alunos').doc(alunoId).get(),
+                db.collection('configuracoes').doc('prova_regras').get(),
+            ]);
             if (!doc.exists) { btn.classList.add('nav-item-hidden'); return; }
-            const convocado = doc.data().aspiranteGraduacao === true;
-            if (convocado) btn.classList.remove('nav-item-hidden');
+            const aluno = doc.data();
+            const convocado = aluno.aspiranteGraduacao === true;
+            const provaConfig = provaDoc.exists ? provaDoc.data() : {};
+            const provaAtiva = provaConfig.liberada && this._matchesProvaTarget(aluno, provaConfig.target);
+            if (convocado || provaAtiva) btn.classList.remove('nav-item-hidden');
             else btn.classList.add('nav-item-hidden');
         } catch(e) { btn.classList.add('nav-item-hidden'); }
     },
@@ -10531,9 +10537,25 @@ const exame = {
                 await this.carregarPainelAdmin();
                 return;
             }
-            const alunoDoc = await db.collection('alunos').doc(alunoId).get();
+            const [alunoDoc, provaDoc] = await Promise.all([
+                db.collection('alunos').doc(alunoId).get(),
+                db.collection('configuracoes').doc('prova_regras').get(),
+            ]);
             if (!alunoDoc.exists) { container.innerHTML = `<p style="color:#64748b;text-align:center;padding:30px;font-size:0.8rem;">Dados não encontrados.</p>`; return; }
             const aluno = alunoDoc.data();
+            const provaConfig = provaDoc.exists ? provaDoc.data() : {};
+
+            // Prova ativa para o grupo deste aluno → mostra só a prova
+            if (provaConfig.liberada && this._matchesProvaTarget(aluno, provaConfig.target)) {
+                const pr = aluno.provaRegras || null;
+                container.innerHTML = `
+                <div style="padding:4px 0;">
+                    <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:1px;margin-bottom:12px;">📝 PROVA DE REGRAS</div>
+                    <div id="prova-aluno-section"></div>
+                </div>`;
+                this._renderProvaAluno(alunoId, pr);
+                return;
+            }
 
             const categoria  = this._getCategoria(aluno);
             const [configDoc, efiDoc] = await Promise.all([
@@ -11892,14 +11914,39 @@ const exame = {
         }).join('') : `<div style="font-size:0.62rem;color:#475569;padding:4px 0;">Nenhum aluno respondeu ainda.</div>`;
 
         el.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:0.5px;">⚙️ STATUS DA PROVA</div>
-                <button onclick="exame.toggleLiberarProva(${liberada})"
-                    style="padding:5px 12px;font-size:0.62rem;font-weight:800;border:none;border-radius:8px;cursor:pointer;background:${liberada?'#334155':'#f97316'};color:${liberada?'#94a3b8':'#000'};">
-                    ${liberada?'🔒 Ocultar Prova':'🔓 Liberar Prova para Alunos'}
-                </button>
+            <div style="margin-bottom:12px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:0.5px;margin-bottom:8px;">🎯 ALVO DA PROVA</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">
+                    ${['adulto','kids','preta'].map(t => {
+                        const lbl = t==='adulto'?'🥋 Adulto':t==='kids'?'🧒 Kids':'⬛ Faixa Preta';
+                        const sel = prova.target?.tipo==='categoria' && prova.target?.valor===t;
+                        return `<button onclick="exame.setProvaTarget('categoria','${t}')"
+                            style="padding:7px;font-size:0.6rem;font-weight:800;border-radius:7px;cursor:pointer;border:1px solid ${sel?'#f97316':'#334155'};background:${sel?'#f9731622':'#0f172a'};color:${sel?'#f97316':'#64748b'};">
+                            ${lbl}
+                        </button>`;
+                    }).join('')}
+                </div>
+                <div style="font-size:0.58rem;font-weight:800;color:#64748b;margin-bottom:6px;">OU POR FAIXA ESPECÍFICA:</div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">
+                    ${['Branca','Cinza','Amarela','Laranja','Verde','Azul','Roxa','Marrom','Preta'].map(f => {
+                        const sel = prova.target?.tipo==='faixa' && prova.target?.valor===f;
+                        return `<button onclick="exame.setProvaTarget('faixa','${f}')"
+                            style="padding:4px 8px;font-size:0.58rem;font-weight:800;border-radius:6px;cursor:pointer;border:1px solid ${sel?'#f97316':'#334155'};background:${sel?'#f9731622':'#0f172a'};color:${sel?'#f97316':'#64748b'};">
+                            ${f}
+                        </button>`;
+                    }).join('')}
+                </div>
+                <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:0.5px;margin-bottom:6px;">⚙️ STATUS</div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <div style="flex:1;font-size:0.6rem;color:${liberada?'#10b981':'#64748b'};">
+                        ${liberada ? `✅ Liberada para: <strong style="color:#f97316;">${prova.target?.tipo==='categoria'?({adulto:'Adulto',kids:'Kids',preta:'Faixa Preta'}[prova.target.valor]||prova.target.valor):prova.target?.valor||'?'}</strong>` : '🔒 Oculta — alunos não veem'}
+                    </div>
+                    <button onclick="exame.toggleLiberarProva(${liberada})"
+                        style="padding:6px 14px;font-size:0.62rem;font-weight:800;border:none;border-radius:8px;cursor:pointer;background:${liberada?'#334155':'#f97316'};color:${liberada?'#94a3b8':'#000'};">
+                        ${liberada?'🔒 Ocultar':'🔓 Liberar'}
+                    </button>
+                </div>
             </div>
-            ${liberada ? '<div style="font-size:0.6rem;color:#10b981;margin-bottom:10px;">✅ Prova visível para os alunos</div>' : '<div style="font-size:0.6rem;color:#64748b;margin-bottom:10px;">🔒 Prova oculta — alunos não podem responder</div>'}
             <div style="font-size:0.6rem;font-weight:800;color:#f97316;margin-bottom:8px;letter-spacing:0.5px;">❓ PERGUNTAS</div>
             <div id="prova-pergs-lista">${listPergs}</div>
             <button onclick="exame.abrirModalPergunta(null)"
@@ -11910,9 +11957,30 @@ const exame = {
             <div>${respostasHtml}</div>`;
     },
 
+    async setProvaTarget(tipo, valor) {
+        await db.collection('configuracoes').doc('prova_regras').set({ target: { tipo, valor } }, { merge: true });
+        this.carregarPainelProvaRegras();
+    },
+
     async toggleLiberarProva(atual) {
+        if (!atual) {
+            const prova = await this._loadProva();
+            if (!prova.target) return alert('Selecione o alvo da prova antes de liberar (Adulto, Kids ou uma faixa).');
+        }
         await db.collection('configuracoes').doc('prova_regras').set({ liberada: !atual }, { merge: true });
         this.carregarPainelProvaRegras();
+    },
+
+    _matchesProvaTarget(aluno, target) {
+        if (!target) return false;
+        if (target.tipo === 'categoria') {
+            return this._getCategoria(aluno) === target.valor;
+        }
+        if (target.tipo === 'faixa') {
+            const faixaAluno = (aluno.faixa || 'Branca');
+            return faixaAluno === target.valor || faixaAluno.startsWith(target.valor + '/');
+        }
+        return false;
     },
 
     abrirModalPergunta(perguntaId) {

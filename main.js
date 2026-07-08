@@ -11981,6 +11981,19 @@ const exame = {
                     </button>
                 </div>
             </div>
+            <div style="margin-bottom:12px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:0.5px;margin-bottom:6px;">⏱ TEMPO LIMITE</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <input type="number" id="prova-tempo-input" value="${prova.tempoLimiteMinutos||''}" min="1" max="120" placeholder="ex: 15"
+                        style="width:72px;padding:7px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;outline:none;text-align:center;">
+                    <span style="font-size:0.62rem;color:#64748b;">minutos (0 = sem limite)</span>
+                    <button onclick="exame.salvarTempoProva()"
+                        style="padding:6px 12px;font-size:0.62rem;font-weight:800;border:none;border-radius:8px;cursor:pointer;background:#334155;color:#94a3b8;">
+                        💾 Salvar
+                    </button>
+                    ${prova.tempoLimiteMinutos ? `<span style="font-size:0.6rem;color:#10b981;font-weight:800;">✅ ${prova.tempoLimiteMinutos} min ativos</span>` : '<span style="font-size:0.6rem;color:#64748b;">Sem limite definido</span>'}
+                </div>
+            </div>
             <div style="font-size:0.6rem;font-weight:800;color:#f97316;margin-bottom:8px;letter-spacing:0.5px;">❓ PERGUNTAS</div>
             <div id="prova-pergs-lista">${listPergs}</div>
             <button onclick="exame.abrirModalPergunta(null)"
@@ -11998,6 +12011,15 @@ const exame = {
         if (idx >= 0) targets.splice(idx, 1); else targets.push({ tipo, valor });
         await db.collection('configuracoes').doc('prova_regras').set(
             { targets, target: firebase.firestore.FieldValue.delete() }, { merge: true });
+        this.carregarPainelProvaRegras();
+    },
+
+    async salvarTempoProva() {
+        const val = parseInt(document.getElementById('prova-tempo-input')?.value) || 0;
+        const update = val > 0
+            ? { tempoLimiteMinutos: val }
+            : { tempoLimiteMinutos: firebase.firestore.FieldValue.delete() };
+        await db.collection('configuracoes').doc('prova_regras').set(update, { merge: true });
         this.carregarPainelProvaRegras();
     },
 
@@ -12237,6 +12259,17 @@ const exame = {
 
         // Prova liberada → mostrar questões
         if (!prova.liberada) return;
+
+        // Timer: registra início se ainda não registrado
+        const tempoMin = prova.tempoLimiteMinutos || 0;
+        const timerKey = `prova_inicio_${alunoId}`;
+        if (tempoMin > 0 && !localStorage.getItem(timerKey)) {
+            localStorage.setItem(timerKey, Date.now().toString());
+        }
+        const timerHtml = tempoMin > 0
+            ? `<div id="prova-countdown" style="text-align:center;padding:10px;background:#0f172a;border-radius:10px;margin-bottom:12px;font-size:1.1rem;font-weight:900;color:#f59e0b;letter-spacing:2px;">⏱ --:--</div>`
+            : '';
+
         el.innerHTML = `
         <div style="background:#0f172a;border:1px solid #f97316;border-radius:14px;overflow:hidden;margin-bottom:12px;">
             <div style="background:#f9731622;padding:12px 16px;border-bottom:1px solid #f9731644;">
@@ -12244,6 +12277,7 @@ const exame = {
                 <div style="font-size:0.62rem;color:#94a3b8;margin-top:2px;">${pergs.length} pergunta${pergs.length!==1?'s':''} — responda com atenção</div>
             </div>
             <div style="padding:12px 16px;" id="prova-questoes">
+                ${timerHtml}
                 ${pergs.map((p,i) => {
                     const embedUrl = exame._youtubeEmbedUrl(p.videoUrl);
                     const videoHtml = embedUrl ? `
@@ -12272,9 +12306,37 @@ const exame = {
                 </button>
             </div>
         </div>`;
+
+        // Inicia countdown se houver tempo limite
+        if (tempoMin > 0) {
+            if (this._provaTimer) clearInterval(this._provaTimer);
+            const startTime = parseInt(localStorage.getItem(timerKey));
+            const totalMs = tempoMin * 60 * 1000;
+            const tick = () => {
+                const remaining = totalMs - (Date.now() - startTime);
+                const countEl = document.getElementById('prova-countdown');
+                if (!countEl) { clearInterval(this._provaTimer); return; }
+                if (remaining <= 0) {
+                    clearInterval(this._provaTimer);
+                    countEl.textContent = '⏱ 00:00 — TEMPO ESGOTADO!';
+                    countEl.style.color = '#ef4444';
+                    document.querySelectorAll('#prova-questoes input[type="radio"]').forEach(r => r.disabled = true);
+                    exame.submeterProva(alunoId, true);
+                    return;
+                }
+                const mins = Math.floor(remaining / 60000);
+                const secs = Math.floor((remaining % 60000) / 1000);
+                countEl.textContent = `⏱ ${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+                countEl.style.color = remaining < 60000 ? '#ef4444' : remaining < 180000 ? '#f59e0b' : '#10b981';
+            };
+            tick();
+            this._provaTimer = setInterval(tick, 1000);
+        }
     },
 
-    async submeterProva(alunoId) {
+    async submeterProva(alunoId, force = false) {
+        if (this._provaTimer) { clearInterval(this._provaTimer); this._provaTimer = null; }
+        localStorage.removeItem(`prova_inicio_${alunoId}`);
         const prova = await this._loadProva();
         const pergs = prova.perguntas || [];
         const respostas = {};
@@ -12284,7 +12346,7 @@ const exame = {
             if (sel) respostas[p.id] = sel.value;
             else respondeuTudo = false;
         });
-        if (!respondeuTudo) return alert('Responda todas as perguntas antes de enviar.');
+        if (!force && !respondeuTudo) return alert('Responda todas as perguntas antes de enviar.');
         const acertos = pergs.filter(p => respostas[p.id] === p.respostaCorreta).length;
         const percentual = Math.round((acertos / pergs.length) * 100);
         await db.collection('alunos').doc(alunoId).update({

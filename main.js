@@ -11984,7 +11984,7 @@ const exame = {
     },
 
     _getProvaTargets(prova) {
-        if (prova.targets?.length) return [...prova.targets];
+        if (Array.isArray(prova.targets)) return [...prova.targets];
         if (prova.target) return [prova.target]; // backward compat
         return [];
     },

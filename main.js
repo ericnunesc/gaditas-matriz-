@@ -11469,6 +11469,9 @@ const exame = {
 
                     const cardsHtml = items.map(({ a, id, cat, proxFaixa }) => {
                         const confirmou    = a.examePresencaConfirmada === true;
+                        const avPct        = a.exameAvaliacaoPercentual;
+                        const avLiberada   = a.exameAvaliacaoLiberada === true;
+                        const temAvaliacao = avPct !== undefined && a.exameAvaliacao;
                         const corNome      = this._corNome(proxFaixa);
                         const faixaDestino = a.proxFaixaCustom || proxFaixa;
                         const seletorKids  = cat === 'kids' ? `
@@ -11547,10 +11550,23 @@ const exame = {
                                     ${taxaPaga?'💰 TAXA PAGA':'💸 Taxa não paga'}
                                 </span>
                             </div>
+                            ${temAvaliacao ? `
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding:6px 10px;background:${avLiberada?'#05200f':'#1e1b4b'};border:1px solid ${avLiberada?'#10b98144':'#6366f144'};border-radius:8px;">
+                                <div>
+                                    <span style="font-size:0.55rem;font-weight:800;color:${avPct>=70?'#10b981':avPct>=50?'#f59e0b':'#ef4444'};">
+                                        📊 AVALIAÇÃO: ${avPct}%
+                                    </span>
+                                    <span style="font-size:0.5rem;color:#64748b;margin-left:6px;">${avLiberada?'🔓 liberada':'🔒 não liberada'}</span>
+                                </div>
+                                <button onclick="exame.toggleLiberarAvaliacao('${id}',${avLiberada})"
+                                    style="padding:4px 8px;font-size:0.55rem;font-weight:800;border:none;border-radius:6px;cursor:pointer;background:${avLiberada?'#334155':'#10b981'};color:${avLiberada?'#94a3b8':'#000'};">
+                                    ${avLiberada?'🔒 Ocultar':'🔓 Liberar'}
+                                </button>
+                            </div>` : ''}
                             <div style="display:flex;gap:6px;margin-top:6px;">
                                 <button onclick="exame.abrirAvaliacaoAluno('${id}','${a.nome.replace(/'/g,"\\'")}','${faixaDestino}')"
                                     style="flex:1;padding:7px;background:#1e1b4b;border:1px solid #6366f1;color:#a5b4fc;font-weight:800;font-size:0.65rem;border-radius:8px;cursor:pointer;">
-                                    🎯 Avaliar
+                                    ${temAvaliacao ? '✏️ Editar' : '🎯 Avaliar'}
                                 </button>
                                 <button onclick="exame.graduarAluno('${id}')" data-faixa-destino="${faixaDestino}"
                                     style="flex:2;padding:7px;background:linear-gradient(135deg,${corNome},${corNome}99);color:#000;font-weight:900;font-size:0.7rem;border:none;border-radius:8px;cursor:pointer;letter-spacing:1px;">
@@ -12070,6 +12086,11 @@ const exame = {
         if (el('av-barra'))       { el('av-barra').style.width = (pct||0) + '%'; el('av-barra').style.background = corNota; }
     },
 
+    async toggleLiberarAvaliacao(alunoId, atual) {
+        await db.collection('alunos').doc(alunoId).update({ exameAvaliacaoLiberada: !atual });
+        this.carregarConfirmados();
+    },
+
     async salvarAvaliacao(alunoId) {
         const ids = new Set([...document.querySelectorAll('[data-av-id]')].map(b => b.dataset.avId));
         const resultado = {};
@@ -12096,7 +12117,7 @@ const exame = {
         if (!el) return;
         const av = aluno.exameAvaliacao;
         const pct = aluno.exameAvaliacaoPercentual;
-        if (!av || pct === undefined) return;
+        if (!av || pct === undefined || !aluno.exameAvaliacaoLiberada) return;
         const cor = pct >= 70 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
         const icone = pct >= 70 ? '🏆' : pct >= 50 ? '⚠️' : '❌';
         const label = pct >= 70 ? 'APROVADO' : pct >= 50 ? 'PARCIAL' : 'REPROVADO';

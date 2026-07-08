@@ -10715,11 +10715,14 @@ const exame = {
                         ${jaConfirmou ? '✅ PRESENÇA CONFIRMADA' : '🙋 CONFIRMAR MINHA PRESENÇA'}
                     </button>
                 </div>
+                <div id="prova-aluno-section"></div>
                 <div id="prereqs-aluno-section"></div>
                 <div id="avaliacao-aluno-section"></div>
                 <div id="btn-tecnicas-exame-aluno"></div>
                 <div style="text-align:center; margin-top:20px; font-size:0.7rem; color:#475569; font-style:italic;">"A faixa é o reconhecimento de quem você se tornou. OSS!" 🦁</div>`;
 
+        // Prova de regras
+        this._renderProvaAluno(alunoId, aluno.provaRegras || null);
         // Carrega pré-requisitos do aluno
         this._renderPreReqsAluno(alunoId, proxFaixa, aluno.examePreReqs || {});
         // Mostra resultado da avaliação (se existir)
@@ -11326,6 +11329,9 @@ const exame = {
         const prereqsAccordion = accordion('prereqs', '📋 PRÉ-REQUISITOS DO EXAME', '#818cf8',
             `<div id="prereqs-painel"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>`);
 
+        const provaAccordion = accordion('prova-regras', '📝 PROVA DE REGRAS', '#f97316',
+            `<div id="prova-regras-painel"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>`);
+
         container.innerHTML =
             `<div id="relatorio-exame" style="margin-bottom:10px;"><small style="color:#475569;font-size:0.65rem;">Carregando relatório...</small></div>` +
             efiAccordion +
@@ -11333,6 +11339,7 @@ const exame = {
             secao('🥋 16+ ATÉ MARROM', '#3b82f6', 'adulto', adulto) +
             secaoPreta() +
             prereqsAccordion +
+            provaAccordion +
             convocadosAccordion +
             `<div id="tecnicas-exame-painel" style="margin-top:10px;"></div>`;
 
@@ -11340,6 +11347,7 @@ const exame = {
         this.carregarRelatorioExame({ kids, adulto, preta });
         tecnicasExame.carregarPainel();
         this.carregarPainelPreReqs();
+        this.carregarPainelProvaRegras();
     },
 
     async salvarConfigEfi() {
@@ -11822,6 +11830,321 @@ const exame = {
     },
 
     // ── PRÉ-REQUISITOS DO EXAME ──────────────────────────────────────────────
+
+    // ── PROVA DE REGRAS ─────────────────────────────────────────────────────
+    async _loadProva() {
+        const doc = await db.collection('configuracoes').doc('prova_regras').get();
+        return doc.exists ? doc.data() : { liberada: false, perguntas: [] };
+    },
+
+    async carregarPainelProvaRegras() {
+        const el = document.getElementById('prova-regras-painel');
+        if (!el) return;
+        const prova = await this._loadProva();
+        const pergs = prova.perguntas || [];
+        const liberada = prova.liberada === true;
+
+        // Busca respostas dos alunos
+        const snapAlunos = await db.collection('alunos').where('aspiranteGraduacao','==',true).get();
+        const responderam = snapAlunos.docs.filter(d => d.data().provaRegras?.enviadaEm);
+
+        const listPergs = pergs.length ? pergs.map((p, i) => `
+            <div style="background:#0a0f1a;border:1px solid #334155;border-radius:8px;padding:10px 12px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                    <div style="font-size:0.7rem;color:white;font-weight:700;flex:1;">${i+1}. ${p.enunciado}</div>
+                    <div style="display:flex;gap:4px;flex-shrink:0;">
+                        <button onclick="exame.abrirModalPergunta('${p.id}')" style="background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;padding:3px 7px;border-radius:5px;font-size:0.6rem;cursor:pointer;">✏️</button>
+                        <button onclick="exame.removerPergunta('${p.id}')" style="background:#2a0808;border:1px solid #7f1d1d;color:#f43f5e;padding:3px 7px;border-radius:5px;font-size:0.6rem;cursor:pointer;">✕</button>
+                    </div>
+                </div>
+                <div style="margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:3px;">
+                    ${p.opcoes.map(o => `<div style="font-size:0.62rem;padding:3px 6px;border-radius:4px;background:${o.id===p.respostaCorreta?'#064e3b':'#1e293b'};color:${o.id===p.respostaCorreta?'#10b981':'#94a3b8'};border:1px solid ${o.id===p.respostaCorreta?'#10b98155':'#334155'};">
+                        ${o.id===p.respostaCorreta?'✅ ':''}${o.texto}
+                    </div>`).join('')}
+                </div>
+            </div>`) .join('')
+            : `<div style="font-size:0.65rem;color:#475569;padding:6px 0;">Nenhuma pergunta cadastrada.</div>`;
+
+        const respostasHtml = responderam.length ? responderam.map(d => {
+            const a = d.data(); const pr = a.provaRegras || {};
+            const liberadoR = pr.resultadoLiberado === true;
+            const corNota = pr.percentual >= 70 ? '#10b981' : pr.percentual >= 50 ? '#f59e0b' : '#ef4444';
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:#0a0f1a;border:1px solid #1e293b;border-radius:8px;margin-bottom:5px;">
+                <div>
+                    <div style="font-size:0.68rem;font-weight:800;color:white;">${a.nome}</div>
+                    <div style="font-size:0.55rem;color:#64748b;">${pr.enviadaEm||''}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="font-size:1rem;font-weight:900;color:${corNota};">${pr.percentual??'—'}%</div>
+                    <button onclick="exame.verRespostaAluno('${d.id}')" style="padding:3px 8px;font-size:0.55rem;font-weight:800;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;cursor:pointer;">👁 Ver</button>
+                    <button onclick="exame.toggleLiberarResultadoProva('${d.id}',${liberadoR})"
+                        style="padding:3px 8px;font-size:0.55rem;font-weight:800;border:none;border-radius:6px;cursor:pointer;background:${liberadoR?'#334155':'#10b981'};color:${liberadoR?'#94a3b8':'#000'};">
+                        ${liberadoR?'🔒 Ocultar':'🔓 Liberar'}
+                    </button>
+                </div>
+            </div>`;
+        }).join('') : `<div style="font-size:0.62rem;color:#475569;padding:4px 0;">Nenhum aluno respondeu ainda.</div>`;
+
+        el.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:0.5px;">⚙️ STATUS DA PROVA</div>
+                <button onclick="exame.toggleLiberarProva(${liberada})"
+                    style="padding:5px 12px;font-size:0.62rem;font-weight:800;border:none;border-radius:8px;cursor:pointer;background:${liberada?'#334155':'#f97316'};color:${liberada?'#94a3b8':'#000'};">
+                    ${liberada?'🔒 Ocultar Prova':'🔓 Liberar Prova para Alunos'}
+                </button>
+            </div>
+            ${liberada ? '<div style="font-size:0.6rem;color:#10b981;margin-bottom:10px;">✅ Prova visível para os alunos</div>' : '<div style="font-size:0.6rem;color:#64748b;margin-bottom:10px;">🔒 Prova oculta — alunos não podem responder</div>'}
+            <div style="font-size:0.6rem;font-weight:800;color:#f97316;margin-bottom:8px;letter-spacing:0.5px;">❓ PERGUNTAS</div>
+            <div id="prova-pergs-lista">${listPergs}</div>
+            <button onclick="exame.abrirModalPergunta(null)"
+                style="width:100%;padding:8px;background:#1c0f00;border:1px solid #f97316;color:#f97316;border-radius:8px;font-weight:800;font-size:0.7rem;cursor:pointer;margin-top:4px;">
+                + ADICIONAR PERGUNTA
+            </button>
+            <div style="font-size:0.6rem;font-weight:800;color:#f97316;margin:14px 0 8px;letter-spacing:0.5px;">📊 RESPOSTAS DOS ALUNOS (${responderam.length})</div>
+            <div>${respostasHtml}</div>`;
+    },
+
+    async toggleLiberarProva(atual) {
+        await db.collection('configuracoes').doc('prova_regras').set({ liberada: !atual }, { merge: true });
+        this.carregarPainelProvaRegras();
+    },
+
+    abrirModalPergunta(perguntaId) {
+        document.getElementById('modal-pergunta-prova')?.remove();
+        const prova = this._loadProva();
+        prova.then(pr => {
+            const p = perguntaId ? (pr.perguntas||[]).find(x => x.id === perguntaId) : null;
+            const opcoes = p?.opcoes || [
+                {id:'a',texto:''},{id:'b',texto:''},{id:'c',texto:''},{id:'d',texto:''}
+            ];
+            const m = document.createElement('div');
+            m.id = 'modal-pergunta-prova';
+            m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#050a14;z-index:10030;display:flex;flex-direction:column;overflow:hidden;';
+            m.innerHTML = `
+                <div style="background:#0f172a;border-bottom:1px solid #1e293b;padding:14px 16px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;">
+                    <div style="font-size:0.75rem;font-weight:900;color:#f97316;">${p ? '✏️ Editar Pergunta' : '➕ Nova Pergunta'}</div>
+                    <button onclick="document.getElementById('modal-pergunta-prova').remove()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;width:30px;height:30px;border-radius:8px;cursor:pointer;">✕</button>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:16px;">
+                    <div style="font-size:0.6rem;color:#94a3b8;font-weight:800;margin-bottom:6px;">ENUNCIADO DA PERGUNTA</div>
+                    <textarea id="perg-enunciado" rows="3" placeholder="Ex: No jiu-jítsu, o que é guardado pelo árbitro?" style="width:100%;padding:10px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;outline:none;resize:vertical;box-sizing:border-box;margin-bottom:14px;">${p?.enunciado||''}</textarea>
+                    <div style="font-size:0.6rem;color:#94a3b8;font-weight:800;margin-bottom:8px;">OPÇÕES (marque a correta)</div>
+                    ${opcoes.map(o => `
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                        <input type="radio" name="resp-correta" value="${o.id}" ${p?.respostaCorreta===o.id?'checked':''} style="accent-color:#f97316;width:16px;height:16px;flex-shrink:0;cursor:pointer;">
+                        <span style="font-size:0.65rem;font-weight:800;color:#f97316;width:16px;flex-shrink:0;">${o.id.toUpperCase()}</span>
+                        <input type="text" id="perg-opc-${o.id}" value="${(o.texto||'').replace(/"/g,'&quot;')}" placeholder="Opção ${o.id.toUpperCase()}"
+                            style="flex:1;padding:8px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;">
+                    </div>`).join('')}
+                </div>
+                <div style="background:#0f172a;border-top:1px solid #1e293b;padding:12px 16px;flex-shrink:0;display:flex;gap:8px;">
+                    <button onclick="exame.salvarPergunta('${perguntaId||''}')"
+                        style="flex:1;padding:12px;background:#f97316;border:none;color:#000;border-radius:10px;font-weight:900;font-size:0.8rem;cursor:pointer;">
+                        💾 SALVAR PERGUNTA
+                    </button>
+                    <button onclick="document.getElementById('modal-pergunta-prova').remove()"
+                        style="padding:12px 16px;background:transparent;border:1px solid #334155;color:#64748b;border-radius:10px;cursor:pointer;font-size:0.75rem;">
+                        Cancelar
+                    </button>
+                </div>`;
+            document.body.appendChild(m);
+        });
+    },
+
+    async salvarPergunta(perguntaId) {
+        const enunciado = document.getElementById('perg-enunciado')?.value.trim();
+        if (!enunciado) return alert('Digite o enunciado da pergunta.');
+        const respostaCorreta = document.querySelector('input[name="resp-correta"]:checked')?.value;
+        if (!respostaCorreta) return alert('Marque a resposta correta.');
+        const opcoes = ['a','b','c','d'].map(id => ({
+            id, texto: document.getElementById(`perg-opc-${id}`)?.value.trim() || ''
+        }));
+        if (opcoes.some(o => !o.texto)) return alert('Preencha todas as 4 opções.');
+        const prova = await this._loadProva();
+        const pergs = prova.perguntas || [];
+        if (perguntaId) {
+            const idx = pergs.findIndex(p => p.id === perguntaId);
+            if (idx >= 0) pergs[idx] = { ...pergs[idx], enunciado, opcoes, respostaCorreta };
+        } else {
+            pergs.push({ id: 'pq_' + Date.now(), enunciado, opcoes, respostaCorreta });
+        }
+        await db.collection('configuracoes').doc('prova_regras').set({ ...prova, perguntas: pergs });
+        document.getElementById('modal-pergunta-prova')?.remove();
+        this.carregarPainelProvaRegras();
+    },
+
+    async removerPergunta(id) {
+        if (!confirm('Remover esta pergunta?')) return;
+        const prova = await this._loadProva();
+        const pergs = (prova.perguntas || []).filter(p => p.id !== id);
+        await db.collection('configuracoes').doc('prova_regras').set({ ...prova, perguntas: pergs });
+        this.carregarPainelProvaRegras();
+    },
+
+    async toggleLiberarResultadoProva(alunoId, atual) {
+        await db.collection('alunos').doc(alunoId).update({ 'provaRegras.resultadoLiberado': !atual });
+        this.carregarPainelProvaRegras();
+    },
+
+    async verRespostaAluno(alunoId) {
+        const [alunoDoc, prova] = await Promise.all([
+            db.collection('alunos').doc(alunoId).get(),
+            this._loadProva()
+        ]);
+        const a = alunoDoc.data();
+        const pr = a.provaRegras || {};
+        const respostas = pr.respostas || {};
+        const pergs = prova.perguntas || [];
+        const m = document.createElement('div');
+        m.id = 'modal-resp-aluno';
+        m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#050a14;z-index:10030;display:flex;flex-direction:column;overflow:hidden;';
+        const linhas = pergs.map((p, i) => {
+            const resp = respostas[p.id];
+            const correta = p.respostaCorreta;
+            const acertou = resp === correta;
+            return `<div style="background:#0f172a;border:1px solid ${acertou?'#10b98133':'#ef444433'};border-radius:8px;padding:10px;margin-bottom:8px;">
+                <div style="font-size:0.68rem;font-weight:700;color:white;margin-bottom:6px;">${i+1}. ${p.enunciado}</div>
+                ${p.opcoes.map(o => {
+                    const isResp = o.id === resp;
+                    const isCorr = o.id === correta;
+                    const bg = isCorr ? '#064e3b' : isResp ? '#4c0519' : '#1e293b';
+                    const cor = isCorr ? '#10b981' : isResp ? '#ef4444' : '#64748b';
+                    const icon = isCorr ? '✅' : isResp ? '❌' : '';
+                    return `<div style="padding:5px 8px;margin-bottom:3px;border-radius:5px;background:${bg};color:${cor};font-size:0.65rem;">
+                        ${icon} <span style="font-weight:800;">${o.id.toUpperCase()})</span> ${o.texto}
+                    </div>`;
+                }).join('')}
+            </div>`;
+        }).join('');
+        const cor = (pr.percentual||0) >= 70 ? '#10b981' : (pr.percentual||0) >= 50 ? '#f59e0b' : '#ef4444';
+        m.innerHTML = `
+            <div style="background:#0f172a;border-bottom:1px solid #1e293b;padding:14px 16px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:0.6rem;color:#f97316;font-weight:800;">📝 RESPOSTAS</div>
+                    <div style="font-size:0.8rem;font-weight:900;color:white;">${a.nome}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="font-size:1.5rem;font-weight:900;color:${cor};">${pr.percentual??'—'}%</div>
+                    <button onclick="document.getElementById('modal-resp-aluno').remove()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;width:30px;height:30px;border-radius:8px;cursor:pointer;">✕</button>
+                </div>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:14px;">${linhas || '<div style="color:#475569;font-size:0.7rem;">Sem respostas.</div>'}</div>`;
+        document.body.appendChild(m);
+    },
+
+    // ── VIEW DO ALUNO ────────────────────────────────────────────────────────
+    async _renderProvaAluno(alunoId, provaRegrasAluno) {
+        const el = document.getElementById('prova-aluno-section');
+        if (!el) return;
+        const prova = await this._loadProva();
+        if (!prova.liberada && !provaRegrasAluno?.enviadaEm) return;
+        const pergs = prova.perguntas || [];
+        if (!pergs.length && !provaRegrasAluno?.enviadaEm) return;
+
+        const pr = provaRegrasAluno || {};
+
+        // Já respondeu e resultado liberado → mostra correção
+        if (pr.enviadaEm && pr.resultadoLiberado) {
+            const respostas = pr.respostas || {};
+            const cor = (pr.percentual||0) >= 70 ? '#10b981' : (pr.percentual||0) >= 50 ? '#f59e0b' : '#ef4444';
+            const label = (pr.percentual||0) >= 70 ? '🏆 APROVADO' : (pr.percentual||0) >= 50 ? '⚠️ PARCIAL' : '❌ REPROVADO';
+            el.innerHTML = `
+            <div style="background:#0f172a;border:1px solid ${cor}44;border-radius:14px;overflow:hidden;margin-bottom:12px;">
+                <div style="background:${cor}22;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <div style="font-size:0.6rem;font-weight:800;color:${cor};letter-spacing:1px;">📝 PROVA DE REGRAS — RESULTADO</div>
+                        <div style="font-size:0.55rem;color:#64748b;margin-top:2px;">${pr.enviadaEm}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:2rem;font-weight:900;color:${cor};">${pr.percentual}%</div>
+                        <div style="font-size:0.6rem;color:${cor};font-weight:800;">${label}</div>
+                    </div>
+                </div>
+                <div style="padding:12px 16px;">
+                    ${pergs.map((p,i) => {
+                        const resp = respostas[p.id]; const acertou = resp === p.respostaCorreta;
+                        return `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #1e293b;">
+                            <div style="font-size:0.68rem;color:${acertou?'#10b981':'#ef4444'};font-weight:700;margin-bottom:4px;">${acertou?'✅':'❌'} ${i+1}. ${p.enunciado}</div>
+                            ${p.opcoes.map(o => {
+                                const isCorr = o.id===p.respostaCorreta; const isResp = o.id===resp;
+                                if (!isCorr && !isResp) return '';
+                                return `<div style="font-size:0.62rem;padding:4px 8px;border-radius:5px;margin-bottom:2px;background:${isCorr?'#064e3b':isResp?'#4c0519':'transparent'};color:${isCorr?'#10b981':isResp?'#ef4444':'#94a3b8'};">
+                                    ${isCorr?'✅':isResp?'❌':''} <strong>${o.id.toUpperCase()})</strong> ${o.texto}
+                                    ${isCorr&&!acertou?' ← correta':''}
+                                </div>`;
+                            }).join('')}
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>`;
+            return;
+        }
+
+        // Já respondeu mas resultado pendente
+        if (pr.enviadaEm) {
+            el.innerHTML = `
+            <div style="background:#1c1400;border:1px solid #f59e0b44;border-radius:14px;padding:16px;margin-bottom:12px;text-align:center;">
+                <div style="font-size:1.5rem;margin-bottom:6px;">⏳</div>
+                <div style="font-size:0.7rem;font-weight:800;color:#f59e0b;">PROVA ENVIADA!</div>
+                <div style="font-size:0.62rem;color:#94a3b8;margin-top:4px;">Aguardando correção do professor.</div>
+            </div>`;
+            return;
+        }
+
+        // Prova liberada → mostrar questões
+        if (!prova.liberada) return;
+        el.innerHTML = `
+        <div style="background:#0f172a;border:1px solid #f97316;border-radius:14px;overflow:hidden;margin-bottom:12px;">
+            <div style="background:#f9731622;padding:12px 16px;border-bottom:1px solid #f9731644;">
+                <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:1px;">📝 PROVA DE REGRAS</div>
+                <div style="font-size:0.62rem;color:#94a3b8;margin-top:2px;">${pergs.length} pergunta${pergs.length!==1?'s':''} — responda com atenção</div>
+            </div>
+            <div style="padding:12px 16px;" id="prova-questoes">
+                ${pergs.map((p,i) => `
+                <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #1e293b;">
+                    <div style="font-size:0.7rem;font-weight:700;color:white;margin-bottom:8px;">${i+1}. ${p.enunciado}</div>
+                    ${p.opcoes.map(o => `
+                    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;margin-bottom:4px;cursor:pointer;background:#1e293b;border:1px solid #334155;" id="opt-lbl-${p.id}-${o.id}">
+                        <input type="radio" name="prova-resp-${p.id}" value="${o.id}"
+                            onchange="document.querySelectorAll('[id^=opt-lbl-${p.id}-]').forEach(l=>l.style.borderColor='#334155');this.closest('label').style.borderColor='#f97316';"
+                            style="accent-color:#f97316;width:15px;height:15px;flex-shrink:0;cursor:pointer;">
+                        <span style="font-size:0.68rem;color:#94a3b8;"><strong style="color:#f97316;">${o.id.toUpperCase()})</strong> ${o.texto}</span>
+                    </label>`).join('')}
+                </div>`).join('')}
+            </div>
+            <div style="padding:12px 16px;border-top:1px solid #1e293b;">
+                <button onclick="exame.submeterProva('${alunoId}')"
+                    style="width:100%;padding:13px;background:#f97316;border:none;color:#000;border-radius:10px;font-weight:900;font-size:0.82rem;cursor:pointer;">
+                    📤 ENVIAR RESPOSTAS
+                </button>
+            </div>
+        </div>`;
+    },
+
+    async submeterProva(alunoId) {
+        const prova = await this._loadProva();
+        const pergs = prova.perguntas || [];
+        const respostas = {};
+        let respondeuTudo = true;
+        pergs.forEach(p => {
+            const sel = document.querySelector(`input[name="prova-resp-${p.id}"]:checked`);
+            if (sel) respostas[p.id] = sel.value;
+            else respondeuTudo = false;
+        });
+        if (!respondeuTudo) return alert('Responda todas as perguntas antes de enviar.');
+        const acertos = pergs.filter(p => respostas[p.id] === p.respostaCorreta).length;
+        const percentual = Math.round((acertos / pergs.length) * 100);
+        await db.collection('alunos').doc(alunoId).update({
+            provaRegras: {
+                respostas,
+                percentual,
+                enviadaEm: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+                resultadoLiberado: false,
+            }
+        });
+        alert(`✅ Prova enviada! Aguarde o professor liberar o resultado.`);
+        this._renderProvaAluno(alunoId, { respostas, percentual, enviadaEm: new Date().toLocaleDateString('pt-BR'), resultadoLiberado: false });
+    },
 
     async _loadPreReqs() {
         const [bib, pfx] = await Promise.all([

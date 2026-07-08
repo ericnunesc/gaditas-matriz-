@@ -10705,11 +10705,14 @@ const exame = {
                     </button>
                 </div>
                 <div id="prereqs-aluno-section"></div>
+                <div id="avaliacao-aluno-section"></div>
                 <div id="btn-tecnicas-exame-aluno"></div>
                 <div style="text-align:center; margin-top:20px; font-size:0.7rem; color:#475569; font-style:italic;">"A faixa é o reconhecimento de quem você se tornou. OSS!" 🦁</div>`;
 
         // Carrega pré-requisitos do aluno
         this._renderPreReqsAluno(alunoId, proxFaixa, aluno.examePreReqs || {});
+        // Mostra resultado da avaliação (se existir)
+        this._renderAvaliacaoAluno(aluno);
         // Carrega botão de técnicas (só aparece se houver técnicas ativas)
         setTimeout(() => tecnicasExame.carregarBotaoAluno(proxFaixa, 'btn-tecnicas-exame-aluno'), 100);
 
@@ -11544,10 +11547,16 @@ const exame = {
                                     ${taxaPaga?'💰 TAXA PAGA':'💸 Taxa não paga'}
                                 </span>
                             </div>
-                            <button onclick="exame.graduarAluno('${id}')" data-faixa-destino="${faixaDestino}"
-                                style="margin-top:6px;width:100%;padding:7px;background:linear-gradient(135deg,${corNome},${corNome}99);color:#000;font-weight:900;font-size:0.7rem;border:none;border-radius:8px;cursor:pointer;letter-spacing:1px;">
-                                🥋 GRADUAR
-                            </button>
+                            <div style="display:flex;gap:6px;margin-top:6px;">
+                                <button onclick="exame.abrirAvaliacaoAluno('${id}','${a.nome.replace(/'/g,"\\'")}','${faixaDestino}')"
+                                    style="flex:1;padding:7px;background:#1e1b4b;border:1px solid #6366f1;color:#a5b4fc;font-weight:800;font-size:0.65rem;border-radius:8px;cursor:pointer;">
+                                    🎯 Avaliar
+                                </button>
+                                <button onclick="exame.graduarAluno('${id}')" data-faixa-destino="${faixaDestino}"
+                                    style="flex:2;padding:7px;background:linear-gradient(135deg,${corNome},${corNome}99);color:#000;font-weight:900;font-size:0.7rem;border:none;border-radius:8px;cursor:pointer;letter-spacing:1px;">
+                                    🥋 GRADUAR
+                                </button>
+                            </div>
                         </div>`;
                     }).join('');
 
@@ -11903,6 +11912,230 @@ const exame = {
             cntEl.textContent = `${n} requisito${n!==1?'s':''}`;
             cntEl.style.color = n > 0 ? '#818cf8' : '#64748b';
         }
+    },
+
+    async abrirAvaliacaoAluno(alunoId, nomeAluno, faixaDestino) {
+        document.getElementById('modal-avaliacao-exame')?.remove();
+        const grupo = tecnicasExame._grupoDeProxFaixa(faixaDestino);
+        if (!grupo) return alert('Grupo de técnicas não encontrado para esta faixa.');
+        const tecnicas = await tecnicasExame._carregarGrupo(grupo);
+        const ativas = tecnicas.filter(t => t.ativo !== false && t.nome);
+        if (!ativas.length) return alert('Nenhuma técnica ativa cadastrada para este grupo.');
+
+        // Carrega avaliação prévia
+        const alunoDoc = await db.collection('alunos').doc(alunoId).get();
+        const avPrev   = alunoDoc.exists ? (alunoDoc.data().exameAvaliacao || {}) : {};
+
+        const m = document.createElement('div');
+        m.id = 'modal-avaliacao-exame';
+        m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#050a14;z-index:10020;display:flex;flex-direction:column;overflow:hidden;';
+
+        // Agrupa por categoria
+        const cats = {};
+        ativas.forEach(t => {
+            const c = t.categoria || 'geral';
+            if (!cats[c]) cats[c] = [];
+            cats[c].push(t);
+        });
+        const bibGrupo = tecnicasExame._GRUPOS[grupo]?.bib === 'kids' ? tecnicasExame._BIB_KIDS : tecnicasExame._BIB_ADULTO;
+
+        const tecHtml = Object.entries(cats).map(([catId, lista]) => {
+            const catNome = (bibGrupo[catId]?.nome || catId).toUpperCase();
+            const catIcon = bibGrupo[catId]?.icon || '🥋';
+            const rows = lista.map(t => {
+                const prev = avPrev[t.id] || '';
+                const btnStyle = (tipo, cor, label) =>
+                    `<button data-av-id="${t.id}" data-av-tipo="${tipo}" onclick="exame._marcarAvaliacao('${t.id}',this)"
+                        style="flex:1;padding:6px 2px;font-size:0.6rem;font-weight:800;border:1px solid ${prev===tipo?cor+'aa':'#334155'};
+                        background:${prev===tipo?cor+'22':'transparent'};color:${prev===tipo?cor:'#64748b'};border-radius:6px;cursor:pointer;transition:all 0.15s;">
+                        ${label}
+                    </button>`;
+                return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1e293b;">
+                    <span style="flex:1;font-size:0.72rem;color:${prev?'white':'#94a3b8'};">${t.nome}</span>
+                    <div style="display:flex;gap:4px;flex-shrink:0;">
+                        ${btnStyle('acerto','#10b981','✅ Acertou')}
+                        ${btnStyle('parcial','#f59e0b','🟡 Parcial')}
+                        ${btnStyle('erro','#ef4444','❌ Errou')}
+                    </div>
+                </div>`;
+            }).join('');
+            return `<div style="margin-bottom:16px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#64748b;letter-spacing:1px;margin-bottom:8px;">${catIcon} ${catNome}</div>
+                ${rows}
+            </div>`;
+        }).join('');
+
+        m.innerHTML = `
+            <div style="background:#0f172a;border-bottom:1px solid #1e293b;padding:14px 16px;flex-shrink:0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <div>
+                        <div style="font-size:0.62rem;color:#6366f1;font-weight:800;letter-spacing:0.5px;">🎯 AVALIAÇÃO DO EXAME</div>
+                        <div style="font-size:0.85rem;font-weight:900;color:white;margin-top:2px;">${nomeAluno}</div>
+                        <div style="font-size:0.6rem;color:#64748b;">Faixa destino: <span style="color:#a5b4fc;font-weight:700;">${faixaDestino}</span></div>
+                    </div>
+                    <button onclick="document.getElementById('modal-avaliacao-exame').remove()"
+                        style="background:#1e293b;border:1px solid #334155;color:#94a3b8;width:32px;height:32px;border-radius:8px;font-size:1rem;cursor:pointer;">✕</button>
+                </div>
+                <!-- Placar -->
+                <div style="display:flex;gap:8px;">
+                    <div style="flex:1;background:#064e3b22;border:1px solid #10b98133;border-radius:8px;padding:8px;text-align:center;">
+                        <div style="font-size:0.5rem;color:#10b981;font-weight:800;">✅ ACERTOS</div>
+                        <div id="av-cnt-acerto" style="font-size:1.4rem;font-weight:900;color:#10b981;">0</div>
+                    </div>
+                    <div style="flex:1;background:#78350f22;border:1px solid #f59e0b33;border-radius:8px;padding:8px;text-align:center;">
+                        <div style="font-size:0.5rem;color:#f59e0b;font-weight:800;">🟡 PARCIAL</div>
+                        <div id="av-cnt-parcial" style="font-size:1.4rem;font-weight:900;color:#f59e0b;">0</div>
+                    </div>
+                    <div style="flex:1;background:#4c051922;border:1px solid #ef444433;border-radius:8px;padding:8px;text-align:center;">
+                        <div style="font-size:0.5rem;color:#ef4444;font-weight:800;">❌ ERROS</div>
+                        <div id="av-cnt-erro" style="font-size:1.4rem;font-weight:900;color:#ef4444;">0</div>
+                    </div>
+                    <div style="flex:1;background:#1e1b4b;border:1px solid #6366f133;border-radius:8px;padding:8px;text-align:center;">
+                        <div style="font-size:0.5rem;color:#a5b4fc;font-weight:800;">📊 NOTA</div>
+                        <div id="av-pct" style="font-size:1.4rem;font-weight:900;color:#a5b4fc;">—</div>
+                    </div>
+                </div>
+                <div style="margin-top:8px;background:#1e293b;border-radius:4px;height:6px;overflow:hidden;">
+                    <div id="av-barra" style="height:6px;width:0%;background:#6366f1;border-radius:4px;transition:width 0.3s;"></div>
+                </div>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:16px;" id="av-tecnicas-lista" data-total="${ativas.length}" data-alunoId="${alunoId}">
+                ${tecHtml}
+            </div>
+            <div style="background:#0f172a;border-top:1px solid #1e293b;padding:12px 16px;flex-shrink:0;display:flex;gap:8px;">
+                <button onclick="exame.salvarAvaliacao('${alunoId}')"
+                    style="flex:1;padding:12px;background:#4f46e5;border:none;color:white;border-radius:10px;font-weight:900;font-size:0.8rem;cursor:pointer;">
+                    💾 SALVAR AVALIAÇÃO
+                </button>
+                <button onclick="document.getElementById('modal-avaliacao-exame').remove()"
+                    style="padding:12px 16px;background:transparent;border:1px solid #334155;color:#64748b;border-radius:10px;cursor:pointer;font-size:0.75rem;">
+                    Cancelar
+                </button>
+            </div>`;
+        document.body.appendChild(m);
+
+        // Inicializa placar com dados anteriores
+        if (Object.keys(avPrev).length) {
+            ativas.forEach(t => { if (avPrev[t.id]) this._recalcularPlacar(); });
+            this._recalcularPlacar();
+        }
+    },
+
+    _marcarAvaliacao(tecId, btn) {
+        const tipo = btn.dataset.avTipo;
+        // Reseta os 3 botões desta técnica
+        document.querySelectorAll(`[data-av-id="${tecId}"]`).forEach(b => {
+            const cor = b.dataset.avTipo === 'acerto' ? '#10b981' : b.dataset.avTipo === 'parcial' ? '#f59e0b' : '#ef4444';
+            b.style.background   = 'transparent';
+            b.style.border       = '1px solid #334155';
+            b.style.color        = '#64748b';
+        });
+        // Ativa o clicado
+        const cor = tipo === 'acerto' ? '#10b981' : tipo === 'parcial' ? '#f59e0b' : '#ef4444';
+        btn.style.background = cor + '22';
+        btn.style.border     = `1px solid ${cor}aa`;
+        btn.style.color      = cor;
+        this._recalcularPlacar();
+    },
+
+    _recalcularPlacar() {
+        const lista = document.getElementById('av-tecnicas-lista');
+        if (!lista) return;
+        const total = parseInt(lista.dataset.total) || 0;
+        let acertos = 0, parciais = 0, erros = 0, respondidas = 0;
+        document.querySelectorAll('[data-av-id]').forEach(btn => {
+            if (btn.style.color !== 'rgb(100, 116, 139)' && btn.style.color !== '#64748b' && btn.style.background !== 'transparent') {
+                // este botão está ativo — já contamos por tipo
+            }
+        });
+        // Conta por tipo (pega apenas os ativos - fundo não transparente)
+        const ids = new Set([...document.querySelectorAll('[data-av-id]')].map(b => b.dataset.avId));
+        ids.forEach(id => {
+            const ativo = [...document.querySelectorAll(`[data-av-id="${id}"]`)].find(b => b.style.background !== 'transparent' && b.style.background !== '');
+            if (!ativo) return;
+            respondidas++;
+            const tipo = ativo.dataset.avTipo;
+            if (tipo === 'acerto') acertos++;
+            else if (tipo === 'parcial') parciais++;
+            else erros++;
+        });
+        const nota = total > 0 ? ((acertos + parciais * 0.5) / total * 100) : 0;
+        const pct = respondidas > 0 ? Math.round(nota) : null;
+        const corNota = pct === null ? '#64748b' : pct >= 70 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+        const el = id => document.getElementById(id);
+        if (el('av-cnt-acerto'))  el('av-cnt-acerto').textContent  = acertos;
+        if (el('av-cnt-parcial')) el('av-cnt-parcial').textContent = parciais;
+        if (el('av-cnt-erro'))    el('av-cnt-erro').textContent    = erros;
+        if (el('av-pct'))         { el('av-pct').textContent = pct !== null ? pct + '%' : '—'; el('av-pct').style.color = corNota; }
+        if (el('av-barra'))       { el('av-barra').style.width = (pct||0) + '%'; el('av-barra').style.background = corNota; }
+    },
+
+    async salvarAvaliacao(alunoId) {
+        const ids = new Set([...document.querySelectorAll('[data-av-id]')].map(b => b.dataset.avId));
+        const resultado = {};
+        ids.forEach(id => {
+            const ativo = [...document.querySelectorAll(`[data-av-id="${id}"]`)].find(b => b.style.background !== 'transparent' && b.style.background !== '');
+            if (ativo) resultado[id] = ativo.dataset.avTipo;
+        });
+        const total = parseInt(document.getElementById('av-tecnicas-lista')?.dataset.total) || 0;
+        const acertos  = Object.values(resultado).filter(v => v === 'acerto').length;
+        const parciais = Object.values(resultado).filter(v => v === 'parcial').length;
+        const pct = total > 0 ? Math.round((acertos + parciais * 0.5) / total * 100) : 0;
+        await db.collection('alunos').doc(alunoId).update({
+            exameAvaliacao: resultado,
+            exameAvaliacaoPercentual: pct,
+            exameAvaliacaoData: new Date().toLocaleDateString('pt-BR'),
+        });
+        document.getElementById('modal-avaliacao-exame')?.remove();
+        alert(`✅ Avaliação salva! Nota: ${pct}%`);
+        this.carregarConfirmados();
+    },
+
+    _renderAvaliacaoAluno(aluno) {
+        const el = document.getElementById('avaliacao-aluno-section');
+        if (!el) return;
+        const av = aluno.exameAvaliacao;
+        const pct = aluno.exameAvaliacaoPercentual;
+        if (!av || pct === undefined) return;
+        const cor = pct >= 70 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+        const icone = pct >= 70 ? '🏆' : pct >= 50 ? '⚠️' : '❌';
+        const label = pct >= 70 ? 'APROVADO' : pct >= 50 ? 'PARCIAL' : 'REPROVADO';
+        const data = aluno.exameAvaliacaoData || '';
+        const acertos  = Object.values(av).filter(v => v === 'acerto').length;
+        const parciais = Object.values(av).filter(v => v === 'parcial').length;
+        const erros    = Object.values(av).filter(v => v === 'erro').length;
+        el.innerHTML = `
+        <div style="margin:14px 0;background:#0f172a;border:1px solid ${cor}44;border-radius:12px;overflow:hidden;">
+            <div style="background:${cor}22;border-bottom:1px solid ${cor}44;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <div style="font-size:0.55rem;color:${cor};font-weight:800;letter-spacing:1px;">🎯 RESULTADO DA AVALIAÇÃO</div>
+                    ${data ? `<div style="font-size:0.55rem;color:#64748b;margin-top:1px;">${data}</div>` : ''}
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:1.8rem;font-weight:900;color:${cor};">${pct}%</div>
+                    <div style="font-size:0.55rem;font-weight:800;color:${cor};">${icone} ${label}</div>
+                </div>
+            </div>
+            <div style="display:flex;gap:0;padding:10px 14px;">
+                <div style="flex:1;text-align:center;">
+                    <div style="font-size:1rem;font-weight:900;color:#10b981;">${acertos}</div>
+                    <div style="font-size:0.5rem;color:#64748b;">✅ Acertos</div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                    <div style="font-size:1rem;font-weight:900;color:#f59e0b;">${parciais}</div>
+                    <div style="font-size:0.5rem;color:#64748b;">🟡 Parciais</div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                    <div style="font-size:1rem;font-weight:900;color:#ef4444;">${erros}</div>
+                    <div style="font-size:0.5rem;color:#64748b;">❌ Erros</div>
+                </div>
+            </div>
+            <div style="padding:0 14px 10px;">
+                <div style="background:#1e293b;border-radius:4px;height:5px;overflow:hidden;">
+                    <div style="height:5px;width:${pct}%;background:${cor};border-radius:4px;"></div>
+                </div>
+            </div>
+        </div>`;
     },
 
     async _renderPreReqsAluno(alunoId, faixaDestino, alunoReqs) {

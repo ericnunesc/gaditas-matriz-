@@ -292,6 +292,7 @@ const auth = {
         if (_btnExame && this.role !== 'admin') _btnExame.classList.add('nav-item-hidden');
         if ((this.role === 'aluno' || this.role === 'professor') && this.currentUser?.id) {
             exame.verificarConvocacao(this.currentUser.id);
+            exame.iniciarListenerProva(this.currentUser.id);
             setTimeout(() => exame.carregarBannerExame(), 600);
         }
 
@@ -10513,22 +10514,33 @@ const exame = {
     async verificarConvocacao(alunoId) {
         const btn = document.getElementById('menu-exame');
         if (!btn) return;
-        // Admin sempre vê (painel de gestão); já tratado em configurarVisao
         if (auth.role === 'admin') return;
-        if (!alunoId || alunoId === 'admin') { btn.classList.add('nav-item-hidden'); return; }
+        if (!alunoId || alunoId === 'admin') { btn.classList.add('nav-item-hidden'); btn.style.display='none'; return; }
         try {
             const [doc, provaDoc] = await Promise.all([
                 db.collection('alunos').doc(alunoId).get(),
                 db.collection('configuracoes').doc('prova_regras').get(),
             ]);
-            if (!doc.exists) { btn.classList.add('nav-item-hidden'); return; }
+            if (!doc.exists) { btn.classList.add('nav-item-hidden'); btn.style.display='none'; return; }
             const aluno = doc.data();
             const convocado = aluno.aspiranteGraduacao === true;
             const provaConfig = provaDoc.exists ? provaDoc.data() : {};
             const provaAtiva = provaConfig.liberada && this._matchesProvaTarget(aluno, this._getProvaTargets(provaConfig));
-            if (convocado || provaAtiva) btn.classList.remove('nav-item-hidden');
-            else btn.classList.add('nav-item-hidden');
-        } catch(e) { btn.classList.add('nav-item-hidden'); }
+            if (convocado || provaAtiva) {
+                btn.classList.remove('nav-item-hidden');
+                btn.style.display = 'flex';
+            } else {
+                btn.classList.add('nav-item-hidden');
+                btn.style.display = 'none';
+            }
+        } catch(e) { btn.classList.add('nav-item-hidden'); btn.style.display='none'; }
+    },
+
+    iniciarListenerProva(alunoId) {
+        if (!alunoId || alunoId === 'admin' || auth.role === 'admin') return;
+        db.collection('configuracoes').doc('prova_regras').onSnapshot(() => {
+            this.verificarConvocacao(alunoId);
+        });
     },
 
     // ── Carrega a tela do aluno convocado ──

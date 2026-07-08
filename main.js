@@ -2154,7 +2154,7 @@ const academia = {
     },
 
     async inscreverEmEvento(eventoId) {
-        if (!auth.currentUser || auth.role !== 'aluno') return alert("Faça login como aluno para garantir a vaga.");
+        if (!auth.currentUser) return alert("Faça login para garantir a vaga.");
         const ref = db.collection("eventos_oficiais").doc(eventoId);
         try {
             let resultado = "";
@@ -2174,7 +2174,7 @@ const academia = {
     },
 
     async cancelarInscricaoEvento(eventoId) {
-        if (!auth.currentUser || auth.role !== 'aluno') return;
+        if (!auth.currentUser) return;
         if (confirm("Deseja cancelar sua inscrição no evento?")) {
             const ref = db.collection("eventos_oficiais").doc(eventoId);
             try {

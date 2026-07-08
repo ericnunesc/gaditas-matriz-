@@ -10431,8 +10431,11 @@ const exame = {
 
     // ── Categoria do aluno ─────────────────────────────────
     _getCategoria(aluno) {
-        const ano = new Date().getFullYear();
-        const idade = aluno.nascimento ? (ano - new Date(aluno.nascimento).getFullYear()) : 99;
+        let idade = 99;
+        if (aluno.nascimento) {
+            const d = aluno.nascimento.toDate ? aluno.nascimento.toDate() : new Date(aluno.nascimento);
+            idade = new Date().getFullYear() - d.getFullYear();
+        }
         if (idade < 16) return 'kids';
         const turmasKids = (aluno.turmas || []).some(t => /kids/i.test(t));
         const nomeKids = /kids/i.test(aluno.nome || '');

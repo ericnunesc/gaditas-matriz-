@@ -11909,6 +11909,8 @@ const exame = {
                         style="padding:3px 8px;font-size:0.55rem;font-weight:800;border:none;border-radius:6px;cursor:pointer;background:${liberadoR?'#334155':'#10b981'};color:${liberadoR?'#94a3b8':'#000'};">
                         ${liberadoR?'🔒 Ocultar':'🔓 Liberar'}
                     </button>
+                    <button onclick="exame.excluirRespostaProva('${d.id}','${a.nome}')"
+                        style="padding:3px 8px;font-size:0.55rem;font-weight:800;background:#2a0808;border:1px solid #7f1d1d;color:#f43f5e;border-radius:6px;cursor:pointer;">🗑</button>
                 </div>
             </div>`;
         }).join('') : `<div style="font-size:0.62rem;color:#475569;padding:4px 0;">Nenhum aluno respondeu ainda.</div>`;
@@ -12061,6 +12063,12 @@ const exame = {
 
     async toggleLiberarResultadoProva(alunoId, atual) {
         await db.collection('alunos').doc(alunoId).update({ 'provaRegras.resultadoLiberado': !atual });
+        this.carregarPainelProvaRegras();
+    },
+
+    async excluirRespostaProva(alunoId, nome) {
+        if (!confirm(`Excluir a prova de ${nome}? O aluno poderá refazer.`)) return;
+        await db.collection('alunos').doc(alunoId).update({ provaRegras: firebase.firestore.FieldValue.delete() });
         this.carregarPainelProvaRegras();
     },
 

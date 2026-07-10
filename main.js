@@ -1621,7 +1621,11 @@ const academia = {
                 <div style="color:#fbbf24; font-size:0.7rem; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">⭐ EM DESTAQUE — ${prontos.length} atleta${prontos.length > 1 ? 's' : ''}</div>
                 <div style="color:#92400e; font-size:0.6rem; margin-bottom:10px;">${subtitulo}</div>`;
             prontos.forEach(({ id, a }) => {
-                const convocado = a.aspiranteGraduacao === true;
+                const _modAluno = a.modalidade || 'jiujitsu';
+                const _mconv    = a.modalidadesConvocado || {};
+                const _jjConv   = _mconv.jiujitsu === true || (_modAluno === 'jiujitsu' && a.aspiranteGraduacao === true);
+                const _mtConv   = _mconv.muaythai === true || (_modAluno === 'muaythai' && a.aspiranteGraduacao === true);
+                const convocado = _modAluno === 'ambos' ? (_jjConv && _mtConv) : (a.aspiranteGraduacao === true);
                 const nomeEsc   = (a.nome || '').replace(/'/g, "\\'");
                 html += `<div style="display:flex; justify-content:space-between; align-items:center; background:${convocado ? '#052e16' : '#0f172a'}; border:1px solid ${convocado ? '#10b981' : '#78350f'}; border-radius:8px; padding:10px 12px; margin-bottom:6px;">
                     <div style="flex:1; min-width:0;">
@@ -1632,7 +1636,7 @@ const academia = {
                         ${convocado
                             ? `<span style="background:#064e3b; color:#10b981; font-size:0.6rem; padding:4px 8px; border-radius:6px; font-weight:800; white-space:nowrap; border:1px solid #10b981;">✅ CONVOCADO</span>
                                <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.85rem; padding:2px 4px;">✕</button>`
-                            : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}','${a.modalidade||'jiujitsu'}')" style="background:#92400e; border:1px solid #f59e0b; color:#fbbf24; font-size:0.6rem; padding:5px 10px; border-radius:6px; cursor:pointer; font-weight:800; white-space:nowrap;">🥋 CONVOCAR</button>`
+                            : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}','${_modAluno}',${_jjConv},${_mtConv})" style="background:#92400e; border:1px solid #f59e0b; color:#fbbf24; font-size:0.6rem; padding:5px 10px; border-radius:6px; cursor:pointer; font-weight:800; white-space:nowrap;">🥋 CONVOCAR</button>`
                         }
                     </div>
                 </div>`;
@@ -1656,7 +1660,11 @@ const academia = {
 
         outros.forEach(({ id, a, s }) => {
             const percent   = Math.round(s.percent);
-            const convocado = a.aspiranteGraduacao === true;
+            const _modAluno = a.modalidade || 'jiujitsu';
+            const _mconv    = a.modalidadesConvocado || {};
+            const _jjConv   = _mconv.jiujitsu === true || (_modAluno === 'jiujitsu' && a.aspiranteGraduacao === true);
+            const _mtConv   = _mconv.muaythai === true || (_modAluno === 'muaythai' && a.aspiranteGraduacao === true);
+            const convocado = _modAluno === 'ambos' ? (_jjConv && _mtConv) : (a.aspiranteGraduacao === true);
             const nomeEsc   = (a.nome || '').replace(/'/g, "\\'");
             html += `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid var(--border-light); padding:10px 0; ${convocado ? 'background:#052e1622; border-radius:8px; padding:10px 8px;' : ''}">
                 <div style="flex:1; min-width:0;">
@@ -1668,7 +1676,7 @@ const academia = {
                     ${convocado
                         ? `<span style="background:#064e3b; color:#10b981; font-size:0.55rem; padding:3px 7px; border-radius:6px; font-weight:800; white-space:nowrap; border:1px solid #10b98155;">✅ CONV.</span>
                            <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.75rem; padding:2px 4px;">✕</button>`
-                        : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}','${a.modalidade||'jiujitsu'}')" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:0.55rem; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:700; white-space:nowrap;">🥋 CONVOCAR</button>`
+                        : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}','${_modAluno}',${_jjConv},${_mtConv})" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:0.55rem; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:700; white-space:nowrap;">🥋 CONVOCAR</button>`
                     }
                 </div>
             </div>`;
@@ -1677,13 +1685,16 @@ const academia = {
         container.innerHTML = html;
     },
 
-    marcarParaExame(id, nome, modalidadeAluno) {
+    marcarParaExame(id, nome, modalidadeAluno, jjJaConv, mtJaConv) {
         const _mods = [
             { id:'jiujitsu', label:'🥋 Jiu-Jitsu', cor:'#22c55e', bg:'#052e16' },
             { id:'muaythai', label:'🥊 Muay Thai',  cor:'#ef4444', bg:'#2d0a0a' },
         ];
         const _modAluno = modalidadeAluno || 'jiujitsu';
-        const modsDisponiveis = _modAluno === 'ambos' ? _mods : _mods.filter(m => m.id === _modAluno);
+        let modsDisponiveis = _modAluno === 'ambos' ? _mods : _mods.filter(m => m.id === _modAluno);
+        if (jjJaConv) modsDisponiveis = modsDisponiveis.filter(m => m.id !== 'jiujitsu');
+        if (mtJaConv) modsDisponiveis = modsDisponiveis.filter(m => m.id !== 'muaythai');
+        if (!modsDisponiveis.length) return;
 
         const executar = async (modEscolhida) => {
             const _modLabel = modEscolhida === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu';

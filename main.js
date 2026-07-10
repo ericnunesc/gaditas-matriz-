@@ -1677,11 +1677,13 @@ const academia = {
         container.innerHTML = html;
     },
 
-    async marcarParaExame(id, nome) {
-        if (!confirm(`Convocar ${nome} para o exame de faixa?\n\nEle(a) verá um aviso fixo no perfil até ser graduado(a).`)) return;
-        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, modalidadeConvocado: exame._modalidadeExame || 'jiujitsu', convocacaoPendente: true, taxaExamePaga: false, examePresencaConfirmada: false });
-        push.paraAluno(id, '🏆 Você foi convocado(a)!', `Parabéns! Seu professor te indicou para o exame de faixa. OSS! 🥋`);
-        alert(`✅ ${nome} foi convocado(a) para o exame de faixa! OSS!`);
+    async marcarParaExame(id, nome, modalidadeAluno) {
+        const _mod = exame._modalidadeExame || 'jiujitsu';
+        const _modLabel = _mod === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu';
+        if (!confirm(`Convocar ${nome} para o exame de faixa?\n\nModalidade: ${_modLabel}\n\nEle(a) verá um aviso fixo no perfil até ser graduado(a).`)) return;
+        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, modalidadeConvocado: _mod, convocacaoPendente: true, taxaExamePaga: false, examePresencaConfirmada: false });
+        push.paraAluno(id, '🏆 Você foi convocado(a)!', `Parabéns! Seu professor te indicou para o exame de faixa de ${_modLabel}. OSS! 🥋`);
+        alert(`✅ ${nome} foi convocado(a) para o exame de faixa de ${_modLabel}! OSS!`);
         this.generarRelatorioGraduacao();
     },
 
@@ -1691,15 +1693,22 @@ const academia = {
         this.generarRelatorioGraduacao();
     },
 
-    async indicarParaFaixa(id, nome, faixaAtual) {
-        if (!confirm(`Indicar ${nome} para o Exame de Faixa (${faixaAtual || 'atual'})?`)) return;
+    async indicarParaFaixa(id, nome, faixaAtual, modalidadeAluno) {
+        let _mod = modalidadeAluno || 'jiujitsu';
+        if (_mod === 'ambos') {
+            const escolhaMT = confirm(`${nome} pratica Jiu-Jitsu E Muay Thai.\n\nOK = Muay Thai\nCancelar = Jiu-Jitsu\n\nQual modalidade deseja indicar?`);
+            _mod = escolhaMT ? 'muaythai' : 'jiujitsu';
+        }
+        const _modLabel = _mod === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu';
+        if (!confirm(`Indicar ${nome} para o Exame de Faixa de ${_modLabel}?`)) return;
         const dataHoje = new Date().toLocaleDateString('pt-BR');
         await db.collection('alunos').doc(id).update({
             indicadoFaixa: true,
             indicadoFaixaData: dataHoje,
-            indicadoFaixaAtual: faixaAtual || ''
+            indicadoFaixaAtual: faixaAtual || '',
+            modalidadeIndicacao: _mod
         });
-        alert(`✅ ${nome} foi indicado para o Exame de Faixa!\n\nEle verá a notificação no painel.`);
+        alert(`✅ ${nome} foi indicado para o Exame de Faixa de ${_modLabel}!\n\nEle verá a notificação no painel.`);
         this.renderAlunos();
     },
 
@@ -2579,7 +2588,7 @@ const academia = {
                     <button onclick="academia.removerPresencaAdmin('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Remover presença" style="background:#2a0808;border:1px solid #ef4444;color:#ef4444;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;"><i class="fas fa-minus"></i> Presença</button>
                     ${isAdmin ? (a.indicadoFaixa
                         ? `<button onclick="academia.removerIndicacaoFaixa('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" style="background:#064e3b;border:1px solid #10b981;color:#10b981;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;">✅ Indicado — Remover</button>`
-                        : `<button onclick="academia.indicarParaFaixa('${doc.id}','${a.nome.replace(/'/g, "\\'")}','${(a.faixa||'').replace(/'/g, "\\'")}')" style="background:#1e293b;border:1px solid #f59e0b;color:#f59e0b;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;">🥋 Indicar p/ Faixa</button>`
+                        : `<button onclick="academia.indicarParaFaixa('${doc.id}','${a.nome.replace(/'/g, "\\'")}','${(a.faixa||'').replace(/'/g, "\\'")}','${a.modalidade||'jiujitsu'}')" style="background:#1e293b;border:1px solid #f59e0b;color:#f59e0b;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;">🥋 Indicar p/ Faixa</button>`
                     ) : ''}
                 </div>
             </div>`;

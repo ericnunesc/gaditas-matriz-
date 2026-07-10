@@ -8804,7 +8804,7 @@ const ui = {
     _corMTSingle(nome) {
         const c = {
             'Branco':'#e2e8f0', 'Vermelha':'#dc2626',
-            'Azul Clara':'#60a5fa', 'Azul Escura':'#1d4ed8', 'Preta':'#111827'
+            'Azul Clara':'#60a5fa', 'Azul Escura':'#1a3bcc', 'Preta':'#111827'
         };
         return c[nome.trim()] || '#475569';
     },
@@ -8868,8 +8868,8 @@ const ui = {
         if (f === "Vermelha")                 return "#dc2626";   // vermelho
         if (f.startsWith("Azul Clara ponta")) return "#60a5fa";   // azul clara
         if (f === "Azul Clara")               return "#60a5fa";   // azul clara
-        if (f.startsWith("Azul Escura ponta"))return "#1d4ed8";   // azul escura
-        if (f === "Azul Escura")              return "#1d4ed8";   // azul escura
+        if (f.startsWith("Azul Escura ponta"))return "#1a3bcc";   // azul marinho
+        if (f === "Azul Escura")              return "#1a3bcc";   // azul marinho
         if (f.startsWith("Preta ponta"))      return "#334155";   // preta/branca
         if (f.includes("Branca e Vermelha"))  return "#7f1d1d";   // grão mestre
         if (f === "Preta")                    return "#0f172a";   // preta
@@ -11161,7 +11161,7 @@ const exame = {
                 grupos[grupos.length - 1].alunos.push(a);
             });
 
-            const coresMT = {'Branco (Iniciante)':'#cbd5e1','Branco ponta Vermelha':'#fca5a5','Vermelha':'#dc2626','Vermelha ponta Azul Clara':'#f87171','Azul Clara':'#60a5fa','Azul Clara ponta Azul Escura (Monitor)':'#3b82f6','Azul Escura (Instrutor Auxiliar)':'#1d4ed8','Azul Escura ponta Preta (Instrutor)':'#1e40af','Preta (Professor)':'#1e293b','Preta ponta Branca (Mestre)':'#334155','Preta, Ponta Branca e Vermelha (Grão Mestre)':'#7f1d1d'};
+            const coresMT = {'Branco (Iniciante)':'#cbd5e1','Branco ponta Vermelha':'#fca5a5','Vermelha':'#dc2626','Vermelha ponta Azul Clara':'#f87171','Azul Clara':'#60a5fa','Azul Clara ponta Azul Escura (Monitor)':'#3b82f6','Azul Escura (Instrutor Auxiliar)':'#1a3bcc','Azul Escura ponta Preta (Instrutor)':'#1a3bcc','Preta (Professor)':'#1e293b','Preta ponta Branca (Mestre)':'#334155','Preta, Ponta Branca e Vermelha (Grão Mestre)':'#7f1d1d'};
             let num = 1;
             const html = grupos.map(g => {
                 const cor = _isMTChamada ? (coresMT[g.faixa] || '#475569') : (coresFaixa[g.faixa] || '#475569');

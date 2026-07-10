@@ -1688,10 +1688,13 @@ const academia = {
         const executar = async (modEscolhida) => {
             const _modLabel = modEscolhida === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu';
             if (!confirm(`Convocar ${nome} para o exame de ${_modLabel}?\n\nEle(a) verá um aviso fixo no perfil até ser graduado(a).`)) return;
-            await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, modalidadeConvocado: modEscolhida, convocacaoPendente: true, taxaExamePaga: false, examePresencaConfirmada: false });
-            push.paraAluno(id, '🏆 Você foi convocado(a)!', `Parabéns! Seu professor te indicou para o exame de faixa de ${_modLabel}. OSS! 🥋`);
-            alert(`✅ ${nome} convocado(a) para o exame de ${_modLabel}! OSS!`);
-            this.generarRelatorioGraduacao();
+            try {
+                await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, modalidadeConvocado: modEscolhida, convocacaoPendente: true, taxaExamePaga: false, examePresencaConfirmada: false });
+                try { push.paraAluno(id, '🏆 Você foi convocado(a)!', `Parabéns! Seu professor te indicou para o exame de faixa de ${_modLabel}. OSS! 🥋`); } catch(_) {}
+                alert(`✅ ${nome} convocado(a) para o exame de ${_modLabel}! OSS!`);
+                this.generarRelatorioGraduacao();
+                if (document.getElementById('lista-confirmados-exame')) exame.carregarConfirmados();
+            } catch(e) { alert('Erro ao convocar: ' + e.message); }
         };
 
         if (modsDisponiveis.length === 1) { executar(modsDisponiveis[0].id); return; }

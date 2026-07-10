@@ -1704,6 +1704,7 @@ const academia = {
                 try { push.paraAluno(id, '🏆 Você foi convocado(a)!', `Parabéns! Seu professor te indicou para o exame de faixa de ${_modLabel}. OSS! 🥋`); } catch(_) {}
                 alert(`✅ ${nome} convocado(a) para o exame de ${_modLabel}! OSS!`);
                 this.generarRelatorioGraduacao();
+                this.renderAlunos();
                 if (document.getElementById('lista-confirmados-exame')) exame.carregarConfirmados();
             } catch(e) { alert('Erro ao convocar: ' + e.message); }
         };
@@ -1725,6 +1726,7 @@ const academia = {
             aspiranteGraduacao: restantes.length > 0,
         });
         this.generarRelatorioGraduacao();
+        this.renderAlunos();
         if (document.getElementById('lista-confirmados-exame')) exame.carregarConfirmados();
     },
 
@@ -3388,7 +3390,17 @@ const academia = {
         } else {
             document.getElementById('select-faixa').innerHTML = graduacao.adulto.map(f => `<option value="${f}">${f}</option>`).join('');
         }
-        if (a.faixa) { document.getElementById('select-faixa').value = a.faixa; }
+        if (a.faixa) {
+            const _selFx = document.getElementById('select-faixa');
+            _selFx.value = a.faixa;
+            // Se a faixa atual não está nas opções (custom), adiciona temporariamente
+            if (_selFx.value !== a.faixa) {
+                const _opt = document.createElement('option');
+                _opt.value = a.faixa; _opt.textContent = a.faixa;
+                _selFx.appendChild(_opt);
+                _selFx.value = a.faixa;
+            }
+        }
         ui.atualizarGraus();
         if (a.grau !== undefined) { document.getElementById('select-graus').value = a.grau; }
         // Graduação MT (sem graus — só faixa)
@@ -4208,11 +4220,16 @@ Ele voltará a ser aluno normal.`)) return;
             try {
                 const docAtual = await db.collection("alunos").doc(id).get();
                 const dadosAtuais = docAtual.data() || {};
-                const faixaMudou = dadosAtuais.faixa !== dados.faixa;
-                const grauMudou  = dadosAtuais.grau  !== dados.grau;
-                const faixaMTMudou = dados.faixaMT && dadosAtuais.faixaMT !== dados.faixaMT;
-                if (dadosAtuais.aspiranteGraduacao && (faixaMudou || grauMudou)) {
-                    dados.aspiranteGraduacao = false;
+                const faixaMudou   = dados.faixa  !== undefined && dadosAtuais.faixa  !== dados.faixa;
+                const grauMudou    = dados.grau   !== undefined && dadosAtuais.grau   !== dados.grau;
+                const faixaMTMudou = dados.faixaMT !== undefined && dadosAtuais.faixaMT !== dados.faixaMT;
+                if (dadosAtuais.aspiranteGraduacao && (faixaMudou || grauMudou || faixaMTMudou)) {
+                    // Limpa apenas a modalidade que foi graduada
+                    const _modGrad = faixaMTMudou && !faixaMudou && !grauMudou ? 'muaythai' : 'jiujitsu';
+                    const _mcsAtual = dadosAtuais.modalidadesConvocado || {};
+                    const _restantes = Object.entries({ ..._mcsAtual, [_modGrad]: false }).filter(([,v]) => v === true);
+                    dados[`modalidadesConvocado.${_modGrad}`] = false;
+                    dados.aspiranteGraduacao = _restantes.length > 0;
                 }
                 const hoje = new Date();
                 const dataFormatada = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;

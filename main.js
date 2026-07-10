@@ -10475,6 +10475,10 @@ const exame = {
         this.carregarPainelAdmin();
     },
 
+    _provaDocId()      { const m = this._modalidadeExame||'jiujitsu'; return m==='jiujitsu'?'prova_regras':`prova_regras_${m}`; },
+    _preReqsBibDocId() { const m = this._modalidadeExame||'jiujitsu'; return m==='jiujitsu'?'prereqs_biblioteca':`prereqs_biblioteca_${m}`; },
+    _preReqsFaixaDocId(){ const m = this._modalidadeExame||'jiujitsu'; return m==='jiujitsu'?'prereqs_por_faixa':`prereqs_por_faixa_${m}`; },
+
     // ── Categoria do aluno ─────────────────────────────────
     _getCategoria(aluno) {
         let idade = 99;
@@ -11689,11 +11693,11 @@ const exame = {
             prereqsAccordion +
             provaAccordion +
             convocadosAccordion +
-            `<div id="tecnicas-exame-painel" style="margin-top:10px;"></div>`;
+            (_modAtual === 'jiujitsu' ? `<div id="tecnicas-exame-painel" style="margin-top:10px;"></div>` : '');
 
         this.carregarConfirmados();
         this.carregarRelatorioExame({ kids, adulto, preta, mt });
-        tecnicasExame.carregarPainel();
+        if (_modAtual === 'jiujitsu') tecnicasExame.carregarPainel();
         this.carregarPainelPreReqs();
         this.carregarPainelProvaRegras();
     },
@@ -11781,8 +11785,8 @@ const exame = {
             const [snap, snapPend, bibDoc, faixaDoc] = await Promise.all([
                 db.collection('alunos').where('aspiranteGraduacao', '==', true).get(),
                 db.collection('alunos').where('taxaExamePendentePagamento', '==', true).get(),
-                db.collection('configuracoes').doc('prereqs_biblioteca').get(),
-                db.collection('configuracoes').doc('prereqs_por_faixa').get(),
+                db.collection('configuracoes').doc(this._preReqsBibDocId()).get(),
+                db.collection('configuracoes').doc(this._preReqsFaixaDocId()).get(),
             ]);
             const prereqBib    = bibDoc.exists  ? (bibDoc.data().items  || []) : [];
             const prereqFaixas = faixaDoc.exists ? (faixaDoc.data().faixas || {}) : {};
@@ -12193,7 +12197,7 @@ const exame = {
     },
 
     async _loadProva() {
-        const doc = await db.collection('configuracoes').doc('prova_regras').get();
+        const doc = await db.collection('configuracoes').doc(this._provaDocId()).get();
         return doc.exists ? doc.data() : { liberada: false, perguntas: [] };
     },
 
@@ -12255,6 +12259,7 @@ const exame = {
         el.innerHTML = `
             <div style="margin-bottom:12px;">
                 <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:0.5px;margin-bottom:4px;">🎯 ALVO DA PROVA <span style="font-size:0.52rem;color:#64748b;font-weight:500;">(pode marcar vários)</span></div>
+                ${(this._modalidadeExame||'jiujitsu')==='jiujitsu' ? `
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">
                     ${['adulto','kids','preta'].map(t => {
                         const lbl = t==='adulto'?'🥋 Adulto':t==='kids'?'🧒 Kids':'⬛ Faixa Preta';
@@ -12274,7 +12279,18 @@ const exame = {
                             ${sel?'✔ ':''}${f}
                         </button>`;
                     }).join('')}
-                </div>
+                </div>` : `
+                <div style="font-size:0.58rem;font-weight:800;color:#64748b;margin-bottom:6px;">POR FAIXA ESPECÍFICA:</div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">
+                    ${['Branco (Iniciante)','Branco ponta Vermelha','Vermelha','Vermelha ponta Azul Clara','Azul Clara','Azul Clara ponta Azul Escura (Monitor)','Azul Escura (Instrutor Auxiliar)','Azul Escura ponta Preta (Instrutor)','Preta (Professor)','Preta ponta Branca (Mestre)','Preta, Ponta Branca e Vermelha (Grão Mestre)'].map(f => {
+                        const sel = isSel('faixa', f);
+                        return `<button onclick="exame.setProvaTarget('faixa','${f.replace(/'/g,"\\'")}')"
+                            style="padding:4px 8px;font-size:0.58rem;font-weight:800;border-radius:6px;cursor:pointer;border:2px solid ${sel?'#f97316':'#334155'};background:${sel?'#f9731622':'#0f172a'};color:${sel?'#f97316':'#64748b'};">
+                            ${sel?'✔ ':''}${f}
+                        </button>`;
+                    }).join('')}
+                </div>`}
+
                 <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:0.5px;margin-bottom:6px;">⚙️ STATUS</div>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <div style="flex:1;font-size:0.6rem;color:${liberada?'#10b981':'#64748b'};">
@@ -12314,7 +12330,7 @@ const exame = {
         const targets = Array.isArray(prova.targets) ? [...prova.targets] : [];
         const idx = targets.findIndex(t => t.tipo === tipo && t.valor === valor);
         if (idx >= 0) targets.splice(idx, 1); else targets.push({ tipo, valor });
-        await db.collection('configuracoes').doc('prova_regras').set(
+        await db.collection('configuracoes').doc(this._provaDocId()).set(
             { targets, target: firebase.firestore.FieldValue.delete() }, { merge: true });
         this.carregarPainelProvaRegras();
     },
@@ -12324,7 +12340,7 @@ const exame = {
         const update = val > 0
             ? { tempoLimiteMinutos: val }
             : { tempoLimiteMinutos: firebase.firestore.FieldValue.delete() };
-        await db.collection('configuracoes').doc('prova_regras').set(update, { merge: true });
+        await db.collection('configuracoes').doc(this._provaDocId()).set(update, { merge: true });
         this.carregarPainelProvaRegras();
     },
 
@@ -12333,13 +12349,13 @@ const exame = {
             const prova = await this._loadProva();
             const targets = this._getProvaTargets(prova);
             if (!targets.length) {
-                await db.collection('configuracoes').doc('prova_regras').set(
+                await db.collection('configuracoes').doc(this._provaDocId()).set(
                     { targets: [{ tipo: 'indicados' }], liberada: true }, { merge: true });
                 this.carregarPainelProvaRegras();
                 return;
             }
         }
-        await db.collection('configuracoes').doc('prova_regras').set({ liberada: !atual }, { merge: true });
+        await db.collection('configuracoes').doc(this._provaDocId()).set({ liberada: !atual }, { merge: true });
         this.carregarPainelProvaRegras();
     },
 
@@ -12425,7 +12441,7 @@ const exame = {
         } else {
             pergs.push({ id: 'pq_' + Date.now(), enunciado, opcoes, respostaCorreta, videoUrl });
         }
-        await db.collection('configuracoes').doc('prova_regras').set({ ...prova, perguntas: pergs });
+        await db.collection('configuracoes').doc(this._provaDocId()).set({ ...prova, perguntas: pergs });
         document.getElementById('modal-pergunta-prova')?.remove();
         this.carregarPainelProvaRegras();
     },
@@ -12434,7 +12450,7 @@ const exame = {
         if (!confirm('Remover esta pergunta?')) return;
         const prova = await this._loadProva();
         const pergs = (prova.perguntas || []).filter(p => p.id !== id);
-        await db.collection('configuracoes').doc('prova_regras').set({ ...prova, perguntas: pergs });
+        await db.collection('configuracoes').doc(this._provaDocId()).set({ ...prova, perguntas: pergs });
         this.carregarPainelProvaRegras();
     },
 
@@ -12696,8 +12712,8 @@ const exame = {
 
     async _loadPreReqs() {
         const [bib, pfx] = await Promise.all([
-            db.collection('configuracoes').doc('prereqs_biblioteca').get(),
-            db.collection('configuracoes').doc('prereqs_por_faixa').get(),
+            db.collection('configuracoes').doc(this._preReqsBibDocId()).get(),
+            db.collection('configuracoes').doc(this._preReqsFaixaDocId()).get(),
         ]);
         return {
             biblioteca: bib.exists ? (bib.data().items || []) : [],
@@ -12709,15 +12725,16 @@ const exame = {
         const el = document.getElementById('prereqs-painel');
         if (!el) return;
         const { biblioteca, porFaixa } = await this._loadPreReqs();
+        const _isMTPreReq = (this._modalidadeExame || 'jiujitsu') === 'muaythai';
 
-        const TODAS_FAIXAS = [
-            'Cinza/Branca','Cinza','Cinza/Preta',
-            'Amarela/Branca','Amarela','Amarela/Preta',
-            'Laranja/Branca','Laranja','Laranja/Preta',
-            'Verde/Branca','Verde','Verde/Preta',
-            'Azul','Roxa','Marrom','Preta',
-            'Preta 1º Grau','Preta 2º Grau','Preta 3º Grau'
-        ];
+        const TODAS_FAIXAS = _isMTPreReq
+            ? ['Branco (Iniciante)','Branco ponta Vermelha','Vermelha','Vermelha ponta Azul Clara','Azul Clara','Azul Clara ponta Azul Escura (Monitor)','Azul Escura (Instrutor Auxiliar)','Azul Escura ponta Preta (Instrutor)','Preta (Professor)','Preta ponta Branca (Mestre)','Preta, Ponta Branca e Vermelha (Grão Mestre)']
+            : ['Cinza/Branca','Cinza','Cinza/Preta',
+               'Amarela/Branca','Amarela','Amarela/Preta',
+               'Laranja/Branca','Laranja','Laranja/Preta',
+               'Verde/Branca','Verde','Verde/Preta',
+               'Azul','Roxa','Marrom','Preta',
+               'Preta 1º Grau','Preta 2º Grau','Preta 3º Grau'];
 
         const bibHtml = biblioteca.length
             ? biblioteca.map(it => `
@@ -12775,7 +12792,7 @@ const exame = {
         const { biblioteca } = await this._loadPreReqs();
         const id = 'pr_' + Date.now();
         biblioteca.push({ id, titulo });
-        await db.collection('configuracoes').doc('prereqs_biblioteca').set({ items: biblioteca });
+        await db.collection('configuracoes').doc(this._preReqsBibDocId()).set({ items: biblioteca });
         inp.value = '';
         this.carregarPainelPreReqs();
     },
@@ -12789,8 +12806,8 @@ const exame = {
             porFaixa[f] = porFaixa[f].filter(i => i !== id);
         });
         await Promise.all([
-            db.collection('configuracoes').doc('prereqs_biblioteca').set({ items: novaBib }),
-            db.collection('configuracoes').doc('prereqs_por_faixa').set({ faixas: porFaixa }),
+            db.collection('configuracoes').doc(this._preReqsBibDocId()).set({ items: novaBib }),
+            db.collection('configuracoes').doc(this._preReqsFaixaDocId()).set({ faixas: porFaixa }),
         ]);
         this.carregarPainelPreReqs();
     },
@@ -12801,7 +12818,7 @@ const exame = {
         porFaixa[faixa] = checkbox.checked
             ? [...new Set([...atual, prereqId])]
             : atual.filter(i => i !== prereqId);
-        await db.collection('configuracoes').doc('prereqs_por_faixa').set({ faixas: porFaixa });
+        await db.collection('configuracoes').doc(this._preReqsFaixaDocId()).set({ faixas: porFaixa });
         // Atualiza contador no cabeçalho da faixa
         const chaveId = 'pf-cnt-' + faixa.replace(/[^a-zA-Z0-9]/g,'_');
         const cntEl = document.getElementById(chaveId);

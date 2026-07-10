@@ -1689,7 +1689,7 @@ const academia = {
             const _modLabel = modEscolhida === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu';
             if (!confirm(`Convocar ${nome} para o exame de ${_modLabel}?\n\nEle(a) verá um aviso fixo no perfil até ser graduado(a).`)) return;
             try {
-                await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, modalidadeConvocado: modEscolhida, convocacaoPendente: true, taxaExamePaga: false, examePresencaConfirmada: false });
+                await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, [`modalidadesConvocado.${modEscolhida}`]: true, convocacaoPendente: true });
                 try { push.paraAluno(id, '🏆 Você foi convocado(a)!', `Parabéns! Seu professor te indicou para o exame de faixa de ${_modLabel}. OSS! 🥋`); } catch(_) {}
                 alert(`✅ ${nome} convocado(a) para o exame de ${_modLabel}! OSS!`);
                 this.generarRelatorioGraduacao();
@@ -1702,9 +1702,19 @@ const academia = {
     },
 
     async desmarcarExame(id, nome) {
-        if (!confirm(`Cancelar a convocação de ${nome}?`)) return;
-        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: false });
+        const _mod = exame._modalidadeExame || 'jiujitsu';
+        const _modLabel = _mod === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu';
+        if (!confirm(`Cancelar a convocação de ${nome} para ${_modLabel}?`)) return;
+        // Lê o doc para saber quais modalidades ainda ativas
+        const docSnap = await db.collection('alunos').doc(id).get();
+        const mcs = docSnap.exists ? (docSnap.data().modalidadesConvocado || {}) : {};
+        const restantes = Object.entries({ ...mcs, [_mod]: false }).filter(([,v]) => v === true);
+        await db.collection('alunos').doc(id).update({
+            [`modalidadesConvocado.${_mod}`]: false,
+            aspiranteGraduacao: restantes.length > 0,
+        });
         this.generarRelatorioGraduacao();
+        if (document.getElementById('lista-confirmados-exame')) exame.carregarConfirmados();
     },
 
     indicarParaFaixa(id, nome, faixaAtual, modalidadeAluno) {
@@ -1718,15 +1728,17 @@ const academia = {
         const executar = async (modEscolhida) => {
             const _modLabel = modEscolhida === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu';
             if (!confirm(`Indicar ${nome} para o Exame de Faixa de ${_modLabel}?`)) return;
-            const dataHoje = new Date().toLocaleDateString('pt-BR');
-            await db.collection('alunos').doc(id).update({
-                indicadoFaixa: true,
-                indicadoFaixaData: dataHoje,
-                indicadoFaixaAtual: faixaAtual || '',
-                modalidadeIndicacao: modEscolhida
-            });
-            alert(`✅ ${nome} indicado(a) para Exame de Faixa de ${_modLabel}!\n\nEle verá a notificação no painel.`);
-            this.renderAlunos();
+            try {
+                const dataHoje = new Date().toLocaleDateString('pt-BR');
+                await db.collection('alunos').doc(id).update({
+                    indicadoFaixa: true,
+                    indicadoFaixaData: dataHoje,
+                    indicadoFaixaAtual: faixaAtual || '',
+                    modalidadeIndicacao: modEscolhida
+                });
+                alert(`✅ ${nome} indicado(a) para Exame de Faixa de ${_modLabel}!\n\nEle verá a notificação no painel.`);
+                this.renderAlunos();
+            } catch(e) { alert('Erro ao indicar: ' + e.message); }
         };
 
         if (modsDisponiveis.length === 1) { executar(modsDisponiveis[0].id); return; }
@@ -11854,7 +11866,14 @@ const exame = {
             }).join('');
 
             const _modFiltro = exame._modalidadeExame || 'jiujitsu';
-            const snapDocs = snap.docs.filter(doc => { const d = doc.data(); const mc = d.modalidadeConvocado || d.modalidade || 'jiujitsu'; return mc === _modFiltro || mc === 'ambos'; });
+            const snapDocs = snap.docs.filter(doc => {
+                const d = doc.data();
+                // Novo formato: modalidadesConvocado.{mod} = true
+                if (d.modalidadesConvocado && typeof d.modalidadesConvocado === 'object') return d.modalidadesConvocado[_modFiltro] === true;
+                // Legado: modalidadeConvocado string
+                const mc = d.modalidadeConvocado || d.modalidade || 'jiujitsu';
+                return mc === _modFiltro || mc === 'ambos';
+            });
 
             if (snapDocs.length === 0 && snapPend.empty) { container.innerHTML = '<small style="color:#475569;font-size:0.65rem;">Nenhum aluno convocado.</small>'; return; }
             if (snapDocs.length === 0) { container.innerHTML = pendHtml; return; }
@@ -11864,15 +11883,27 @@ const exame = {
             const groupLabels = { kids:'🧒 KIDS', Azul:'🔵 AZUL', Roxa:'🟣 ROXA', Marrom:'🟤 MARROM → PRETA', Preta:'⬛ FAIXA PRETA' };
 
             // Monta lista e agrupa
+            const _isMTConf = _modFiltro === 'muaythai';
+            const ordemMTConf = ['Branco (Iniciante)','Branco ponta Vermelha','Vermelha','Vermelha ponta Azul Clara','Azul Clara','Azul Clara ponta Azul Escura (Monitor)','Azul Escura (Instrutor Auxiliar)','Azul Escura ponta Preta (Instrutor)','Preta (Professor)','Preta ponta Branca (Mestre)','Preta, Ponta Branca e Vermelha (Grão Mestre)'];
             const grupos = {};
             snapDocs.forEach(doc => {
                 const a = doc.data(); const id = doc.id;
-                const cat = this._getCategoria(a);
-                const proxFaixa = this._getProxFaixa(a, cat);
-                const group = cat === 'kids' ? 'kids' : proxFaixa.split(' ')[0];
-                let sortKey = cat === 'kids'
-                    ? `0_${String(infantil.indexOf(proxFaixa) >= 0 ? infantil.indexOf(proxFaixa) : 99).padStart(2,'0')}`
-                    : `1_${String(adultoOrder[proxFaixa.split(' ')[0]] || 50).padStart(2,'0')}`;
+                let group, sortKey, proxFaixa, cat;
+                if (_isMTConf) {
+                    const faixaMT = a.faixaMT || ordemMTConf[0];
+                    const idxMT = ordemMTConf.indexOf(faixaMT);
+                    group = faixaMT;
+                    proxFaixa = faixaMT;
+                    cat = 'muaythai';
+                    sortKey = String(idxMT >= 0 ? idxMT : 99).padStart(2, '0');
+                } else {
+                    cat = this._getCategoria(a);
+                    proxFaixa = this._getProxFaixa(a, cat) || (a.faixa || 'Branca');
+                    group = cat === 'kids' ? 'kids' : (proxFaixa.split(' ')[0] || 'Branca');
+                    sortKey = cat === 'kids'
+                        ? `0_${String(infantil.indexOf(proxFaixa) >= 0 ? infantil.indexOf(proxFaixa) : 99).padStart(2,'0')}`
+                        : `1_${String(adultoOrder[proxFaixa.split(' ')[0]] || 50).padStart(2,'0')}`;
+                }
                 if (!grupos[group]) grupos[group] = { sortKey, items: [] };
                 grupos[group].items.push({ a, id, cat, proxFaixa });
             });
@@ -11882,8 +11913,8 @@ const exame = {
             let html = Object.entries(grupos)
                 .sort(([,a],[,b]) => a.sortKey.localeCompare(b.sortKey))
                 .map(([group, { items }]) => {
-                    const cor = grupoCor[group] || '#94a3b8';
-                    const label = groupLabels[group] || group.toUpperCase();
+                    const cor = _isMTConf ? '#ef4444' : (grupoCor[group] || '#94a3b8');
+                    const label = _isMTConf ? `🥊 ${group}` : (groupLabels[group] || group.toUpperCase());
                     const total = items.length;
                     const conf  = items.filter(i => i.a.examePresencaConfirmada).length;
 
@@ -11892,9 +11923,9 @@ const exame = {
                         const avPct        = a.exameAvaliacaoPercentual;
                         const avLiberada   = a.exameAvaliacaoLiberada === true;
                         const temAvaliacao = avPct !== undefined && a.exameAvaliacao;
-                        const corNome      = this._corNome(proxFaixa);
-                        const faixaDestino = a.proxFaixaCustom || proxFaixa;
-                        const seletorKids  = cat === 'kids' ? `
+                        const corNome      = _isMTConf ? '#ef4444' : this._corNome(proxFaixa);
+                        const faixaDestino = _isMTConf ? (a.faixaMT || ordemMTConf[0]) : (a.proxFaixaCustom || proxFaixa);
+                        const seletorKids  = (!_isMTConf && cat === 'kids') ? `
                             <div style="margin-top:5px;display:flex;gap:6px;align-items:center;">
                                 <small style="color:#f59e0b;font-size:0.55rem;font-weight:800;white-space:nowrap;">Faixa destino:</small>
                                 <select onchange="exame.salvarProxFaixaKids('${id}',this.value);exame.atualizarCorNome('${id}',this.value)"
@@ -11920,7 +11951,7 @@ const exame = {
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <div style="flex:1;min-width:0;">
                                     <div id="nome-conv-${id}" style="font-size:0.82rem;font-weight:800;color:${corNome};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome}</div>
-                                    <div id="sub-conv-${id}" data-faixa-atual="${a.faixa}" style="font-size:0.6rem;color:#64748b;margin-top:1px;">${a.faixa} → <span style="color:${corNome};font-weight:700;">${faixaDestino}</span> • ${a.aulas||0} aulas</div>
+                                    <div id="sub-conv-${id}" data-faixa-atual="${_isMTConf?(a.faixaMT||''):(a.faixa||'')}" style="font-size:0.6rem;color:#64748b;margin-top:1px;">${_isMTConf?`🥊 ${faixaDestino}`:`${a.faixa||'Branca'} → <span style="color:${corNome};font-weight:700;">${faixaDestino}</span>`} • ${a.aulas||0} aulas</div>
                                 </div>
                                 <button onclick="exame.togglePresencaAdmin('${id}',${confirmou})"
                                     style="font-size:0.58rem;font-weight:800;color:${confirmou?'#10b981':'#f59e0b'};white-space:nowrap;margin-left:8px;background:${confirmou?'#05200f':'#1c1400'};border:1px solid ${confirmou?'#10b98155':'#f59e0b55'};border-radius:6px;padding:4px 8px;cursor:pointer;">
@@ -12074,7 +12105,9 @@ const exame = {
             const todosRelatorio = [...snap.docs, ...snapPend.docs].filter(d => {
                 if (docsVistos.has(d.id)) return false;
                 docsVistos.add(d.id);
-                const _dd = d.data(); const _mc = _dd.modalidadeConvocado || _dd.modalidade || 'jiujitsu'; return _mc === _modRel || _mc === 'ambos';
+                const _dd = d.data();
+                if (_dd.modalidadesConvocado && typeof _dd.modalidadesConvocado === 'object') return _dd.modalidadesConvocado[_modRel] === true;
+                const _mc = _dd.modalidadeConvocado || _dd.modalidade || 'jiujitsu'; return _mc === _modRel || _mc === 'ambos';
             });
             if (todosRelatorio.length === 0) { el.innerHTML = ''; return; }
 

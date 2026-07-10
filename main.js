@@ -10433,6 +10433,13 @@ const aniversario = {
 // ══════════════════════════════════════════════════════════
 const exame = {
 
+    _modalidadeExame: 'jiujitsu',
+
+    setModalidadeExame(mod) {
+        this._modalidadeExame = mod;
+        this.carregarPainelAdmin();
+    },
+
     // ── Categoria do aluno ─────────────────────────────────
     _getCategoria(aluno) {
         let idade = 99;
@@ -10944,7 +10951,8 @@ const exame = {
             };
             const snapAlunos = await db.collection('alunos').get();
 
-            let alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false && (a.modalidade || 'jiujitsu') === 'jiujitsu');
+            const _modLista = exame._modalidadeExame || 'jiujitsu';
+            let alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false && (a.modalidade || 'jiujitsu') === _modLista);
 
             const ordenar = (lista, ordem) => lista.slice().sort((a, b) => {
                 const fa = a.faixa||'Branca', fb = b.faixa||'Branca';
@@ -10956,7 +10964,7 @@ const exame = {
             let listaOrdenada = [];
 
             if (filtro === 'exame') {
-                const convocados = alunos.filter(a => a.aspiranteGraduacao === true && (a.modalidade || 'jiujitsu') === 'jiujitsu')
+                const convocados = alunos.filter(a => a.aspiranteGraduacao === true)
                     .map(a => ({ ...a, _proxFaixa: this._getProxFaixa(a, getCat(a)), _isKids: isKids(a) }));
                 convocados.sort((a, b) => {
                     if (a._isKids !== b._isKids) return a._isKids ? -1 : 1;
@@ -11431,6 +11439,19 @@ const exame = {
                        || document.getElementById('painel-config-exame');
         if (!container) return;
 
+        const _mods = [
+            { id:'jiujitsu', label:'🥋 Jiu-Jitsu', cor:'#22c55e', bg:'#052e16' },
+            { id:'muaythai', label:'🥊 Muay Thai',  cor:'#ef4444', bg:'#2d0a0a' },
+        ];
+        const _modAtual = this._modalidadeExame || 'jiujitsu';
+        const _seletorMod = `<div style="display:flex;gap:6px;margin-bottom:14px;">
+            ${_mods.map(m => `<button onclick="exame.setModalidadeExame('${m.id}')"
+                style="flex:1;padding:9px 6px;font-size:0.7rem;font-weight:800;border-radius:10px;cursor:pointer;
+                border:2px solid ${_modAtual===m.id?m.cor:'#334155'};
+                background:${_modAtual===m.id?m.bg:'#0f172a'};
+                color:${_modAtual===m.id?m.cor:'#64748b'};">${m.label}</button>`).join('')}
+        </div>`;
+
         // Carrega as 3 configs em paralelo
         const [dKids, dAdulto, dPreta] = await Promise.all([
             db.collection('configuracoes').doc('exame_kids').get(),
@@ -11595,6 +11616,7 @@ const exame = {
             `<div id="prova-regras-painel"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>`);
 
         container.innerHTML =
+            _seletorMod +
             `<div id="relatorio-exame" style="margin-bottom:10px;"><small style="color:#475569;font-size:0.65rem;">Carregando relatório...</small></div>` +
             efiAccordion +
             secao('🧒 KIDS', '#f59e0b', 'kids', kids) +
@@ -11717,8 +11739,11 @@ const exame = {
                 </div>`;
             }).join('');
 
-            if (snap.empty && snapPend.empty) { container.innerHTML = '<small style="color:#475569;font-size:0.65rem;">Nenhum aluno convocado.</small>'; return; }
-            if (snap.empty) { container.innerHTML = pendHtml; return; }
+            const _modFiltro = exame._modalidadeExame || 'jiujitsu';
+            const snapDocs = snap.docs.filter(doc => (doc.data().modalidade || 'jiujitsu') === _modFiltro);
+
+            if (snapDocs.length === 0 && snapPend.empty) { container.innerHTML = '<small style="color:#475569;font-size:0.65rem;">Nenhum aluno convocado.</small>'; return; }
+            if (snapDocs.length === 0) { container.innerHTML = pendHtml; return; }
 
             const infantil = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
             const adultoOrder = { 'Azul':10, 'Roxa':20, 'Marrom':30, 'Preta':40 };
@@ -11726,7 +11751,7 @@ const exame = {
 
             // Monta lista e agrupa
             const grupos = {};
-            snap.docs.forEach(doc => {
+            snapDocs.forEach(doc => {
                 const a = doc.data(); const id = doc.id;
                 const cat = this._getCategoria(a);
                 const proxFaixa = this._getProxFaixa(a, cat);

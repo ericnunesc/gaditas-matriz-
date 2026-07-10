@@ -10956,7 +10956,7 @@ const exame = {
             let listaOrdenada = [];
 
             if (filtro === 'exame') {
-                const convocados = alunos.filter(a => a.aspiranteGraduacao === true)
+                const convocados = alunos.filter(a => a.aspiranteGraduacao === true && (a.modalidade || 'jiujitsu') === 'jiujitsu')
                     .map(a => ({ ...a, _proxFaixa: this._getProxFaixa(a, getCat(a)), _isKids: isKids(a) }));
                 convocados.sort((a, b) => {
                     if (a._isKids !== b._isKids) return a._isKids ? -1 : 1;

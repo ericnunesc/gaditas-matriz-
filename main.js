@@ -1695,7 +1695,7 @@ const academia = {
         };
 
         if (modsDisponiveis.length === 1) { executar(modsDisponiveis[0].id); return; }
-        this._escolherModalidade('🏆 Convocar para Exame de Faixa', nome, modsDisponiveis, executar);
+        exame._escolherModalidade('🏆 Convocar para Exame de Faixa', nome, modsDisponiveis, executar);
     },
 
     async desmarcarExame(id, nome) {
@@ -1727,7 +1727,7 @@ const academia = {
         };
 
         if (modsDisponiveis.length === 1) { executar(modsDisponiveis[0].id); return; }
-        this._escolherModalidade('🥋 Indicar para Exame de Faixa', nome, modsDisponiveis, executar);
+        exame._escolherModalidade('🥋 Indicar para Exame de Faixa', nome, modsDisponiveis, executar);
     },
 
     async removerIndicacaoFaixa(id, nome) {

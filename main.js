@@ -1632,7 +1632,7 @@ const academia = {
                         ${convocado
                             ? `<span style="background:#064e3b; color:#10b981; font-size:0.6rem; padding:4px 8px; border-radius:6px; font-weight:800; white-space:nowrap; border:1px solid #10b981;">✅ CONVOCADO</span>
                                <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.85rem; padding:2px 4px;">✕</button>`
-                            : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}')" style="background:#92400e; border:1px solid #f59e0b; color:#fbbf24; font-size:0.6rem; padding:5px 10px; border-radius:6px; cursor:pointer; font-weight:800; white-space:nowrap;">🥋 CONVOCAR</button>`
+                            : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}','${a.modalidade||'jiujitsu'}')" style="background:#92400e; border:1px solid #f59e0b; color:#fbbf24; font-size:0.6rem; padding:5px 10px; border-radius:6px; cursor:pointer; font-weight:800; white-space:nowrap;">🥋 CONVOCAR</button>`
                         }
                     </div>
                 </div>`;
@@ -1668,7 +1668,7 @@ const academia = {
                     ${convocado
                         ? `<span style="background:#064e3b; color:#10b981; font-size:0.55rem; padding:3px 7px; border-radius:6px; font-weight:800; white-space:nowrap; border:1px solid #10b98155;">✅ CONV.</span>
                            <button onclick="academia.desmarcarExame('${id}','${nomeEsc}')" title="Cancelar" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:0.75rem; padding:2px 4px;">✕</button>`
-                        : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}')" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:0.55rem; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:700; white-space:nowrap;">🥋 CONVOCAR</button>`
+                        : `<button onclick="academia.marcarParaExame('${id}','${nomeEsc}','${a.modalidade||'jiujitsu'}')" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:0.55rem; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:700; white-space:nowrap;">🥋 CONVOCAR</button>`
                     }
                 </div>
             </div>`;
@@ -1677,14 +1677,25 @@ const academia = {
         container.innerHTML = html;
     },
 
-    async marcarParaExame(id, nome, modalidadeAluno) {
-        const _mod = exame._modalidadeExame || 'jiujitsu';
-        const _modLabel = _mod === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu';
-        if (!confirm(`Convocar ${nome} para o exame de faixa?\n\nModalidade: ${_modLabel}\n\nEle(a) verá um aviso fixo no perfil até ser graduado(a).`)) return;
-        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, modalidadeConvocado: _mod, convocacaoPendente: true, taxaExamePaga: false, examePresencaConfirmada: false });
-        push.paraAluno(id, '🏆 Você foi convocado(a)!', `Parabéns! Seu professor te indicou para o exame de faixa de ${_modLabel}. OSS! 🥋`);
-        alert(`✅ ${nome} foi convocado(a) para o exame de faixa de ${_modLabel}! OSS!`);
-        this.generarRelatorioGraduacao();
+    marcarParaExame(id, nome, modalidadeAluno) {
+        const _mods = [
+            { id:'jiujitsu', label:'🥋 Jiu-Jitsu', cor:'#22c55e', bg:'#052e16' },
+            { id:'muaythai', label:'🥊 Muay Thai',  cor:'#ef4444', bg:'#2d0a0a' },
+        ];
+        const _modAluno = modalidadeAluno || 'jiujitsu';
+        const modsDisponiveis = _modAluno === 'ambos' ? _mods : _mods.filter(m => m.id === _modAluno);
+
+        const executar = async (modEscolhida) => {
+            const _modLabel = modEscolhida === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu';
+            if (!confirm(`Convocar ${nome} para o exame de ${_modLabel}?\n\nEle(a) verá um aviso fixo no perfil até ser graduado(a).`)) return;
+            await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, modalidadeConvocado: modEscolhida, convocacaoPendente: true, taxaExamePaga: false, examePresencaConfirmada: false });
+            push.paraAluno(id, '🏆 Você foi convocado(a)!', `Parabéns! Seu professor te indicou para o exame de faixa de ${_modLabel}. OSS! 🥋`);
+            alert(`✅ ${nome} convocado(a) para o exame de ${_modLabel}! OSS!`);
+            this.generarRelatorioGraduacao();
+        };
+
+        if (modsDisponiveis.length === 1) { executar(modsDisponiveis[0].id); return; }
+        this._escolherModalidade('🏆 Convocar para Exame de Faixa', nome, modsDisponiveis, executar);
     },
 
     async desmarcarExame(id, nome) {
@@ -1693,23 +1704,30 @@ const academia = {
         this.generarRelatorioGraduacao();
     },
 
-    async indicarParaFaixa(id, nome, faixaAtual, modalidadeAluno) {
-        let _mod = modalidadeAluno || 'jiujitsu';
-        if (_mod === 'ambos') {
-            const escolhaMT = confirm(`${nome} pratica Jiu-Jitsu E Muay Thai.\n\nOK = Muay Thai\nCancelar = Jiu-Jitsu\n\nQual modalidade deseja indicar?`);
-            _mod = escolhaMT ? 'muaythai' : 'jiujitsu';
-        }
-        const _modLabel = _mod === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu';
-        if (!confirm(`Indicar ${nome} para o Exame de Faixa de ${_modLabel}?`)) return;
-        const dataHoje = new Date().toLocaleDateString('pt-BR');
-        await db.collection('alunos').doc(id).update({
-            indicadoFaixa: true,
-            indicadoFaixaData: dataHoje,
-            indicadoFaixaAtual: faixaAtual || '',
-            modalidadeIndicacao: _mod
-        });
-        alert(`✅ ${nome} foi indicado para o Exame de Faixa de ${_modLabel}!\n\nEle verá a notificação no painel.`);
-        this.renderAlunos();
+    indicarParaFaixa(id, nome, faixaAtual, modalidadeAluno) {
+        const _mods = [
+            { id:'jiujitsu', label:'🥋 Jiu-Jitsu', cor:'#22c55e', bg:'#052e16' },
+            { id:'muaythai', label:'🥊 Muay Thai',  cor:'#ef4444', bg:'#2d0a0a' },
+        ];
+        const _modAluno = modalidadeAluno || 'jiujitsu';
+        const modsDisponiveis = _modAluno === 'ambos' ? _mods : _mods.filter(m => m.id === _modAluno);
+
+        const executar = async (modEscolhida) => {
+            const _modLabel = modEscolhida === 'muaythai' ? 'Muay Thai' : 'Jiu-Jitsu';
+            if (!confirm(`Indicar ${nome} para o Exame de Faixa de ${_modLabel}?`)) return;
+            const dataHoje = new Date().toLocaleDateString('pt-BR');
+            await db.collection('alunos').doc(id).update({
+                indicadoFaixa: true,
+                indicadoFaixaData: dataHoje,
+                indicadoFaixaAtual: faixaAtual || '',
+                modalidadeIndicacao: modEscolhida
+            });
+            alert(`✅ ${nome} indicado(a) para Exame de Faixa de ${_modLabel}!\n\nEle verá a notificação no painel.`);
+            this.renderAlunos();
+        };
+
+        if (modsDisponiveis.length === 1) { executar(modsDisponiveis[0].id); return; }
+        this._escolherModalidade('🥋 Indicar para Exame de Faixa', nome, modsDisponiveis, executar);
     },
 
     async removerIndicacaoFaixa(id, nome) {
@@ -10473,6 +10491,31 @@ const exame = {
     setModalidadeExame(mod) {
         this._modalidadeExame = mod;
         this.carregarPainelAdmin();
+    },
+
+    _modalModCallback: null,
+    _escolherModalidade(titulo, nome, mods, onEscolha) {
+        document.getElementById('_modal-escolha-mod')?.remove();
+        this._modalModCallback = onEscolha;
+        const el = document.createElement('div');
+        el.id = '_modal-escolha-mod';
+        el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        el.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:24px;max-width:320px;width:100%;box-shadow:0 20px 60px #000a;">
+            <div style="font-size:0.6rem;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${titulo}</div>
+            <div style="font-size:0.9rem;font-weight:900;color:white;margin-bottom:16px;">${nome}</div>
+            <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:14px;">Selecione a modalidade do exame:</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                ${mods.map(m => `<button onclick="document.getElementById('_modal-escolha-mod').remove();exame._modalModCallback('${m.id}')"
+                    style="padding:14px 16px;background:${m.bg};border:2px solid ${m.cor};color:${m.cor};border-radius:10px;font-size:0.85rem;font-weight:800;cursor:pointer;text-align:left;">
+                    ${m.label}
+                </button>`).join('')}
+                <button onclick="document.getElementById('_modal-escolha-mod').remove();exame._modalModCallback=null"
+                    style="padding:10px;background:transparent;border:1px solid #334155;color:#64748b;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;margin-top:4px;">
+                    Cancelar
+                </button>
+            </div>
+        </div>`;
+        document.body.appendChild(el);
     },
 
     _provaDocId()      { const m = this._modalidadeExame||'jiujitsu'; return m==='jiujitsu'?'prova_regras':`prova_regras_${m}`; },

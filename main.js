@@ -1679,7 +1679,7 @@ const academia = {
 
     async marcarParaExame(id, nome) {
         if (!confirm(`Convocar ${nome} para o exame de faixa?\n\nEle(a) verá um aviso fixo no perfil até ser graduado(a).`)) return;
-        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, convocacaoPendente: true, taxaExamePaga: false, examePresencaConfirmada: false });
+        await db.collection('alunos').doc(id).update({ aspiranteGraduacao: true, modalidadeConvocado: exame._modalidadeExame || 'jiujitsu', convocacaoPendente: true, taxaExamePaga: false, examePresencaConfirmada: false });
         push.paraAluno(id, '🏆 Você foi convocado(a)!', `Parabéns! Seu professor te indicou para o exame de faixa. OSS! 🥋`);
         alert(`✅ ${nome} foi convocado(a) para o exame de faixa! OSS!`);
         this.generarRelatorioGraduacao();
@@ -10881,9 +10881,13 @@ const exame = {
         m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:10010;display:flex;flex-direction:column;padding:16px;box-sizing:border-box;overflow-y:auto;';
         document.body.appendChild(m);
 
+        const _modChamada = exame._modalidadeExame || 'jiujitsu';
+        const _isMTChamada = _modChamada === 'muaythai';
+        const ordemMT = ['Branco (Iniciante)','Branco ponta Vermelha','Vermelha','Vermelha ponta Azul Clara','Azul Clara','Azul Clara ponta Azul Escura (Monitor)','Azul Escura (Instrutor Auxiliar)','Azul Escura ponta Preta (Instrutor)','Preta (Professor)','Preta ponta Branca (Mestre)','Preta, Ponta Branca e Vermelha (Grão Mestre)'];
         const ordemKids   = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
         const ordemAdulto = ['Branca','Azul','Roxa','Marrom','Preta','Preta 1º Grau','Preta 2º Grau','Preta 3º Grau','Preta 4º Grau'];
         const kidsExclusivos = new Set(['Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta']);
+        const _getFaixaChamada = (a) => _isMTChamada ? (a.faixaMT || 'Branco (Iniciante)') : (a.faixa || 'Branca');
 
         const coresFaixa = {
             'Branca':'#e2e8f0','Cinza/Branca':'#b0bec5','Cinza':'#94a3b8','Cinza/Preta':'#607d8b',
@@ -10956,7 +10960,7 @@ const exame = {
             let alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false && _pertenceMod(a, _modLista));
 
             const ordenar = (lista, ordem) => lista.slice().sort((a, b) => {
-                const fa = a.faixa||'Branca', fb = b.faixa||'Branca';
+                const fa = _getFaixaChamada(a), fb = _getFaixaChamada(b);
                 const ia = ordem.indexOf(fa), ib = ordem.indexOf(fb);
                 if (ia !== ib) return (ia<0?99:ia) - (ib<0?99:ib);
                 return (a.nome||'').localeCompare(b.nome||'', 'pt-BR');
@@ -10965,22 +10969,36 @@ const exame = {
             let listaOrdenada = [];
 
             if (filtro === 'exame') {
-                const convocados = alunos.filter(a => a.aspiranteGraduacao === true)
-                    .map(a => ({ ...a, _proxFaixa: this._getProxFaixa(a, getCat(a)), _isKids: isKids(a) }));
-                convocados.sort((a, b) => {
-                    if (a._isKids !== b._isKids) return a._isKids ? -1 : 1;
-                    const ordem = a._isKids ? ordemKids : ordemAdulto;
-                    const ia = ordem.indexOf(a._proxFaixa), ib = ordem.indexOf(b._proxFaixa);
-                    if (ia !== ib) return (ia<0?99:ia) - (ib<0?99:ib);
-                    return (a.nome||'').localeCompare(b.nome||'', 'pt-BR');
-                });
+                const convocados = alunos.filter(a => a.aspiranteGraduacao === true);
+                if (_isMTChamada) {
+                    convocados.sort((a, b) => {
+                        const ia = ordemMT.indexOf(a.faixaMT||'Branco (Iniciante)'), ib = ordemMT.indexOf(b.faixaMT||'Branco (Iniciante)');
+                        if (ia !== ib) return (ia<0?99:ia) - (ib<0?99:ib);
+                        return (a.nome||'').localeCompare(b.nome||'', 'pt-BR');
+                    });
+                } else {
+                    convocados.sort((a, b) => {
+                        const _ak = isKids(a), _bk = isKids(b);
+                        if (_ak !== _bk) return _ak ? -1 : 1;
+                        const ordem = _ak ? ordemKids : ordemAdulto;
+                        const pfa = this._getProxFaixa(a, getCat(a)), pfb = this._getProxFaixa(b, getCat(b));
+                        const ia = ordem.indexOf(pfa), ib = ordem.indexOf(pfb);
+                        if (ia !== ib) return (ia<0?99:ia) - (ib<0?99:ib);
+                        return (a.nome||'').localeCompare(b.nome||'', 'pt-BR');
+                    });
+                    convocados.forEach(a => { a._proxFaixa = this._getProxFaixa(a, getCat(a)); a._isKids = isKids(a); });
+                }
                 listaOrdenada = convocados;
             } else {
-                if (filtro === 'kids') alunos = alunos.filter(a => isKids(a));
-                else if (filtro === 'adultos') alunos = alunos.filter(a => !isKids(a));
-                if (filtro === 'kids') listaOrdenada = ordenar(alunos, ordemKids);
-                else if (filtro === 'adultos') listaOrdenada = ordenar(alunos, ordemAdulto);
-                else listaOrdenada = [...ordenar(alunos.filter(a => isKids(a)), ordemKids), ...ordenar(alunos.filter(a => !isKids(a)), ordemAdulto)];
+                if (_isMTChamada) {
+                    listaOrdenada = ordenar(alunos, ordemMT);
+                } else {
+                    if (filtro === 'kids') alunos = alunos.filter(a => isKids(a));
+                    else if (filtro === 'adultos') alunos = alunos.filter(a => !isKids(a));
+                    if (filtro === 'kids') listaOrdenada = ordenar(alunos, ordemKids);
+                    else if (filtro === 'adultos') listaOrdenada = ordenar(alunos, ordemAdulto);
+                    else listaOrdenada = [...ordenar(alunos.filter(a => isKids(a)), ordemKids), ...ordenar(alunos.filter(a => !isKids(a)), ordemAdulto)];
+                }
             }
 
             if (!listaOrdenada.length) {
@@ -10988,7 +11006,7 @@ const exame = {
                 return;
             }
 
-            const chaveGrupo = (a) => filtro === 'exame' ? (a._proxFaixa || 'Branca') : (a.faixa || 'Branca');
+            const chaveGrupo = (a) => _isMTChamada ? (a.faixaMT || 'Branco (Iniciante)') : filtro === 'exame' ? (a._proxFaixa || 'Branca') : (a.faixa || 'Branca');
             const grupos = [];
             let faixaAtual = null;
             listaOrdenada.forEach(a => {
@@ -10997,10 +11015,11 @@ const exame = {
                 grupos[grupos.length - 1].alunos.push(a);
             });
 
+            const coresMT = {'Branco (Iniciante)':'#cbd5e1','Branco ponta Vermelha':'#fca5a5','Vermelha':'#dc2626','Vermelha ponta Azul Clara':'#f87171','Azul Clara':'#60a5fa','Azul Clara ponta Azul Escura (Monitor)':'#3b82f6','Azul Escura (Instrutor Auxiliar)':'#1d4ed8','Azul Escura ponta Preta (Instrutor)':'#1e40af','Preta (Professor)':'#1e293b','Preta ponta Branca (Mestre)':'#334155','Preta, Ponta Branca e Vermelha (Grão Mestre)':'#7f1d1d'};
             let num = 1;
             const html = grupos.map(g => {
-                const cor = coresFaixa[g.faixa] || '#475569';
-                const txt = txtFaixa(g.faixa);
+                const cor = _isMTChamada ? (coresMT[g.faixa] || '#475569') : (coresFaixa[g.faixa] || '#475569');
+                const txt = _isMTChamada ? '#fff' : txtFaixa(g.faixa);
                 const marcados = new Set(JSON.parse(localStorage.getItem('chamada_marcados') || '[]'));
 
                 const linhas = g.alunos.map(a => {
@@ -11014,9 +11033,12 @@ const exame = {
                         ? `<span style="display:inline-flex;gap:3px;margin-left:5px;vertical-align:middle;">${'<span style="width:9px;height:9px;border-radius:50%;background:#f97316;display:inline-block;border:1px solid #fb923c;"></span>'.repeat(grau)}</span>`
                         : '';
                     const grauLabel = grau > 0 ? `<strong style="color:white;font-weight:800;">${grau} grau${grau>1?'s':''}</strong>` : '<span style="color:#475569;">sem grau</span>';
-                    const faixaBadge = filtro === 'exame'
-                        ? `<div style="font-size:0.6rem;color:#94a3b8;margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;">Atual: <strong style="color:white;">${a.faixa||'Branca'}</strong>${grauDots} ${grauLabel}${isKids(a)?' 🧒':''}</div>`
-                        : `<div style="font-size:0.6rem;color:#94a3b8;margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;"><strong style="color:white;">${a.faixa||'Branca'}</strong>${grauDots} ${grauLabel}${filtro==='todos'&&isKids(a)?' · 🧒':''}</div>`;
+                    const _faixaLabel = _getFaixaChamada(a);
+                    const faixaBadge = _isMTChamada
+                        ? `<div style="font-size:0.6rem;color:#94a3b8;margin-top:2px;"><strong style="color:white;">${_faixaLabel}</strong></div>`
+                        : filtro === 'exame'
+                            ? `<div style="font-size:0.6rem;color:#94a3b8;margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;">Atual: <strong style="color:white;">${a.faixa||'Branca'}</strong>${grauDots} ${grauLabel}${isKids(a)?' 🧒':''}</div>`
+                            : `<div style="font-size:0.6rem;color:#94a3b8;margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;"><strong style="color:white;">${a.faixa||'Branca'}</strong>${grauDots} ${grauLabel}${filtro==='todos'&&isKids(a)?' · 🧒':''}</div>`;
                     const afastadoBadge = afastado30
                         ? `<div style="font-size:0.52rem;color:#ef4444;font-weight:800;margin-top:1px;">🚨 AFASTADO +30d</div>`
                         : afastado14
@@ -11039,7 +11061,7 @@ const exame = {
                         <span style="font-size:1.1rem;${marcado?'':'opacity:0;'}" class="chamada-check">✅</span>
                     </div>`;
                 }).join('');
-                const labelHeader = filtro === 'exame' ? `🏅 RECEBE: ${g.faixa.toUpperCase()}` : `🥋 ${g.faixa.toUpperCase()}`;
+                const labelHeader = _isMTChamada ? `🥊 ${g.faixa}` : filtro === 'exame' ? `🏅 RECEBE: ${g.faixa.toUpperCase()}` : `🥋 ${g.faixa.toUpperCase()}`;
                 return `<div style="margin-bottom:10px;border-radius:10px;overflow:hidden;border:1px solid #1e293b;">
                     <div style="background:${cor};padding:7px 12px;display:flex;justify-content:space-between;align-items:center;">
                         <span style="font-size:0.65rem;font-weight:900;color:${txt};">${labelHeader}</span>
@@ -11747,7 +11769,7 @@ const exame = {
             }).join('');
 
             const _modFiltro = exame._modalidadeExame || 'jiujitsu';
-            const snapDocs = snap.docs.filter(doc => { const m = doc.data().modalidade || 'jiujitsu'; return m === _modFiltro || m === 'ambos'; });
+            const snapDocs = snap.docs.filter(doc => { const d = doc.data(); const mc = d.modalidadeConvocado || d.modalidade || 'jiujitsu'; return mc === _modFiltro || mc === 'ambos'; });
 
             if (snapDocs.length === 0 && snapPend.empty) { container.innerHTML = '<small style="color:#475569;font-size:0.65rem;">Nenhum aluno convocado.</small>'; return; }
             if (snapDocs.length === 0) { container.innerHTML = pendHtml; return; }
@@ -11967,7 +11989,7 @@ const exame = {
             const todosRelatorio = [...snap.docs, ...snapPend.docs].filter(d => {
                 if (docsVistos.has(d.id)) return false;
                 docsVistos.add(d.id);
-                const _m = d.data().modalidade || 'jiujitsu'; return _m === _modRel || _m === 'ambos';
+                const _dd = d.data(); const _mc = _dd.modalidadeConvocado || _dd.modalidade || 'jiujitsu'; return _mc === _modRel || _mc === 'ambos';
             });
             if (todosRelatorio.length === 0) { el.innerHTML = ''; return; }
 

@@ -10944,7 +10944,7 @@ const exame = {
             };
             const snapAlunos = await db.collection('alunos').get();
 
-            let alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false);
+            let alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false && (a.modalidade || 'jiujitsu') === 'jiujitsu');
 
             const ordenar = (lista, ordem) => lista.slice().sort((a, b) => {
                 const fa = a.faixa||'Branca', fb = b.faixa||'Branca';

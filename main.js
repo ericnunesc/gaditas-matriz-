@@ -10952,7 +10952,8 @@ const exame = {
             const snapAlunos = await db.collection('alunos').get();
 
             const _modLista = exame._modalidadeExame || 'jiujitsu';
-            let alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false && (a.modalidade || 'jiujitsu') === _modLista);
+            const _pertenceMod = (a, mod) => { const m = a.modalidade || 'jiujitsu'; return m === mod || m === 'ambos'; };
+            let alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.nome && a.ativo !== false && _pertenceMod(a, _modLista));
 
             const ordenar = (lista, ordem) => lista.slice().sort((a, b) => {
                 const fa = a.faixa||'Branca', fb = b.faixa||'Branca';
@@ -11746,7 +11747,7 @@ const exame = {
             }).join('');
 
             const _modFiltro = exame._modalidadeExame || 'jiujitsu';
-            const snapDocs = snap.docs.filter(doc => (doc.data().modalidade || 'jiujitsu') === _modFiltro);
+            const snapDocs = snap.docs.filter(doc => { const m = doc.data().modalidade || 'jiujitsu'; return m === _modFiltro || m === 'ambos'; });
 
             if (snapDocs.length === 0 && snapPend.empty) { container.innerHTML = '<small style="color:#475569;font-size:0.65rem;">Nenhum aluno convocado.</small>'; return; }
             if (snapDocs.length === 0) { container.innerHTML = pendHtml; return; }
@@ -11966,7 +11967,7 @@ const exame = {
             const todosRelatorio = [...snap.docs, ...snapPend.docs].filter(d => {
                 if (docsVistos.has(d.id)) return false;
                 docsVistos.add(d.id);
-                return (d.data().modalidade || 'jiujitsu') === _modRel;
+                const _m = d.data().modalidade || 'jiujitsu'; return _m === _modRel || _m === 'ambos';
             });
             if (todosRelatorio.length === 0) { el.innerHTML = ''; return; }
 

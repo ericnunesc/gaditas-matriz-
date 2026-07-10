@@ -2613,7 +2613,7 @@ const academia = {
                         ${tagsLeoes}
                     </div>
                 </div>
-                <!-- Linha botões -->
+                <!-- Linha botões ações -->
                 <div style="display:flex; flex-wrap:wrap; gap:5px; padding-top:2px; border-top:1px solid #1e293b;">
                     <button onclick="academia.abrirModalEditarAluno('${doc.id}')" title="Editar" style="background:#1e3a5f;border:1px solid #3b82f6;color:#93c5fd;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-edit"></i></button>
                     ${telLimpo ? `<button onclick="academia.abrirWhatsappBusiness('${telLimpo}')" title="WhatsApp" style="background:#064e3b;border:none;color:#25d366;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fab fa-whatsapp"></i></button>` : ''}
@@ -2630,6 +2630,9 @@ const academia = {
                     <button onclick="academia.verCheckinsPendentesAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Check-ins pendentes" style="background:#1a1a00;border:1px solid #ca8a04;color:#fbbf24;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;" id="btn-checkin-${doc.id}"><i class="fas fa-clock"></i></button>
                     <button onclick="academia.lancarPresencaManualAdmin('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#1e3a8a;border:none;color:#60a5fa;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;"><i class="fas fa-plus"></i> Presença</button>
                     <button onclick="academia.removerPresencaAdmin('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Remover presença" style="background:#2a0808;border:1px solid #ef4444;color:#ef4444;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;"><i class="fas fa-minus"></i> Presença</button>
+                </div>
+                <!-- Linha exame de faixa -->
+                <div style="display:flex; flex-wrap:wrap; gap:5px; padding-top:4px;">
                     ${(() => {
                         const _gMod   = a.modalidade || 'jiujitsu';
                         const _gMconv = a.modalidadesConvocado || {};
@@ -2637,16 +2640,18 @@ const academia = {
                         const _gMtConv = _gMconv.muaythai === true || (_gMod === 'muaythai' && a.aspiranteGraduacao === true);
                         const _id  = doc.id;
                         const _nom = a.nome.replace(/'/g, "\\'");
+                        const _btnStyle = 'background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;';
+                        const _convStyle = 'background:#0f2a1a;border:1px solid #166534;color:#86efac;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;';
                         let _btns = '';
                         if (_gMod === 'jiujitsu' || _gMod === 'ambos') {
                             _btns += _gJjConv
-                                ? `<span style="background:#064e3b;border:1px solid #10b981;color:#10b981;padding:5px 9px;border-radius:6px;font-size:0.6rem;font-weight:800;">✅ JJ</span><button onclick="academia.desmarcarExame('${_id}','${_nom}','jiujitsu')" title="Cancelar JJ" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:2px 4px;">✕</button>`
-                                : `<button onclick="academia.marcarParaExame('${_id}','${_nom}','jiujitsu',false,false)" style="background:#1e293b;border:1px solid #22c55e;color:#22c55e;padding:5px 9px;border-radius:6px;font-size:0.6rem;font-weight:800;cursor:pointer;">🥋 Conv JJ</button>`;
+                                ? `<span style="${_convStyle}">✅ Conv JJ</span> <button onclick="academia.desmarcarExame('${_id}','${_nom}','jiujitsu')" title="Cancelar convocação JJ" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:0 4px;">✕</button>`
+                                : `<button onclick="academia.marcarParaExame('${_id}','${_nom}','jiujitsu',false,false)" style="${_btnStyle}">🥋 Convocar JJ</button>`;
                         }
                         if (_gMod === 'muaythai' || _gMod === 'ambos') {
                             _btns += _gMtConv
-                                ? `<span style="background:#2d0a0a;border:1px solid #ef4444;color:#ef4444;padding:5px 9px;border-radius:6px;font-size:0.6rem;font-weight:800;">✅ MT</span><button onclick="academia.desmarcarExame('${_id}','${_nom}','muaythai')" title="Cancelar MT" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:2px 4px;">✕</button>`
-                                : `<button onclick="academia.marcarParaExame('${_id}','${_nom}','muaythai',false,false)" style="background:#1e293b;border:1px solid #ef4444;color:#ef4444;padding:5px 9px;border-radius:6px;font-size:0.6rem;font-weight:800;cursor:pointer;">🥊 Conv MT</button>`;
+                                ? `<span style="${_convStyle}">✅ Conv MT</span> <button onclick="academia.desmarcarExame('${_id}','${_nom}','muaythai')" title="Cancelar convocação MT" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:0 4px;">✕</button>`
+                                : `<button onclick="academia.marcarParaExame('${_id}','${_nom}','muaythai',false,false)" style="${_btnStyle}">🥊 Convocar MT</button>`;
                         }
                         return _btns;
                     })()}

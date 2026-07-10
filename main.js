@@ -11954,11 +11954,13 @@ const exame = {
                 db.collection('alunos').where('aspiranteGraduacao', '==', true).get(),
                 db.collection('alunos').where('taxaExamePendentePagamento', '==', true).get()
             ]);
-            // Junta os dois conjuntos sem duplicar
+            // Junta os dois conjuntos sem duplicar, filtrando pela modalidade selecionada
+            const _modRel = exame._modalidadeExame || 'jiujitsu';
             const docsVistos = new Set();
             const todosRelatorio = [...snap.docs, ...snapPend.docs].filter(d => {
                 if (docsVistos.has(d.id)) return false;
-                docsVistos.add(d.id); return true;
+                docsVistos.add(d.id);
+                return (d.data().modalidade || 'jiujitsu') === _modRel;
             });
             if (todosRelatorio.length === 0) { el.innerHTML = ''; return; }
 

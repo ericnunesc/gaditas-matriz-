@@ -2645,20 +2645,16 @@ const academia = {
                         let _btns = '';
                         if (_gMod === 'jiujitsu' || _gMod === 'ambos') {
                             _btns += _gJjConv
-                                ? `<span style="${_convStyle}">✅ Conv JJ</span> <button onclick="academia.desmarcarExame('${_id}','${_nom}','jiujitsu')" title="Cancelar convocação JJ" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:0 4px;">✕</button>`
-                                : `<button onclick="academia.marcarParaExame('${_id}','${_nom}','jiujitsu',false,false)" style="${_btnStyle}">🥋 Convocar JJ</button>`;
+                                ? `<span style="${_convStyle}">✅ Indicado JJ</span> <button onclick="academia.desmarcarExame('${_id}','${_nom}','jiujitsu')" title="Cancelar indicação JJ" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:0 4px;">✕</button>`
+                                : `<button onclick="academia.marcarParaExame('${_id}','${_nom}','jiujitsu',false,false)" style="${_btnStyle}">🥋 Indicar JJ</button>`;
                         }
                         if (_gMod === 'muaythai' || _gMod === 'ambos') {
                             _btns += _gMtConv
-                                ? `<span style="${_convStyle}">✅ Conv MT</span> <button onclick="academia.desmarcarExame('${_id}','${_nom}','muaythai')" title="Cancelar convocação MT" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:0 4px;">✕</button>`
-                                : `<button onclick="academia.marcarParaExame('${_id}','${_nom}','muaythai',false,false)" style="${_btnStyle}">🥊 Convocar MT</button>`;
+                                ? `<span style="${_convStyle}">✅ Indicado MT</span> <button onclick="academia.desmarcarExame('${_id}','${_nom}','muaythai')" title="Cancelar indicação MT" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:0 4px;">✕</button>`
+                                : `<button onclick="academia.marcarParaExame('${_id}','${_nom}','muaythai',false,false)" style="${_btnStyle}">🥊 Indicar MT</button>`;
                         }
                         return _btns;
                     })()}
-                    ${isAdmin ? (a.indicadoFaixa
-                        ? `<button onclick="academia.removerIndicacaoFaixa('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" style="background:#064e3b;border:1px solid #10b981;color:#10b981;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;">✅ Indicado — Remover</button>`
-                        : `<button onclick="academia.indicarParaFaixa('${doc.id}','${a.nome.replace(/'/g, "\\'")}','${(a.faixa||'').replace(/'/g, "\\'")}','${a.modalidade||'jiujitsu'}')" style="background:#1e293b;border:1px solid #f59e0b;color:#f59e0b;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;">🥋 Indicar p/ Faixa</button>`
-                    ) : ''}
                 </div>
             </div>`;
         });
@@ -4166,8 +4162,8 @@ Ele voltará a ser aluno normal.`)) return;
             email: document.getElementById('email-aluno').value.trim().toLowerCase(),
             nascimento: document.getElementById('nascimento-aluno').value,
             modalidade: modalidadeSalva,
-            faixa: novaFaixa,
-            grau: parseInt(document.getElementById('select-graus').value) || 0,
+            // Para alunos muaythai puro, não sobrescreve a faixa JJ
+            ...(modalidadeSalva !== 'muaythai' && { faixa: novaFaixa, grau: parseInt(document.getElementById('select-graus').value) || 0 }),
             cpf: document.getElementById('cpf-aluno') ? document.getElementById('cpf-aluno').value.replace(/\D/g, '') : "",
             telefone: document.getElementById('telefone-aluno') ? document.getElementById('telefone-aluno').value.replace(/\D/g, '') : "",
             cep: document.getElementById('cep-aluno') ? document.getElementById('cep-aluno').value.replace(/\D/g, '') : "",

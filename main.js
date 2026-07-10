@@ -11973,7 +11973,10 @@ const exame = {
                         const avLiberada   = a.exameAvaliacaoLiberada === true;
                         const temAvaliacao = avPct !== undefined && a.exameAvaliacao;
                         const corNome      = _isMTConf ? '#ef4444' : this._corNome(proxFaixa);
-                        const faixaDestino = _isMTConf ? (a.faixaMT || ordemMTConf[0]) : (a.proxFaixaCustom || proxFaixa);
+                        const _faixaMTAtual = a.faixaMT || ordemMTConf[0];
+                        const _idxMTAtual   = ordemMTConf.indexOf(_faixaMTAtual);
+                        const _proxMT       = ordemMTConf[_idxMTAtual + 1] || _faixaMTAtual;
+                        const faixaDestino  = _isMTConf ? _proxMT : (a.proxFaixaCustom || proxFaixa);
                         const seletorKids  = (!_isMTConf && cat === 'kids') ? `
                             <div style="margin-top:5px;display:flex;gap:6px;align-items:center;">
                                 <small style="color:#f59e0b;font-size:0.55rem;font-weight:800;white-space:nowrap;">Faixa destino:</small>
@@ -12068,7 +12071,7 @@ const exame = {
                                     style="flex:1;padding:7px;background:#1e1b4b;border:1px solid #6366f1;color:#a5b4fc;font-weight:800;font-size:0.65rem;border-radius:8px;cursor:pointer;">
                                     ${temAvaliacao ? '✏️ Editar' : '🎯 Avaliar'}
                                 </button>
-                                <button onclick="exame.graduarAluno('${id}')" data-faixa-destino="${faixaDestino}"
+                                <button onclick="exame.graduarAluno('${id}')" data-faixa-destino="${faixaDestino}" data-modalidade-grad="${_isMTConf ? 'muaythai' : 'jiujitsu'}"
                                     style="flex:2;padding:7px;background:linear-gradient(135deg,${corNome},${corNome}99);color:#000;font-weight:900;font-size:0.7rem;border:none;border-radius:8px;cursor:pointer;letter-spacing:1px;">
                                     🥋 GRADUAR
                                 </button>
@@ -13289,7 +13292,8 @@ const exame = {
     async graduarAluno(alunoId) {
         const card = document.getElementById(`card-conv-${alunoId}`);
         const btn = card?.querySelector('button[data-faixa-destino]');
-        const faixaDestino = btn?.dataset.faixaDestino;
+        const faixaDestino   = btn?.dataset.faixaDestino;
+        const modalidadeGrad = btn?.dataset.modalidadeGrad || 'jiujitsu';
         if (!faixaDestino) return;
 
         const nomeEl = document.getElementById(`nome-conv-${alunoId}`);
@@ -13308,30 +13312,46 @@ const exame = {
             const hoje = new Date();
             const dataFormatada = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
             const historicoGrad = dados.historicoGraduacao || [];
-            historicoGrad.push({ faixa: faixaDestino, grau: 0, faixaMT: null, modalidade: 'jiujitsu', data: dataFormatada });
 
-            await docRef.update({
-                faixa: faixaDestino,
-                grau: 0,
-                aspiranteGraduacao: false,
-                proxFaixaCustom: firebase.firestore.FieldValue.delete(),
-                graduacaoPendente: { faixa: faixaDestino, grau: 0, faixaMT: null, modalidadeAlterada: 'jiujitsu' },
-                historicoGraduacao: historicoGrad,
-                aulas: 0
-            });
+            // Verifica se ainda há outra modalidade convocada (para manter aspiranteGraduacao)
+            const mcs = dados.modalidadesConvocado || {};
+            const outrasAtivas = Object.entries({ ...mcs, [modalidadeGrad]: false }).filter(([,v]) => v === true);
 
-            // Push de parabéns
-            push.paraAluno(alunoId, '🏆 Parabéns! Nova faixa!', `Você foi graduado(a) para a faixa ${faixaDestino}! Muito orgulho! OSS! 🥋`);
-
-            // Se taxa não paga: mantém na lista via campo Firestore
-            const taxaPaga = dados.taxaExamePaga === true;
-            if (!taxaPaga) {
-                await docRef.update({ taxaExamePendentePagamento: true });
+            let updateObj;
+            if (modalidadeGrad === 'muaythai') {
+                historicoGrad.push({ faixaMT: faixaDestino, faixa: dados.faixa || '', grau: dados.grau || 0, modalidade: 'muaythai', data: dataFormatada });
+                updateObj = {
+                    faixaMT: faixaDestino,
+                    aulasMT: 0,
+                    'modalidadesConvocado.muaythai': false,
+                    aspiranteGraduacao: outrasAtivas.length > 0,
+                    graduacaoPendente: { faixaMT: faixaDestino, faixa: dados.faixa || '', grau: dados.grau || 0, modalidadeAlterada: 'muaythai' },
+                    historicoGraduacao: historicoGrad,
+                };
+            } else {
+                historicoGrad.push({ faixa: faixaDestino, grau: 0, faixaMT: dados.faixaMT || null, modalidade: 'jiujitsu', data: dataFormatada });
+                updateObj = {
+                    faixa: faixaDestino,
+                    grau: 0,
+                    aulas: 0,
+                    'modalidadesConvocado.jiujitsu': false,
+                    aspiranteGraduacao: outrasAtivas.length > 0,
+                    proxFaixaCustom: firebase.firestore.FieldValue.delete(),
+                    graduacaoPendente: { faixa: faixaDestino, grau: 0, faixaMT: dados.faixaMT || null, modalidadeAlterada: 'jiujitsu' },
+                    historicoGraduacao: historicoGrad,
+                };
             }
-            // Re-renderiza a lista (remove convocado normal, mostra pendente se necessário)
-            this.carregarConfirmados();
 
-            // Oferece emitir certificado
+            await docRef.update(updateObj);
+
+            try { push.paraAluno(alunoId, '🏆 Parabéns! Nova faixa!', `Você foi graduado(a) para ${faixaDestino}! Muito orgulho! OSS! 🥋`); } catch(_) {}
+
+            const taxaPaga = dados.taxaExamePaga === true;
+            if (!taxaPaga) { try { await docRef.update({ taxaExamePendentePagamento: true }); } catch(_) {} }
+
+            this.carregarConfirmados();
+            academia.renderAlunos();
+
             const hoje2 = new Date();
             const dataGrad = `${hoje2.getFullYear()}-${String(hoje2.getMonth()+1).padStart(2,'0')}-${String(hoje2.getDate()).padStart(2,'0')}`;
             setTimeout(() => certificado.abrirEmitir(alunoId, nome, faixaDestino, dataGrad, 0), 300);

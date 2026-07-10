@@ -1691,6 +1691,28 @@ const academia = {
         this.generarRelatorioGraduacao();
     },
 
+    async indicarParaFaixa(id, nome, faixaAtual) {
+        if (!confirm(`Indicar ${nome} para o Exame de Faixa (${faixaAtual || 'atual'})?`)) return;
+        const dataHoje = new Date().toLocaleDateString('pt-BR');
+        await db.collection('alunos').doc(id).update({
+            indicadoFaixa: true,
+            indicadoFaixaData: dataHoje,
+            indicadoFaixaAtual: faixaAtual || ''
+        });
+        alert(`✅ ${nome} foi indicado para o Exame de Faixa!\n\nEle verá a notificação no painel.`);
+        this.renderAlunos();
+    },
+
+    async removerIndicacaoFaixa(id, nome) {
+        if (!confirm(`Remover indicação de ${nome} para o Exame de Faixa?`)) return;
+        await db.collection('alunos').doc(id).update({
+            indicadoFaixa: false,
+            indicadoFaixaData: null,
+            indicadoFaixaAtual: ''
+        });
+        this.renderAlunos();
+    },
+
     async abrirMensagemIndicados() {
         try {
         const snap = await db.collection('alunos').where('aspiranteGraduacao','==',true).get();
@@ -2555,6 +2577,10 @@ const academia = {
                     <button onclick="academia.verCheckinsPendentesAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Check-ins pendentes" style="background:#1a1a00;border:1px solid #ca8a04;color:#fbbf24;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;" id="btn-checkin-${doc.id}"><i class="fas fa-clock"></i></button>
                     <button onclick="academia.lancarPresencaManualAdmin('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" style="background:#1e3a8a;border:none;color:#60a5fa;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;"><i class="fas fa-plus"></i> Presença</button>
                     <button onclick="academia.removerPresencaAdmin('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Remover presença" style="background:#2a0808;border:1px solid #ef4444;color:#ef4444;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;"><i class="fas fa-minus"></i> Presença</button>
+                    ${isAdmin ? (a.indicadoFaixa
+                        ? `<button onclick="academia.removerIndicacaoFaixa('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" style="background:#064e3b;border:1px solid #10b981;color:#10b981;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;">✅ Indicado — Remover</button>`
+                        : `<button onclick="academia.indicarParaFaixa('${doc.id}','${a.nome.replace(/'/g, "\\'")}','${(a.faixa||'').replace(/'/g, "\\'")}')" style="background:#1e293b;border:1px solid #f59e0b;color:#f59e0b;padding:5px 9px;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;">🥋 Indicar p/ Faixa</button>`
+                    ) : ''}
                 </div>
             </div>`;
         });

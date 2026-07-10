@@ -10480,7 +10480,7 @@ const exame = {
 
     // ── Doc Firestore por categoria ────────────────────────
     _docId(categoria) {
-        return { kids: 'exame_kids', adulto: 'exame_adulto', preta: 'exame_preta' }[categoria] || 'exame_adulto';
+        return { kids: 'exame_kids', adulto: 'exame_adulto', preta: 'exame_preta', muaythai: 'exame_muaythai' }[categoria] || 'exame_adulto';
     },
 
     // ── Cores por faixa ────────────────────────────────────
@@ -11452,15 +11452,17 @@ const exame = {
                 color:${_modAtual===m.id?m.cor:'#64748b'};">${m.label}</button>`).join('')}
         </div>`;
 
-        // Carrega as 3 configs em paralelo
-        const [dKids, dAdulto, dPreta] = await Promise.all([
+        // Carrega configs conforme modalidade
+        const [dKids, dAdulto, dPreta, dMT] = await Promise.all([
             db.collection('configuracoes').doc('exame_kids').get(),
             db.collection('configuracoes').doc('exame_adulto').get(),
-            db.collection('configuracoes').doc('exame_preta').get()
+            db.collection('configuracoes').doc('exame_preta').get(),
+            db.collection('configuracoes').doc('exame_muaythai').get(),
         ]);
         const kids   = dKids.exists   ? dKids.data()   : {};
         const adulto = dAdulto.exists  ? dAdulto.data()  : {};
         const preta  = dPreta.exists   ? dPreta.data()   : {};
+        const mt     = dMT.exists      ? dMT.data()      : {};
 
         const inp = (id, val, type='text', ph='') =>
             `<input type="${type}" id="${id}" value="${val||''}" placeholder="${ph}"
@@ -11615,20 +11617,24 @@ const exame = {
         const provaAccordion = accordion('prova-regras', '📝 PROVA DE REGRAS', '#f97316',
             `<div id="prova-regras-painel"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>`);
 
+        const secoesPorMod = _modAtual === 'muaythai'
+            ? secao('🥊 MUAY THAI', '#ef4444', 'muaythai', mt)
+            : secao('🧒 KIDS', '#f59e0b', 'kids', kids) +
+              secao('🥋 16+ ATÉ MARROM', '#3b82f6', 'adulto', adulto) +
+              secaoPreta();
+
         container.innerHTML =
             _seletorMod +
             `<div id="relatorio-exame" style="margin-bottom:10px;"><small style="color:#475569;font-size:0.65rem;">Carregando relatório...</small></div>` +
             efiAccordion +
-            secao('🧒 KIDS', '#f59e0b', 'kids', kids) +
-            secao('🥋 16+ ATÉ MARROM', '#3b82f6', 'adulto', adulto) +
-            secaoPreta() +
+            secoesPorMod +
             prereqsAccordion +
             provaAccordion +
             convocadosAccordion +
             `<div id="tecnicas-exame-painel" style="margin-top:10px;"></div>`;
 
         this.carregarConfirmados();
-        this.carregarRelatorioExame({ kids, adulto, preta });
+        this.carregarRelatorioExame({ kids, adulto, preta, mt });
         tecnicasExame.carregarPainel();
         this.carregarPainelPreReqs();
         this.carregarPainelProvaRegras();
@@ -11665,7 +11671,7 @@ const exame = {
             cfg.linkPagamento2 = g('link2').trim();
         }
         await db.collection('configuracoes').doc(this._docId(categoria)).set(cfg);
-        const labels = { kids:'🧒 Kids', adulto:'🥋 16+ até Marrom', preta:'⬛ Faixa Preta' };
+        const labels = { kids:'🧒 Kids', adulto:'🥋 16+ até Marrom', preta:'⬛ Faixa Preta', muaythai:'🥊 Muay Thai' };
         alert(`✅ Exame ${labels[categoria]} salvo! Alunos convocados já verão as informações.`);
     },
 
@@ -11946,7 +11952,7 @@ const exame = {
     },
 
     // ── Relatório resumido do exame ──────────────────────────
-    async carregarRelatorioExame({ kids, adulto, preta } = {}) {
+    async carregarRelatorioExame({ kids, adulto, preta, mt } = {}) {
         const el = document.getElementById('relatorio-exame');
         if (!el) return;
         try {
@@ -11980,8 +11986,8 @@ const exame = {
             todosRelatorio.forEach(doc => {
                 const a = doc.data();
                 const cat = this._getCategoria(a);
-                const proxFaixa = this._getProxFaixa(a, cat);
-                const faixaDestino = a.proxFaixaCustom || proxFaixa;
+                const proxFaixa = _modRel === 'muaythai' ? (a.faixaMT || 'Branco (Iniciante)') : this._getProxFaixa(a, cat);
+                const faixaDestino = _modRel === 'muaythai' ? proxFaixa : (a.proxFaixaCustom || proxFaixa);
                 total++;
                 if (a.examePresencaConfirmada) confirmados++; else pendentes++;
 
@@ -11992,6 +11998,7 @@ const exame = {
                 if (cat === 'preta')  taxa = a.faixa === 'Preta'
                     ? parseFloat((preta?.valor2 || '0').toString().replace(',','.')) || 0
                     : parseFloat((preta?.valor  || '0').toString().replace(',','.')) || 0;
+                if (_modRel === 'muaythai') taxa = parseFloat((mt?.valor || '0').toString().replace(',','.')) || 0;
                 receber += taxa;
                 if (a.taxaExamePaga) { pagaram++; totalPago += taxa; }
 

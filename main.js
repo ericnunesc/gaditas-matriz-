@@ -8804,11 +8804,13 @@ const ui = {
     },
 
     _corMTSingle(nome) {
-        const c = {
-            'Branco':'#e2e8f0', 'Branca':'#e2e8f0', 'Vermelha':'#dc2626',
-            'Azul Clara':'#60a5fa', 'Azul Escura':'#0000FF', 'Preta':'#000000'
-        };
-        return c[nome.trim()] || '#475569';
+        const n = nome.trim();
+        if (n.startsWith('Preta'))      return '#000000';
+        if (n.startsWith('Azul Escura'))return '#0000FF';
+        if (n.startsWith('Azul Clara')) return '#60a5fa';
+        if (n.startsWith('Vermelha'))   return '#dc2626';
+        if (n.startsWith('Branco') || n.startsWith('Branca')) return '#e2e8f0';
+        return '#475569';
     },
 
     renderBeltJJ(faixa, grau) {

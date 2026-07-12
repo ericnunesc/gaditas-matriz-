@@ -8805,7 +8805,7 @@ const ui = {
 
     _corMTSingle(nome) {
         const c = {
-            'Branco':'#e2e8f0', 'Vermelha':'#dc2626',
+            'Branco':'#e2e8f0', 'Branca':'#e2e8f0', 'Vermelha':'#dc2626',
             'Azul Clara':'#60a5fa', 'Azul Escura':'#0000FF', 'Preta':'#000000'
         };
         return c[nome.trim()] || '#475569';
@@ -8872,7 +8872,7 @@ const ui = {
         if (f === "Azul Clara")               return "#60a5fa";   // azul clara
         if (f.startsWith("Azul Escura ponta"))return "#0000FF";   // azul marinho
         if (f === "Azul Escura")              return "#0000FF";   // azul marinho
-        if (f.startsWith("Preta ponta"))      return "#334155";   // preta/branca
+        if (f.startsWith("Preta ponta"))      return "#000000";   // preta
         if (f.includes("Branca e Vermelha"))  return "#7f1d1d";   // grão mestre
         if (f === "Preta")                    return "#000000";   // preta
         return "#475569";
@@ -11163,7 +11163,7 @@ const exame = {
                 grupos[grupos.length - 1].alunos.push(a);
             });
 
-            const coresMT = {'Branco (Iniciante)':'#cbd5e1','Branco ponta Vermelha':'#fca5a5','Vermelha':'#dc2626','Vermelha ponta Azul Clara':'#f87171','Azul Clara':'#60a5fa','Azul Clara ponta Azul Escura (Monitor)':'#3b82f6','Azul Escura (Instrutor Auxiliar)':'#0000FF','Azul Escura ponta Preta (Instrutor)':'#0000FF','Preta (Professor)':'#000000','Preta ponta Branca (Mestre)':'#1e293b','Preta, Ponta Branca e Vermelha (Grão Mestre)':'#7f1d1d'};
+            const coresMT = {'Branco (Iniciante)':'#cbd5e1','Branco ponta Vermelha':'#fca5a5','Vermelha':'#dc2626','Vermelha ponta Azul Clara':'#f87171','Azul Clara':'#60a5fa','Azul Clara ponta Azul Escura (Monitor)':'#0000FF','Azul Escura (Instrutor Auxiliar)':'#0000FF','Azul Escura ponta Preta (Instrutor)':'#0000FF','Preta (Professor)':'#000000','Preta ponta Branca (Mestre)':'#000000','Preta, Ponta Branca e Vermelha (Grão Mestre)':'#000000'};
             let num = 1;
             const html = grupos.map(g => {
                 const cor = _isMTChamada ? (coresMT[g.faixa] || '#475569') : (coresFaixa[g.faixa] || '#475569');

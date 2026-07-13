@@ -19727,11 +19727,17 @@ const perguntas = {
                 </div>`;
             }
 
-            const snapProfs = await db.collection('professores').get();
-            const profsOpts = snapProfs.docs
-                .filter(d => !d.data().role || d.data().role === 'professor')
-                .map(d => `<option value="${d.id}|${d.data().nome}">${d.data().nome}</option>`)
-                .join('');
+            const [snapProfs, snapPromovidos] = await Promise.all([
+                db.collection('professores').get(),
+                db.collection('alunos').where('role', '==', 'professor').get(),
+            ]);
+            const listaProfs = [
+                ...snapProfs.docs.filter(d => !d.data().role || d.data().role === 'professor'),
+                ...snapPromovidos.docs,
+            ];
+            const profsOpts = listaProfs.length
+                ? listaProfs.map(d => `<option value="${d.id}|${d.data().nome}">${d.data().nome}</option>`).join('')
+                : `<option value="admin|Professor">Professor</option>`;
 
             card.innerHTML = `
             <div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;">

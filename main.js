@@ -19699,7 +19699,7 @@ const perguntas = {
                         : '<div style="font-size:0.6rem;color:#64748b;margin-top:6px;font-style:italic;">⏳ aguardando resposta...</div>';
                     return `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:8px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                            <span style="font-size:0.6rem;color:#64748b;">${p.dataEnvio}</span>
+                            <span style="font-size:0.6rem;color:#64748b;">${p.dataEnvio}${p.professorNome ? ` · <span style="color:#c4b5fd;">para ${p.professorNome}</span>` : ''}</span>
                             <button onclick="perguntas.excluirAluno('${pid}')" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.7rem;padding:0 2px;" title="Excluir pergunta">🗑</button>
                         </div>
                         <div style="font-size:0.75rem;color:#e2e8f0;">${p.texto}</div>
@@ -19727,9 +19727,20 @@ const perguntas = {
                 </div>`;
             }
 
+            const snapProfs = await db.collection('professores').get();
+            const profsOpts = snapProfs.docs
+                .filter(d => !d.data().role || d.data().role === 'professor')
+                .map(d => `<option value="${d.id}|${d.data().nome}">${d.data().nome}</option>`)
+                .join('');
+
             card.innerHTML = `
             <div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;">
                 <div style="font-size:0.75rem;font-weight:800;color:#8b5cf6;margin-bottom:12px;">💬 PERGUNTAR AO PROFESSOR</div>
+                <select id="pergunta-prof-select"
+                    style="width:100%;box-sizing:border-box;padding:9px 10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;outline:none;margin-bottom:8px;">
+                    <option value="">👨‍🏫 Escolha o professor...</option>
+                    ${profsOpts}
+                </select>
                 <textarea id="pergunta-texto-aluno" placeholder="Digite sua pergunta..." maxlength="500"
                     style="width:100%;box-sizing:border-box;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.78rem;resize:none;height:80px;outline:none;font-family:inherit;"></textarea>
                 <button onclick="perguntas.enviarPergunta()"
@@ -19750,7 +19761,10 @@ const perguntas = {
 
     async enviarPergunta() {
         const texto = document.getElementById('pergunta-texto-aluno')?.value?.trim();
-        if (!texto) return alert('Digite sua pergunta.');
+        const profVal = document.getElementById('pergunta-prof-select')?.value;
+        if (!profVal) return alert('Escolha o professor.');
+        if (!texto)   return alert('Digite sua pergunta.');
+        const [professorId, professorNome] = profVal.split('|');
         const alunoId  = auth.currentUser?.id;
         const alunoDoc = await db.collection('alunos').doc(alunoId).get();
         const alunoData = alunoDoc.exists ? alunoDoc.data() : {};
@@ -19759,24 +19773,26 @@ const perguntas = {
         try {
             await db.collection('perguntas').add({
                 alunoId,
-                alunoNome:   alunoData.nome || auth.currentUser?.nome || '',
-                modalidade:  alunoData.modalidade || 'jiujitsu',
-                isKids:      alunoData.isKids === true,
+                alunoNome:    alunoData.nome || auth.currentUser?.nome || '',
+                modalidade:   alunoData.modalidade || 'jiujitsu',
+                isKids:       alunoData.isKids === true,
+                professorId,
+                professorNome,
                 texto,
-                dataEnvio:   this._dataHoje(),
-                timestamp:   Date.now(),
-                respondida:  false,
-                publica:     false,
-                resposta:    '',
+                dataEnvio:    this._dataHoje(),
+                timestamp:    Date.now(),
+                respondida:   false,
+                publica:      false,
+                resposta:     '',
                 dataResposta: '',
             });
-            // Push para o admin
+            // Push para o professor escolhido
             try {
-                const cfgDoc = await db.collection('configuracoes').doc('admin_config').get();
-                const adminToken = cfgDoc.exists ? cfgDoc.data().fcmToken : null;
-                auth._enviarPush(adminToken, '💬 Nova pergunta', `${alunoData.nome || 'Aluno'}: ${texto.substring(0,80)}`);
+                const profDoc = await db.collection('professores').doc(professorId).get();
+                const profToken = profDoc.exists ? profDoc.data().fcmToken : null;
+                auth._enviarPush(profToken, '💬 Nova pergunta', `${alunoData.nome || 'Aluno'}: ${texto.substring(0,80)}`);
             } catch(e2) { /* silencioso */ }
-            alert('✅ Pergunta enviada! O professor responderá em breve.');
+            alert('✅ Pergunta enviada!');
             this.renderCardAluno();
         } catch(e) {
             alert('Erro ao enviar: ' + e.message);
@@ -19812,7 +19828,7 @@ const perguntas = {
                 if (isPendente) {
                     return `<div id="perg-item-${pid}" style="background:#0f172a;border:1px solid #8b5cf644;border-radius:8px;padding:10px;margin-bottom:8px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-                            <div style="display:flex;gap:6px;align-items:center;">${badge}<span style="font-size:0.65rem;color:#c4b5fd;font-weight:700;">${p.alunoNome}</span><span style="font-size:0.55rem;color:#64748b;">${p.dataEnvio}</span></div>
+                            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${badge}<span style="font-size:0.65rem;color:#c4b5fd;font-weight:700;">${p.alunoNome}</span>${p.professorNome ? `<span style="font-size:0.5rem;background:#1e293b;border:1px solid #8b5cf6;color:#8b5cf6;padding:1px 5px;border-radius:4px;">→ ${p.professorNome}</span>` : ''}<span style="font-size:0.55rem;color:#64748b;">${p.dataEnvio}</span></div>
                             <button onclick="perguntas.excluirProf('${pid}')" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:0 2px;" title="Excluir pergunta">🗑</button>
                         </div>
                         <div style="font-size:0.75rem;color:#e2e8f0;margin-bottom:8px;">${p.texto}</div>

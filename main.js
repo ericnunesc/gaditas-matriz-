@@ -19689,7 +19689,7 @@ const perguntas = {
             let minhasHtml = '';
             if (minhas.length) {
                 minhasHtml = minhas.map(doc => {
-                    const p = doc.data();
+                    const p = doc.data(); const pid = doc.id;
                     const resp = p.respondida
                         ? `<div style="margin-top:8px;background:#0a1628;border-left:3px solid #8b5cf6;padding:8px 10px;border-radius:0 6px 6px 0;">
                                <div style="font-size:0.55rem;color:#8b5cf6;font-weight:800;margin-bottom:3px;">💬 PROFESSOR · ${p.dataResposta || ''}</div>
@@ -19698,7 +19698,10 @@ const perguntas = {
                            </div>`
                         : '<div style="font-size:0.6rem;color:#64748b;margin-top:6px;font-style:italic;">⏳ aguardando resposta...</div>';
                     return `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:8px;">
-                        <div style="font-size:0.6rem;color:#64748b;margin-bottom:4px;">${p.dataEnvio}</div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                            <span style="font-size:0.6rem;color:#64748b;">${p.dataEnvio}</span>
+                            <button onclick="perguntas.excluirAluno('${pid}')" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.7rem;padding:0 2px;" title="Excluir pergunta">🗑</button>
+                        </div>
                         <div style="font-size:0.75rem;color:#e2e8f0;">${p.texto}</div>
                         ${resp}
                     </div>`;
@@ -19808,7 +19811,10 @@ const perguntas = {
                 const badge = this._badgeMod(p.modalidade, p.isKids);
                 if (isPendente) {
                     return `<div id="perg-item-${pid}" style="background:#0f172a;border:1px solid #8b5cf644;border-radius:8px;padding:10px;margin-bottom:8px;">
-                        <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">${badge}<span style="font-size:0.65rem;color:#c4b5fd;font-weight:700;">${p.alunoNome}</span><span style="font-size:0.55rem;color:#64748b;">${p.dataEnvio}</span></div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                            <div style="display:flex;gap:6px;align-items:center;">${badge}<span style="font-size:0.65rem;color:#c4b5fd;font-weight:700;">${p.alunoNome}</span><span style="font-size:0.55rem;color:#64748b;">${p.dataEnvio}</span></div>
+                            <button onclick="perguntas.excluirProf('${pid}')" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:0 2px;" title="Excluir pergunta">🗑</button>
+                        </div>
                         <div style="font-size:0.75rem;color:#e2e8f0;margin-bottom:8px;">${p.texto}</div>
                         <textarea id="resp-texto-${pid}" placeholder="Digite a resposta..." maxlength="600"
                             style="width:100%;box-sizing:border-box;padding:8px;background:#1e293b;border:1px solid #334155;color:white;border-radius:6px;font-size:0.72rem;resize:none;height:70px;outline:none;font-family:inherit;"></textarea>
@@ -19825,7 +19831,10 @@ const perguntas = {
                     </div>`;
                 } else {
                     return `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px;margin-bottom:6px;opacity:0.7;">
-                        <div style="display:flex;gap:6px;align-items:center;margin-bottom:3px;">${badge}<span style="font-size:0.62rem;color:#94a3b8;">${p.alunoNome}</span>${p.publica ? '<span style="font-size:0.48rem;background:#2e1065;color:#c4b5fd;padding:1px 5px;border-radius:3px;font-weight:800;">🌍 público</span>' : '<span style="font-size:0.48rem;background:#1e293b;color:#64748b;padding:1px 5px;border-radius:3px;font-weight:800;">🔒 privado</span>'}</div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                            <div style="display:flex;gap:6px;align-items:center;">${badge}<span style="font-size:0.62rem;color:#94a3b8;">${p.alunoNome}</span>${p.publica ? '<span style="font-size:0.48rem;background:#2e1065;color:#c4b5fd;padding:1px 5px;border-radius:3px;font-weight:800;">🌍 público</span>' : '<span style="font-size:0.48rem;background:#1e293b;color:#64748b;padding:1px 5px;border-radius:3px;font-weight:800;">🔒 privado</span>'}</div>
+                            <button onclick="perguntas.excluirProf('${pid}')" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:0 2px;" title="Excluir">🗑</button>
+                        </div>
                         <div style="font-size:0.68rem;color:#94a3b8;margin-bottom:3px;">${p.texto}</div>
                         <div style="font-size:0.65rem;color:#8b5cf6;">↳ ${p.resposta}</div>
                     </div>`;
@@ -19853,6 +19862,22 @@ const perguntas = {
             const card2 = document.getElementById('card-perguntas-prof');
             if (card2) card2.innerHTML = `<div style="background:#1e293b;border-radius:12px;padding:15px;color:#f43f5e;font-size:0.72rem;">Erro: ${e.message}</div>`;
         }
+    },
+
+    async excluirAluno(perguntaId) {
+        if (!confirm('Excluir esta pergunta?')) return;
+        try {
+            await db.collection('perguntas').doc(perguntaId).delete();
+            this.renderCardAluno();
+        } catch(e) { alert('Erro ao excluir: ' + e.message); }
+    },
+
+    async excluirProf(perguntaId) {
+        if (!confirm('Excluir esta pergunta?')) return;
+        try {
+            await db.collection('perguntas').doc(perguntaId).delete();
+            this.renderPainelProfessor();
+        } catch(e) { alert('Erro ao excluir: ' + e.message); }
     },
 
     async responder(perguntaId, publica) {

@@ -19735,8 +19735,12 @@ const perguntas = {
                 ...snapProfs.docs.filter(d => !d.data().role || d.data().role === 'professor'),
                 ...snapPromovidos.docs,
             ];
-            const nomeAdmin = auth.adminCreds?.nome || 'Professor';
-            const optAdmin  = `<option value="admin|${nomeAdmin}">${nomeAdmin} (Admin)</option>`;
+            let nomeAdmin = auth.adminCreds?.nome || 'Professor';
+            try {
+                const cfgDoc = await db.collection('configuracoes').doc('admin_config').get();
+                if (cfgDoc.exists && cfgDoc.data().nome) nomeAdmin = cfgDoc.data().nome;
+            } catch(e2) { /* usa default */ }
+            const optAdmin  = `<option value="admin|${nomeAdmin}">${nomeAdmin}</option>`;
             const profsOpts = optAdmin + listaProfs.map(d => `<option value="${d.id}|${d.data().nome}">${d.data().nome}</option>`).join('');
 
             card.innerHTML = `

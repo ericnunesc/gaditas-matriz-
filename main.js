@@ -8775,7 +8775,7 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); if(auth.role === 'aluno') setTimeout(() => academia.verificarDisparoEvento(), 600); }
-        if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } }
+        if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); perguntas.renderPainelProfessor(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } if(auth.role === 'aluno') { perguntas.renderCardAluno(); } }
         if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); academia.renderResumoFinanceiroMes(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); boletim.renderPainelAdmin(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); if(auth.role === 'professor') profComms.renderPainelDispensas(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }
@@ -19634,6 +19634,249 @@ const certificado = {
             if (status) status.innerHTML = '<span style="color:#10b981;">✅ Configurações salvas!</span>';
         } catch(e) {
             if (status) status.innerHTML = `<span style="color:#f43f5e;">❌ Erro: ${e.message}</span>`;
+        }
+    },
+};
+
+// ── PERGUNTAR AO PROFESSOR ─────────────────────────────────────────────────
+const perguntas = {
+
+    _badgeMod(modalidade, isKids) {
+        if (isKids) return '<span style="background:#451a03;color:#f59e0b;font-size:0.5rem;font-weight:800;padding:2px 6px;border-radius:4px;">🏅 KIDS</span>';
+        if (modalidade === 'muaythai') return '<span style="background:#4c0519;color:#f43f5e;font-size:0.5rem;font-weight:800;padding:2px 6px;border-radius:4px;">🥊 MT</span>';
+        if (modalidade === 'ambos')    return '<span style="background:#2e1065;color:#c4b5fd;font-size:0.5rem;font-weight:800;padding:2px 6px;border-radius:4px;">⚔️ BJJ+MT</span>';
+        return '<span style="background:#0c2a1a;color:#4ade80;font-size:0.5rem;font-weight:800;padding:2px 6px;border-radius:4px;">🥋 BJJ</span>';
+    },
+
+    _dataHoje() {
+        const h = new Date();
+        return `${String(h.getDate()).padStart(2,'0')}/${String(h.getMonth()+1).padStart(2,'0')}/${h.getFullYear()}`;
+    },
+
+    // ── CARD DO ALUNO ──────────────────────────────────────────────────────
+    async renderCardAluno() {
+        const tab = document.getElementById('tab-checkin');
+        if (!tab) return;
+        let card = document.getElementById('card-perguntas-aluno');
+        if (!card) {
+            card = document.createElement('div');
+            card.id = 'card-perguntas-aluno';
+            card.style.cssText = 'margin-top:15px;';
+            tab.appendChild(card);
+        }
+        card.innerHTML = '<div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;"><div style="color:#8b5cf6;font-size:0.75rem;font-weight:800;margin-bottom:10px;">💬 PERGUNTAR AO PROFESSOR</div><div style="text-align:center;color:#64748b;font-size:0.7rem;padding:10px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div></div>';
+
+        try {
+            const alunoId  = auth.currentUser?.id;
+            const alunoDoc = await db.collection('alunos').doc(alunoId).get();
+            const alunoData = alunoDoc.exists ? alunoDoc.data() : {};
+            const modalidade = alunoData.modalidade || 'jiujitsu';
+            const isKids     = alunoData.isKids === true;
+
+            // Perguntas do próprio aluno
+            const snapMinha = await db.collection('perguntas')
+                .where('alunoId', '==', alunoId)
+                .get();
+
+            // Perguntas públicas respondidas
+            const snapFaq = await db.collection('perguntas')
+                .where('publica', '==', true)
+                .where('respondida', '==', true)
+                .get();
+
+            const minhas = snapMinha.docs.sort((a,b) => (b.data().timestamp||0)-(a.data().timestamp||0)).slice(0,10);
+
+            let minhasHtml = '';
+            if (minhas.length) {
+                minhasHtml = minhas.map(doc => {
+                    const p = doc.data();
+                    const resp = p.respondida
+                        ? `<div style="margin-top:8px;background:#0a1628;border-left:3px solid #8b5cf6;padding:8px 10px;border-radius:0 6px 6px 0;">
+                               <div style="font-size:0.55rem;color:#8b5cf6;font-weight:800;margin-bottom:3px;">💬 PROFESSOR · ${p.dataResposta || ''}</div>
+                               <div style="font-size:0.72rem;color:#e2e8f0;">${p.resposta}</div>
+                               ${p.publica ? '<div style="font-size:0.5rem;color:#64748b;margin-top:4px;">🌍 visível para todos</div>' : '<div style="font-size:0.5rem;color:#64748b;margin-top:4px;">🔒 só para você</div>'}
+                           </div>`
+                        : '<div style="font-size:0.6rem;color:#64748b;margin-top:6px;font-style:italic;">⏳ aguardando resposta...</div>';
+                    return `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:8px;">
+                        <div style="font-size:0.6rem;color:#64748b;margin-bottom:4px;">${p.dataEnvio}</div>
+                        <div style="font-size:0.75rem;color:#e2e8f0;">${p.texto}</div>
+                        ${resp}
+                    </div>`;
+                }).join('');
+            }
+
+            const faqDocs = snapFaq.docs.filter(d => d.data().alunoId !== alunoId).sort((a,b) => (b.data().timestamp||0)-(a.data().timestamp||0)).slice(0,20);
+            let faqHtml = '';
+            if (faqDocs.length) {
+                faqHtml = `<div style="margin-top:14px;border-top:1px solid #334155;padding-top:12px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#64748b;margin-bottom:8px;">📋 PERGUNTAS FREQUENTES</div>
+                    ${faqDocs.map(doc => {
+                        const p = doc.data();
+                        return `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:8px;">
+                            <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">${this._badgeMod(p.modalidade, p.isKids)}<span style="font-size:0.6rem;color:#64748b;">${p.alunoNome} · ${p.dataEnvio}</span></div>
+                            <div style="font-size:0.75rem;color:#e2e8f0;margin-bottom:6px;">${p.texto}</div>
+                            <div style="background:#0a1628;border-left:3px solid #8b5cf6;padding:8px 10px;border-radius:0 6px 6px 0;">
+                                <div style="font-size:0.55rem;color:#8b5cf6;font-weight:800;margin-bottom:3px;">💬 PROFESSOR</div>
+                                <div style="font-size:0.72rem;color:#e2e8f0;">${p.resposta}</div>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+            }
+
+            card.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;">
+                <div style="font-size:0.75rem;font-weight:800;color:#8b5cf6;margin-bottom:12px;">💬 PERGUNTAR AO PROFESSOR</div>
+                <textarea id="pergunta-texto-aluno" placeholder="Digite sua pergunta..." maxlength="500"
+                    style="width:100%;box-sizing:border-box;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.78rem;resize:none;height:80px;outline:none;font-family:inherit;"></textarea>
+                <button onclick="perguntas.enviarPergunta()"
+                    style="width:100%;margin-top:8px;padding:10px;background:#8b5cf6;border:none;color:white;border-radius:8px;font-weight:800;font-size:0.78rem;cursor:pointer;">
+                    📤 ENVIAR PERGUNTA
+                </button>
+                ${minhas.length ? `<div style="margin-top:14px;border-top:1px solid #334155;padding-top:12px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#64748b;margin-bottom:8px;">MINHAS PERGUNTAS</div>
+                    ${minhasHtml}
+                </div>` : ''}
+                ${faqHtml}
+            </div>`;
+        } catch(e) {
+            const card2 = document.getElementById('card-perguntas-aluno');
+            if (card2) card2.innerHTML = `<div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;"><div style="color:#f43f5e;font-size:0.72rem;">Erro ao carregar perguntas: ${e.message}</div></div>`;
+        }
+    },
+
+    async enviarPergunta() {
+        const texto = document.getElementById('pergunta-texto-aluno')?.value?.trim();
+        if (!texto) return alert('Digite sua pergunta.');
+        const alunoId  = auth.currentUser?.id;
+        const alunoDoc = await db.collection('alunos').doc(alunoId).get();
+        const alunoData = alunoDoc.exists ? alunoDoc.data() : {};
+        const btn = document.querySelector('#card-perguntas-aluno button');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
+        try {
+            await db.collection('perguntas').add({
+                alunoId,
+                alunoNome:   alunoData.nome || auth.currentUser?.nome || '',
+                modalidade:  alunoData.modalidade || 'jiujitsu',
+                isKids:      alunoData.isKids === true,
+                texto,
+                dataEnvio:   this._dataHoje(),
+                timestamp:   Date.now(),
+                respondida:  false,
+                publica:     false,
+                resposta:    '',
+                dataResposta: '',
+            });
+            // Push para o admin
+            try {
+                const cfgDoc = await db.collection('configuracoes').doc('admin_config').get();
+                const adminToken = cfgDoc.exists ? cfgDoc.data().fcmToken : null;
+                auth._enviarPush(adminToken, '💬 Nova pergunta', `${alunoData.nome || 'Aluno'}: ${texto.substring(0,80)}`);
+            } catch(e2) { /* silencioso */ }
+            alert('✅ Pergunta enviada! O professor responderá em breve.');
+            this.renderCardAluno();
+        } catch(e) {
+            alert('Erro ao enviar: ' + e.message);
+            if (btn) { btn.disabled = false; btn.textContent = '📤 ENVIAR PERGUNTA'; }
+        }
+    },
+
+    // ── PAINEL DO PROFESSOR / ADMIN ────────────────────────────────────────
+    async renderPainelProfessor() {
+        if (auth.role !== 'admin' && auth.role !== 'professor') return;
+        const profArea = document.getElementById('area-professor-checkin');
+        if (!profArea) return;
+        let card = document.getElementById('card-perguntas-prof');
+        if (!card) {
+            card = document.createElement('div');
+            card.id = 'card-perguntas-prof';
+            card.style.cssText = 'margin-top:15px;';
+            profArea.after(card);
+        }
+        card.innerHTML = '<div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;"><div style="color:#64748b;font-size:0.7rem;padding:10px;text-align:center;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div></div>';
+
+        try {
+            const snap = await db.collection('perguntas').get();
+            snap.docs.sort((a,b) => (b.data().timestamp||0)-(a.data().timestamp||0));
+
+            const pendentes   = snap.docs.filter(d => !d.data().respondida);
+            const respondidas = snap.docs.filter(d => d.data().respondida);
+
+            const renderItem = (doc, isPendente) => {
+                const p   = doc.data();
+                const pid = doc.id;
+                const badge = this._badgeMod(p.modalidade, p.isKids);
+                if (isPendente) {
+                    return `<div id="perg-item-${pid}" style="background:#0f172a;border:1px solid #8b5cf644;border-radius:8px;padding:10px;margin-bottom:8px;">
+                        <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">${badge}<span style="font-size:0.65rem;color:#c4b5fd;font-weight:700;">${p.alunoNome}</span><span style="font-size:0.55rem;color:#64748b;">${p.dataEnvio}</span></div>
+                        <div style="font-size:0.75rem;color:#e2e8f0;margin-bottom:8px;">${p.texto}</div>
+                        <textarea id="resp-texto-${pid}" placeholder="Digite a resposta..." maxlength="600"
+                            style="width:100%;box-sizing:border-box;padding:8px;background:#1e293b;border:1px solid #334155;color:white;border-radius:6px;font-size:0.72rem;resize:none;height:70px;outline:none;font-family:inherit;"></textarea>
+                        <div style="display:flex;gap:6px;margin-top:6px;">
+                            <button onclick="perguntas.responder('${pid}', false)"
+                                style="flex:1;padding:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:7px;font-size:0.65rem;font-weight:800;cursor:pointer;">
+                                🔒 Só p/ aluno
+                            </button>
+                            <button onclick="perguntas.responder('${pid}', true)"
+                                style="flex:1;padding:7px;background:#2e1065;border:1px solid #8b5cf6;color:#c4b5fd;border-radius:7px;font-size:0.65rem;font-weight:800;cursor:pointer;">
+                                🌍 Publicar p/ todos
+                            </button>
+                        </div>
+                    </div>`;
+                } else {
+                    return `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px;margin-bottom:6px;opacity:0.7;">
+                        <div style="display:flex;gap:6px;align-items:center;margin-bottom:3px;">${badge}<span style="font-size:0.62rem;color:#94a3b8;">${p.alunoNome}</span>${p.publica ? '<span style="font-size:0.48rem;background:#2e1065;color:#c4b5fd;padding:1px 5px;border-radius:3px;font-weight:800;">🌍 público</span>' : '<span style="font-size:0.48rem;background:#1e293b;color:#64748b;padding:1px 5px;border-radius:3px;font-weight:800;">🔒 privado</span>'}</div>
+                        <div style="font-size:0.68rem;color:#94a3b8;margin-bottom:3px;">${p.texto}</div>
+                        <div style="font-size:0.65rem;color:#8b5cf6;">↳ ${p.resposta}</div>
+                    </div>`;
+                }
+            };
+
+            const pendHtml = pendentes.length
+                ? pendentes.map(d => renderItem(d, true)).join('')
+                : '<div style="font-size:0.65rem;color:#10b981;text-align:center;padding:8px;">✅ Nenhuma pergunta pendente</div>';
+
+            const respHtml = respondidas.length
+                ? `<details style="margin-top:10px;"><summary style="font-size:0.62rem;color:#64748b;cursor:pointer;font-weight:700;list-style:none;padding:4px 0;">▸ ${respondidas.length} respondida${respondidas.length>1?'s':''}</summary><div style="margin-top:6px;">${respondidas.map(d => renderItem(d, false)).join('')}</div></details>`
+                : '';
+
+            card.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <span style="font-size:0.75rem;font-weight:800;color:#8b5cf6;">💬 PERGUNTAS DOS ALUNOS</span>
+                    ${pendentes.length ? `<span style="background:#8b5cf6;color:white;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:10px;">${pendentes.length} nova${pendentes.length>1?'s':''}</span>` : ''}
+                </div>
+                ${pendHtml}
+                ${respHtml}
+            </div>`;
+        } catch(e) {
+            const card2 = document.getElementById('card-perguntas-prof');
+            if (card2) card2.innerHTML = `<div style="background:#1e293b;border-radius:12px;padding:15px;color:#f43f5e;font-size:0.72rem;">Erro: ${e.message}</div>`;
+        }
+    },
+
+    async responder(perguntaId, publica) {
+        const texto = document.getElementById(`resp-texto-${perguntaId}`)?.value?.trim();
+        if (!texto) return alert('Digite a resposta.');
+        try {
+            const snap = await db.collection('perguntas').doc(perguntaId).get();
+            if (!snap.exists) return;
+            const p = snap.data();
+            await db.collection('perguntas').doc(perguntaId).update({
+                resposta:    texto,
+                dataResposta: this._dataHoje(),
+                respondida:  true,
+                publica:     publica,
+            });
+            // Push para o aluno
+            try {
+                const alunoDoc = await db.collection('alunos').doc(p.alunoId).get();
+                const token = alunoDoc.exists ? alunoDoc.data().fcmToken : null;
+                auth._enviarPush(token, '💬 Professor respondeu sua pergunta', texto.substring(0, 100));
+            } catch(e2) { /* silencioso */ }
+            this.renderPainelProfessor();
+        } catch(e) {
+            alert('Erro ao responder: ' + e.message);
         }
     },
 };

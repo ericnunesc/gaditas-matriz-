@@ -19735,9 +19735,9 @@ const perguntas = {
                 ...snapProfs.docs.filter(d => !d.data().role || d.data().role === 'professor'),
                 ...snapPromovidos.docs,
             ];
-            const profsOpts = listaProfs.length
-                ? listaProfs.map(d => `<option value="${d.id}|${d.data().nome}">${d.data().nome}</option>`).join('')
-                : `<option value="admin|Professor">Professor</option>`;
+            const nomeAdmin = auth.adminCreds?.nome || 'Professor';
+            const optAdmin  = `<option value="admin|${nomeAdmin}">${nomeAdmin} (Admin)</option>`;
+            const profsOpts = optAdmin + listaProfs.map(d => `<option value="${d.id}|${d.data().nome}">${d.data().nome}</option>`).join('');
 
             card.innerHTML = `
             <div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;">

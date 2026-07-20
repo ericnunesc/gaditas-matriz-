@@ -523,7 +523,30 @@ const auth = {
             el.style.flexDirection = 'column';
         } catch(e) { console.warn('_renderFaixaHeader error:', e.message); }
     },
+    _titularSessao: null,
+
+    async acessarComoDependente(depId) {
+        const doc = await db.collection('alunos').doc(depId).get();
+        if (!doc.exists) return alert('Dependente não encontrado.');
+        this._titularSessao = { ...this.currentUser, role: this.role };
+        this.currentUser = { id: doc.id, ...doc.data() };
+        this.role = 'aluno';
+        ui._mostrarBannerDependente(this.currentUser.nome);
+        ui.showTab('tab-checkin');
+    },
+
+    voltarParaTitular() {
+        if (!this._titularSessao) return;
+        this.currentUser = this._titularSessao;
+        this.role = this._titularSessao.role;
+        this._titularSessao = null;
+        ui._removerBannerDependente();
+        ui.showTab('tab-checkin');
+    },
+
     logout() {
+        this._titularSessao = null;
+        ui._removerBannerDependente();
         localStorage.removeItem('gaditas_sessao');
         firebase.auth().signOut().catch(() => {});
         window.location.reload();
@@ -1982,7 +2005,7 @@ const academia = {
         if (!container) return;
         const grade  = this.getGrade();
         const diaSem = new Date().getDay();
-        const turmas = (grade[diaSem] || grade[String(diaSem)] || []).filter(t => !t.includes('Sem treinos'));
+        const turmas = (grade[diaSem] || grade[String(diaSem)] || []).filter(t => !t.includes('Sem treinos') && !this._aulaDesativada(diaSem, t));
 
         const snap = await db.collection('checkins')
             .where('alunoId', '==', 'admin_visual')
@@ -2696,15 +2719,39 @@ const academia = {
 
     async renderCheckins() {
         const l = document.getElementById('list-checkins'); if(!l) return;
-        let snap = await db.collection("checkins").get(); const aSnap = await db.collection("alunos").get();
-        const info = {}; aSnap.forEach(d => info[d.id] = d.data()); const g = {};
+        const [snap, aSnap] = await Promise.all([db.collection("checkins").get(), db.collection("alunos").get()]);
+        const info = {}; aSnap.forEach(d => info[d.id] = d.data());
+        const hoje = new Date().toLocaleDateString('pt-BR');
+        const g = {};
+        const toDelete = []; // docs órfãos/duplicados para limpar
+        const seen = new Set(); // dedup: alunoId|turma
+
         snap.docs.forEach(doc => {
             const c = doc.data();
-            if (c.tipo === 'visual') return; // presença visual do admin — não aparece na chamada
-            if (auth.role === 'admin' || (auth.currentUser.turmasAcesso && auth.currentUser.turmasAcesso.includes(c.turma))) {
-                if (!g[c.turma]) g[c.turma] = []; g[c.turma].push({ id: doc.id, ...c });
-            }
+            if (c.tipo === 'visual') return;
+            if (!(auth.role === 'admin' || (auth.currentUser.turmasAcesso && auth.currentUser.turmasAcesso.includes(c.turma)))) return;
+
+            // Bug 1: aluno já tem presença no histórico hoje (QR registrou no dispositivo dele)
+            const al = info[c.alunoId] || {};
+            const jaNoHistorico = (al.historico || []).some(h => h.turma === c.turma && h.data && h.data.startsWith(hoje));
+            if (jaNoHistorico) { toDelete.push(doc.ref); return; }
+
+            // Bug 2: deduplicar — mesmo aluno+turma, mantém só o primeiro
+            const key = `${c.alunoId}|${c.turma}`;
+            if (seen.has(key)) { toDelete.push(doc.ref); return; }
+            seen.add(key);
+
+            if (!g[c.turma]) g[c.turma] = [];
+            g[c.turma].push({ id: doc.id, ...c });
         });
+
+        // Limpa órfãos e duplicatas silenciosamente
+        if (toDelete.length) {
+            const batch = db.batch();
+            toDelete.forEach(ref => batch.delete(ref));
+            batch.commit().catch(() => {});
+        }
+
         let h = "";
         for (const t in g) {
             h += `<h4 style="color:#3b82f6; font-size:0.7rem; margin:15px 0 6px 4px; font-weight:800; letter-spacing:0.5px;">${t.toUpperCase()}</h4>`;
@@ -2819,7 +2866,7 @@ const academia = {
         const dataHoje = this._getDataHoje();
         const grade = this.getGrade();
         const diaSemana = new Date().getDay();
-        const turmasHoje = (grade[diaSemana] || grade[String(diaSemana)] || []).filter(t => !t.includes('Sem treinos'));
+        const turmasHoje = (grade[diaSemana] || grade[String(diaSemana)] || []).filter(t => !t.includes('Sem treinos') && !this._aulaDesativada(diaSemana, t));
 
         if (turmasHoje.length === 0) {
             container.innerHTML = '';
@@ -2899,7 +2946,8 @@ const academia = {
             }
         }
         const grade = this.getGrade();
-        const todasTurmas = [...new Set(Object.values(grade).filter(v => Array.isArray(v)).flat())].filter(t => typeof t === 'string' && !t.includes('Sem treinos'));
+        const diaSemCh = new Date().getDay();
+        const todasTurmas = (grade[diaSemCh] || grade[String(diaSemCh)] || []).filter(t => typeof t === 'string' && !t.includes('Sem treinos') && !this._aulaDesativada(diaSemCh, t));
         const opts = todasTurmas.map(t => `<option value="${t}">${t}</option>`).join('');
         card.innerHTML = `
             <div style="font-size:0.75rem; font-weight:800; color:#0ea5e9; margin-bottom:12px; letter-spacing:0.3px;">
@@ -3296,19 +3344,15 @@ const academia = {
 
         // ── Helper: conta treinos NO MÊS ATUAL pelo histórico ──────
         // historico[].data formato: "DD/MM/AAAA, HH:MM:SS" (toLocaleString pt-BR)
-        const aulasDoMes = (historico, isMT) => {
+        const aulasDoMes = (historico) => {
             if (!historico || !historico.length) return 0;
             return historico.filter(h => {
                 if (!h.data) return false;
-                // Extrai dia, mês, ano da string "DD/MM/AAAA..."
                 const partes = h.data.split('/');
                 if (partes.length < 3) return false;
-                const mes = parseInt(partes[1]) - 1;         // 0-indexed
-                const ano = parseInt(partes[2]);              // "2026, 15:30" → parseInt pega 2026
-                if (mes !== mesAtual || ano !== anoAtual) return false;
-                // Filtra por modalidade (JJ ou MT)
-                const ehMT = this._isTurmaMT(h.turma || '');
-                return isMT ? ehMT : !ehMT;
+                const mes = parseInt(partes[1]) - 1;
+                const ano = parseInt(partes[2]);
+                return mes === mesAtual && ano === anoAtual;
             }).length;
         };
 
@@ -3318,7 +3362,7 @@ const academia = {
             const a = doc.data();
             if ((a.modalidade || 'jiujitsu') === 'muaythai') return;
             const idade = anoAtual - new Date(a.nascimento).getFullYear();
-            const aulasJJMes = aulasDoMes(a.historico, false);
+            const aulasJJMes = aulasDoMes(a.historico);
             const entrada = { ...a, _aulasRanking: aulasJJMes };
             if      (idade <= 8)  listasJJ.kids1.push(entrada);
             else if (idade <= 15) listasJJ.kids2.push(entrada);
@@ -3343,7 +3387,7 @@ const academia = {
             const a = doc.data();
             const mod = a.modalidade || 'jiujitsu';
             if (mod !== 'muaythai' && mod !== 'ambos') return;
-            const aulasMTMes = aulasDoMes(a.historico, true);
+            const aulasMTMes = aulasDoMes(a.historico);
             const idade = anoAtual - new Date(a.nascimento).getFullYear();
             const tag = idade <= 15 ? ' <span style="font-size:0.5rem;color:#f59e0b;font-weight:800;background:#1c1400;border:1px solid #f59e0b44;border-radius:4px;padding:1px 5px;margin-left:3px;">KIDS</span>' : '';
             listaMTGeral.push({ ...a, _aulasRanking: aulasMTMes, _tag: tag });
@@ -5631,6 +5675,9 @@ Ele voltará a ser aluno normal.`)) return;
                     ${cardsHtml}
                 </div>
 
+                <!-- Mini Mural Pretas -->
+                <div id="mini-mural-pretas-dash" style="margin-bottom:12px;"></div>
+
                 <!-- Ranking do mês -->
                 <div style="background:#1e293b;border:1px solid #f59e0b22;border-radius:14px;padding:14px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -5640,6 +5687,76 @@ Ele voltará a ser aluno normal.`)) return;
                     ${rankingHtml}
                     ${minhaPosHtml}
                 </div>`;
+        // Mini Mural Pretas
+        db.collection('faixas_pretas').where('ativo', '!=', false).get().then(snapP => {
+            const cont = document.getElementById('mini-mural-pretas-dash');
+            if (!cont) return;
+            const lista = [];
+            snapP.forEach(d => lista.push({ id: d.id, ...d.data() }));
+            if (!lista.length) { cont.style.display = 'none'; return; }
+            // Fixos: sem número (pinned) ou destaque — sempre aparecem
+            const fixos = lista.filter(p => (p.numero == null || p.numero === '') || p.destaque);
+            // Resto: sorteio aleatório dos demais
+            const resto = lista.filter(p => !fixos.find(f => f.id === p.id));
+            for (let i = resto.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [resto[i], resto[j]] = [resto[j], resto[i]];
+            }
+            const exibir = [...fixos, ...resto.slice(0, Math.max(0, 6 - fixos.length))];
+            const chips = exibir.map(p => {
+                const numLabel = (p.numero == null || p.numero === '') ? '' : `<div style="font-size:0.5rem;color:#f59e0b;font-weight:800;margin-top:3px;">#${String(p.numero).padStart(2,'0')}</div>`;
+                const fotoEl = p.foto
+                    ? `<img src="${p.foto}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid #1e293b;">`
+                    : `<div style="width:56px;height:56px;border-radius:50%;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:1.4rem;border:2px solid #334155;">🥋</div>`;
+                return `<div onclick="pretas.abrirDetalhe('${p.id}')"
+                    style="flex-shrink:0;width:80px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;"
+                    onmousedown="this.style.opacity='0.7'" onmouseup="this.style.opacity='1'" ontouchstart="this.style.opacity='0.7'" ontouchend="this.style.opacity='1'">
+                    ${fotoEl}
+                    <div style="font-size:0.52rem;font-weight:800;color:#e2e8f0;text-align:center;line-height:1.2;word-break:break-word;">${p.nome.split(' ')[0].toUpperCase()}</div>
+                    ${numLabel}
+                </div>`;
+            }).join('');
+            cont.innerHTML = `
+                <div style="background:#1e293b;border:1px solid #1e293b;border-left:3px solid #f59e0b;border-radius:14px;padding:14px 14px 12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <div style="font-size:0.62rem;font-weight:800;color:#f59e0b;">🥋 CONHEÇA OS PRETAS</div>
+                        <button onclick="ui.showTab('tab-pretas');pretas.render()" style="font-size:0.5rem;font-weight:800;color:#64748b;background:none;border:none;cursor:pointer;padding:0;">VER TODOS →</button>
+                    </div>
+                    <div style="display:flex;gap:14px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;">
+                        ${chips}
+                    </div>
+                </div>`;
+        }).catch(() => {});
+
+        // ── Meus Dependentes (titular do plano família) ──────────
+        if (!auth._titularSessao && (auth.role === 'aluno' || auth.role === 'professor')) {
+            db.collection('alunos').where('responsavelId', '==', alunoId).get().then(snapDep => {
+                const cont = document.getElementById('mini-mural-pretas-dash');
+                if (!snapDep || snapDep.empty || !cont) return;
+                const deps = snapDep.docs.map(d => ({ id: d.id, ...d.data() }));
+                const depCards = deps.map(d => {
+                    const fotoEl = d.fotoPerfil
+                        ? `<img src="${d.fotoPerfil}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #3b82f6;">`
+                        : `<div style="width:52px;height:52px;border-radius:50%;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:2px solid #334155;">👤</div>`;
+                    return `<div onclick="auth.acessarComoDependente('${d.id}')"
+                        style="flex-shrink:0;width:72px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;"
+                        onmousedown="this.style.opacity='0.7'" onmouseup="this.style.opacity='1'" ontouchstart="this.style.opacity='0.7'" ontouchend="this.style.opacity='1'">
+                        ${fotoEl}
+                        <div style="font-size:0.52rem;font-weight:800;color:#e2e8f0;text-align:center;line-height:1.2;">${d.nome.split(' ')[0].toUpperCase()}</div>
+                        <div style="font-size:0.45rem;color:#3b82f6;font-weight:700;">ACESSAR</div>
+                    </div>`;
+                }).join('');
+                const divDep = document.createElement('div');
+                divDep.style.marginBottom = '12px';
+                divDep.innerHTML = `
+                    <div style="background:#1e293b;border:1px solid #3b82f644;border-left:3px solid #3b82f6;border-radius:14px;padding:14px 14px 12px;">
+                        <div style="font-size:0.62rem;font-weight:800;color:#3b82f6;margin-bottom:12px;">👨‍👧‍👦 MEUS DEPENDENTES</div>
+                        <div style="display:flex;gap:14px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;">${depCards}</div>
+                    </div>`;
+                cont.parentNode.insertBefore(divDep, cont);
+            }).catch(() => {});
+        }
+
         // Convocações pendentes para professor
         if (auth.role === 'professor' && alunoId) {
             db.collection('convocacoes_prof')
@@ -5689,8 +5806,9 @@ Ele voltará a ser aluno normal.`)) return;
     _irParaChamada() {
         // Abre modal direto com seleção de turma
         const grade = this.getGrade();
-        const turmas = [...new Set(Object.values(grade).filter(v => Array.isArray(v)).flat())]
-            .filter(t => typeof t === 'string' && !t.includes('Sem treinos'));
+        const diaSemIr = new Date().getDay();
+        const turmas = (grade[diaSemIr] || grade[String(diaSemIr)] || [])
+            .filter(t => typeof t === 'string' && !t.includes('Sem treinos') && !this._aulaDesativada(diaSemIr, t));
 
         document.getElementById('modal-chamada-dash')?.remove();
         const modal = document.createElement('div');
@@ -6987,10 +7105,10 @@ Ele voltará a ser aluno normal.`)) return;
         return this.gradeFirebase;
     },
 
-    async renderHorarios() {
+    async renderHorarios(skipFetch = false) {
         const container = document.getElementById('tab-horarios');
         if (!container) return;
-        await this.carregarGradeFirebase();
+        if (!skipFetch) await this.carregarGradeFirebase();
         const grade = this.getGrade();
         const diasNomes = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
         const hoje = new Date().getDay();
@@ -7313,8 +7431,11 @@ Ele voltará a ser aluno normal.`)) return;
         try {
             await db.collection('configuracoes').doc('horarios').set(grade);
         } catch(e) { console.warn('Erro ao salvar horário:', e); }
-        this.renderHorarios();
+        this.renderHorarios(true);
         this.renderChamadaProf();
+        this.renderPresencaAdmin();
+        if (typeof ui !== 'undefined') ui.atualizarTurmasDinamicas();
+        if (typeof planoCal !== 'undefined' && planoCal._dia) { const c = document.getElementById('plano-aula-cal-card'); if (c) { c.innerHTML = planoCal._buildCard(); planoCal._bindTextareas?.(); } }
     },
 
     _aulaDesativada(dia, nome) {
@@ -7329,9 +7450,14 @@ Ele voltará a ser aluno normal.`)) return;
         if (grade.desativadas[key]) delete grade.desativadas[key];
         else grade.desativadas[key] = true;
         this.gradeFirebase = grade;
-        try { await db.collection('configuracoes').doc('horarios').set({ desativadas: grade.desativadas }, { merge: true }); }
+        try { await db.collection('configuracoes').doc('horarios').set(grade); }
         catch(e) { console.warn('Erro ao salvar toggle turma:', e); }
-        this.renderHorarios();
+        this.renderHorarios(true);
+        this.renderChamadaProf();
+        this.renderPresencaAdmin();
+        this.renderPlanoAulaProf();
+        if (typeof ui !== 'undefined') ui.atualizarTurmasDinamicas();
+        if (typeof planoCal !== 'undefined' && planoCal._dia) { const c = document.getElementById('plano-aula-cal-card'); if (c) { c.innerHTML = planoCal._buildCard(); planoCal._bindTextareas?.(); } }
     },
 
     async removerHorarioAdmin(dia, slotValor) {
@@ -7339,7 +7465,6 @@ Ele voltará a ser aluno normal.`)) return;
         const grade = this.getGrade();
         const slots = (grade[dia] || grade[String(dia)] || []).filter(s => s !== slotValor);
         grade[dia] = slots.length > 0 ? slots : ['Sem treinos hoje'];
-        // Remove duração do slot removido, se existir
         if (grade.duracoes && grade.duracoes[slotValor] !== undefined) {
             delete grade.duracoes[slotValor];
         }
@@ -7347,8 +7472,12 @@ Ele voltará a ser aluno normal.`)) return;
         try {
             await db.collection('configuracoes').doc('horarios').set(grade);
         } catch(e) { console.warn('Erro ao salvar horário:', e); }
-        this.renderHorarios();
+        this.renderHorarios(true);
         this.renderChamadaProf();
+        this.renderPresencaAdmin();
+        this.renderPlanoAulaProf();
+        if (typeof ui !== 'undefined') ui.atualizarTurmasDinamicas();
+        if (typeof planoCal !== 'undefined' && planoCal._dia) { const c = document.getElementById('plano-aula-cal-card'); if (c) { c.innerHTML = planoCal._buildCard(); planoCal._bindTextareas?.(); } }
     },
 
     // ── GERADOR DE QR CODES PARA IMPRESSÃO ───────────────────
@@ -7569,7 +7698,7 @@ Ele voltará a ser aluno normal.`)) return;
                             <div style="flex:1; min-width:150px;">
                                 <div style="font-size:0.82rem; font-weight:800; color:${isHoje ? '#60a5fa' : '#e2e8f0'};">${e.nome}</div>
                                 <div style="font-size:0.62rem; color:#64748b; margin-top:3px;">${e.turma} · ${e.data ? e.data.split('-').reverse().join('/') : '—'}</div>
-                                <div style="font-size:0.62rem; color:#64748b;">${modalLabel} · ${e.telefone || '—'}</div>
+                                <div style="font-size:0.62rem; color:#64748b;">${modalLabel} · ${e.telefone ? `<a href="https://wa.me/55${e.telefone.replace(/\D/g,'')}" target="_blank" style="color:#25d366;text-decoration:none;font-weight:700;">📱 ${e.telefone}</a>` : '—'}</div>
                             </div>
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0;">
                                 <span style="font-size:0.6rem; color:${statusColor}; font-weight:800;">${statusLabel}</span>
@@ -8731,12 +8860,194 @@ const profComms = {
     }
 };
 
+// ══════════════════════════════════════════════════════════
+// CALENDÁRIO DE PLANO DE AULA — admin/professor
+// ══════════════════════════════════════════════════════════
+const planoCal = {
+    _mes: new Date().getMonth(),
+    _ano: new Date().getFullYear(),
+    _dia: null,
+    _planos: null, // null = not loaded yet
+
+    async render() {
+        const card = document.getElementById('plano-aula-cal-card');
+        if (!card) return;
+        if (this._planos === null) {
+            card.innerHTML = `<div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;margin-top:0;">
+                <div style="font-size:0.75rem;font-weight:800;color:#8b5cf6;margin-bottom:8px;">📋 PLANO DE AULA — HISTÓRICO</div>
+                <div style="font-size:0.7rem;color:#64748b;">Carregando...</div></div>`;
+            await this._carregarPlanos();
+            return;
+        }
+        card.innerHTML = this._buildCard();
+        this._bindTextareas();
+    },
+
+    async _carregarPlanos() {
+        try {
+            const snap = await db.collection('plano_aula').get();
+            this._planos = {};
+            snap.forEach(doc => { this._planos[doc.id] = doc.data(); });
+        } catch(e) { this._planos = {}; }
+        const card = document.getElementById('plano-aula-cal-card');
+        if (card) { card.innerHTML = this._buildCard(); this._bindTextareas(); }
+    },
+
+    _buildCard() {
+        const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const mes = this._mes, ano = this._ano;
+        const hoje = new Date();
+        const primeiroDia = new Date(ano, mes, 1).getDay();
+        const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+        const planos = this._planos || {};
+
+        let cells = '';
+        for (let i = 0; i < primeiroDia; i++) cells += `<div></div>`;
+        for (let d = 1; d <= ultimoDia; d++) {
+            const key = `${ano}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const temPlano = planos[key] && Object.keys(planos[key]).length > 0;
+            const isHoje = d === hoje.getDate() && mes === hoje.getMonth() && ano === hoje.getFullYear();
+            const isSel = this._dia === key;
+            let bg = isSel ? '#8b5cf622' : (isHoje ? '#1e3a8a18' : 'transparent');
+            let border = isSel ? '1px solid #8b5cf6' : (isHoje ? '1px solid #3b82f644' : '1px solid transparent');
+            cells += `<div onclick="planoCal.selDia('${key}')"
+                style="text-align:center;cursor:pointer;border-radius:6px;padding:3px 2px;background:${bg};border:${border};">
+                <div style="font-size:0.55rem;color:${isHoje?'#3b82f6':'#94a3b8'};font-weight:${isHoje?'800':'400'};line-height:1.3;">${d}</div>
+                ${temPlano ? `<div style="font-size:0.5rem;line-height:1;">📋</div>` : `<div style="font-size:0.5rem;color:transparent;line-height:1;">·</div>`}
+            </div>`;
+        }
+
+        const detalhe = this._dia ? this._buildDetalhe(this._dia) : '';
+
+        return `<div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;margin-top:0;">
+            <div style="font-size:0.75rem;font-weight:800;color:#8b5cf6;margin-bottom:10px;">📋 PLANO DE AULA — HISTÓRICO</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <button onclick="planoCal.navMes(-1)" style="background:#0f172a;border:1px solid #334155;color:#94a3b8;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:700;">◄</button>
+                <span style="font-size:0.7rem;font-weight:800;color:#e2e8f0;">${meses[mes]} ${ano}</span>
+                <button onclick="planoCal.navMes(1)" style="background:#0f172a;border:1px solid #334155;color:#94a3b8;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:700;">►</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:3px;">
+                ${['D','S','T','Q','Q','S','S'].map(d=>`<div style="text-align:center;font-size:0.48rem;color:#475569;font-weight:700;">${d}</div>`).join('')}
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">${cells}</div>
+            ${detalhe}
+        </div>`;
+    },
+
+    _buildDetalhe(key) {
+        const [ay, am, ad] = key.split('-');
+        const planosDia = (this._planos || {})[key] || {};
+        const grade = academia.getGrade();
+        const dow = new Date(Number(ay), Number(am)-1, Number(ad)).getDay();
+        const turmasDoDia = [...new Set((grade[dow] || grade[String(dow)] || []).filter(t => !t.includes('Sem treinos') && !academia._aulaDesativada(dow, t)))];
+        // Add turmas that already have plans but may not be in grade for this weekday
+        Object.keys(planosDia).forEach(t => { if (!turmasDoDia.includes(t)) turmasDoDia.push(t); });
+
+        // Filter by professor access
+        let turmasVisiveis = turmasDoDia;
+        if (auth.role === 'professor' && auth.currentUser.turmasAcesso) {
+            turmasVisiveis = turmasDoDia.filter(t =>
+                auth.currentUser.turmasAcesso.some(ta => t.toLowerCase().includes(ta.toLowerCase().replace(/\s*\d+$/,'').trim()))
+            );
+        }
+
+        const allTurmas = [...new Set(Object.values(grade).filter(v=>Array.isArray(v)).flat())].filter(t=>!t.includes('Sem treinos'));
+        const extras = allTurmas.filter(t => !turmasVisiveis.includes(t));
+
+        const turmasHtml = turmasVisiveis.map(turma => {
+            const plano = planosDia[turma];
+            const safeId = `pcc-${key}-${turma}`.replace(/[^a-zA-Z0-9-]/g,'_');
+            return `<div style="margin-bottom:8px;background:#0f172a;border-left:3px solid #8b5cf6;border-radius:6px;padding:8px 10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <span style="font-size:0.62rem;color:#a78bfa;font-weight:700;">● ${turma}</span>
+                    ${plano ? `<button onclick="planoCal.excluir('${key}','${turma.replace(/'/g,"\\'")}');event.stopPropagation();" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.6rem;padding:0;">🗑</button>` : ''}
+                </div>
+                <textarea id="${safeId}" data-key="${key}" data-turma="${turma.replace(/"/g,'&quot;')}"
+                    placeholder="Conteúdo da aula para ${turma}..."
+                    style="width:100%;box-sizing:border-box;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:5px;padding:6px 8px;font-size:0.68rem;resize:vertical;min-height:56px;font-family:inherit;">${plano ? plano.conteudo || '' : ''}</textarea>
+                ${plano && plano.profNome ? `<div style="font-size:0.53rem;color:#475569;margin-top:2px;">por ${plano.profNome}</div>` : ''}
+                <button onclick="planoCal.salvar('${key}','${turma.replace(/'/g,"\\'")}','${safeId}')"
+                    style="margin-top:4px;width:100%;padding:5px;background:#2d1f5e;border:1px solid #8b5cf6;color:#a78bfa;border-radius:5px;font-size:0.62rem;font-weight:700;cursor:pointer;">
+                    💾 Salvar
+                </button>
+            </div>`;
+        }).join('');
+
+        return `<div style="margin-top:10px;border-top:1px solid #334155;padding-top:10px;">
+            <div style="font-size:0.6rem;color:#64748b;font-weight:700;margin-bottom:6px;">📅 ${ad}/${am}/${ay}</div>
+            ${turmasHtml || `<div style="font-size:0.65rem;color:#475569;margin-bottom:6px;">Nenhuma turma neste dia da semana.</div>`}
+            ${extras.length ? `<div style="margin-top:6px;">
+                <select id="pcc-nova-turma-${key}" style="width:58%;background:#0f172a;border:1px solid #334155;color:#94a3b8;padding:5px;border-radius:5px;font-size:0.62rem;">
+                    <option value="">+ Adicionar turma</option>
+                    ${extras.map(t=>`<option value="${t}">${t}</option>`).join('')}
+                </select>
+                <button onclick="planoCal._addTurma('${key}')" style="background:#0f172a;border:1px solid #334155;color:#94a3b8;padding:5px 8px;border-radius:5px;font-size:0.62rem;cursor:pointer;margin-left:3px;">OK</button>
+            </div>` : ''}
+        </div>`;
+    },
+
+    _bindTextareas() {},
+
+    selDia(key) {
+        this._dia = (this._dia === key) ? null : key;
+        const card = document.getElementById('plano-aula-cal-card');
+        if (card) { card.innerHTML = this._buildCard(); this._bindTextareas(); }
+    },
+
+    navMes(delta) {
+        this._mes += delta;
+        if (this._mes > 11) { this._mes = 0; this._ano++; }
+        if (this._mes < 0) { this._mes = 11; this._ano--; }
+        this._dia = null;
+        const card = document.getElementById('plano-aula-cal-card');
+        if (card) { card.innerHTML = this._buildCard(); }
+    },
+
+    async salvar(key, turma, safeId) {
+        const ta = document.getElementById(safeId);
+        if (!ta) return;
+        const conteudo = ta.value.trim();
+        const profNome = auth.currentUser?.nome || '';
+        try {
+            await db.collection('plano_aula').doc(key).set(
+                { [turma]: { conteudo, profNome, updatedAt: new Date().toISOString() } },
+                { merge: true }
+            );
+            if (!this._planos[key]) this._planos[key] = {};
+            this._planos[key][turma] = { conteudo, profNome };
+            const card = document.getElementById('plano-aula-cal-card');
+            if (card) { card.innerHTML = this._buildCard(); this._bindTextareas(); }
+        } catch(e) { alert('Erro ao salvar.'); }
+    },
+
+    async excluir(key, turma) {
+        if (!confirm(`Excluir plano de "${turma}" em ${key}?`)) return;
+        try {
+            await db.collection('plano_aula').doc(key).update({ [turma]: firebase.firestore.FieldValue.delete() });
+            if (this._planos[key]) delete this._planos[key][turma];
+            const card = document.getElementById('plano-aula-cal-card');
+            if (card) { card.innerHTML = this._buildCard(); this._bindTextareas(); }
+        } catch(e) { alert('Erro ao excluir.'); }
+    },
+
+    _addTurma(key) {
+        const sel = document.getElementById(`pcc-nova-turma-${key}`);
+        if (!sel || !sel.value) return;
+        const turma = sel.value;
+        if (!this._planos[key]) this._planos[key] = {};
+        if (!this._planos[key][turma]) this._planos[key][turma] = { conteudo: '', profNome: '' };
+        const card = document.getElementById('plano-aula-cal-card');
+        if (card) { card.innerHTML = this._buildCard(); this._bindTextareas(); }
+    },
+};
+
 const ui = {
     // ── Estado do calendário de treinos ──────────────────
     _calMes: new Date().getMonth(),
     _calAno: new Date().getFullYear(),
     _calHistorico: [],
     _calEventos: [],
+    _calPlanos: {},
     _calDia: null,
     _calVista: 'calendario',
 
@@ -8775,7 +9086,7 @@ const ui = {
             }
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); if(auth.role === 'aluno') setTimeout(() => academia.verificarDisparoEvento(), 600); }
-        if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); perguntas.renderPainelProfessor(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); } if(auth.role === 'aluno') { perguntas.renderCardAluno(); } }
+        if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); perguntas.renderPainelProfessor(); } if(auth.role === 'admin') { planoCal._planos = null; planoCal.render(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); pesquisas.renderPainelAdmin(); } if(auth.role === 'aluno') { perguntas.renderCardAluno(); pesquisas.renderCardAluno(); } }
         if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); academia.renderResumoFinanceiroMes(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); boletim.renderPainelAdmin(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); if(auth.role === 'professor') profComms.renderPainelDispensas(); }
         if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }
@@ -8899,6 +9210,8 @@ const ui = {
         document.getElementById('area-professor-checkin').classList.toggle('hidden', !isAdmin && !isProf);
         const planoProfDiv = document.getElementById('plano-aula-professor');
         if (planoProfDiv) planoProfDiv.classList.toggle('hidden', !isAdmin && !isProf);
+        const planoCalCard = document.getElementById('plano-aula-cal-card');
+        if (planoCalCard) planoCalCard.classList.toggle('hidden', !isAdmin && !isProf);
         // Professor/aluno vê área de check-in próprio
         document.getElementById('area-aluno-checkin').classList.toggle('hidden', auth.role !== 'aluno' && auth.role !== 'professor');
         document.getElementById('admin-mural-editor').classList.toggle('hidden', !isAdmin);
@@ -9043,6 +9356,19 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
     },
 
     _turmaSelecionada: null,
+
+    _mostrarBannerDependente(nome) {
+        this._removerBannerDependente();
+        const bar = document.createElement('div');
+        bar.id = 'banner-dependente';
+        bar.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;background:#f59e0b;color:#000;z-index:99998;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;box-sizing:border-box;font-size:0.78rem;font-weight:800;box-shadow:0 -2px 12px rgba(0,0,0,0.4);';
+        bar.innerHTML = `<span>🔄 Acessando como <strong>${nome}</strong></span><button onclick="auth.voltarParaTitular()" style="background:#000;color:#f59e0b;border:none;border-radius:8px;padding:6px 14px;font-weight:800;font-size:0.72rem;cursor:pointer;">← VOLTAR</button>`;
+        document.body.appendChild(bar);
+    },
+
+    _removerBannerDependente() {
+        document.getElementById('banner-dependente')?.remove();
+    },
 
     atualizarTurmasDinamicas() {
         const container = document.getElementById('turmas-checkin-btns'); if (!container) return;
@@ -9423,6 +9749,47 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         this._calDia = (this._calDia === key) ? null : key;
         this._renderCal();
     },
+    recarregarPlanosCal() {
+        this._calPlanos = {};
+        this._renderCal(true);
+    },
+
+    // ── PLANO DE AULA NO CALENDÁRIO ───────────────────────
+    async _carregarPlanosCal() {
+        try {
+            const snap = await db.collection('plano_aula').get();
+            const m = {};
+            snap.forEach(doc => { m[doc.id] = doc.data(); });
+            this._calPlanos = m;
+        } catch(e) { this._calPlanos = {}; }
+        this._renderCal();
+    },
+
+    async salvarPlanoCal(dateKey, turma) {
+        const safeId = `${dateKey}-${turma}`.replace(/[^a-zA-Z0-9-]/g, '_');
+        const ta = document.getElementById(`plano-cal-ta-${safeId}`);
+        if (!ta) return;
+        const conteudo = ta.value.trim();
+        const profNome = auth.currentUser?.nome || '';
+        try {
+            await db.collection('plano_aula').doc(dateKey).set(
+                { [turma]: { conteudo, profNome, updatedAt: new Date().toISOString() } },
+                { merge: true }
+            );
+            if (!this._calPlanos[dateKey]) this._calPlanos[dateKey] = {};
+            this._calPlanos[dateKey][turma] = { conteudo, profNome };
+            this._renderCal();
+        } catch(e) { alert('Erro ao salvar plano.'); }
+    },
+
+    async excluirPlanoCal(dateKey, turma) {
+        if (!confirm(`Excluir plano de "${turma}" em ${dateKey}?`)) return;
+        try {
+            await db.collection('plano_aula').doc(dateKey).update({ [turma]: firebase.firestore.FieldValue.delete() });
+            if (this._calPlanos[dateKey]) delete this._calPlanos[dateKey][turma];
+            this._renderCal();
+        } catch(e) { alert('Erro ao excluir.'); }
+    },
 
     // ── CALENDÁRIO DE TREINOS ──────────────────────────────
     _parseDateKey(dataStr) {
@@ -9431,9 +9798,13 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
     },
 
-    _renderCal() {
+    _renderCal(loadPlanos) {
         const container = document.getElementById('cal-treinos-container');
         if (!container) return;
+        // Load/refresh planos on first render or explicit reload
+        if (loadPlanos || Object.keys(this._calPlanos).length === 0) {
+            this._carregarPlanosCal(); return;
+        }
 
         // Atualiza estilo dos botões de aba
         const btnCal  = document.getElementById('cal-btn-cal');
@@ -9467,6 +9838,7 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
     _buildCalendario() {
         const hist   = this._calHistorico || [];
         const eventos = this._calEventos || [];
+        const planos = this._calPlanos || {};
         const mes   = this._calMes;
         const ano   = this._calAno;
         const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -9509,13 +9881,15 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             const isHoje   = ano === hoje.getFullYear() && mes === hoje.getMonth() && d === hoje.getDate();
             const isSel    = this._calDia === key;
 
-            if (treinos.length > 0 || evsDia.length > 0) {
+            const temPlano = planos[key] && Object.keys(planos[key]).length > 0;
+            if (treinos.length > 0 || evsDia.length > 0 || temPlano) {
                 const hasMT   = treinos.some(t => academia._isTurmaMT(t.turma));
                 const hasKids = treinos.some(t => academia._isTurmaKids(t.turma));
                 const corTreino = hasMT ? '#ef4444' : hasKids ? '#f59e0b' : '#3b82f6';
-                const cor = treinos.length > 0 ? corTreino : '#a855f7';
+                const cor = treinos.length > 0 ? corTreino : (evsDia.length > 0 ? '#a855f7' : '#10b981');
                 const label = treinos.length > 1 ? treinos.length : (treinos.length === 1 ? '●' : '');
                 const evBadge = evsDia.length > 0 ? `<div style="font-size:0.55rem; line-height:1;">🏆</div>` : '';
+                const planoBadge = temPlano ? `<div style="font-size:0.5rem; line-height:1;">📋</div>` : '';
 
                 cells += `<div onclick="ui.selecionarDiaCal('${key}')"
                     style="text-align:center; cursor:pointer; border-radius:7px; padding:4px 2px;
@@ -9523,11 +9897,15 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                            border:1px solid ${isSel ? cor : cor + '44'};">
                     <div style="font-size:0.55rem; color:#94a3b8; font-weight:600; line-height:1.2;">${d}</div>
                     ${label ? `<div style="font-size:${treinos.length > 1 ? '0.6rem' : '0.72rem'}; color:${corTreino}; font-weight:800; line-height:1.2;">${label}</div>` : ''}
-                    ${evBadge}
+                    ${evBadge}${planoBadge}
                 </div>`;
             } else {
-                cells += `<div style="text-align:center; padding:4px 2px;
-                    ${isHoje ? 'border:1px solid #3b82f644; border-radius:7px; background:#1e3a8a18;' : ''}">
+                const canEdit = auth.role === 'admin' || auth.role === 'professor';
+                const clickAttr = canEdit ? `onclick="ui.selecionarDiaCal('${key}')" style="cursor:pointer;"` : '';
+                const isSel2 = this._calDia === key;
+                cells += `<div ${clickAttr} style="text-align:center; padding:4px 2px;
+                    ${isHoje ? 'border:1px solid #3b82f644; border-radius:7px; background:#1e3a8a18;' : ''}
+                    ${isSel2 && canEdit ? 'border:1px solid #10b98144; border-radius:7px; background:#10b98118;' : ''}">
                     <div style="font-size:0.55rem; color:${isHoje ? '#3b82f6' : '#334155'}; font-weight:${isHoje ? '800' : '400'}; line-height:1.2;">${d}</div>
                     <div style="font-size:0.5rem; color:transparent; line-height:1.2;">·</div>
                 </div>`;
@@ -9536,10 +9914,69 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
 
         // Detalhe do dia selecionado
         let detalhe = '';
-        if (this._calDia && (mapaD[this._calDia] || mapaEv[this._calDia])) {
-            const [ay, am, ad] = this._calDia.split('-');
-            const treinosDia = mapaD[this._calDia] || [];
-            const eventosDia = mapaEv[this._calDia] || [];
+        const diaKey = this._calDia;
+        const planosDia = diaKey ? (planos[diaKey] || {}) : {};
+        const temPlanoNoDia = Object.keys(planosDia).length > 0;
+        if (diaKey && (mapaD[diaKey] || mapaEv[diaKey] || temPlanoNoDia || auth.role === 'admin' || auth.role === 'professor')) {
+            const [ay, am, ad] = diaKey.split('-');
+            const treinosDia = mapaD[diaKey] || [];
+            const eventosDia = mapaEv[diaKey] || [];
+            const isAdminProf = auth.role === 'admin' || auth.role === 'professor';
+
+            // Turmas do dia (das turmas agendadas do dia na semana ou do histórico)
+            // Para admin/prof mostramos botão de adicionar turma
+            const turmasDoDia = [...new Set(treinosDia.map(t => t.turma))];
+            // Inclui turmas que já têm plano mas podem não ter treino esse dia
+            Object.keys(planosDia).forEach(t => { if (!turmasDoDia.includes(t)) turmasDoDia.push(t); });
+
+            // Build planos section
+            let planosHtml = '';
+            if (turmasDoDia.length > 0) {
+                planosHtml = turmasDoDia.map(turma => {
+                    const plano = planosDia[turma];
+                    const cor = this._corTurma(turma);
+                    const safeId = `${diaKey}-${turma}`.replace(/[^a-zA-Z0-9-]/g, '_');
+                    if (isAdminProf) {
+                        return `<div style="background:#1e293b; border-left:3px solid ${cor}; border-radius:6px; padding:8px 10px; margin-bottom:6px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                                <span style="font-size:0.65rem; color:${cor}; font-weight:700;">● ${turma}</span>
+                                ${plano ? `<button onclick="ui.excluirPlanoCal('${diaKey}','${turma.replace(/'/g,"\\'")}');event.stopPropagation();" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.6rem;">🗑</button>` : ''}
+                            </div>
+                            <textarea id="plano-cal-ta-${safeId}"
+                                placeholder="Plano de aula para ${turma}..."
+                                style="width:100%;box-sizing:border-box;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:5px;padding:6px 8px;font-size:0.68rem;resize:vertical;min-height:60px;font-family:inherit;">${plano ? plano.conteudo : ''}</textarea>
+                            ${plano && plano.profNome ? `<div style="font-size:0.55rem;color:#475569;margin-top:2px;">por ${plano.profNome}</div>` : ''}
+                            <button onclick="ui.salvarPlanoCal('${diaKey}','${turma.replace(/'/g,"\\'")}');event.stopPropagation();"
+                                style="margin-top:5px;width:100%;padding:5px;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;border-radius:5px;font-size:0.65rem;font-weight:700;cursor:pointer;">
+                                💾 Salvar plano
+                            </button>
+                        </div>`;
+                    } else {
+                        if (!plano || !plano.conteudo) return '';
+                        return `<div style="background:#1e293b; border-left:3px solid ${cor}; border-radius:6px; padding:8px 10px; margin-bottom:6px;">
+                            <div style="font-size:0.65rem; color:${cor}; font-weight:700; margin-bottom:4px;">● ${turma}</div>
+                            <div style="font-size:0.72rem; color:#e2e8f0; white-space:pre-wrap; line-height:1.5;">${plano.conteudo}</div>
+                            ${plano.profNome ? `<div style="font-size:0.55rem;color:#475569;margin-top:4px;">por ${plano.profNome}</div>` : ''}
+                        </div>`;
+                    }
+                }).join('');
+            }
+
+            // Para admin/prof: campo para adicionar plano de turma não listada
+            let addTurmaHtml = '';
+            if (isAdminProf) {
+                addTurmaHtml = `<div style="margin-top:6px;">
+                    <select id="plano-cal-nova-turma-${diaKey}" style="width:60%;background:#0f172a;border:1px solid #334155;color:#94a3b8;padding:5px;border-radius:5px;font-size:0.65rem;">
+                        <option value="">+ Outra turma</option>
+                        ${[...new Set(Object.values(academia.getGrade()).filter(v=>Array.isArray(v)).flat())].filter(t=>!t.includes('Sem treinos')&&!turmasDoDia.includes(t)).map(t=>`<option value="${t}">${t}</option>`).join('')}
+                    </select>
+                    <button onclick="(function(){ const sel=document.getElementById('plano-cal-nova-turma-${diaKey}'); if(!sel||!sel.value)return; const t=sel.value; if(!ui._calPlanos['${diaKey}'])ui._calPlanos['${diaKey}']={};ui._calPlanos['${diaKey}'][t]={conteudo:'',profNome:''};ui._renderCal(); })()"
+                        style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:5px 10px;border-radius:5px;font-size:0.65rem;cursor:pointer;margin-left:4px;">
+                        Adicionar
+                    </button>
+                </div>`;
+            }
+
             detalhe = `
                 <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px; margin-top:10px;">
                     <div style="font-size:0.6rem; color:#64748b; font-weight:700; margin-bottom:6px;">📅 ${ad}/${am}/${ay}</div>
@@ -9559,6 +9996,12 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                             </div>
                             <span style="font-size:0.6rem; color:#a855f7;">ver →</span>
                         </div>`).join('')}
+                    ${(temPlanoNoDia || isAdminProf) ? `
+                    <div style="margin-top:8px; border-top:1px solid #1e293b; padding-top:8px;">
+                        <div style="font-size:0.6rem; color:#10b981; font-weight:700; margin-bottom:6px;">📋 Plano de Aula</div>
+                        ${planosHtml}
+                        ${addTurmaHtml}
+                    </div>` : ''}
                 </div>`;
         }
 
@@ -9588,6 +10031,7 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                     <span style="font-size:0.55rem; color:#3b82f6; font-weight:700;">● JJ Adulto</span>
                     <span style="font-size:0.55rem; color:#f59e0b; font-weight:700;">● Kids</span>
                     <span style="font-size:0.55rem; color:#ef4444; font-weight:700;">● Muay Thai</span>
+                    <span style="font-size:0.55rem; color:#10b981; font-weight:700;">📋 Plano</span>
                 </div>
                 <!-- Total -->
                 <div style="font-size:0.65rem; color:#64748b; margin-top:8px; text-align:center; font-weight:600;">
@@ -10466,11 +10910,17 @@ const aniversario = {
         };
 
         if (fotoUrl) {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload  = () => desenhar(img);
-            img.onerror = () => desenhar(null);
-            img.src = fotoUrl;
+            const proxyUrl = `/api/img-proxy?url=${encodeURIComponent(fotoUrl)}`;
+            fetch(proxyUrl)
+                .then(r => r.blob())
+                .then(blob => {
+                    const objUrl = URL.createObjectURL(blob);
+                    const img = new Image();
+                    img.onload  = () => { desenhar(img); URL.revokeObjectURL(objUrl); };
+                    img.onerror = () => desenhar(null);
+                    img.src = objUrl;
+                })
+                .catch(() => desenhar(null));
         } else {
             desenhar(null);
         }
@@ -19697,12 +20147,25 @@ const perguntas = {
                                ${p.publica ? '<div style="font-size:0.5rem;color:#64748b;margin-top:4px;">🌍 visível para todos</div>' : '<div style="font-size:0.5rem;color:#64748b;margin-top:4px;">🔒 só para você</div>'}
                            </div>`
                         : '<div style="font-size:0.6rem;color:#64748b;margin-top:6px;font-style:italic;">⏳ aguardando resposta...</div>';
+                    const editBtn = !p.respondida
+                        ? `<button onclick="perguntas._toggleEditAluno('${pid}',\`${p.texto.replace(/`/g,'\\`').replace(/\\/g,'\\\\')}\`)" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.7rem;padding:0 2px;" title="Editar pergunta">✏️</button>`
+                        : '';
+                    const editForm = !p.respondida
+                        ? `<div id="edit-aluno-${pid}" style="display:none;margin-top:6px;">
+                               <textarea id="edit-aluno-txt-${pid}" maxlength="400" style="width:100%;box-sizing:border-box;padding:8px;background:#1e293b;border:1px solid #334155;color:white;border-radius:6px;font-size:0.72rem;resize:none;height:60px;outline:none;font-family:inherit;"></textarea>
+                               <div style="display:flex;gap:6px;margin-top:4px;">
+                                   <button onclick="perguntas.editarPergunta('${pid}')" style="flex:1;padding:6px;background:#2e1065;border:1px solid #8b5cf6;color:#c4b5fd;border-radius:6px;font-size:0.62rem;font-weight:800;cursor:pointer;">💾 Salvar</button>
+                                   <button onclick="document.getElementById('edit-aluno-${pid}').style.display='none'" style="padding:6px 10px;background:#1e293b;border:1px solid #334155;color:#64748b;border-radius:6px;font-size:0.62rem;cursor:pointer;">✕</button>
+                               </div>
+                           </div>`
+                        : '';
                     return `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:8px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                             <span style="font-size:0.6rem;color:#64748b;">${p.dataEnvio}${p.professorNome ? ` · <span style="color:#c4b5fd;">para ${p.professorNome}</span>` : ''}</span>
-                            <button onclick="perguntas.excluirAluno('${pid}')" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.7rem;padding:0 2px;" title="Excluir pergunta">🗑</button>
+                            <div style="display:flex;gap:4px;">${editBtn}<button onclick="perguntas.excluirAluno('${pid}')" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.7rem;padding:0 2px;" title="Excluir pergunta">🗑</button></div>
                         </div>
                         <div style="font-size:0.75rem;color:#e2e8f0;">${p.texto}</div>
+                        ${editForm}
                         ${resp}
                     </div>`;
                 }).join('');
@@ -19856,13 +20319,24 @@ const perguntas = {
                         </div>
                     </div>`;
                 } else {
-                    return `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px;margin-bottom:6px;opacity:0.7;">
+                    return `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px;margin-bottom:6px;opacity:0.85;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
                             <div style="display:flex;gap:6px;align-items:center;">${badge}<span style="font-size:0.62rem;color:#94a3b8;">${p.alunoNome}</span>${p.publica ? '<span style="font-size:0.48rem;background:#2e1065;color:#c4b5fd;padding:1px 5px;border-radius:3px;font-weight:800;">🌍 público</span>' : '<span style="font-size:0.48rem;background:#1e293b;color:#64748b;padding:1px 5px;border-radius:3px;font-weight:800;">🔒 privado</span>'}</div>
-                            <button onclick="perguntas.excluirProf('${pid}')" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:0 2px;" title="Excluir">🗑</button>
+                            <div style="display:flex;gap:4px;">
+                                <button onclick="perguntas._toggleEditProf('${pid}',\`${(p.resposta||'').replace(/`/g,'\\`').replace(/\\/g,'\\\\')}\`)" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.7rem;padding:0 2px;" title="Editar resposta">✏️</button>
+                                <button onclick="perguntas.excluirProf('${pid}')" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.75rem;padding:0 2px;" title="Excluir">🗑</button>
+                            </div>
                         </div>
                         <div style="font-size:0.68rem;color:#94a3b8;margin-bottom:3px;">${p.texto}</div>
-                        <div style="font-size:0.65rem;color:#8b5cf6;">↳ ${p.resposta}</div>
+                        <div style="font-size:0.65rem;color:#8b5cf6;margin-bottom:4px;">↳ ${p.resposta}</div>
+                        <div id="edit-prof-${pid}" style="display:none;">
+                            <textarea id="edit-prof-txt-${pid}" maxlength="600" style="width:100%;box-sizing:border-box;padding:8px;background:#1e293b;border:1px solid #334155;color:white;border-radius:6px;font-size:0.72rem;resize:none;height:60px;outline:none;font-family:inherit;"></textarea>
+                            <div style="display:flex;gap:6px;margin-top:4px;">
+                                <button onclick="perguntas.editarResposta('${pid}',false)" style="flex:1;padding:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.6rem;font-weight:800;cursor:pointer;">🔒 Salvar privado</button>
+                                <button onclick="perguntas.editarResposta('${pid}',true)" style="flex:1;padding:6px;background:#2e1065;border:1px solid #8b5cf6;color:#c4b5fd;border-radius:6px;font-size:0.6rem;font-weight:800;cursor:pointer;">🌍 Salvar público</button>
+                                <button onclick="document.getElementById('edit-prof-${pid}').style.display='none'" style="padding:6px 8px;background:#1e293b;border:1px solid #334155;color:#64748b;border-radius:6px;font-size:0.6rem;cursor:pointer;">✕</button>
+                            </div>
+                        </div>
                     </div>`;
                 }
             };
@@ -19906,6 +20380,54 @@ const perguntas = {
         } catch(e) { alert('Erro ao excluir: ' + e.message); }
     },
 
+    _toggleEditAluno(pid, textoAtual) {
+        const div = document.getElementById(`edit-aluno-${pid}`);
+        if (!div) return;
+        const txt = document.getElementById(`edit-aluno-txt-${pid}`);
+        if (div.style.display === 'none') {
+            div.style.display = 'block';
+            if (txt) txt.value = textoAtual;
+            txt?.focus();
+        } else {
+            div.style.display = 'none';
+        }
+    },
+
+    async editarPergunta(perguntaId) {
+        const txt = document.getElementById(`edit-aluno-txt-${perguntaId}`)?.value?.trim();
+        if (!txt) return alert('Digite a pergunta.');
+        try {
+            await db.collection('perguntas').doc(perguntaId).update({ texto: txt });
+            this.renderCardAluno();
+        } catch(e) { alert('Erro ao salvar: ' + e.message); }
+    },
+
+    _toggleEditProf(pid, respostaAtual) {
+        const div = document.getElementById(`edit-prof-${pid}`);
+        if (!div) return;
+        const txt = document.getElementById(`edit-prof-txt-${pid}`);
+        if (div.style.display === 'none') {
+            div.style.display = 'block';
+            if (txt) txt.value = respostaAtual;
+            txt?.focus();
+        } else {
+            div.style.display = 'none';
+        }
+    },
+
+    async editarResposta(perguntaId, publica) {
+        const txt = document.getElementById(`edit-prof-txt-${perguntaId}`)?.value?.trim();
+        if (!txt) return alert('Digite a resposta.');
+        try {
+            await db.collection('perguntas').doc(perguntaId).update({
+                resposta: txt,
+                publica: publica,
+                dataResposta: this._dataHoje(),
+            });
+            this.renderPainelProfessor();
+        } catch(e) { alert('Erro ao salvar: ' + e.message); }
+    },
+
     async responder(perguntaId, publica) {
         const texto = document.getElementById(`resp-texto-${perguntaId}`)?.value?.trim();
         if (!texto) return alert('Digite a resposta.');
@@ -19929,5 +20451,721 @@ const perguntas = {
         } catch(e) {
             alert('Erro ao responder: ' + e.message);
         }
+    },
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PESQUISAS — Admin cria formulários; alunos respondem; admin vê relatório
+// ══════════════════════════════════════════════════════════════════════════════
+const pesquisas = {
+
+    _dataHoje() {
+        const h = new Date();
+        return `${String(h.getDate()).padStart(2,'0')}/${String(h.getMonth()+1).padStart(2,'0')}/${h.getFullYear()}`;
+    },
+
+    _publicoLabel(pub) {
+        if (!pub || pub.tipo === 'todos') return '👥 Todos';
+        if (pub.tipo === 'kids')       return '🏅 Kids';
+        if (pub.tipo === 'bjj_adulto') return '🥋 BJJ Adulto';
+        if (pub.tipo === 'mt')         return '🥊 Muay Thai';
+        if (pub.tipo === 'faixas_bjj') return `🎖 Faixas: ${(pub.faixas||[]).join(', ')}`;
+        if (pub.tipo === 'alunos')     return `👤 ${(pub.alunoIds||[]).length} aluno(s) específico(s)`;
+        return '👥 Todos';
+    },
+
+    _alunoMatchPublico(pub, alunoData, alunoId) {
+        if (!pub || pub.tipo === 'todos') return true;
+        if (pub.tipo === 'kids')       return alunoData.isKids === true;
+        if (pub.tipo === 'bjj_adulto') return alunoData.modalidade !== 'muaythai' && !alunoData.isKids;
+        if (pub.tipo === 'mt')         return alunoData.modalidade === 'muaythai';
+        if (pub.tipo === 'faixas_bjj') return (pub.faixas||[]).includes(alunoData.faixa);
+        if (pub.tipo === 'alunos')     return (pub.alunoIds||[]).includes(alunoId);
+        return true;
+    },
+
+    async _changePublico(tipo) {
+        if (!window._pesqPublico) window._pesqPublico = { tipo: 'todos', faixas: [], alunoIds: [] };
+        window._pesqPublico.tipo   = tipo;
+        window._pesqPublico.faixas = [];
+        window._pesqPublico.alunoIds = [];
+        const extra = document.getElementById('pesq-publico-extra');
+        if (!extra) return;
+        if (tipo === 'faixas_bjj') {
+            const faixas = ['Branca','Azul','Roxa','Marrom','Preta'];
+            extra.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">${faixas.map(f =>
+                `<label style="display:flex;align-items:center;gap:4px;font-size:0.65rem;color:#e2e8f0;cursor:pointer;">
+                    <input type="checkbox" value="${f}" onchange="pesquisas._toggleFaixaPesq('${f}',this.checked)" style="accent-color:#f59e0b;"> ${f}
+                </label>`).join('')}</div>`;
+        } else if (tipo === 'alunos') {
+            extra.innerHTML = '<div style="font-size:0.62rem;color:#64748b;padding:6px;"><i class="fas fa-spinner fa-spin"></i> Carregando alunos...</div>';
+            try {
+                const snap = await db.collection('alunos').get();
+                window._pesqListaAlunos = snap.docs.map(d => ({ id: d.id, nome: d.data().nome || d.id })).sort((a,b) => a.nome.localeCompare(b.nome));
+                this._renderListaAlunos('');
+            } catch(e) { extra.innerHTML = `<div style="color:#f43f5e;font-size:0.62rem;">Erro ao carregar alunos</div>`; }
+        } else {
+            extra.innerHTML = '';
+        }
+    },
+
+    _toggleFaixaPesq(faixa, checked) {
+        if (!window._pesqPublico) window._pesqPublico = { tipo: 'faixas_bjj', faixas: [], alunoIds: [] };
+        if (checked) { if (!window._pesqPublico.faixas.includes(faixa)) window._pesqPublico.faixas.push(faixa); }
+        else window._pesqPublico.faixas = window._pesqPublico.faixas.filter(f => f !== faixa);
+    },
+
+    _toggleAlunoPesq(id, checked) {
+        if (!window._pesqPublico) window._pesqPublico = { tipo: 'alunos', faixas: [], alunoIds: [] };
+        if (checked) { if (!window._pesqPublico.alunoIds.includes(id)) window._pesqPublico.alunoIds.push(id); }
+        else window._pesqPublico.alunoIds = window._pesqPublico.alunoIds.filter(x => x !== id);
+    },
+
+    _renderListaAlunos(filtro) {
+        const extra = document.getElementById('pesq-publico-extra');
+        if (!extra) return;
+        // primeira vez: monta o container fixo com input + divs separados
+        if (!document.getElementById('pesq-alunos-lista')) {
+            extra.innerHTML = `
+                <input id="pesq-alunos-busca" oninput="pesquisas._filtrarAlunos(this.value)" placeholder="🔍 Pesquisar aluno..."
+                    style="width:100%;box-sizing:border-box;padding:7px 10px;background:#1e293b;border:1px solid #334155;color:white;border-radius:6px;font-size:0.72rem;outline:none;margin-top:4px;margin-bottom:4px;font-family:inherit;"/>
+                <div id="pesq-alunos-lista" style="max-height:160px;overflow-y:auto;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:6px;"></div>
+                <div id="pesq-alunos-contador" style="font-size:0.55rem;color:#f59e0b;margin-top:4px;"></div>`;
+        }
+        this._filtrarAlunos(filtro);
+    },
+
+    _filtrarAlunos(filtro) {
+        const lista = (window._pesqListaAlunos || []).filter(a => a.nome.toLowerCase().includes((filtro||'').toLowerCase()));
+        const selecionados = window._pesqPublico?.alunoIds || [];
+        const listDiv = document.getElementById('pesq-alunos-lista');
+        const contador = document.getElementById('pesq-alunos-contador');
+        if (listDiv) listDiv.innerHTML = lista.length
+            ? lista.map(a => `<label style="display:flex;align-items:center;gap:6px;font-size:0.65rem;color:#e2e8f0;cursor:pointer;padding:4px 2px;">
+                <input type="checkbox" value="${a.id}" ${selecionados.includes(a.id)?'checked':''} onchange="pesquisas._toggleAlunoPesq('${a.id}',this.checked)" style="accent-color:#f59e0b;"> ${a.nome}
+              </label>`).join('')
+            : '<div style="font-size:0.62rem;color:#64748b;padding:4px;">Nenhum aluno encontrado</div>';
+        if (contador) contador.textContent = selecionados.length ? `${selecionados.length} selecionado(s)` : '';
+    },
+
+    // ── PAINEL ADMIN ──────────────────────────────────────────────────────────
+
+    async renderPainelAdmin() {
+        if (auth.role !== 'admin') return;
+        let card = document.getElementById('card-pesquisas-admin');
+        if (!card) {
+            card = document.createElement('div');
+            card.id = 'card-pesquisas-admin';
+            card.style.cssText = 'margin-top:15px;';
+            const ref = document.getElementById('card-perguntas-prof') || document.getElementById('area-professor-checkin');
+            if (!ref) return;
+            ref.after(card);
+        }
+        card.innerHTML = '<div style="background:#1e293b;border:1px solid #f59e0b44;border-left:3px solid #f59e0b;border-radius:12px;padding:15px;"><div style="color:#64748b;font-size:0.7rem;text-align:center;padding:10px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div></div>';
+        try {
+            const snap = await db.collection('pesquisas').get();
+            const lista = snap.docs.sort((a,b) => (b.data().timestamp||0)-(a.data().timestamp||0));
+
+            const listaHtml = lista.length ? lista.map(doc => {
+                const p = doc.data(); const pid = doc.id;
+                return `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <span style="font-size:0.75rem;font-weight:700;color:#e2e8f0;">${p.titulo}</span>
+                        ${p.ativa
+                            ? '<span style="font-size:0.48rem;background:#14532d;color:#4ade80;padding:2px 6px;border-radius:4px;font-weight:800;">🟢 ATIVA</span>'
+                            : '<span style="font-size:0.48rem;background:#1e293b;color:#64748b;padding:2px 6px;border-radius:4px;font-weight:800;">⚫ INATIVA</span>'}
+                    </div>
+                    <div style="font-size:0.55rem;color:#64748b;margin-bottom:8px;">${p.perguntas?.length || 0} pergunta(s) · ${this._publicoLabel(p.publico)} · criada em ${p.dataCriacao}</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button onclick="pesquisas.verRelatorio('${pid}')" style="flex:1;padding:6px;background:#1e3a5f;border:1px solid #3b82f6;color:#93c5fd;border-radius:6px;font-size:0.62rem;font-weight:800;cursor:pointer;">📊 Relatório</button>
+                        <button onclick="pesquisas.toggleAtiva('${pid}',${!p.ativa})" style="flex:1;padding:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.62rem;font-weight:800;cursor:pointer;">${p.ativa ? '⏸ Desativar' : '▶ Ativar'}</button>
+                        <button onclick="pesquisas.excluir('${pid}')" style="padding:6px 8px;background:none;border:1px solid #f43f5e44;color:#f43f5e;border-radius:6px;font-size:0.62rem;cursor:pointer;">🗑</button>
+                    </div>
+                </div>`;
+            }).join('') : '<div style="font-size:0.65rem;color:#64748b;text-align:center;padding:8px;">Nenhuma pesquisa criada</div>';
+
+            card.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #f59e0b44;border-left:3px solid #f59e0b;border-radius:12px;padding:15px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <span style="font-size:0.75rem;font-weight:800;color:#f59e0b;">📋 PESQUISAS</span>
+                    <button onclick="pesquisas.abrirFormCriar()" style="padding:5px 10px;background:#78350f;border:1px solid #f59e0b;color:#fcd34d;border-radius:6px;font-size:0.62rem;font-weight:800;cursor:pointer;">+ Nova pesquisa</button>
+                </div>
+                <div id="form-nova-pesquisa" style="display:none;background:#0f172a;border:1px solid #f59e0b44;border-radius:8px;padding:12px;margin-bottom:12px;">
+                    <input id="pesq-titulo" placeholder="Título da pesquisa..." maxlength="100"
+                        style="width:100%;box-sizing:border-box;padding:9px 10px;background:#1e293b;border:1px solid #334155;color:white;border-radius:7px;font-size:0.75rem;outline:none;margin-bottom:8px;font-family:inherit;"/>
+                    <div style="margin-bottom:8px;">
+                        <div style="font-size:0.55rem;color:#64748b;font-weight:700;letter-spacing:1px;margin-bottom:4px;">PÚBLICO-ALVO</div>
+                        <select id="pesq-publico-tipo" onchange="pesquisas._changePublico(this.value)"
+                            style="width:100%;box-sizing:border-box;padding:8px 10px;background:#1e293b;border:1px solid #334155;color:white;border-radius:7px;font-size:0.72rem;outline:none;">
+                            <option value="todos">👥 Todos os alunos</option>
+                            <option value="kids">🏅 Somente Kids</option>
+                            <option value="bjj_adulto">🥋 BJJ Adulto</option>
+                            <option value="mt">🥊 Muay Thai</option>
+                            <option value="faixas_bjj">🎖 Por faixas (BJJ Adulto)</option>
+                            <option value="alunos">👤 Alunos específicos</option>
+                        </select>
+                        <div id="pesq-publico-extra"></div>
+                    </div>
+                    <div id="pesq-perguntas-cont"></div>
+                    <button onclick="pesquisas._addPergunta()" style="width:100%;padding:7px;background:#1e293b;border:1px dashed #334155;color:#64748b;border-radius:6px;font-size:0.62rem;cursor:pointer;margin-bottom:8px;">+ Adicionar pergunta</button>
+                    <button onclick="pesquisas.salvarPesquisa()" style="width:100%;padding:9px;background:#f59e0b;border:none;color:#0f172a;border-radius:7px;font-weight:800;font-size:0.72rem;cursor:pointer;">💾 Criar Pesquisa</button>
+                </div>
+                ${listaHtml}
+            </div>`;
+            window._pesqPerguntas = [];
+            window._pesqPublico = { tipo: 'todos', faixas: [], alunoIds: [] };
+            this._renderFormPerguntas();
+        } catch(e) {
+            const c = document.getElementById('card-pesquisas-admin');
+            if (c) c.innerHTML = `<div style="background:#1e293b;border-radius:12px;padding:15px;color:#f43f5e;font-size:0.72rem;">Erro: ${e.message}</div>`;
+        }
+    },
+
+    abrirFormCriar() {
+        const form = document.getElementById('form-nova-pesquisa');
+        if (!form) return;
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    },
+
+    _renderFormPerguntas() {
+        const cont = document.getElementById('pesq-perguntas-cont');
+        if (!cont) return;
+        if (!window._pesqPerguntas) window._pesqPerguntas = [];
+        cont.innerHTML = window._pesqPerguntas.map((q, i) => `
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:8px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                    <span style="font-size:0.55rem;color:#64748b;font-weight:700;">PERGUNTA ${i+1}</span>
+                    <button onclick="pesquisas._removerPergunta(${i})" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.7rem;">✕</button>
+                </div>
+                <input value="${q.texto.replace(/"/g,'&quot;')}" placeholder="Texto da pergunta..." maxlength="200"
+                    oninput="window._pesqPerguntas[${i}].texto=this.value"
+                    style="width:100%;box-sizing:border-box;padding:7px;background:#0f172a;border:1px solid #334155;color:white;border-radius:5px;font-size:0.72rem;outline:none;margin-bottom:5px;font-family:inherit;"/>
+                <select onchange="pesquisas._changeTipo(${i},this.value)"
+                    style="width:100%;padding:6px;background:#0f172a;border:1px solid #334155;color:white;border-radius:5px;font-size:0.68rem;outline:none;margin-bottom:${q.tipo==='multipla'?'5px':'0'};">
+                    <option value="texto" ${q.tipo==='texto'?'selected':''}>📝 Resposta livre</option>
+                    <option value="nota" ${q.tipo==='nota'?'selected':''}>⭐ Nota 1-5</option>
+                    <option value="multipla" ${q.tipo==='multipla'?'selected':''}>🔘 Múltipla escolha</option>
+                </select>
+                ${q.tipo==='multipla' ? `<input value="${(q.opcoes||[]).join(', ').replace(/"/g,'&quot;')}" placeholder="opção1, opção2, opção3..."
+                    oninput="window._pesqPerguntas[${i}].opcoes=this.value.split(',').map(s=>s.trim()).filter(Boolean)"
+                    style="width:100%;box-sizing:border-box;padding:7px;background:#0f172a;border:1px solid #334155;color:white;border-radius:5px;font-size:0.68rem;outline:none;font-family:inherit;" placeholder="opção1, opção2, opção3"/>` : ''}
+            </div>
+        `).join('');
+    },
+
+    _addPergunta() {
+        if (!window._pesqPerguntas) window._pesqPerguntas = [];
+        window._pesqPerguntas.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,5), texto: '', tipo: 'texto', opcoes: [] });
+        this._renderFormPerguntas();
+    },
+
+    _removerPergunta(i) {
+        window._pesqPerguntas.splice(i, 1);
+        this._renderFormPerguntas();
+    },
+
+    _changeTipo(i, tipo) {
+        window._pesqPerguntas[i].tipo = tipo;
+        this._renderFormPerguntas();
+    },
+
+    async salvarPesquisa() {
+        const titulo = document.getElementById('pesq-titulo')?.value?.trim();
+        if (!titulo) return alert('Digite o título da pesquisa.');
+        if (!window._pesqPerguntas?.length) return alert('Adicione ao menos uma pergunta.');
+        const pergs = window._pesqPerguntas.filter(q => q.texto.trim());
+        if (!pergs.length) return alert('Preencha o texto das perguntas.');
+        try {
+            await db.collection('pesquisas').add({
+                titulo,
+                perguntas: pergs,
+                publico: window._pesqPublico || { tipo: 'todos', faixas: [], alunoIds: [] },
+                ativa: true,
+                dataCriacao: this._dataHoje(),
+                timestamp: Date.now(),
+            });
+            window._pesqPerguntas = [];
+            alert('✅ Pesquisa criada e ativada!');
+            this.renderPainelAdmin();
+        } catch(e) { alert('Erro ao criar: ' + e.message); }
+    },
+
+    async toggleAtiva(pesquisaId, novoEstado) {
+        try {
+            await db.collection('pesquisas').doc(pesquisaId).update({ ativa: novoEstado });
+            this.renderPainelAdmin();
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async excluir(pesquisaId) {
+        if (!confirm('Excluir esta pesquisa e todas as respostas?')) return;
+        try {
+            const snapR = await db.collection('pesquisas').doc(pesquisaId).collection('respostas').get();
+            const batch = db.batch();
+            snapR.docs.forEach(d => batch.delete(d.ref));
+            batch.delete(db.collection('pesquisas').doc(pesquisaId));
+            await batch.commit();
+            this.renderPainelAdmin();
+        } catch(e) { alert('Erro ao excluir: ' + e.message); }
+    },
+
+    async verRelatorio(pesquisaId) {
+        const card = document.getElementById('card-pesquisas-admin');
+        if (!card) return;
+        card.innerHTML = '<div style="background:#1e293b;border:1px solid #f59e0b44;border-left:3px solid #f59e0b;border-radius:12px;padding:15px;"><div style="color:#64748b;font-size:0.7rem;text-align:center;padding:10px;"><i class="fas fa-spinner fa-spin"></i> Carregando relatório...</div></div>';
+        try {
+            const [pesqDoc, snapR] = await Promise.all([
+                db.collection('pesquisas').doc(pesquisaId).get(),
+                db.collection('pesquisas').doc(pesquisaId).collection('respostas').get(),
+            ]);
+            if (!pesqDoc.exists) return;
+            const p = pesqDoc.data();
+            const respostas = snapR.docs.map(d => d.data()).sort((a,b) => (b.timestamp||0)-(a.timestamp||0));
+
+            const statsHtml = (p.perguntas || []).map(q => {
+                const vals = respostas.map(r => r.respostas?.[q.id]).filter(v => v !== undefined && v !== '');
+                let resumo = '';
+                if (q.tipo === 'nota') {
+                    const media = vals.length ? (vals.reduce((a,b) => a + Number(b), 0) / vals.length).toFixed(1) : '-';
+                    const estrelas = vals.length ? '⭐'.repeat(Math.round(Number(media))) : '';
+                    resumo = `<div style="font-size:0.72rem;color:#fcd34d;margin-top:4px;">${estrelas} <strong>${media}</strong> / 5 · ${vals.length} resposta(s)</div>`;
+                } else if (q.tipo === 'multipla') {
+                    const cnt = {};
+                    vals.forEach(v => { cnt[v] = (cnt[v]||0) + 1; });
+                    resumo = Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([k,v]) => {
+                        const pct = vals.length ? Math.round(v/vals.length*100) : 0;
+                        return `<div style="margin-top:4px;">
+                            <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#e2e8f0;margin-bottom:2px;"><span>${k}</span><span>${v} (${pct}%)</span></div>
+                            <div style="height:5px;background:#1e293b;border-radius:3px;"><div style="height:5px;width:${pct}%;background:#f59e0b;border-radius:3px;"></div></div>
+                        </div>`;
+                    }).join('') || '<div style="font-size:0.62rem;color:#64748b;margin-top:4px;">Sem respostas</div>';
+                } else {
+                    resumo = vals.length
+                        ? `<div style="margin-top:6px;">${vals.map(v => `<div style="background:#0f172a;border-left:2px solid #334155;padding:5px 8px;border-radius:0 4px 4px 0;font-size:0.68rem;color:#cbd5e1;margin-bottom:4px;">"${v}"</div>`).join('')}</div>`
+                        : '<div style="font-size:0.62rem;color:#64748b;margin-top:4px;">Sem respostas</div>';
+                }
+                return `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:8px;">
+                    <div style="font-size:0.72rem;font-weight:700;color:#e2e8f0;">${q.texto}</div>
+                    ${resumo}
+                </div>`;
+            }).join('');
+
+            const alunosHtml = respostas.length
+                ? `<details style="margin-top:10px;"><summary style="font-size:0.62rem;color:#64748b;cursor:pointer;font-weight:700;list-style:none;padding:4px 0;">▸ Ver por aluno (${respostas.length})</summary>
+                    <div style="margin-top:6px;">${respostas.map(r => `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:8px;margin-bottom:6px;">
+                        <div style="font-size:0.62rem;color:#c4b5fd;font-weight:700;margin-bottom:4px;">${r.alunoNome} · ${r.dataResposta}</div>
+                        ${(p.perguntas||[]).map(q => `<div style="font-size:0.62rem;color:#94a3b8;margin-bottom:2px;"><span style="color:#64748b;">${q.texto}:</span> ${r.respostas?.[q.id] ?? '—'}</div>`).join('')}
+                    </div>`).join('')}</div>
+                </details>` : '';
+
+            card.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #f59e0b44;border-left:3px solid #f59e0b;border-radius:12px;padding:15px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                    <button onclick="pesquisas.renderPainelAdmin()" style="background:none;border:none;color:#f59e0b;cursor:pointer;font-size:0.8rem;padding:0;">←</button>
+                    <span style="font-size:0.75rem;font-weight:800;color:#f59e0b;">📊 RELATÓRIO</span>
+                </div>
+                <div style="font-size:0.8rem;font-weight:700;color:#e2e8f0;margin-bottom:4px;">${p.titulo}</div>
+                <div style="font-size:0.6rem;color:#64748b;margin-bottom:12px;">${respostas.length} aluno(s) responderam</div>
+                ${statsHtml}
+                ${alunosHtml}
+            </div>`;
+        } catch(e) {
+            const c = document.getElementById('card-pesquisas-admin');
+            if (c) c.innerHTML = `<div style="background:#1e293b;border-radius:12px;padding:15px;color:#f43f5e;font-size:0.72rem;">Erro: ${e.message}</div>`;
+        }
+    },
+
+    // ── CARD DO ALUNO ─────────────────────────────────────────────────────────
+
+    async renderCardAluno() {
+        if (auth.role !== 'aluno') return;
+        try {
+            const snap = await db.collection('pesquisas').where('ativa', '==', true).get();
+            if (snap.empty) return;
+            const pesqDoc = snap.docs[0];
+            const p = pesqDoc.data(); const pid = pesqDoc.id;
+            const alunoId = auth.currentUser?.id;
+            const alunoDoc2 = await db.collection('alunos').doc(alunoId).get();
+            const alunoData2 = alunoDoc2.exists ? alunoDoc2.data() : {};
+            if (!this._alunoMatchPublico(p.publico, alunoData2, alunoId)) return;
+            const respDoc = await db.collection('pesquisas').doc(pid).collection('respostas').doc(alunoId).get();
+            if (respDoc.exists) return;
+
+            let card = document.getElementById('card-pesquisa-aluno');
+            if (!card) {
+                card = document.createElement('div');
+                card.id = 'card-pesquisa-aluno';
+                card.style.cssText = 'margin-top:15px;';
+                const ref = document.getElementById('card-perguntas-aluno') || document.getElementById('tab-checkin');
+                if (!ref) return;
+                ref.after ? ref.after(card) : ref.appendChild(card);
+            }
+
+            const pergHtml = (p.perguntas || []).map(q => {
+                let input = '';
+                if (q.tipo === 'texto') {
+                    input = `<textarea id="pesq-resp-${pid}-${q.id}" maxlength="300" placeholder="Sua resposta..."
+                        style="width:100%;box-sizing:border-box;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:6px;font-size:0.72rem;resize:none;height:60px;outline:none;font-family:inherit;"></textarea>`;
+                } else if (q.tipo === 'nota') {
+                    input = `<div style="display:flex;gap:6px;flex-wrap:wrap;">${[1,2,3,4,5].map(n =>
+                        `<button onclick="pesquisas._selecionarNota('${pid}','${q.id}',${n},this)"
+                            data-nota="${n}" data-qid="${q.id}"
+                            style="flex:1;padding:7px 4px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.7rem;font-weight:800;cursor:pointer;">${n} ⭐</button>`
+                    ).join('')}</div>`;
+                } else if (q.tipo === 'multipla') {
+                    input = `<div style="display:flex;flex-direction:column;gap:5px;">${(q.opcoes||[]).map(op =>
+                        `<label style="display:flex;align-items:center;gap:8px;font-size:0.72rem;color:#e2e8f0;cursor:pointer;background:#0f172a;border:1px solid #334155;padding:8px 10px;border-radius:6px;">
+                            <input type="radio" name="pesq-${pid}-${q.id}" value="${op.replace(/"/g,'&quot;')}" style="accent-color:#f59e0b;"> ${op}
+                        </label>`
+                    ).join('')}</div>`;
+                }
+                return `<div style="margin-bottom:12px;">
+                    <div style="font-size:0.75rem;color:#e2e8f0;margin-bottom:6px;font-weight:600;">${q.texto}</div>
+                    ${input}
+                </div>`;
+            }).join('');
+
+            card.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #f59e0b44;border-left:3px solid #f59e0b;border-radius:12px;padding:15px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#f59e0b;letter-spacing:1px;margin-bottom:4px;">📋 PESQUISA</div>
+                <div style="font-size:0.85rem;font-weight:700;color:#e2e8f0;margin-bottom:14px;">${p.titulo}</div>
+                ${pergHtml}
+                <button onclick="pesquisas.enviarRespostas('${pid}')"
+                    style="width:100%;padding:11px;background:#f59e0b;border:none;color:#0f172a;border-radius:8px;font-weight:800;font-size:0.78rem;cursor:pointer;">
+                    📤 ENVIAR RESPOSTAS
+                </button>
+            </div>`;
+        } catch(e) { /* silencioso — pesquisa opcional */ }
+    },
+
+    _selecionarNota(pid, qid, valor, btn) {
+        if (!window._pesqNotas) window._pesqNotas = {};
+        window._pesqNotas[`${pid}-${qid}`] = valor;
+        const parent = btn.parentElement;
+        parent.querySelectorAll('button').forEach(b => {
+            b.style.background = '#1e293b';
+            b.style.color = '#94a3b8';
+            b.style.borderColor = '#334155';
+        });
+        btn.style.background = '#f59e0b';
+        btn.style.color = '#0f172a';
+        btn.style.borderColor = '#f59e0b';
+    },
+
+    async enviarRespostas(pesquisaId) {
+        const pesqDoc = await db.collection('pesquisas').doc(pesquisaId).get();
+        if (!pesqDoc.exists) return;
+        const p = pesqDoc.data();
+        const respostas = {};
+        for (const q of (p.perguntas || [])) {
+            if (q.tipo === 'texto') {
+                respostas[q.id] = document.getElementById(`pesq-resp-${pesquisaId}-${q.id}`)?.value?.trim() || '';
+            } else if (q.tipo === 'nota') {
+                respostas[q.id] = window._pesqNotas?.[`${pesquisaId}-${q.id}`] || '';
+            } else if (q.tipo === 'multipla') {
+                const checked = document.querySelector(`input[name="pesq-${pesquisaId}-${q.id}"]:checked`);
+                respostas[q.id] = checked ? checked.value : '';
+            }
+        }
+        const alunoId = auth.currentUser?.id;
+        try {
+            const alunoDoc = await db.collection('alunos').doc(alunoId).get();
+            const alunoData = alunoDoc.exists ? alunoDoc.data() : {};
+            await db.collection('pesquisas').doc(pesquisaId).collection('respostas').doc(alunoId).set({
+                alunoId,
+                alunoNome:    alunoData.nome || '',
+                modalidade:   alunoData.modalidade || 'bjj',
+                isKids:       alunoData.isKids === true,
+                respostas,
+                dataResposta: this._dataHoje(),
+                timestamp:    Date.now(),
+            });
+            alert('✅ Respostas enviadas! Obrigado.');
+            document.getElementById('card-pesquisa-aluno')?.remove();
+        } catch(e) { alert('Erro ao enviar: ' + e.message); }
+    },
+};
+
+// ══════════════════════════════════════════════════════════
+// MURAL DE FAIXAS PRETAS
+// ══════════════════════════════════════════════════════════
+const pretas = {
+    _lista: null,
+
+    async render() {
+        const el = document.getElementById('pretas-container');
+        if (!el) return;
+        el.innerHTML = `<div style="text-align:center;padding:40px;color:#475569;font-size:0.75rem;">Carregando...</div>`;
+        try {
+            const snap = await db.collection('faixas_pretas').orderBy('dataGraduacao', 'asc').get();
+            this._lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch(e) { this._lista = []; }
+        el.innerHTML = this._buildPage();
+    },
+
+    _buildPage() {
+        const isAdmin = auth.role === 'admin';
+        const total = (this._lista || []).length;
+
+        // Ordenação: sem número (pinned) → destaque → por número → resto
+        const sorted = [...(this._lista || [])].sort((a, b) => {
+            const aPin = a.numero == null || a.numero === '', bPin = b.numero == null || b.numero === '';
+            if (aPin !== bPin) return aPin ? -1 : 1;
+            const aDest = !!a.destaque, bDest = !!b.destaque;
+            if (!aPin && aDest !== bDest) return aDest ? -1 : 1;
+            if (!aPin && !bPin) return a.numero - b.numero;
+            return 0;
+        });
+
+        const cards = sorted.map(p => {
+            const inativo = p.ativo === false;
+            const pinned  = p.numero == null || p.numero === '';
+            const dataFmt = p.dataGraduacao ? p.dataGraduacao.split('-').reverse().join('/') : '';
+            const border  = pinned ? '2px solid #3b82f6' : p.destaque ? '2px solid #f59e0b' : '1px solid #1e293b';
+            const innerOpacity = inativo ? 'opacity:0.45;filter:grayscale(80%);' : '';
+            return `
+            <div style="background:#0f172a;border:${border};border-radius:16px;overflow:hidden;position:relative;">
+                <div style="${innerOpacity}">
+                <!-- Foto -->
+                <div style="position:relative;aspect-ratio:1;overflow:hidden;background:#1e293b;">
+                    ${p.foto
+                        ? `<img src="${p.foto}" onclick="verFotoAluno('${p.foto}','${p.nome.replace(/'/g,"\\'")}');"
+                            style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;">`
+                        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem;">🥋</div>`}
+                    <!-- Faixa preta decorativa no topo -->
+                    <div style="position:absolute;top:0;left:0;right:0;height:6px;background:#000;border-bottom:2px solid #ffffff18;"></div>
+                    ${p.graus > 0 ? `<div style="position:absolute;top:0;right:0;background:#dc2626;color:white;font-size:0.5rem;font-weight:800;padding:2px 7px;border-radius:0 0 0 6px;">${p.graus}º GRAU</div>` : ''}
+                </div>
+                <!-- Info -->
+                <div style="padding:12px;">
+                    ${pinned ? `<div style="font-size:0.52rem;color:#3b82f6;font-weight:800;letter-spacing:1px;margin-bottom:2px;">📌 DESTAQUE</div>` : `<div style="font-size:0.75rem;color:white;font-weight:800;letter-spacing:1px;margin-bottom:2px;"># ${String(p.numero).padStart(2,'0')}</div>`}
+                    ${inativo ? `<div style="font-size:0.5rem;color:#ef4444;font-weight:800;letter-spacing:1px;margin-bottom:2px;">INATIVO</div>` : ''}
+                    ${p.destaque && !pinned ? `<div style="font-size:0.52rem;color:#f59e0b;font-weight:800;letter-spacing:1px;margin-bottom:2px;">⭐ DESTAQUE</div>` : ''}
+                    <div style="font-size:0.85rem;font-weight:800;color:white;margin-bottom:2px;letter-spacing:-0.3px;">${p.nome.toUpperCase()}</div>
+                    ${dataFmt ? `<div style="font-size:0.58rem;color:#64748b;margin-bottom:6px;">Graduado em ${dataFmt}</div>` : ''}
+                    ${p.observacao ? `<div style="font-size:0.65rem;color:#94a3b8;font-style:italic;line-height:1.4;margin-bottom:6px;">"${p.observacao}"</div>` : ''}
+                    <!-- Faixa visual estilo BJJ -->
+                    <div style="margin-top:8px;">
+                        ${ui.renderBeltJJ('Preta', p.graus || 0)}
+                        <div style="font-size:0.5rem;color:#475569;font-weight:700;margin-top:3px;letter-spacing:0.5px;">FAIXA PRETA${p.graus > 0 ? ` — ${p.graus}º GRAU` : ''}</div>
+                    </div>
+                    ${isAdmin ? `
+                    <div style="display:flex;gap:6px;margin-top:10px;">
+                        <button onclick="pretas.abrirEditar('${p.id}')" style="flex:1;padding:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:7px;font-size:0.62rem;font-weight:700;cursor:pointer;">✏️ Editar</button>
+                        <button onclick="pretas.excluir('${p.id}')" style="padding:6px 10px;background:#1a0404;border:1px solid #ef444444;color:#ef4444;border-radius:7px;font-size:0.62rem;cursor:pointer;">🗑</button>
+                    </div>` : ''}
+                </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        return `
+        <!-- Cabeçalho -->
+        <div style="text-align:center;margin-bottom:24px;padding:20px 0 10px;">
+            <div style="font-size:2rem;margin-bottom:6px;">🥋</div>
+            <div style="font-size:1.1rem;font-weight:800;color:white;letter-spacing:-0.5px;">HALL DAS FAIXAS PRETAS</div>
+            <div style="font-size:0.62rem;color:#475569;margin-top:4px;">Gaditas Academy — ${total} graduado${total !== 1 ? 's' : ''}</div>
+            <div style="width:60px;height:3px;background:#000;border:1px solid #334155;border-radius:2px;margin:10px auto 0;"></div>
+        </div>
+
+        ${isAdmin ? `
+        <button onclick="pretas.abrirNovo()" style="width:100%;padding:14px;background:#1e293b;border:1px dashed #334155;color:#64748b;border-radius:12px;font-size:0.75rem;font-weight:800;cursor:pointer;margin-bottom:20px;letter-spacing:0.5px;">
+            ＋ ADICIONAR FAIXA PRETA
+        </button>` : ''}
+
+        ${total === 0
+            ? `<div style="text-align:center;padding:40px;color:#334155;font-size:0.8rem;">Nenhum faixa preta cadastrado ainda.</div>`
+            : `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">${cards}</div>`}`;
+    },
+
+    _toggleFlag(btnId, tipo) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        const on = btn.dataset.val !== '1';
+        btn.dataset.val = on ? '1' : '0';
+        if (tipo === 'ativo') {
+            btn.style.borderColor = on ? '#10b981' : '#334155';
+            btn.style.background  = on ? '#064e3b' : '#0f172a';
+            btn.style.color       = on ? '#10b981' : '#64748b';
+            btn.textContent       = on ? '✅ ATIVO' : '⬜ INATIVO';
+        } else {
+            btn.style.borderColor = on ? '#f59e0b' : '#334155';
+            btn.style.background  = on ? '#78350f' : '#0f172a';
+            btn.style.color       = on ? '#f59e0b' : '#64748b';
+            btn.textContent       = on ? '⭐ DESTAQUE' : '☆ DESTAQUE';
+        }
+    },
+
+    abrirNovo() {
+        this._abrirModal(null);
+    },
+
+    abrirEditar(id) {
+        const p = (this._lista || []).find(x => x.id === id);
+        if (p) this._abrirModal(p);
+    },
+
+    _abrirModal(p) {
+        document.getElementById('modal-preta')?.remove();
+        const isEdicao = !!p;
+        const modal = document.createElement('div');
+        modal.id = 'modal-preta';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(2,6,23,0.97);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;overflow-y:auto;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:20px;padding:24px;max-width:380px;width:100%;">
+                <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:2px;margin-bottom:16px;">${isEdicao ? 'EDITAR' : 'NOVO'} FAIXA PRETA</div>
+
+                <!-- Foto -->
+                <div style="text-align:center;margin-bottom:16px;">
+                    <img id="mp-foto-preview" src="${p?.foto || ''}"
+                        style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid #000;background:#0f172a;display:block;margin:0 auto 10px;${p?.foto ? '' : 'display:none;'}">
+                    <div id="mp-foto-placeholder" style="width:120px;height:120px;border-radius:50%;background:#0f172a;border:3px dashed #334155;display:${p?.foto ? 'none' : 'flex'};align-items:center;justify-content:center;margin:0 auto 10px;font-size:2.5rem;">🥋</div>
+                    <input type="file" id="mp-foto-input" accept="image/*" style="display:none;">
+                    <button onclick="document.getElementById('mp-foto-input').click()" style="background:#0f172a;border:1px solid #334155;color:#94a3b8;padding:7px 16px;border-radius:8px;font-size:0.65rem;font-weight:700;cursor:pointer;">📷 Escolher foto</button>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <div>
+                        <label style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:4px;">Nº DO GRADUADO</label>
+                        <input id="mp-numero" type="number" min="0" value="${p?.numero ?? ''}" placeholder="Ex: 0, 1, 2..."
+                            style="width:100%;box-sizing:border-box;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:4px;">NOME COMPLETO</label>
+                        <input id="mp-nome" type="text" value="${p?.nome || ''}" placeholder="Nome do faixa preta..."
+                            style="width:100%;box-sizing:border-box;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:4px;">DATA DE GRADUAÇÃO</label>
+                        <input id="mp-data" type="date" value="${p?.dataGraduacao || ''}"
+                            style="width:100%;box-sizing:border-box;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:4px;">GRAUS (0 = sem grau)</label>
+                        <select id="mp-graus" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;">
+                            ${[0,1,2,3,4].map(g => `<option value="${g}" ${(p?.graus||0)==g?'selected':''}>${g === 0 ? 'Sem grau' : g+'º Grau'}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:4px;">FRASE / OBSERVAÇÃO (opcional)</label>
+                        <textarea id="mp-obs" placeholder="Uma frase marcante, conquista, etc..."
+                            style="width:100%;box-sizing:border-box;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;resize:vertical;min-height:60px;font-family:inherit;">${p?.observacao || ''}</textarea>
+                    </div>
+                    <!-- Ativo / Destaque -->
+                    <div style="display:flex;gap:8px;">
+                        <button id="mp-btn-ativo" onclick="pretas._toggleFlag('mp-btn-ativo','ativo')"
+                            style="flex:1;padding:10px;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;border:2px solid ${(p?.ativo!==false)?'#10b981':'#334155'};background:${(p?.ativo!==false)?'#064e3b':'#0f172a'};color:${(p?.ativo!==false)?'#10b981':'#64748b'};"
+                            data-val="${(p?.ativo!==false)?'1':'0'}">
+                            ${(p?.ativo!==false)?'✅ ATIVO':'⬜ INATIVO'}
+                        </button>
+                        <button id="mp-btn-destaque" onclick="pretas._toggleFlag('mp-btn-destaque','destaque')"
+                            style="flex:1;padding:10px;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;border:2px solid ${p?.destaque?'#f59e0b':'#334155'};background:${p?.destaque?'#78350f':'#0f172a'};color:${p?.destaque?'#f59e0b':'#64748b'};"
+                            data-val="${p?.destaque?'1':'0'}">
+                            ${p?.destaque?'⭐ DESTAQUE':'☆ DESTAQUE'}
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:8px;margin-top:16px;">
+                    <button onclick="document.getElementById('modal-preta').remove()" style="flex:1;padding:12px;background:none;border:1px solid #334155;color:#64748b;border-radius:10px;font-size:0.8rem;cursor:pointer;">Cancelar</button>
+                    <button onclick="pretas._salvar('${p?.id || ''}')" style="flex:2;padding:12px;background:#000;border:1px solid #33415566;color:white;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;">💾 Salvar</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+        // Foto preview
+        let _novaFoto = p?.foto || null;
+        document.getElementById('mp-foto-input').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    const maxL = 600, c = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if (w > maxL || h > maxL) { if (w > h) { h = Math.round(h*maxL/w); w=maxL; } else { w=Math.round(w*maxL/h); h=maxL; } }
+                    c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+                    _novaFoto = c.toDataURL('image/jpeg', 0.82);
+                    const prev = document.getElementById('mp-foto-preview');
+                    const ph = document.getElementById('mp-foto-placeholder');
+                    prev.src = _novaFoto; prev.style.display = 'block';
+                    if (ph) ph.style.display = 'none';
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+        // Guarda a foto para o _salvar acessar
+        modal._fotoData = () => _novaFoto;
+    },
+
+    async _salvar(id) {
+        const modal = document.getElementById('modal-preta');
+        const nome = document.getElementById('mp-nome')?.value?.trim();
+        if (!nome) { alert('Informe o nome.'); return; }
+        const foto = modal?._fotoData ? modal._fotoData() : null;
+        const _numStr = document.getElementById('mp-numero')?.value ?? '';
+        const numero = _numStr === '' ? null : parseInt(_numStr);
+        const dataGraduacao = document.getElementById('mp-data')?.value || '';
+        const graus = parseInt(document.getElementById('mp-graus')?.value || '0');
+        const observacao = document.getElementById('mp-obs')?.value?.trim() || '';
+        const ativo = document.getElementById('mp-btn-ativo')?.dataset.val !== '0';
+        const destaque = document.getElementById('mp-btn-destaque')?.dataset.val === '1';
+
+        const dados = { nome, numero, dataGraduacao, graus, observacao, ativo, destaque, updatedAt: Date.now() };
+        if (foto) dados.foto = foto;
+
+        try {
+            if (id) {
+                await db.collection('faixas_pretas').doc(id).update(dados);
+            } else {
+                await db.collection('faixas_pretas').add({ ...dados, criadoEm: Date.now() });
+            }
+            modal?.remove();
+            await this.render();
+        } catch(e) { alert('Erro ao salvar: ' + e.message); }
+    },
+
+    async excluir(id) {
+        const p = (this._lista || []).find(x => x.id === id);
+        if (!confirm(`Excluir ${p?.nome || 'este registro'}?`)) return;
+        try {
+            await db.collection('faixas_pretas').doc(id).delete();
+            await this.render();
+        } catch(e) { alert('Erro ao excluir.'); }
+    },
+
+    async abrirDetalhe(id) {
+        let p = (this._lista || []).find(x => x.id === id);
+        if (!p) {
+            try {
+                const doc = await db.collection('faixas_pretas').doc(id).get();
+                if (doc.exists) p = { id: doc.id, ...doc.data() };
+            } catch(e) {}
+        }
+        if (!p) return;
+        const dataFmt = p.dataGraduacao ? p.dataGraduacao.split('-').reverse().join('/') : '';
+        const existing = document.getElementById('modal-preta-detalhe');
+        if (existing) existing.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-preta-detalhe';
+        modal.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+        modal.innerHTML = `
+        <div style="background:#0f172a;border:1px solid #334155;border-radius:20px;padding:24px;width:100%;max-width:340px;text-align:center;">
+            ${p.foto
+                ? `<img src="${p.foto}" style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid #f59e0b;margin-bottom:14px;">`
+                : `<div style="width:110px;height:110px;border-radius:50%;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:3rem;margin:0 auto 14px;">🥋</div>`}
+            ${(p.numero == null || p.numero === '') ? '' : `<div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:1px;margin-bottom:4px;">#${String(p.numero).padStart(2,'0')}</div>`}
+            <div style="font-size:1rem;font-weight:900;color:white;margin-bottom:4px;">${p.nome.toUpperCase()}</div>
+            ${dataFmt ? `<div style="font-size:0.62rem;color:#64748b;margin-bottom:10px;">Graduado em ${dataFmt}</div>` : ''}
+            <div style="margin:12px 0;">${ui.renderBeltJJ('Preta', p.graus || 0)}</div>
+            <div style="font-size:0.55rem;color:#475569;font-weight:700;margin-bottom:${p.observacao?'10px':'0'};">FAIXA PRETA${p.graus > 0 ? ` — ${p.graus}º GRAU` : ''}</div>
+            ${p.observacao ? `<div style="font-size:0.72rem;color:#94a3b8;font-style:italic;line-height:1.5;margin-top:8px;">"${p.observacao}"</div>` : ''}
+            <button onclick="document.getElementById('modal-preta-detalhe').remove()" style="margin-top:18px;width:100%;padding:12px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:10px;font-weight:800;cursor:pointer;">Fechar</button>
+        </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
     },
 };

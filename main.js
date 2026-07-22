@@ -10910,17 +10910,11 @@ const aniversario = {
         };
 
         if (fotoUrl) {
-            const proxyUrl = `/api/img-proxy?url=${encodeURIComponent(fotoUrl)}`;
-            fetch(proxyUrl)
-                .then(r => r.blob())
-                .then(blob => {
-                    const objUrl = URL.createObjectURL(blob);
-                    const img = new Image();
-                    img.onload  = () => { desenhar(img); URL.revokeObjectURL(objUrl); };
-                    img.onerror = () => desenhar(null);
-                    img.src = objUrl;
-                })
-                .catch(() => desenhar(null));
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload  = () => desenhar(img);
+            img.onerror = () => desenhar(null);
+            img.src = `/api/img-proxy?url=${encodeURIComponent(fotoUrl)}`;
         } else {
             desenhar(null);
         }

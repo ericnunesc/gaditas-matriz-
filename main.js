@@ -10681,10 +10681,12 @@ const aniversario = {
                 })();
                 const nomeEsc  = a.nome.replace(/'/g,"\\'");
                 const fotoEsc  = (a.fotoPerfil||'').replace(/'/g,"\\'");
+                const temFoto  = !!a.fotoPerfil;
                 const btnCard  = isHoje
                     ? `<button onclick="aniversario.gerarCardAniversario('${nomeEsc}','${fotoEsc}',${a._idade})"
-                        style="background:#78350f;border:1px solid #f59e0b;color:#fbbf24;padding:5px 10px;border-radius:7px;font-size:0.58rem;font-weight:800;cursor:pointer;white-space:nowrap;margin-left:8px;">
-                        📸 Card</button>`
+                        style="background:#78350f;border:1px solid #f59e0b;color:#fbbf24;padding:5px 10px;border-radius:7px;font-size:0.58rem;font-weight:800;cursor:pointer;white-space:nowrap;margin-left:8px;"
+                        title="${temFoto ? 'Tem foto cadastrada' : 'Sem foto cadastrada'}">
+                        ${temFoto ? '📸' : '🖊️'} Card</button>`
                     : '';
                 return `
                     <div style="display:flex;justify-content:space-between;align-items:center;background:${isHoje ? '#1c1400' : '#0f172a'};border:1px solid ${isHoje ? '#f59e0b' : '#334155'};border-radius:8px;padding:9px 12px;margin-bottom:6px;">

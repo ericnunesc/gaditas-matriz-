@@ -10913,10 +10913,16 @@ const aniversario = {
 
         if (fotoUrl) {
             const img = new Image();
-            img.crossOrigin = 'anonymous';
             img.onload  = () => desenhar(img);
             img.onerror = () => desenhar(null);
-            img.src = `/api/img-proxy?url=${encodeURIComponent(fotoUrl)}`;
+            if (fotoUrl.startsWith('data:')) {
+                // base64 — carrega direto, sem proxy (canvas aceita sem CORS)
+                img.src = fotoUrl;
+            } else {
+                // Firebase Storage URL — passa pelo proxy para evitar CORS no canvas
+                img.crossOrigin = 'anonymous';
+                img.src = `/api/img-proxy?url=${encodeURIComponent(fotoUrl)}`;
+            }
         } else {
             desenhar(null);
         }

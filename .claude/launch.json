@@ -12,6 +12,18 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["-y", "serve", "../LottaAPP", "-l", "3210"],
       "port": 3210
+    },
+    {
+      "name": "seminarios",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "serve", "../SeminariosApp", "-l", "3220"],
+      "port": 3220
+    },
+    {
+      "name": "budoflow",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "serve", "../BudoFlow", "-l", "3230"],
+      "port": 3230
     }
   ]
 }

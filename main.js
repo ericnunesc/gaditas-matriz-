@@ -13929,22 +13929,16 @@ const exame = {
         if (!grupoSelecionado || grupoSelecionado.length === 0) return;
         const listaFiltrada = lista.filter(a => grupoSelecionado.includes(a._grupoKey));
 
-        // Gera um canvas por aluno e abre janela de impressão
+        // Gera um canvas por aluno e abre janela com o PDF (baixar/compartilhar/fechar)
         const win = window.open('', '_blank');
-        win.document.write(`<!DOCTYPE html><html><head><title>Certificados — Gaditas Academy</title>
-            <style>
-                @page { size: landscape; margin: 0; }
-                * { margin:0; padding:0; box-sizing:border-box; }
-                body { background:#000; }
-                .pagina { page-break-after:always; width:100vw; display:flex; align-items:center; justify-content:center; }
-                .pagina:last-child { page-break-after:auto; }
-                img { max-width:100%; height:auto; display:block; }
-                h2 { color:#fff; text-align:center; font-family:Arial; font-size:14px; padding:8px; opacity:0.5; }
-                @media print { body { background:#fff; } h2 { display:none; } }
-            </style></head><body>`);
-        win.document.write('<h2>⏳ Gerando certificados... Aguarde.</h2>');
+        if (!win) { alert('Permita pop-ups para gerar o PDF.'); return; }
+        win.document.write(`<!DOCTYPE html><html><head><title>Certificados</title>
+            <style>* { margin:0; padding:0; box-sizing:border-box; }
+            body { background:#0f172a; color:#fff; font-family:Arial,sans-serif; height:100vh; display:flex; align-items:center; justify-content:center; text-align:center; }</style></head><body>
+            <div>⏳ Gerando certificados... Aguarde.</div></body></html>`);
         win.document.close();
 
+        let pdf = null;
         let gerados = 0;
         const gruposLabel = { kids:'🧒 KIDS', azul:'🔵 AZUL', roxa:'🟣 ROXA', marrom:'🟤 MARROM', preta:'⬛ PRETA' };
         const grupos = ['kids','azul','roxa','marrom','preta']
@@ -13958,26 +13952,19 @@ const exame = {
                     if (!templateUrl) continue;
                     const campos = { nome: aluno.nome, faixaTexto: aluno.faixaTexto, cidade: aluno.cidade, dataStr: aluno.dataStr };
                     const canvas = await certificado._montarCanvas(campos, templateUrl, aluno.isPreta);
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-                    const div = win.document.createElement('div');
-                    div.className = 'pagina';
-                    const img = win.document.createElement('img');
-                    img.src = dataUrl;
-                    div.appendChild(img);
-                    win.document.body.appendChild(div);
+                    pdf = certificado._adicionarPaginaPdf(pdf, canvas);
                     gerados++;
                 } catch(e) { /* ignora erro individual */ }
             }
         }
 
-        // Remove mensagem de aguarde e aciona impressão
-        const h2 = win.document.querySelector('h2');
-        if (h2) h2.remove();
-        if (gerados === 0) {
-            win.document.body.innerHTML = '<p style="color:white;text-align:center;padding:40px;font-family:Arial;">Nenhum certificado pôde ser gerado. Verifique os templates.</p>';
-        } else {
-            setTimeout(() => win.print(), 800);
+        if (gerados === 0 || !pdf) {
+            win.close();
+            alert('Nenhum certificado pôde ser gerado. Verifique os templates.');
+            return;
         }
+        const blob = pdf.output('blob');
+        certificado._abrirResultadoPdf(win, blob, `certificados-${new Date().toISOString().split('T')[0]}.pdf`, 'Certificados');
     }
 };
 
@@ -19614,6 +19601,65 @@ const certificado = {
         });
     },
 
+    // ── PDF: monta página a página e abre janela com baixar/compartilhar/fechar ─
+    _adicionarPaginaPdf(pdf, canvas) {
+        const { jsPDF } = window.jspdf;
+        const w = canvas.width, h = canvas.height;
+        const orientation = w >= h ? 'l' : 'p';
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        if (!pdf) {
+            pdf = new jsPDF({ orientation, unit: 'px', format: [w, h], compress: true });
+        } else {
+            pdf.addPage([w, h], orientation);
+        }
+        pdf.addImage(dataUrl, 'JPEG', 0, 0, w, h);
+        return pdf;
+    },
+
+    _abrirResultadoPdf(win, blob, nomeArquivo, titulo) {
+        const blobUrl = URL.createObjectURL(blob);
+        win.document.open();
+        win.document.write(`<!DOCTYPE html><html><head><title>${titulo}</title>
+            <style>
+                * { margin:0; padding:0; box-sizing:border-box; }
+                html, body { height:100%; background:#0f172a; font-family:Arial,sans-serif; }
+                body { display:flex; flex-direction:column; }
+                .toolbar { display:flex; gap:8px; padding:10px; background:#1e293b; border-bottom:1px solid #334155; }
+                .toolbar button { flex:1; padding:12px 6px; border:none; border-radius:8px; font-weight:800; font-size:0.72rem; cursor:pointer; }
+                #btnBaixar { background:#a855f7; color:#fff; }
+                #btnCompartilhar { background:#3b82f6; color:#fff; }
+                #btnFechar { background:#334155; color:#fff; }
+                iframe { flex:1; border:none; width:100%; background:#fff; }
+            </style></head><body>
+            <div class="toolbar">
+                <button id="btnBaixar">📥 Baixar PDF</button>
+                <button id="btnCompartilhar">📤 Compartilhar</button>
+                <button id="btnFechar">✕ Fechar</button>
+            </div>
+            <iframe src="${blobUrl}"></iframe>
+            </body></html>`);
+        win.document.close();
+
+        win.document.getElementById('btnFechar').onclick = () => win.close();
+        win.document.getElementById('btnBaixar').onclick = () => {
+            const a = win.document.createElement('a');
+            a.href = blobUrl; a.download = nomeArquivo;
+            win.document.body.appendChild(a); a.click(); a.remove();
+        };
+        win.document.getElementById('btnCompartilhar').onclick = async () => {
+            try {
+                const file = new File([blob], nomeArquivo, { type: 'application/pdf' });
+                if (win.navigator.canShare && win.navigator.canShare({ files: [file] })) {
+                    await win.navigator.share({ files: [file], title: titulo });
+                } else if (win.navigator.share) {
+                    await win.navigator.share({ title: titulo, url: blobUrl });
+                } else {
+                    alert('Compartilhamento não suportado neste navegador. Use o botão Baixar.');
+                }
+            } catch (e) { if (e.name !== 'AbortError') alert('Não foi possível compartilhar: ' + e.message); }
+        };
+    },
+
     // ── Certificado Avulso — modal para digitar manualmente ─
     async abrirAvulso() {
         const cfg = await this._carregarCfg();
@@ -19670,7 +19716,7 @@ const certificado = {
 
                 <button onclick="certificado._gerarAvulso()" id="btn-av-gerar"
                     style="width:100%;padding:13px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">
-                    🎓 GERAR E BAIXAR CERTIFICADO
+                    🎓 GERAR CERTIFICADO
                 </button>
             </div>`;
     },
@@ -19684,6 +19730,16 @@ const certificado = {
 
     async _gerarAvulso() {
         const btn = document.getElementById('btn-av-gerar');
+
+        // Abre a janela já no clique (síncrono) para não ser bloqueada como pop-up
+        const win = window.open('', '_blank');
+        if (!win) { alert('Permita pop-ups para ver o certificado.'); return; }
+        win.document.write(`<!DOCTYPE html><html><head><title>Certificado</title>
+            <style>* { margin:0; padding:0; box-sizing:border-box; }
+            body { background:#0f172a; color:#fff; font-family:Arial,sans-serif; height:100vh; display:flex; align-items:center; justify-content:center; text-align:center; }</style></head><body>
+            <div>⏳ Gerando certificado... Aguarde.</div></body></html>`);
+        win.document.close();
+
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
         try {
             const cfg = await this._carregarCfg();
@@ -19697,23 +19753,24 @@ const certificado = {
                 cidade:     (document.getElementById('av-cidade')?.value.trim() || ''),
                 dataStr:    (document.getElementById('av-data')?.value || new Date().toISOString().split('T')[0]),
             };
-            if (!campos.nome) { alert('Digite o nome do aluno.'); return; }
-            if (!faixaRaw)    { alert('Selecione ou digite a faixa.'); return; }
+            if (!campos.nome) { win.close(); alert('Digite o nome do aluno.'); return; }
+            if (!faixaRaw)    { win.close(); alert('Selecione ou digite a faixa.'); return; }
             const isPreta = this._faixaEhPreta(faixaRaw);
             const templateUrl = isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
-            if (!templateUrl) { alert('Template não configurado para este tipo de faixa.'); return; }
+            if (!templateUrl) { win.close(); alert('Template não configurado para este tipo de faixa.'); return; }
 
             // Substituir temporariamente checkboxes de prof para _montarCanvas ler corretamente
             const canvas = await this._montarCanvasAvulso(campos, templateUrl, isPreta, cfg);
-            const link = document.createElement('a');
-            link.download = `certificado-${campos.nome.replace(/\s+/g,'-')}-${faixaRaw.replace(/\s+/g,'-')}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            const pdf = this._adicionarPaginaPdf(null, canvas);
+            const blob = pdf.output('blob');
+            const nomeArquivo = `certificado-${campos.nome.replace(/\s+/g,'-')}-${faixaRaw.replace(/\s+/g,'-')}.pdf`;
+            this._abrirResultadoPdf(win, blob, nomeArquivo, 'Certificado');
             document.getElementById('modal-cert-avulso')?.remove();
         } catch(e) {
+            win.close();
             alert('Erro ao gerar certificado: ' + e.message);
         } finally {
-            if (btn) { btn.disabled = false; btn.textContent = '🎓 GERAR E BAIXAR CERTIFICADO'; }
+            if (btn) { btn.disabled = false; btn.textContent = '🎓 GERAR CERTIFICADO'; }
         }
     },
 

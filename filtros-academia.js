@@ -237,7 +237,8 @@ const GaditasFiltros = {
         const img = document.createElement('img');
         img.src = url;
         img.className = 'foto-header';
-        img.style.cssText = 'width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid #3b82f6; flex-shrink:0;';
+        img.style.cssText = 'width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid #3b82f6; flex-shrink:0; cursor:zoom-in;';
+        img.onclick = () => typeof verFotoAluno === 'function' && verFotoAluno(url, auth?.currentUser?.nome || '');
         if (iconExistente) iconExistente.replaceWith(img);
         else if (fotoExistente) fotoExistente.src = url;
         else headerUser.insertBefore(img, headerUser.firstChild);

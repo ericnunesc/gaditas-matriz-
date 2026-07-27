@@ -268,6 +268,9 @@
 
                 <div id="plano-aula-professor" class="hidden" style="margin-top:15px;"></div>
 
+                <!-- ══ CALENDÁRIO DE PLANOS DE AULA (admin/prof) ══ -->
+                <div id="plano-aula-cal-card" class="hidden" style="margin-top:15px;"></div>
+
                 <!-- ══ PRESENÇA VISUAL DO ADMIN NAS TURMAS ══ -->
                 <div id="card-presenca-admin" style="display:none; background:#1e293b; border:1px solid #f59e0b44; border-radius:12px; padding:15px; margin-top:15px;">
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
@@ -1153,6 +1156,11 @@
             <div id="midia-campanhas-lista"><div style="text-align:center;padding:30px;color:#475569;font-size:0.75rem;">Nenhuma campanha cadastrada.</div></div>
         </div>
 
+            <!-- ══ MURAL DE FAIXAS PRETAS ══ -->
+            <div id="tab-pretas" class="tab-content hidden" style="padding:15px;">
+                <div id="pretas-container"></div>
+            </div>
+
         </main>
 
         <nav class="bottom-nav">
@@ -1173,6 +1181,7 @@
                 <span id="badge-solic-avaliacao" style="display:none;position:absolute;top:0;right:4px;background:#10b981;color:white;font-size:0.5rem;font-weight:800;padding:2px 5px;border-radius:999px;min-width:16px;text-align:center;"></span>
             </button>
             <button onclick="ui.showTab('tab-midia'); publicidade.renderAdmin()" id="menu-midia" class="nav-item" style="display:none;"><i class="fas fa-bullhorn"></i><span>MÍDIA</span></button>
+            <button onclick="ui.showTab('tab-pretas'); pretas.render()" class="nav-item"><i class="fas fa-award"></i><span>PRETAS</span></button>
             <button onclick="auth.logout()" class="nav-item logout-item"><i class="fas fa-sign-out-alt"></i><span>SAIR</span></button>
         </nav>
     </div>
@@ -1195,13 +1204,14 @@
 
     <!-- QR Code Scanner library -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-    <script src="main.js?v=20260620a"></script>
+    <script src="main.js?v=20260727a"></script>
     <script src="filtros-academia.js?v=20260615a"></script>
     <script src="gaditas-modal-financeiro.js?v=20260616b"></script>
     <script src="gaditas-painel-adm.js?v=20260615c"></script>

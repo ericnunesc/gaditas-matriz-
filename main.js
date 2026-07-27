@@ -13933,6 +13933,7 @@ const exame = {
         const win = window.open('', '_blank');
         win.document.write(`<!DOCTYPE html><html><head><title>Certificados — Gaditas Academy</title>
             <style>
+                @page { size: landscape; margin: 0; }
                 * { margin:0; padding:0; box-sizing:border-box; }
                 body { background:#000; }
                 .pagina { page-break-after:always; width:100vw; display:flex; align-items:center; justify-content:center; }

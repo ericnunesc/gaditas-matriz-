@@ -13831,39 +13831,52 @@ const exame = {
             return;
         }
 
-        // Coleta todos os convocados confirmados das 3 categorias
-        const [dKids, dAdulto, dPreta] = await Promise.all([
-            db.collection('configuracoes').doc('exame_kids').get(),
-            db.collection('configuracoes').doc('exame_adulto').get(),
-            db.collection('configuracoes').doc('exame_preta').get(),
-        ]);
+        // Coleta alunos convocados da coleção alunos (igual ao carregarConfirmados)
+        const snap = await db.collection('alunos').where('aspiranteGraduacao', '==', true).get();
+        if (snap.empty) {
+            alert('Nenhum aluno convocado para o exame.');
+            return;
+        }
+
+        const _modFiltro = this._modalidadeExame || 'jiujitsu';
+        const infantil = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta'];
 
         const dataGrad = new Date().toISOString().split('T')[0];
         const cidade   = cfg.cidadePadrao || '';
 
         // Monta lista: { nome, faixaTexto, isPreta, dataStr, categoria }
         const lista = [];
-        const extrairAlunos = (docSnap, categoria) => {
-            if (!docSnap.exists) return;
-            const data = docSnap.data();
-            (data.convocados || []).forEach(c => {
-                const isPreta = certificado._faixaEhPreta(c.proxFaixa || '');
-                lista.push({
-                    nome:       c.nome || '',
-                    faixaTexto: `FAIXA ${(c.proxFaixa || '').toUpperCase()}`,
-                    isPreta,
-                    dataStr:    dataGrad,
-                    cidade,
-                    categoria
-                });
+        snap.docs.forEach(doc => {
+            const a = doc.data();
+            // Filtro de modalidade
+            if (a.modalidadesConvocado && typeof a.modalidadesConvocado === 'object') {
+                if (!a.modalidadesConvocado[_modFiltro]) return;
+            } else {
+                const mc = a.modalidadeConvocado || a.modalidade || 'jiujitsu';
+                if (mc !== _modFiltro && mc !== 'ambos') return;
+            }
+            const cat       = this._getCategoria(a);
+            const proxFaixa = this._getProxFaixa(a, cat) || (a.faixa || '');
+            const isPreta   = certificado._faixaEhPreta(proxFaixa);
+            // Ordenação: kids primeiro, depois adulto por ordem, depois preta
+            const sortKey = cat === 'kids'
+                ? `0_${String(infantil.indexOf(proxFaixa) >= 0 ? infantil.indexOf(proxFaixa) : 99).padStart(2,'0')}`
+                : isPreta ? `2_${a.nome}` : `1_${a.nome}`;
+            lista.push({
+                nome:       a.nome || '',
+                faixaTexto: `FAIXA ${proxFaixa.toUpperCase()}`,
+                isPreta,
+                dataStr:    dataGrad,
+                cidade,
+                categoria:  isPreta ? 'preta' : cat,
+                _sortKey:   sortKey,
             });
-        };
-        extrairAlunos(dKids,   'kids');
-        extrairAlunos(dAdulto, 'adulto');
-        extrairAlunos(dPreta,  'preta');
+        });
+
+        lista.sort((a, b) => a._sortKey.localeCompare(b._sortKey));
 
         if (lista.length === 0) {
-            alert('Nenhum aluno confirmado no exame para gerar certificados.');
+            alert('Nenhum aluno convocado para a modalidade atual.');
             return;
         }
 

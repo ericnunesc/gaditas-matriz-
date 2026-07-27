@@ -12198,7 +12198,13 @@ const exame = {
             <button onclick="exame.selecionarFiltroCostureira()"
                 style="width:100%;padding:9px;font-size:0.62rem;font-weight:800;background:#0f172a;border:1px solid #94a3b8;color:#94a3b8;border-radius:8px;cursor:pointer;margin-bottom:6px;">🧵 Relatório para Costureira</button>
             <button onclick="exame.abrirListaChamada()"
-                style="width:100%;padding:9px;font-size:0.62rem;font-weight:800;background:#0f172a;border:1px solid #22c55e;color:#22c55e;border-radius:8px;cursor:pointer;margin-bottom:8px;">📋 Lista de Chamada (por Faixa)</button>
+                style="width:100%;padding:9px;font-size:0.62rem;font-weight:800;background:#0f172a;border:1px solid #22c55e;color:#22c55e;border-radius:8px;cursor:pointer;margin-bottom:6px;">📋 Lista de Chamada (por Faixa)</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+                <button onclick="exame.gerarTodosCertificados()"
+                    style="padding:9px 4px;font-size:0.6rem;font-weight:800;background:#0f172a;border:1px solid #a855f7;color:#a855f7;border-radius:8px;cursor:pointer;">🎓 PDF Todos os Certs</button>
+                <button onclick="certificado.abrirAvulso()"
+                    style="padding:9px 4px;font-size:0.6rem;font-weight:800;background:#0f172a;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;cursor:pointer;">📝 Certificado Avulso</button>
+            </div>
             <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:12px;margin-bottom:10px;overflow:hidden;">
                 <div onclick="(()=>{const b=document.getElementById('acc-convocados');const c=document.getElementById('chev-convocados');b.style.display=b.style.display==='none'?'block':'none';c.style.transform=b.style.display==='block'?'rotate(180deg)':''})()"
                     style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer;user-select:none;">
@@ -13814,6 +13820,105 @@ const exame = {
         } catch(e) {
             alert('Erro ao graduar: ' + e.message);
             if (btn) { btn.disabled = false; btn.textContent = '🥋 GRADUAR'; }
+        }
+    },
+
+    // ── Gerar PDF com todos os certificados dos convocados ──
+    async gerarTodosCertificados() {
+        const cfg = await certificado._carregarCfg();
+        if (!cfg.templateColoridoUrl && !cfg.templatePretaUrl) {
+            alert('⚠️ Nenhum template de certificado configurado.\nVá em Configurações → Certificados.');
+            return;
+        }
+
+        // Coleta todos os convocados confirmados das 3 categorias
+        const [dKids, dAdulto, dPreta] = await Promise.all([
+            db.collection('configuracoes').doc('exame_kids').get(),
+            db.collection('configuracoes').doc('exame_adulto').get(),
+            db.collection('configuracoes').doc('exame_preta').get(),
+        ]);
+
+        const dataGrad = new Date().toISOString().split('T')[0];
+        const cidade   = cfg.cidadePadrao || '';
+
+        // Monta lista: { nome, faixaTexto, isPreta, dataStr, categoria }
+        const lista = [];
+        const extrairAlunos = (docSnap, categoria) => {
+            if (!docSnap.exists) return;
+            const data = docSnap.data();
+            (data.convocados || []).forEach(c => {
+                if (!c.confirmado) return;
+                const isPreta = certificado._faixaEhPreta(c.proxFaixa || '');
+                lista.push({
+                    nome:       c.nome || '',
+                    faixaTexto: `FAIXA ${(c.proxFaixa || '').toUpperCase()}`,
+                    isPreta,
+                    dataStr:    dataGrad,
+                    cidade,
+                    categoria
+                });
+            });
+        };
+        extrairAlunos(dKids,   'kids');
+        extrairAlunos(dAdulto, 'adulto');
+        extrairAlunos(dPreta,  'preta');
+
+        if (lista.length === 0) {
+            alert('Nenhum aluno confirmado no exame para gerar certificados.');
+            return;
+        }
+
+        // Confirma com o admin
+        if (!confirm(`Gerar ${lista.length} certificado(s)?\n\nKids: ${lista.filter(a=>a.categoria==='kids').length}\nAdulto: ${lista.filter(a=>a.categoria==='adulto').length}\nPreta: ${lista.filter(a=>a.categoria==='preta').length}\n\nUma janela de impressão será aberta.`)) return;
+
+        // Gera um canvas por aluno e abre janela de impressão
+        const win = window.open('', '_blank');
+        win.document.write(`<!DOCTYPE html><html><head><title>Certificados — Gaditas Academy</title>
+            <style>
+                * { margin:0; padding:0; box-sizing:border-box; }
+                body { background:#000; }
+                .pagina { page-break-after:always; width:100vw; display:flex; align-items:center; justify-content:center; }
+                .pagina:last-child { page-break-after:auto; }
+                img { max-width:100%; height:auto; display:block; }
+                h2 { color:#fff; text-align:center; font-family:Arial; font-size:14px; padding:8px; opacity:0.5; }
+                @media print { body { background:#fff; } h2 { display:none; } }
+            </style></head><body>`);
+        win.document.write('<h2>⏳ Gerando certificados... Aguarde.</h2>');
+        win.document.close();
+
+        let gerados = 0;
+        const grupos = [
+            { label: '🧒 KIDS', itens: lista.filter(a => a.categoria === 'kids') },
+            { label: '🥋 ADULTO (16+ até Marrom)', itens: lista.filter(a => a.categoria === 'adulto') },
+            { label: '⬛ FAIXA PRETA', itens: lista.filter(a => a.categoria === 'preta') },
+        ].filter(g => g.itens.length > 0);
+
+        for (const grupo of grupos) {
+            for (const aluno of grupo.itens) {
+                try {
+                    const templateUrl = aluno.isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
+                    if (!templateUrl) continue;
+                    const campos = { nome: aluno.nome, faixaTexto: aluno.faixaTexto, cidade: aluno.cidade, dataStr: aluno.dataStr };
+                    const canvas = await certificado._montarCanvas(campos, templateUrl, aluno.isPreta);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                    const div = win.document.createElement('div');
+                    div.className = 'pagina';
+                    const img = win.document.createElement('img');
+                    img.src = dataUrl;
+                    div.appendChild(img);
+                    win.document.body.appendChild(div);
+                    gerados++;
+                } catch(e) { /* ignora erro individual */ }
+            }
+        }
+
+        // Remove mensagem de aguarde e aciona impressão
+        const h2 = win.document.querySelector('h2');
+        if (h2) h2.remove();
+        if (gerados === 0) {
+            win.document.body.innerHTML = '<p style="color:white;text-align:center;padding:40px;font-family:Arial;">Nenhum certificado pôde ser gerado. Verifique os templates.</p>';
+        } else {
+            setTimeout(() => win.print(), 800);
         }
     }
 };
@@ -19447,6 +19552,163 @@ const certificado = {
                 resolve(canvas);
             };
             img.onerror = () => reject(new Error('Erro ao processar template'));
+            img.src = dataUrl;
+        });
+    },
+
+    // ── Certificado Avulso — modal para digitar manualmente ─
+    async abrirAvulso() {
+        const cfg = await this._carregarCfg();
+        const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;margin-bottom:10px;';
+        const lbl = 'color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;';
+        const faixas = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta','Azul','Roxa','Marrom','Preta','Preta 1° Grau','Preta 2° Grau','Preta 3° Grau','Preta 4° Grau','Preta 5° Grau','Preta 6° Grau'];
+        const profs = cfg.professores || [];
+        const profHtml = profs.map((p,i) => `
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#0f172a;border-radius:8px;cursor:pointer;margin-bottom:4px;">
+                <input type="checkbox" id="av-prof-${i}" value="${i}" style="width:16px;height:16px;accent-color:#3b82f6;">
+                <span style="font-size:0.75rem;color:#e2e8f0;">${p.nome}</span>
+            </label>`).join('');
+
+        let modal = document.getElementById('modal-cert-avulso');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-cert-avulso'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:92vh;overflow-y:auto;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.95rem;font-weight:800;color:#f59e0b;">📝 Certificado Avulso</span>
+                    <button onclick="document.getElementById('modal-cert-avulso').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+
+                <small style="${lbl}">NOME DO ALUNO</small>
+                <input type="text" id="av-nome" placeholder="Nome completo do aluno" style="${inp}"/>
+
+                <small style="${lbl}">FAIXA / GRADUAÇÃO</small>
+                <select id="av-faixa-sel" onchange="certificado._avSyncFaixa()" style="${inp}">
+                    ${faixas.map(f => `<option value="${f}">${f}</option>`).join('')}
+                    <option value="__custom">✏️ Digitar manualmente...</option>
+                </select>
+                <input type="text" id="av-faixa-texto" placeholder="Ex: FAIXA AZUL" style="${inp}display:none;" oninput="this.value=this.value.toUpperCase()"/>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div>
+                        <small style="${lbl}">CIDADE</small>
+                        <input type="text" id="av-cidade" value="${cfg.cidadePadrao || ''}" placeholder="Aracaju" style="${inp}"/>
+                    </div>
+                    <div>
+                        <small style="${lbl}">DATA</small>
+                        <input type="date" id="av-data" value="${new Date().toISOString().split('T')[0]}" style="${inp}"/>
+                    </div>
+                </div>
+
+                ${cfg.assinaturaPrincipalUrl || profs.length > 0 ? `
+                <small style="${lbl}">ASSINATURAS</small>
+                ${cfg.assinaturaPrincipalUrl ? `
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#0f172a;border-radius:8px;cursor:pointer;margin-bottom:4px;">
+                    <input type="checkbox" id="av-prof-principal" checked style="width:16px;height:16px;accent-color:#3b82f6;">
+                    <span style="font-size:0.75rem;color:#f59e0b;font-weight:700;">${cfg.assinaturaPrincipalNome || 'Professor Principal'} ⭐</span>
+                </label>` : ''}
+                ${profHtml}
+                <div style="height:8px;"></div>` : ''}
+
+                <button onclick="certificado._gerarAvulso()" id="btn-av-gerar"
+                    style="width:100%;padding:13px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">
+                    🎓 GERAR E BAIXAR CERTIFICADO
+                </button>
+            </div>`;
+    },
+
+    _avSyncFaixa() {
+        const sel   = document.getElementById('av-faixa-sel');
+        const txt   = document.getElementById('av-faixa-texto');
+        if (!sel || !txt) return;
+        txt.style.display = sel.value === '__custom' ? 'block' : 'none';
+    },
+
+    async _gerarAvulso() {
+        const btn = document.getElementById('btn-av-gerar');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+        try {
+            const cfg = await this._carregarCfg();
+            const sel  = document.getElementById('av-faixa-sel');
+            const faixaRaw = sel?.value === '__custom'
+                ? (document.getElementById('av-faixa-texto')?.value.trim() || '')
+                : (sel?.value || '');
+            const campos = {
+                nome:       (document.getElementById('av-nome')?.value.trim() || ''),
+                faixaTexto: faixaRaw.startsWith('FAIXA') ? faixaRaw : `FAIXA ${faixaRaw.toUpperCase()}`,
+                cidade:     (document.getElementById('av-cidade')?.value.trim() || ''),
+                dataStr:    (document.getElementById('av-data')?.value || new Date().toISOString().split('T')[0]),
+            };
+            if (!campos.nome) { alert('Digite o nome do aluno.'); return; }
+            if (!faixaRaw)    { alert('Selecione ou digite a faixa.'); return; }
+            const isPreta = this._faixaEhPreta(faixaRaw);
+            const templateUrl = isPreta ? cfg.templatePretaUrl : cfg.templateColoridoUrl;
+            if (!templateUrl) { alert('Template não configurado para este tipo de faixa.'); return; }
+
+            // Substituir temporariamente checkboxes de prof para _montarCanvas ler corretamente
+            const canvas = await this._montarCanvasAvulso(campos, templateUrl, isPreta, cfg);
+            const link = document.createElement('a');
+            link.download = `certificado-${campos.nome.replace(/\s+/g,'-')}-${faixaRaw.replace(/\s+/g,'-')}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            document.getElementById('modal-cert-avulso')?.remove();
+        } catch(e) {
+            alert('Erro ao gerar certificado: ' + e.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '🎓 GERAR E BAIXAR CERTIFICADO'; }
+        }
+    },
+
+    // Versão de _montarCanvas que lê checkboxes com prefixo 'av-'
+    async _montarCanvasAvulso(campos_modal, templateUrl, isPreta, cfg) {
+        const campos = isPreta
+            ? (cfg.camposA3 || this._camposPadrao('a3'))
+            : (cfg.camposA4 || cfg.campos || this._camposPadrao('a4'));
+        const dataFormatada = this._ptDataFmt(campos_modal.dataStr, campos_modal.cidade);
+        const dataUrl = await this._carregarTemplateDataUrl(templateUrl);
+
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = async () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width; canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const W = canvas.width, H = canvas.height;
+                const escala = W / 1754;
+                const escrever = (texto, campo) => {
+                    const fs = Math.round(campo.fontSize * escala);
+                    ctx.font = `${campo.italic?'italic ':''}${campo.bold?'bold ':''}${fs}px 'Georgia','Times New Roman',serif`;
+                    ctx.fillStyle = campo.color; ctx.textAlign = 'center';
+                    ctx.fillText(texto, W * campo.xPct / 100, H * campo.yPct / 100);
+                };
+                escrever(campos_modal.nome, campos.nome);
+                escrever(campos_modal.faixaTexto, campos.faixa);
+                escrever(dataFormatada, campos.data);
+
+                const assinaturas = [];
+                if (document.getElementById('av-prof-principal')?.checked && cfg.assinaturaPrincipalUrl)
+                    assinaturas.push({ url: cfg.assinaturaPrincipalUrl, nome: cfg.assinaturaPrincipalNome || '' });
+                (cfg.professores || []).forEach((p, i) => {
+                    if (document.getElementById(`av-prof-${i}`)?.checked) assinaturas.push(p);
+                });
+
+                if (assinaturas.length > 0) {
+                    const assCfg = cfg.camposAssinatura || { yPct: 80, alturaPct: 9 };
+                    const assH = H * assCfg.alturaPct / 100;
+                    const espaco = W / (assinaturas.length + 1);
+                    await Promise.all(assinaturas.map((p, i) => new Promise(res => {
+                        this._carregarTemplateDataUrl(p.url).then(assUrl => {
+                            const ai = new Image();
+                            ai.onload = () => { const assW = assH*(ai.width/ai.height); ctx.drawImage(ai, espaco*(i+1)-assW/2, H*assCfg.yPct/100, assW, assH); res(); };
+                            ai.onerror = () => res();
+                            ai.src = assUrl;
+                        }).catch(() => res());
+                    })));
+                }
+                resolve(canvas);
+            };
+            img.onerror = () => reject(new Error('Erro ao carregar template'));
             img.src = dataUrl;
         });
     },

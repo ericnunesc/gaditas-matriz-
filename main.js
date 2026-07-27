@@ -13858,10 +13858,17 @@ const exame = {
             const cat       = this._getCategoria(a);
             const proxFaixa = this._getProxFaixa(a, cat) || (a.faixa || '');
             const isPreta   = certificado._faixaEhPreta(proxFaixa);
-            // Ordenação: kids primeiro, depois adulto por ordem, depois preta
+            const faixaBase = proxFaixa.split(' ')[0].toLowerCase();
+            const grupoKey  = cat === 'kids' ? 'kids'
+                : isPreta                     ? 'preta'
+                : faixaBase === 'marrom'      ? 'marrom'
+                : faixaBase === 'roxa'        ? 'roxa'
+                : faixaBase === 'azul'        ? 'azul'
+                : 'azul';
+            const adultoOrder = { azul: 1, roxa: 2, marrom: 3 };
             const sortKey = cat === 'kids'
                 ? `0_${String(infantil.indexOf(proxFaixa) >= 0 ? infantil.indexOf(proxFaixa) : 99).padStart(2,'0')}`
-                : isPreta ? `2_${a.nome}` : `1_${a.nome}`;
+                : isPreta ? `4_${a.nome}` : `${adultoOrder[grupoKey] || 1}_${a.nome}`;
             lista.push({
                 nome:       a.nome || '',
                 faixaTexto: `FAIXA ${proxFaixa.toUpperCase()}`,
@@ -13869,6 +13876,7 @@ const exame = {
                 dataStr:    dataGrad,
                 cidade,
                 categoria:  isPreta ? 'preta' : cat,
+                _grupoKey:  grupoKey,
                 _sortKey:   sortKey,
             });
         });
@@ -13880,8 +13888,46 @@ const exame = {
             return;
         }
 
-        // Confirma com o admin
-        if (!confirm(`Gerar ${lista.length} certificado(s)?\n\nKids: ${lista.filter(a=>a.categoria==='kids').length}\nAdulto: ${lista.filter(a=>a.categoria==='adulto').length}\nPreta: ${lista.filter(a=>a.categoria==='preta').length}\n\nUma janela de impressão será aberta.`)) return;
+        // Detecta grupos presentes e deixa admin escolher quais gerar
+        const gruposDisponiveis = [
+            { key: 'kids',   label: '🧒 KIDS',   cor: '#22c55e' },
+            { key: 'azul',   label: '🔵 AZUL',   cor: '#3b82f6' },
+            { key: 'roxa',   label: '🟣 ROXA',   cor: '#a855f7' },
+            { key: 'marrom', label: '🟤 MARROM',  cor: '#b45309' },
+            { key: 'preta',  label: '⬛ PRETA',   cor: '#94a3b8' },
+        ].filter(g => lista.some(a => a._grupoKey === g.key));
+
+        const grupoSelecionado = await new Promise(resolve => {
+            let modal = document.getElementById('modal-sel-grupos-cert');
+            if (!modal) { modal = document.createElement('div'); modal.id = 'modal-sel-grupos-cert'; document.body.appendChild(modal); }
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+            const chkHtml = gruposDisponiveis.map(g => {
+                const n = lista.filter(a => a._grupoKey === g.key).length;
+                return `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border:1px solid ${g.cor}33;border-radius:10px;cursor:pointer;margin-bottom:6px;">
+                    <input type="checkbox" id="sel-grupo-${g.key}" checked style="width:18px;height:18px;accent-color:${g.cor};">
+                    <span style="font-size:0.8rem;font-weight:800;color:${g.cor};">${g.label}</span>
+                    <span style="margin-left:auto;font-size:0.7rem;color:#64748b;">${n} aluno${n!==1?'s':''}</span>
+                </label>`;
+            }).join('');
+            modal.innerHTML = `
+                <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
+                    <div style="font-size:0.95rem;font-weight:800;color:#a855f7;margin-bottom:14px;">🎓 Selecionar Grupos</div>
+                    ${chkHtml}
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;">
+                        <button onclick="document.getElementById('modal-sel-grupos-cert').remove();window._certGrupoResolve(null);"
+                            style="padding:11px;background:#334155;border:none;color:white;border-radius:8px;font-weight:700;cursor:pointer;">Cancelar</button>
+                        <button onclick="
+                            const sels=[...document.querySelectorAll('[id^=sel-grupo-]')].filter(c=>c.checked).map(c=>c.id.replace('sel-grupo-',''));
+                            document.getElementById('modal-sel-grupos-cert').remove();
+                            window._certGrupoResolve(sels);"
+                            style="padding:11px;background:#a855f7;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;">Gerar PDF</button>
+                    </div>
+                </div>`;
+            window._certGrupoResolve = resolve;
+        });
+
+        if (!grupoSelecionado || grupoSelecionado.length === 0) return;
+        const listaFiltrada = lista.filter(a => grupoSelecionado.includes(a._grupoKey));
 
         // Gera um canvas por aluno e abre janela de impressão
         const win = window.open('', '_blank');
@@ -13899,11 +13945,10 @@ const exame = {
         win.document.close();
 
         let gerados = 0;
-        const grupos = [
-            { label: '🧒 KIDS', itens: lista.filter(a => a.categoria === 'kids') },
-            { label: '🥋 ADULTO (16+ até Marrom)', itens: lista.filter(a => a.categoria === 'adulto') },
-            { label: '⬛ FAIXA PRETA', itens: lista.filter(a => a.categoria === 'preta') },
-        ].filter(g => g.itens.length > 0);
+        const gruposLabel = { kids:'🧒 KIDS', azul:'🔵 AZUL', roxa:'🟣 ROXA', marrom:'🟤 MARROM', preta:'⬛ PRETA' };
+        const grupos = ['kids','azul','roxa','marrom','preta']
+            .map(k => ({ label: gruposLabel[k], itens: listaFiltrada.filter(a => a._grupoKey === k) }))
+            .filter(g => g.itens.length > 0);
 
         for (const grupo of grupos) {
             for (const aluno of grupo.itens) {

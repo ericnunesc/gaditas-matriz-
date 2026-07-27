@@ -13847,7 +13847,6 @@ const exame = {
             if (!docSnap.exists) return;
             const data = docSnap.data();
             (data.convocados || []).forEach(c => {
-                if (!c.confirmado) return;
                 const isPreta = certificado._faixaEhPreta(c.proxFaixa || '');
                 lista.push({
                     nome:       c.nome || '',

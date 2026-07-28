@@ -5612,6 +5612,7 @@ Ele voltará a ser aluno normal.`)) return;
                     : { icon:'fa-book',      label:'Diário',   cor:'#a78bfa', fn:`treinoPost.abrirDiario()` },
                 { icon:'fa-medal',        label:'Conquistas', cor:'#f59e0b', fn:`document.getElementById('mural-conquistas').scrollIntoView({behavior:'smooth'})` },
                 { icon:'fa-graduation-cap', label:'Exame',    cor:'#a855f7', fn:`ui.showTab('tab-exame')` },
+                { icon:'fa-stopwatch',      label:'Cronômetro',cor:'#38bdf8', fn:`cronometro.abrir()` },
             ];
 
             const cardsHtml = cards.map(c => `
@@ -5928,7 +5929,7 @@ Ele voltará a ser aluno normal.`)) return;
             { icon:'fa-chart-bar',     label:'Relatórios',   cor:'#06b6d4', fn:`ui.showTab('tab-relatorios')` },
             { icon:'fa-shopping-bag',  label:'Loja',         cor:'#ec4899', fn:`ui.showTab('tab-loja')` },
             { icon:'fa-calendar-alt',  label:'Eventos',      cor:'#f97316', fn:`ui.showTab('tab-eventos')` },
-            { icon:'fa-clipboard-list',label:'Chamada',      cor:'#84cc16', fn:`academia._irParaChamada()` },
+            { icon:'fa-stopwatch',     label:'Cronômetro',   cor:'#38bdf8', fn:`cronometro.abrir()` },
             { icon:'fa-satellite-dish',label:'Sumidos',      cor:'#ef4444', fn:`ui.showTab('tab-relatorios'); setTimeout(()=>treinoPost.renderRadarSumidos(),300)` },
             { icon:'fa-star',          label:'Avaliações',   cor:'#facc15', fn:`ui.showTab('tab-relatorios'); setTimeout(()=>treinoPost.renderAvaliacoesPainel(),300)` },
             { icon:'fa-birthday-cake', label:'Aniversários', cor:'#a78bfa', fn:`academia._irParaAniversarios()` },
@@ -19369,6 +19370,200 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tenta restaurar sessão salva (evita login toda vez)
     auth.restaurarSessao();
 });
+
+// ══════════════════════════════════════════════════════════
+// CRONÔMETRO DE LUTA — JIU-JITSU
+// ══════════════════════════════════════════════════════════
+const cronometro = {
+    _timer: null,
+    _segundos: 0,
+    _rodando: false,
+    _tempos: [
+        { label: 'Infantil',  s: 180, cor: '#22c55e' },
+        { label: 'Juvenil',   s: 240, cor: '#3b82f6' },
+        { label: 'Adulto',    s: 300, cor: '#a855f7' },
+        { label: 'Avançado',  s: 360, cor: '#f59e0b' },
+        { label: 'Faixa Preta', s: 480, cor: '#94a3b8' },
+    ],
+    _tempoSel: 300,
+    _overtime: false,
+
+    abrir() {
+        document.getElementById('modal-cronometro')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-cronometro';
+        modal.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+        modal.innerHTML = `
+            <div style="width:100%;max-width:420px;padding:20px;box-sizing:border-box;">
+                <!-- Botões de tempo predefinido -->
+                <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;">
+                    ${this._tempos.map(t => `
+                        <button onclick="cronometro._selecionarTempo(${t.s}, this)"
+                            data-seg="${t.s}"
+                            style="padding:7px 12px;border-radius:8px;border:2px solid ${t.cor}55;background:${this._tempoSel===t.s?t.cor+'22':'#0f172a'};color:${t.cor};font-size:0.65rem;font-weight:800;cursor:pointer;">
+                            ${t.label}<br><span style="font-size:0.7rem;">${Math.floor(t.s/60)}min</span>
+                        </button>`).join('')}
+                </div>
+
+                <!-- Display principal -->
+                <div style="text-align:center;margin-bottom:20px;">
+                    <div id="cron-display" style="font-size:5.5rem;font-weight:900;color:white;font-family:monospace;line-height:1;letter-spacing:4px;">${this._fmt(this._tempoSel)}</div>
+                    <div id="cron-status" style="font-size:0.75rem;font-weight:800;color:#64748b;margin-top:8px;letter-spacing:2px;">PRONTO</div>
+                </div>
+
+                <!-- Barra de progresso -->
+                <div style="background:#1e293b;border-radius:99px;height:8px;margin-bottom:24px;overflow:hidden;">
+                    <div id="cron-barra" style="height:100%;width:100%;background:#a855f7;border-radius:99px;transition:width 0.5s linear;"></div>
+                </div>
+
+                <!-- Controles principais -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                    <button id="btn-cron-play" onclick="cronometro._toggle()"
+                        style="padding:18px;border-radius:14px;border:none;background:#a855f7;color:white;font-size:1.5rem;cursor:pointer;font-weight:900;">
+                        ▶
+                    </button>
+                    <button onclick="cronometro._resetar()"
+                        style="padding:18px;border-radius:14px;border:none;background:#1e293b;color:#94a3b8;font-size:1.5rem;cursor:pointer;font-weight:900;">
+                        ↺
+                    </button>
+                </div>
+
+                <!-- Overtime -->
+                <button onclick="cronometro._iniciarOvertime()"
+                    style="width:100%;padding:13px;border-radius:12px;border:2px solid #f59e0b44;background:#1c1000;color:#f59e0b;font-size:0.8rem;font-weight:800;cursor:pointer;margin-bottom:10px;">
+                    ⚡ OVERTIME (2min)
+                </button>
+
+                <!-- Fechar -->
+                <button onclick="cronometro._fechar()"
+                    style="width:100%;padding:11px;border-radius:12px;border:1px solid #334155;background:transparent;color:#475569;font-size:0.75rem;font-weight:700;cursor:pointer;">
+                    ✕ Fechar
+                </button>
+            </div>`;
+        document.body.appendChild(modal);
+        this._rodando = false;
+        this._overtime = false;
+        this._segundos = this._tempoSel;
+        this._atualizar();
+    },
+
+    _selecionarTempo(s, btn) {
+        this._parar();
+        this._tempoSel = s;
+        this._segundos = s;
+        this._overtime = false;
+        // Atualiza estilos dos botões
+        const t = this._tempos.find(x => x.s === s);
+        document.querySelectorAll('#modal-cronometro button[data-seg]').forEach(b => {
+            const ts = this._tempos.find(x => x.s === parseInt(b.dataset.seg));
+            if (!ts) return;
+            b.style.background = parseInt(b.dataset.seg) === s ? ts.cor + '22' : '#0f172a';
+        });
+        this._atualizar();
+    },
+
+    _toggle() {
+        if (this._rodando) this._parar(); else this._iniciar();
+    },
+
+    _iniciar() {
+        if (this._segundos <= 0) { this._segundos = this._tempoSel; }
+        this._rodando = true;
+        document.getElementById('btn-cron-play').textContent = '⏸';
+        document.getElementById('cron-status').textContent = this._overtime ? 'OVERTIME' : 'LUTA!';
+        document.getElementById('cron-status').style.color = this._overtime ? '#f59e0b' : '#22c55e';
+        this._timer = setInterval(() => {
+            this._segundos--;
+            this._atualizar();
+            if (this._segundos <= 0) {
+                this._parar();
+                this._tocarApito('fim');
+                document.getElementById('cron-status').textContent = this._overtime ? 'FIM DO OVERTIME!' : 'FIM DE LUTA!';
+                document.getElementById('cron-status').style.color = '#f43f5e';
+                document.getElementById('cron-display').style.color = '#f43f5e';
+            } else if (this._segundos === 30) {
+                this._tocarApito('aviso');
+            }
+        }, 1000);
+        this._tocarApito('inicio');
+    },
+
+    _parar() {
+        clearInterval(this._timer);
+        this._timer = null;
+        this._rodando = false;
+        const btn = document.getElementById('btn-cron-play');
+        if (btn) btn.textContent = '▶';
+    },
+
+    _resetar() {
+        this._parar();
+        this._overtime = false;
+        this._segundos = this._tempoSel;
+        const disp = document.getElementById('cron-display');
+        const status = document.getElementById('cron-status');
+        if (disp) { disp.textContent = this._fmt(this._segundos); disp.style.color = 'white'; }
+        if (status) { status.textContent = 'PRONTO'; status.style.color = '#64748b'; }
+        this._atualizar();
+    },
+
+    _iniciarOvertime() {
+        this._parar();
+        this._overtime = true;
+        this._segundos = 120;
+        const disp = document.getElementById('cron-display');
+        if (disp) disp.style.color = '#f59e0b';
+        this._atualizar();
+        this._iniciar();
+    },
+
+    _atualizar() {
+        const disp = document.getElementById('cron-display');
+        const barra = document.getElementById('cron-barra');
+        if (!disp) return;
+        disp.textContent = this._fmt(this._segundos);
+        if (barra) {
+            const total = this._overtime ? 120 : this._tempoSel;
+            const pct = Math.max(0, Math.min(100, (this._segundos / total) * 100));
+            barra.style.width = pct + '%';
+            const t = this._tempos.find(x => x.s === this._tempoSel);
+            barra.style.background = this._overtime ? '#f59e0b'
+                : this._segundos <= 30 ? '#f43f5e'
+                : (t?.cor || '#a855f7');
+        }
+    },
+
+    _fmt(s) {
+        const m = Math.floor(Math.abs(s) / 60);
+        const seg = Math.abs(s) % 60;
+        return `${String(m).padStart(2,'0')}:${String(seg).padStart(2,'0')}`;
+    },
+
+    _tocarApito(tipo) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const beep = (freq, dur, delay = 0) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.4, ctx.currentTime + delay);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+                osc.start(ctx.currentTime + delay);
+                osc.stop(ctx.currentTime + delay + dur);
+            };
+            if (tipo === 'inicio') { beep(880, 0.15); beep(880, 0.15, 0.2); }
+            else if (tipo === 'aviso') { beep(660, 0.3); }
+            else if (tipo === 'fim') { beep(880, 0.2); beep(660, 0.2, 0.25); beep(440, 0.4, 0.5); }
+        } catch(e) {}
+    },
+
+    _fechar() {
+        this._parar();
+        document.getElementById('modal-cronometro')?.remove();
+    },
+};
 
 // ══════════════════════════════════════════════════════════
 // CERTIFICADOS

@@ -19400,10 +19400,25 @@ const cronometro = {
                         style="padding:6px 10px;border-radius:8px;border:2px solid ${t.cor}55;background:${this._tempoSel===t.s?t.cor+'22':'#0f172a'};color:${t.cor};font-size:0.6rem;font-weight:800;cursor:pointer;">
                         ${t.label}<br><span style="font-size:0.68rem;">${Math.floor(t.s/60)}min</span>
                     </button>`).join('')}
-                <button onclick="cronometro._abrirPersonalizado()" id="btn-custom-tempo"
+                <button onclick="cronometro._toggleCustom()" id="btn-custom-tempo"
                     style="padding:6px 10px;border-radius:8px;border:2px solid #38bdf855;background:#0f172a;color:#38bdf8;font-size:0.6rem;font-weight:800;cursor:pointer;">
-                    ✏️ Custom<br><span id="custom-tempo-label" style="font-size:0.68rem;">${this._tempoSel===0?'--':''}</span>
+                    ✏️ Custom<br><span id="custom-tempo-label" style="font-size:0.68rem;"></span>
                 </button>
+            </div>
+
+            <!-- Tempo personalizado (oculto por padrão) -->
+            <div id="cron-custom-panel" style="display:none;background:#0f172a;border:1px solid #38bdf833;border-radius:12px;padding:12px;margin-bottom:10px;">
+                <div style="font-size:0.55rem;font-weight:800;color:#38bdf8;letter-spacing:1px;margin-bottom:10px;">✏️ TEMPO PERSONALIZADO</div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
+                    <button onclick="cronometro._adjCustomTempo(-30)" style="width:44px;height:44px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:white;font-size:1.2rem;cursor:pointer;font-weight:700;">−</button>
+                    <span id="cron-custom-display" style="font-size:2rem;font-weight:900;color:#38bdf8;font-family:monospace;min-width:80px;text-align:center;">${this._fmt(this._tempoSel)}</span>
+                    <button onclick="cronometro._adjCustomTempo(30)" style="width:44px;height:44px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:white;font-size:1.2rem;cursor:pointer;font-weight:700;">+</button>
+                </div>
+                <div style="display:flex;gap:6px;justify-content:center;margin-top:10px;">
+                    <button onclick="cronometro._adjCustomTempo(-60)" style="padding:5px 10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#64748b;font-size:0.6rem;font-weight:700;cursor:pointer;">−1min</button>
+                    <button onclick="cronometro._adjCustomTempo(60)" style="padding:5px 10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#64748b;font-size:0.6rem;font-weight:700;cursor:pointer;">+1min</button>
+                    <button onclick="cronometro._confirmarCustom()" style="padding:5px 14px;border-radius:8px;border:none;background:#38bdf8;color:#000;font-size:0.6rem;font-weight:800;cursor:pointer;">✓ Usar</button>
+                </div>
             </div>
 
             <!-- Configurações: ciclos e intervalo -->
@@ -19463,22 +19478,31 @@ const cronometro = {
         this._atualizar();
     },
 
-    _abrirPersonalizado() {
-        const inp = prompt('Tempo personalizado (ex: 4:30 ou 270):', `${Math.floor(this._tempoSel/60)}:${String(this._tempoSel%60).padStart(2,'0')}`);
-        if (!inp) return;
-        let s = 0;
-        if (inp.includes(':')) {
-            const [m, seg] = inp.split(':').map(Number);
-            s = (m || 0) * 60 + (seg || 0);
-        } else {
-            s = parseInt(inp) || 0;
+    _customTempoPending: 0,
+
+    _toggleCustom() {
+        const panel = document.getElementById('cron-custom-panel');
+        if (!panel) return;
+        const visible = panel.style.display !== 'none';
+        panel.style.display = visible ? 'none' : 'block';
+        if (!visible) {
+            this._customTempoPending = this._tempoSel;
+            const d = document.getElementById('cron-custom-display');
+            if (d) d.textContent = this._fmt(this._customTempoPending);
         }
-        if (s <= 0 || s > 3600) { alert('Tempo inválido (máx 60min).'); return; }
+    },
+
+    _adjCustomTempo(d) {
+        this._customTempoPending = Math.max(30, Math.min(3600, (this._customTempoPending || this._tempoSel) + d));
+        const el = document.getElementById('cron-custom-display');
+        if (el) el.textContent = this._fmt(this._customTempoPending);
+    },
+
+    _confirmarCustom() {
+        const s = this._customTempoPending;
+        if (!s || s <= 0) return;
         this._parar();
-        this._tempoSel = s;
-        this._segundos = s;
-        this._overtime = false;
-        // Desmarca todos os presets
+        this._tempoSel = s; this._segundos = s; this._overtime = false;
         document.querySelectorAll('#modal-cronometro button[data-seg]').forEach(b => {
             const ts = this._tempos.find(x => x.s === parseInt(b.dataset.seg));
             if (ts) b.style.background = '#0f172a';
@@ -19487,6 +19511,8 @@ const cronometro = {
         if (lbl) lbl.textContent = this._fmt(s);
         const btn = document.getElementById('btn-custom-tempo');
         if (btn) btn.style.background = '#38bdf822';
+        const panel = document.getElementById('cron-custom-panel');
+        if (panel) panel.style.display = 'none';
         this._atualizar();
     },
 

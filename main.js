@@ -19624,17 +19624,19 @@ const cronometro = {
     _tocarApito(tipo) {
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const beep = (freq, dur, delay=0) => {
+            const beep = (freq, dur, delay=0, vol=1.0) => {
                 const osc = ctx.createOscillator(); const gain = ctx.createGain();
-                osc.connect(gain); gain.connect(ctx.destination);
-                osc.frequency.value = freq; osc.type = 'sine';
-                gain.gain.setValueAtTime(0.4, ctx.currentTime+delay);
+                const comp = ctx.createDynamicsCompressor();
+                osc.connect(gain); gain.connect(comp); comp.connect(ctx.destination);
+                osc.frequency.value = freq; osc.type = 'square';
+                gain.gain.setValueAtTime(vol, ctx.currentTime+delay);
+                gain.gain.setValueAtTime(vol, ctx.currentTime+delay+dur-0.02);
                 gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+delay+dur);
-                osc.start(ctx.currentTime+delay); osc.stop(ctx.currentTime+delay+dur);
+                osc.start(ctx.currentTime+delay); osc.stop(ctx.currentTime+delay+dur+0.05);
             };
-            if (tipo==='inicio') { beep(880,0.15); beep(880,0.15,0.2); }
-            else if (tipo==='aviso') { beep(660,0.3); }
-            else if (tipo==='fim') { beep(880,0.2); beep(660,0.2,0.25); beep(440,0.4,0.5); }
+            if (tipo==='inicio') { beep(1050,0.12,0,0.7); beep(1050,0.12,0.18,0.7); }
+            else if (tipo==='aviso') { beep(1400,0.08,0,1.0); beep(1400,0.08,0.13,1.0); beep(1400,0.08,0.26,1.0); }
+            else if (tipo==='fim') { beep(1200,0.6,0,1.0); beep(1200,0.6,0.75,1.0); beep(1200,1.0,1.5,1.0); }
         } catch(e) {}
     },
 

@@ -19375,194 +19375,270 @@ document.addEventListener('DOMContentLoaded', () => {
 // CRONÔMETRO DE LUTA — JIU-JITSU
 // ══════════════════════════════════════════════════════════
 const cronometro = {
-    _timer: null,
-    _segundos: 0,
-    _rodando: false,
+    _timer: null, _segundos: 0, _rodando: false,
+    _tempoSel: 300, _overtime: false,
+    _cicloAtual: 0, _totalCiclos: 1, _intervaloSeg: 60, _emIntervalo: false,
     _tempos: [
-        { label: 'Infantil',  s: 180, cor: '#22c55e' },
-        { label: 'Juvenil',   s: 240, cor: '#3b82f6' },
-        { label: 'Adulto',    s: 300, cor: '#a855f7' },
-        { label: 'Avançado',  s: 360, cor: '#f59e0b' },
+        { label: 'Infantil',    s: 180, cor: '#22c55e' },
+        { label: 'Juvenil',     s: 240, cor: '#3b82f6' },
+        { label: 'Adulto',      s: 300, cor: '#a855f7' },
+        { label: 'Avançado',    s: 360, cor: '#f59e0b' },
         { label: 'Faixa Preta', s: 480, cor: '#94a3b8' },
     ],
-    _tempoSel: 300,
-    _overtime: false,
 
     abrir() {
         document.getElementById('modal-cronometro')?.remove();
         const modal = document.createElement('div');
         modal.id = 'modal-cronometro';
-        modal.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;';
-        modal.innerHTML = `
-            <div style="width:100%;max-width:420px;padding:20px;box-sizing:border-box;">
-                <!-- Botões de tempo predefinido -->
-                <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;">
-                    ${this._tempos.map(t => `
-                        <button onclick="cronometro._selecionarTempo(${t.s}, this)"
-                            data-seg="${t.s}"
-                            style="padding:7px 12px;border-radius:8px;border:2px solid ${t.cor}55;background:${this._tempoSel===t.s?t.cor+'22':'#0f172a'};color:${t.cor};font-size:0.65rem;font-weight:800;cursor:pointer;">
-                            ${t.label}<br><span style="font-size:0.7rem;">${Math.floor(t.s/60)}min</span>
-                        </button>`).join('')}
-                </div>
+        modal.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;';
+        modal.innerHTML = `<div style="width:100%;max-width:420px;padding:20px;box-sizing:border-box;">
 
-                <!-- Display principal -->
-                <div style="text-align:center;margin-bottom:20px;">
-                    <div id="cron-display" style="font-size:5.5rem;font-weight:900;color:white;font-family:monospace;line-height:1;letter-spacing:4px;">${this._fmt(this._tempoSel)}</div>
-                    <div id="cron-status" style="font-size:0.75rem;font-weight:800;color:#64748b;margin-top:8px;letter-spacing:2px;">PRONTO</div>
-                </div>
-
-                <!-- Barra de progresso -->
-                <div style="background:#1e293b;border-radius:99px;height:8px;margin-bottom:24px;overflow:hidden;">
-                    <div id="cron-barra" style="height:100%;width:100%;background:#a855f7;border-radius:99px;transition:width 0.5s linear;"></div>
-                </div>
-
-                <!-- Controles principais -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-                    <button id="btn-cron-play" onclick="cronometro._toggle()"
-                        style="padding:18px;border-radius:14px;border:none;background:#a855f7;color:white;font-size:1.5rem;cursor:pointer;font-weight:900;">
-                        ▶
-                    </button>
-                    <button onclick="cronometro._resetar()"
-                        style="padding:18px;border-radius:14px;border:none;background:#1e293b;color:#94a3b8;font-size:1.5rem;cursor:pointer;font-weight:900;">
-                        ↺
-                    </button>
-                </div>
-
-                <!-- Overtime -->
-                <button onclick="cronometro._iniciarOvertime()"
-                    style="width:100%;padding:13px;border-radius:12px;border:2px solid #f59e0b44;background:#1c1000;color:#f59e0b;font-size:0.8rem;font-weight:800;cursor:pointer;margin-bottom:10px;">
-                    ⚡ OVERTIME (2min)
+            <!-- Presets -->
+            <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-bottom:10px;">
+                ${this._tempos.map(t => `
+                    <button onclick="cronometro._selecionarTempo(${t.s})" data-seg="${t.s}"
+                        style="padding:6px 10px;border-radius:8px;border:2px solid ${t.cor}55;background:${this._tempoSel===t.s?t.cor+'22':'#0f172a'};color:${t.cor};font-size:0.6rem;font-weight:800;cursor:pointer;">
+                        ${t.label}<br><span style="font-size:0.68rem;">${Math.floor(t.s/60)}min</span>
+                    </button>`).join('')}
+                <button onclick="cronometro._abrirPersonalizado()" id="btn-custom-tempo"
+                    style="padding:6px 10px;border-radius:8px;border:2px solid #38bdf855;background:#0f172a;color:#38bdf8;font-size:0.6rem;font-weight:800;cursor:pointer;">
+                    ✏️ Custom<br><span id="custom-tempo-label" style="font-size:0.68rem;">${this._tempoSel===0?'--':''}</span>
                 </button>
+            </div>
 
-                <!-- Fechar -->
-                <button onclick="cronometro._fechar()"
-                    style="width:100%;padding:11px;border-radius:12px;border:1px solid #334155;background:transparent;color:#475569;font-size:0.75rem;font-weight:700;cursor:pointer;">
-                    ✕ Fechar
-                </button>
-            </div>`;
+            <!-- Configurações: ciclos e intervalo -->
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px;margin-bottom:14px;">
+                <div style="font-size:0.55rem;font-weight:800;color:#64748b;letter-spacing:1px;margin-bottom:10px;">⚙️ CONFIGURAR CICLOS</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div>
+                        <div style="font-size:0.55rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">Nº DE LUTAS</div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <button onclick="cronometro._adjCiclos(-1)" style="width:28px;height:28px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;font-size:1rem;cursor:pointer;font-weight:700;">−</button>
+                            <span id="cron-ciclos-val" style="font-size:1.2rem;font-weight:900;color:white;min-width:24px;text-align:center;">${this._totalCiclos}</span>
+                            <button onclick="cronometro._adjCiclos(1)" style="width:28px;height:28px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;font-size:1rem;cursor:pointer;font-weight:700;">+</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.55rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">INTERVALO</div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <button onclick="cronometro._adjIntervalo(-30)" style="width:28px;height:28px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;font-size:0.75rem;cursor:pointer;font-weight:700;">−</button>
+                            <span id="cron-intervalo-val" style="font-size:0.9rem;font-weight:900;color:white;min-width:36px;text-align:center;">${this._fmt(this._intervaloSeg)}</span>
+                            <button onclick="cronometro._adjIntervalo(30)" style="width:28px;height:28px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;font-size:0.75rem;cursor:pointer;font-weight:700;">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Display principal -->
+            <div style="text-align:center;margin-bottom:12px;">
+                <div id="cron-ciclo-label" style="font-size:0.65rem;font-weight:800;color:#64748b;letter-spacing:2px;margin-bottom:4px;">LUTA 1 / ${this._totalCiclos}</div>
+                <div id="cron-display" style="font-size:5.5rem;font-weight:900;color:white;font-family:monospace;line-height:1;letter-spacing:4px;">${this._fmt(this._tempoSel)}</div>
+                <div id="cron-status" style="font-size:0.75rem;font-weight:800;color:#64748b;margin-top:6px;letter-spacing:2px;">PRONTO</div>
+            </div>
+
+            <!-- Barra de progresso -->
+            <div style="background:#1e293b;border-radius:99px;height:8px;margin-bottom:18px;overflow:hidden;">
+                <div id="cron-barra" style="height:100%;width:100%;background:#a855f7;border-radius:99px;transition:width 0.5s linear;"></div>
+            </div>
+
+            <!-- Controles -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">
+                <button id="btn-cron-play" onclick="cronometro._toggle()"
+                    style="padding:16px;border-radius:14px;border:none;background:#a855f7;color:white;font-size:1.5rem;cursor:pointer;font-weight:900;">▶</button>
+                <button onclick="cronometro._resetar()"
+                    style="padding:16px;border-radius:14px;border:none;background:#1e293b;color:#94a3b8;font-size:1.5rem;cursor:pointer;font-weight:900;">↺</button>
+            </div>
+            <button onclick="cronometro._iniciarOvertime()"
+                style="width:100%;padding:11px;border-radius:12px;border:2px solid #f59e0b44;background:#1c1000;color:#f59e0b;font-size:0.78rem;font-weight:800;cursor:pointer;margin-bottom:8px;">
+                ⚡ OVERTIME (2min)
+            </button>
+            <button onclick="cronometro._fechar()"
+                style="width:100%;padding:10px;border-radius:12px;border:1px solid #334155;background:transparent;color:#475569;font-size:0.72rem;font-weight:700;cursor:pointer;">
+                ✕ Fechar
+            </button>
+        </div>`;
         document.body.appendChild(modal);
-        this._rodando = false;
-        this._overtime = false;
-        this._segundos = this._tempoSel;
+        this._rodando = false; this._overtime = false; this._emIntervalo = false;
+        this._cicloAtual = 1; this._segundos = this._tempoSel;
         this._atualizar();
     },
 
-    _selecionarTempo(s, btn) {
+    _abrirPersonalizado() {
+        const inp = prompt('Tempo personalizado (ex: 4:30 ou 270):', `${Math.floor(this._tempoSel/60)}:${String(this._tempoSel%60).padStart(2,'0')}`);
+        if (!inp) return;
+        let s = 0;
+        if (inp.includes(':')) {
+            const [m, seg] = inp.split(':').map(Number);
+            s = (m || 0) * 60 + (seg || 0);
+        } else {
+            s = parseInt(inp) || 0;
+        }
+        if (s <= 0 || s > 3600) { alert('Tempo inválido (máx 60min).'); return; }
         this._parar();
         this._tempoSel = s;
         this._segundos = s;
         this._overtime = false;
-        // Atualiza estilos dos botões
-        const t = this._tempos.find(x => x.s === s);
+        // Desmarca todos os presets
+        document.querySelectorAll('#modal-cronometro button[data-seg]').forEach(b => {
+            const ts = this._tempos.find(x => x.s === parseInt(b.dataset.seg));
+            if (ts) b.style.background = '#0f172a';
+        });
+        const lbl = document.getElementById('custom-tempo-label');
+        if (lbl) lbl.textContent = this._fmt(s);
+        const btn = document.getElementById('btn-custom-tempo');
+        if (btn) btn.style.background = '#38bdf822';
+        this._atualizar();
+    },
+
+    _selecionarTempo(s) {
+        this._parar(); this._tempoSel = s; this._segundos = s; this._overtime = false;
         document.querySelectorAll('#modal-cronometro button[data-seg]').forEach(b => {
             const ts = this._tempos.find(x => x.s === parseInt(b.dataset.seg));
             if (!ts) return;
             b.style.background = parseInt(b.dataset.seg) === s ? ts.cor + '22' : '#0f172a';
         });
+        const btn = document.getElementById('btn-custom-tempo');
+        if (btn) { btn.style.background = '#0f172a'; const lbl = document.getElementById('custom-tempo-label'); if(lbl) lbl.textContent = ''; }
         this._atualizar();
     },
 
-    _toggle() {
-        if (this._rodando) this._parar(); else this._iniciar();
+    _adjCiclos(d) {
+        this._totalCiclos = Math.max(1, Math.min(20, this._totalCiclos + d));
+        const el = document.getElementById('cron-ciclos-val'); if (el) el.textContent = this._totalCiclos;
+        this._atualizarCicloLabel();
     },
 
+    _adjIntervalo(d) {
+        this._intervaloSeg = Math.max(0, Math.min(600, this._intervaloSeg + d));
+        const el = document.getElementById('cron-intervalo-val'); if (el) el.textContent = this._fmt(this._intervaloSeg);
+    },
+
+    _atualizarCicloLabel() {
+        const el = document.getElementById('cron-ciclo-label');
+        if (el) el.textContent = this._totalCiclos > 1 ? `LUTA ${this._cicloAtual} / ${this._totalCiclos}` : '';
+    },
+
+    _toggle() { if (this._rodando) this._parar(); else this._iniciar(); },
+
     _iniciar() {
-        if (this._segundos <= 0) { this._segundos = this._tempoSel; }
+        if (this._segundos <= 0) { this._segundos = this._emIntervalo ? this._intervaloSeg : this._tempoSel; }
         this._rodando = true;
-        document.getElementById('btn-cron-play').textContent = '⏸';
-        document.getElementById('cron-status').textContent = this._overtime ? 'OVERTIME' : 'LUTA!';
-        document.getElementById('cron-status').style.color = this._overtime ? '#f59e0b' : '#22c55e';
+        const btn = document.getElementById('btn-cron-play'); if (btn) btn.textContent = '⏸';
+        const status = document.getElementById('cron-status');
+        if (status) {
+            if (this._overtime) { status.textContent = 'OVERTIME'; status.style.color = '#f59e0b'; }
+            else if (this._emIntervalo) { status.textContent = 'INTERVALO'; status.style.color = '#38bdf8'; }
+            else { status.textContent = 'LUTA!'; status.style.color = '#22c55e'; }
+        }
         this._timer = setInterval(() => {
             this._segundos--;
             this._atualizar();
+            if (this._segundos <= 30 && this._segundos > 0 && this._segundos % 30 === 0 && !this._emIntervalo) this._tocarApito('aviso');
             if (this._segundos <= 0) {
                 this._parar();
-                this._tocarApito('fim');
-                document.getElementById('cron-status').textContent = this._overtime ? 'FIM DO OVERTIME!' : 'FIM DE LUTA!';
-                document.getElementById('cron-status').style.color = '#f43f5e';
-                document.getElementById('cron-display').style.color = '#f43f5e';
-            } else if (this._segundos === 30) {
-                this._tocarApito('aviso');
+                if (this._overtime) {
+                    this._tocarApito('fim');
+                    this._setStatus('FIM DO OVERTIME!', '#f43f5e');
+                    return;
+                }
+                if (this._emIntervalo) {
+                    // Fim do intervalo — próxima luta
+                    this._emIntervalo = false;
+                    this._cicloAtual++;
+                    this._atualizarCicloLabel();
+                    this._segundos = this._tempoSel;
+                    this._atualizar();
+                    this._tocarApito('inicio');
+                    this._iniciar();
+                } else {
+                    // Fim de luta
+                    this._tocarApito('fim');
+                    const disp = document.getElementById('cron-display'); if (disp) disp.style.color = '#f43f5e';
+                    if (this._cicloAtual < this._totalCiclos && this._intervaloSeg > 0) {
+                        // Iniciar intervalo
+                        this._emIntervalo = true;
+                        this._segundos = this._intervaloSeg;
+                        this._atualizar();
+                        setTimeout(() => { if (document.getElementById('cron-display')) { const d = document.getElementById('cron-display'); if(d) d.style.color = '#38bdf8'; this._iniciar(); } }, 1500);
+                    } else if (this._cicloAtual < this._totalCiclos) {
+                        // Sem intervalo — próxima luta
+                        this._cicloAtual++;
+                        this._atualizarCicloLabel();
+                        this._segundos = this._tempoSel;
+                        const d = document.getElementById('cron-display'); if(d) d.style.color = 'white';
+                        setTimeout(() => { if (document.getElementById('cron-display')) this._iniciar(); }, 1500);
+                    } else {
+                        this._setStatus(`FIM! ${this._totalCiclos} LUTA${this._totalCiclos>1?'S':''} CONCLUÍDA${this._totalCiclos>1?'S':''}`, '#f43f5e');
+                    }
+                }
             }
         }, 1000);
-        this._tocarApito('inicio');
+        if (!this._emIntervalo && !this._overtime) this._tocarApito('inicio');
+    },
+
+    _setStatus(txt, cor) {
+        const s = document.getElementById('cron-status'); if (s) { s.textContent = txt; s.style.color = cor; }
     },
 
     _parar() {
-        clearInterval(this._timer);
-        this._timer = null;
-        this._rodando = false;
-        const btn = document.getElementById('btn-cron-play');
-        if (btn) btn.textContent = '▶';
+        clearInterval(this._timer); this._timer = null; this._rodando = false;
+        const btn = document.getElementById('btn-cron-play'); if (btn) btn.textContent = '▶';
     },
 
     _resetar() {
         this._parar();
-        this._overtime = false;
-        this._segundos = this._tempoSel;
+        this._overtime = false; this._emIntervalo = false;
+        this._cicloAtual = 1; this._segundos = this._tempoSel;
         const disp = document.getElementById('cron-display');
-        const status = document.getElementById('cron-status');
         if (disp) { disp.textContent = this._fmt(this._segundos); disp.style.color = 'white'; }
-        if (status) { status.textContent = 'PRONTO'; status.style.color = '#64748b'; }
+        this._setStatus('PRONTO', '#64748b');
+        this._atualizarCicloLabel();
         this._atualizar();
     },
 
     _iniciarOvertime() {
-        this._parar();
-        this._overtime = true;
+        this._parar(); this._overtime = true; this._emIntervalo = false;
         this._segundos = 120;
-        const disp = document.getElementById('cron-display');
-        if (disp) disp.style.color = '#f59e0b';
-        this._atualizar();
-        this._iniciar();
+        const d = document.getElementById('cron-display'); if (d) d.style.color = '#f59e0b';
+        this._atualizar(); this._iniciar();
     },
 
     _atualizar() {
-        const disp = document.getElementById('cron-display');
-        const barra = document.getElementById('cron-barra');
-        if (!disp) return;
+        const disp = document.getElementById('cron-display'); if (!disp) return;
         disp.textContent = this._fmt(this._segundos);
+        const barra = document.getElementById('cron-barra');
         if (barra) {
-            const total = this._overtime ? 120 : this._tempoSel;
-            const pct = Math.max(0, Math.min(100, (this._segundos / total) * 100));
+            const total = this._overtime ? 120 : this._emIntervalo ? this._intervaloSeg : this._tempoSel;
+            const pct = total > 0 ? Math.max(0, Math.min(100, (this._segundos / total) * 100)) : 0;
             barra.style.width = pct + '%';
             const t = this._tempos.find(x => x.s === this._tempoSel);
             barra.style.background = this._overtime ? '#f59e0b'
+                : this._emIntervalo ? '#38bdf8'
                 : this._segundos <= 30 ? '#f43f5e'
                 : (t?.cor || '#a855f7');
         }
     },
 
-    _fmt(s) {
-        const m = Math.floor(Math.abs(s) / 60);
-        const seg = Math.abs(s) % 60;
-        return `${String(m).padStart(2,'0')}:${String(seg).padStart(2,'0')}`;
-    },
+    _fmt(s) { const m = Math.floor(Math.abs(s)/60); const seg = Math.abs(s)%60; return `${String(m).padStart(2,'0')}:${String(seg).padStart(2,'0')}`; },
 
     _tocarApito(tipo) {
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const beep = (freq, dur, delay = 0) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
+            const beep = (freq, dur, delay=0) => {
+                const osc = ctx.createOscillator(); const gain = ctx.createGain();
                 osc.connect(gain); gain.connect(ctx.destination);
-                osc.frequency.value = freq;
-                osc.type = 'sine';
-                gain.gain.setValueAtTime(0.4, ctx.currentTime + delay);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
-                osc.start(ctx.currentTime + delay);
-                osc.stop(ctx.currentTime + delay + dur);
+                osc.frequency.value = freq; osc.type = 'sine';
+                gain.gain.setValueAtTime(0.4, ctx.currentTime+delay);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+delay+dur);
+                osc.start(ctx.currentTime+delay); osc.stop(ctx.currentTime+delay+dur);
             };
-            if (tipo === 'inicio') { beep(880, 0.15); beep(880, 0.15, 0.2); }
-            else if (tipo === 'aviso') { beep(660, 0.3); }
-            else if (tipo === 'fim') { beep(880, 0.2); beep(660, 0.2, 0.25); beep(440, 0.4, 0.5); }
+            if (tipo==='inicio') { beep(880,0.15); beep(880,0.15,0.2); }
+            else if (tipo==='aviso') { beep(660,0.3); }
+            else if (tipo==='fim') { beep(880,0.2); beep(660,0.2,0.25); beep(440,0.4,0.5); }
         } catch(e) {}
     },
 
-    _fechar() {
-        this._parar();
-        document.getElementById('modal-cronometro')?.remove();
-    },
+    _fechar() { this._parar(); document.getElementById('modal-cronometro')?.remove(); },
 };
 
 // ══════════════════════════════════════════════════════════

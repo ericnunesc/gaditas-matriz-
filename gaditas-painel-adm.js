@@ -635,42 +635,51 @@ const GaditasPainelAdm = {
     // ══════════════════════════════════════════════════════════
 
     _clienteWpp: null, // { id?, nome, telefone, asaasId, origem: 'app'|'asaas' }
+    _wppBuscaToken: 0, // evita race condition entre buscas simultâneas
 
     async buscarClienteWpp() {
         const termo = document.getElementById('wpp-busca-cliente')?.value.trim();
         const lista = document.getElementById('wpp-lista-clientes');
-        if (!lista || !termo || termo.length < 2) { if(lista) lista.innerHTML = ''; return; }
+        if (!lista) return;
+        if (!termo || termo.length < 2) { lista.innerHTML = ''; return; }
 
+        const token = ++this._wppBuscaToken;
         lista.innerHTML = '<small style="color:#64748b;font-size:0.7rem;padding:4px;display:block;"><i class="fas fa-spinner fa-spin"></i> Buscando...</small>';
 
         const resultados = [];
+        const termoLower = termo.toLowerCase();
+        const termoNumerico = termo.replace(/\D/g,'');
 
         // 1. Busca no Firestore (alunos do app)
         try {
             const snap = await db.collection('alunos').orderBy('nome').get();
+            if (token !== this._wppBuscaToken) return; // descarta resultado obsoleto
             snap.docs.filter(d => {
                 const a = d.data();
-                return a.nome?.toLowerCase().includes(termo.toLowerCase())
-                    || a.telefone?.includes(termo.replace(/\D/g,''))
-                    || a.email?.toLowerCase().includes(termo.toLowerCase());
+                return a.nome?.toLowerCase().includes(termoLower)
+                    || (termoNumerico && a.telefone?.replace(/\D/g,'').includes(termoNumerico))
+                    || a.email?.toLowerCase().includes(termoLower);
             }).slice(0, 5).forEach(doc => {
                 const a = doc.data();
                 resultados.push({ id: doc.id, nome: a.nome, telefone: (a.telefone||'').replace(/\D/g,''), asaasId: a.asaasId||'', email: a.email, origem: 'app' });
             });
         } catch(e) {}
 
-        // 2. Busca no Asaas por nome (se menos de 3 resultados)
+        // 2. Busca no Asaas por nome (se menos de 3 resultados e termo não é número)
         if (resultados.length < 3 && isNaN(termo)) {
             try {
-                const res = await fetch('/api/asaas?endpoint=customers&name=' + encodeURIComponent(termo) + '&limit=5');
+                const res = await fetch('/api/asaas?endpoint=customers&name=' + encodeURIComponent(termo) + '&limit=10');
+                if (token !== this._wppBuscaToken) return; // descarta resultado obsoleto
                 const data = await res.json();
-                (data.data || []).forEach(c => {
+                (data.data || []).filter(c => c.name?.toLowerCase().includes(termoLower)).forEach(c => {
                     if (!resultados.find(r => r.asaasId === c.id)) {
                         resultados.push({ nome: c.name, telefone: (c.mobilePhone||c.phone||'').replace(/\D/g,''), asaasId: c.id, email: c.email||'', origem: 'asaas' });
                     }
                 });
             } catch(e) {}
         }
+
+        if (token !== this._wppBuscaToken) return; // descarta resultado obsoleto
 
         if (!resultados.length) {
             lista.innerHTML = '<small style="color:#64748b;font-size:0.75rem;padding:6px;display:block;">Nenhum cliente encontrado. Cadastre no Asaas primeiro.</small>';
@@ -686,7 +695,6 @@ const GaditasPainelAdm = {
                 ${c.telefone ? `<small style="color:#475569; display:block; font-size:0.6rem; margin-top:2px;">📱 (${c.telefone.slice(0,2)}) ${c.telefone.slice(2,7)}-${c.telefone.slice(7)}</small>` : '<small style="color:#f43f5e; display:block; font-size:0.58rem; margin-top:2px;">⚠️ Sem telefone</small>'}
             </div>`).join('');
 
-        // Salva temporariamente para acesso por índice
         this._wppResultados = resultados;
     },
 

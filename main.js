@@ -101,6 +101,7 @@ const auth = {
                 if (d.modalidade) this.adminCreds.modalidade = d.modalidade;
                 if (d.permitirKidsComAdultos != null) this.adminCreds.permitirKidsComAdultos = d.permitirKidsComAdultos;
                 if (d.nascimentoMestre) this.adminCreds.nascimentoMestre = d.nascimentoMestre;
+                if (d.fotoPerfil) this.adminCreds.fotoPerfil = d.fotoPerfil;
             }
         } catch(e) { console.warn('carregarCredenciaisAdmin:', e.message); }
         try {
@@ -231,6 +232,10 @@ const auth = {
         // Mostra ícone de configurações só para admin
         const btnCfg = document.getElementById('btn-config-admin');
         if (btnCfg) btnCfg.style.display = this.role === 'admin' ? 'inline-block' : 'none';
+        // Foto do admin no header
+        if (this.role === 'admin' && this.adminCreds.fotoPerfil && typeof GaditasFiltros !== 'undefined') {
+            setTimeout(() => GaditasFiltros.atualizarFotoHeader(this.adminCreds.fotoPerfil), 300);
+        }
         // Exibe faixa/grau no cabeçalho (só para alunos)
         this._renderFaixaHeader();
         ui.configurarVisao();
@@ -6492,6 +6497,17 @@ Ele voltará a ser aluno normal.`)) return;
                     <span style="font-size:0.95rem;font-weight:800;color:white;">⚙️ Configurações do Admin</span>
                     <button onclick="document.getElementById('modal-config-admin').remove()" style="background:#334155;border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
                 </div>
+                <!-- FOTO DO ADMIN -->
+                <div style="text-align:center;margin-bottom:16px;">
+                    <img id="cfg-admin-foto-preview" src="${auth.adminCreds.fotoPerfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(auth.adminCreds.nome||'Admin') + '&background=1e3a8a&color=fff&size=120'}"
+                        style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #3b82f6;display:block;margin:0 auto 8px;"/>
+                    <input type="file" id="cfg-admin-foto-input" accept="image/*" style="display:none;"/>
+                    <button id="cfg-admin-btn-foto" onclick="document.getElementById('cfg-admin-foto-input').click()"
+                        style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:7px 14px;border-radius:8px;font-size:0.68rem;font-weight:700;cursor:pointer;">
+                        <i class="fas fa-camera"></i> ESCOLHER FOTO
+                    </button>
+                    <span id="cfg-admin-foto-status" style="display:none;font-size:0.62rem;color:#10b981;font-weight:700;display:block;margin-top:4px;"></span>
+                </div>
                 <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">NOME DE EXIBIÇÃO</small>
                 <input type="text" id="cfg-admin-nome" value="${auth.adminCreds.nome || 'Admin'}" style="${inp}" placeholder="Seu nome"/>
                 <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">USUÁRIO DE LOGIN</small>
@@ -6592,6 +6608,30 @@ Ele voltará a ser aluno normal.`)) return;
                 <button onclick="academia._diagnosticarPush()" style="width:100%;padding:11px;background:#8b5cf6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.78rem;margin-bottom:8px;">🔍 DIAGNÓSTICO PUSH</button>
                 <div id="cfg-diag-resultado" style="font-size:0.72rem;line-height:1.6;"></div>
             </div>`;
+
+        // Event: foto do admin
+        document.getElementById('cfg-admin-foto-input').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            GaditasFiltros.abrirCropFoto(file, async (blob, dataUrl) => {
+                const preview = document.getElementById('cfg-admin-foto-preview');
+                if (preview) preview.src = dataUrl;
+                const status = document.getElementById('cfg-admin-foto-status');
+                if (status) { status.textContent = '⏳ Enviando foto...'; status.style.display = 'block'; }
+                try {
+                    const storage = firebase.storage();
+                    const ref = storage.ref().child('fotos_perfil/admin.jpg');
+                    const snap = await ref.put(blob, { contentType: 'image/jpeg' });
+                    const url = await snap.ref.getDownloadURL();
+                    await db.collection('configuracoes').doc('admin_config').set({ fotoPerfil: url }, { merge: true });
+                    auth.adminCreds.fotoPerfil = url;
+                    GaditasFiltros.atualizarFotoHeader(url);
+                    if (status) { status.textContent = '✅ Foto salva!'; }
+                } catch(err) {
+                    if (status) { status.textContent = '❌ Erro: ' + err.message; }
+                }
+            });
+        });
     },
 
     async _diagnosticarPush() {

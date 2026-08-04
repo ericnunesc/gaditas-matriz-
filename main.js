@@ -147,6 +147,7 @@ const auth = {
                 if (!aS.empty) {
                     const d = aS.docs[0].data();
                     this.role = d.role === 'professor' ? 'professor' : 'aluno';
+                    this.eAluno = true; // veio da coleção alunos → mantém funções de aluno mesmo se for professor
                     this.currentUser = { id: aS.docs[0].id, ...d };
                     return this.sucesso();
                 }
@@ -177,6 +178,7 @@ const auth = {
                 const d = aS2.docs[0].data();
                 if (d.senha === p || p === "1234") {
                     this.role = d.role === 'professor' ? 'professor' : 'aluno';
+                    this.eAluno = true; // veio da coleção alunos → mantém funções de aluno mesmo se for professor
                     this.currentUser = { id: aS2.docs[0].id, ...d };
                     return this.sucesso();
                 }
@@ -258,8 +260,8 @@ const auth = {
             if (wp) wp.classList.remove('hidden');
         }
         // Boletim escolar: visível para kids (por idade ou por turma kids)
-        // Certificados do aluno
-        if (this.role === 'aluno') {
+        // Certificados do aluno (também para professores promovidos que eram alunos)
+        if (this.eAluno) {
             setTimeout(async () => {
                 const snap = await db.collection('alunos').doc(auth.currentUser.id).get();
                 const certs = snap.data()?.certificados || [];
@@ -271,7 +273,7 @@ const auth = {
             }, 1200);
         }
 
-        if (this.role === 'aluno') {
+        if (this.eAluno) {
             const _nasc = this.currentUser?.nascimento;
             const _idadeBoletim = _nasc ? new Date().getFullYear() - new Date(_nasc).getFullYear() : 99;
             const _turmasKids = (this.currentUser?.turmas || []).some(t => /kids/i.test(t));
@@ -297,7 +299,7 @@ const auth = {
         }
 
         // ── LISTENERS RELATOS DE SAÚDE ────────────────────
-        if (this.role === 'aluno') { academia.iniciarListenerRelatoAluno(); setTimeout(() => academia.iniciarListenerRecadosAluno(), 1500); }
+        if (this.eAluno) { academia.iniciarListenerRelatoAluno(); setTimeout(() => academia.iniciarListenerRecadosAluno(), 1500); }
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerRelatosProf();
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerCheckins();
         if (this.role === 'professor') { profComms.iniciarListenerRecadosProf(); setTimeout(() => profComms.renderPainelDispensas(), 1000); setTimeout(() => profComms._verificarNotificacoesProf(), 1500); }
@@ -570,13 +572,33 @@ const auth = {
                     grau:      this.adminCreds.grau       ?? 3,
                     modalidade: this.adminCreds.modalidade || 'jiujitsu'
                 };
+            } else if (sessao.role === 'financeiro') {
+                const snap = await db.collection('professores').doc(sessao.id).get();
+                if (!snap.exists) { localStorage.removeItem('gaditas_sessao'); return false; }
+                this.role = 'financeiro';
+                this.currentUser = { id: snap.id, ...snap.data() };
+            } else if (sessao.role === 'professor') {
+                // Professor pode estar em 'professores' (externo) ou em 'alunos' (promovido)
+                const snapProf = await db.collection('professores').doc(sessao.id).get();
+                if (snapProf.exists) {
+                    this.role = 'professor';
+                    this.currentUser = { id: snapProf.id, ...snapProf.data() };
+                } else {
+                    const snapAluno = await db.collection('alunos').doc(sessao.id).get();
+                    if (!snapAluno.exists) { localStorage.removeItem('gaditas_sessao'); return false; }
+                    this.role = 'professor';
+                    this.eAluno = true; // professor promovido — mantém funções de aluno
+                    this.currentUser = { id: snapAluno.id, ...snapAluno.data() };
+                    if (snapAluno.data().email) {
+                        try { await firebase.auth().signInWithEmailAndPassword(snapAluno.data().email, snapAluno.data().senha || ''); } catch(_) {}
+                    }
+                }
             } else {
-                const colecao = (sessao.role === 'professor' || sessao.role === 'financeiro') ? 'professores' : 'alunos';
-                const snap = await db.collection(colecao).doc(sessao.id).get();
+                const snap = await db.collection('alunos').doc(sessao.id).get();
                 if (!snap.exists) { localStorage.removeItem('gaditas_sessao'); return false; }
                 this.role = sessao.role;
+                this.eAluno = true;
                 this.currentUser = { id: snap.id, ...snap.data() };
-                // Tenta reautenticar no Firebase Auth se tiver email/senha Firebase
                 if (snap.data().email) {
                     try { await firebase.auth().signInWithEmailAndPassword(snap.data().email, snap.data().senha || ''); } catch(_) {}
                 }
@@ -15050,9 +15072,9 @@ const loja = {
             }
             this._renderGrid();
 
-            // Mostra botão meus pedidos para alunos
+            // Mostra botão meus pedidos para alunos (e professores que também são alunos)
             const btnP = document.getElementById('btn-ver-meus-pedidos');
-            if (btnP && auth.role === 'aluno') { btnP.style.display = 'block'; this._carregarBadgePedidos(); }
+            if (btnP && auth.eAluno) { btnP.style.display = 'block'; this._carregarBadgePedidos(); }
         } catch(e) {
             grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:30px; color:#ef4444; font-size:0.72rem;">Erro ao carregar loja: ${e.message}</div>`;
         }

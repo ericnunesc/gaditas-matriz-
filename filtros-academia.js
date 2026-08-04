@@ -203,23 +203,125 @@ const GaditasFiltros = {
         });
     },
 
+    _fotoCropBlob: null,
+
+    abrirCropFoto(file, onConfirm) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const srcImg = new Image();
+            srcImg.onload = () => {
+                // ── Modal ──────────────────────────────────────────
+                const SIZE = 300; // diâmetro da área de recorte
+                let scale = 1, minScale = 0.5;
+                let ox = 0, oy = 0; // offset do centro da imagem relativo ao canvas
+                let dragging = false, lastX = 0, lastY = 0;
+                // Calcular escala inicial para cobrir o círculo
+                const fitScale = Math.max(SIZE / srcImg.width, SIZE / srcImg.height);
+                scale = fitScale;
+                minScale = fitScale * 0.5;
+
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;';
+                overlay.innerHTML = `
+                    <div style="color:#fff;font-size:0.75rem;font-weight:800;margin-bottom:10px;letter-spacing:0.5px;opacity:0.7;">ARRASTE E FAÇA ZOOM PARA AJUSTAR</div>
+                    <div style="position:relative;width:${SIZE}px;height:${SIZE}px;border-radius:50%;overflow:hidden;border:3px solid #3b82f6;cursor:grab;touch-action:none;">
+                        <canvas id="crop-canvas" width="${SIZE}" height="${SIZE}" style="display:block;"></canvas>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:18px;">
+                        <button id="crop-cancel" style="padding:11px 28px;background:#334155;border:none;color:#94a3b8;border-radius:10px;font-size:0.8rem;font-weight:700;cursor:pointer;">✕ Cancelar</button>
+                        <button id="crop-ok" style="padding:11px 28px;background:#3b82f6;border:none;color:#fff;border-radius:10px;font-size:0.8rem;font-weight:800;cursor:pointer;">✅ Usar esta foto</button>
+                    </div>`;
+                document.body.appendChild(overlay);
+
+                const canvas = document.getElementById('crop-canvas');
+                const ctx = canvas.getContext('2d');
+
+                const draw = () => {
+                    ctx.clearRect(0, 0, SIZE, SIZE);
+                    const w = srcImg.width * scale;
+                    const h = srcImg.height * scale;
+                    ctx.drawImage(srcImg, SIZE/2 - w/2 + ox, SIZE/2 - h/2 + oy, w, h);
+                };
+                draw();
+
+                // Arraste (mouse)
+                canvas.addEventListener('mousedown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; canvas.style.cursor = 'grabbing'; });
+                window.addEventListener('mousemove', e => {
+                    if (!dragging) return;
+                    ox += e.clientX - lastX; oy += e.clientY - lastY;
+                    lastX = e.clientX; lastY = e.clientY; draw();
+                });
+                window.addEventListener('mouseup', () => { dragging = false; canvas.style.cursor = 'grab'; });
+
+                // Arraste (touch)
+                let lastTouchDist = null;
+                canvas.addEventListener('touchstart', e => {
+                    e.preventDefault();
+                    if (e.touches.length === 1) { dragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
+                    else if (e.touches.length === 2) { lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
+                }, { passive: false });
+                canvas.addEventListener('touchmove', e => {
+                    e.preventDefault();
+                    if (e.touches.length === 1 && dragging) {
+                        ox += e.touches[0].clientX - lastX; oy += e.touches[0].clientY - lastY;
+                        lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; draw();
+                    } else if (e.touches.length === 2) {
+                        const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                        if (lastTouchDist) { scale = Math.max(minScale, scale * (dist / lastTouchDist)); draw(); }
+                        lastTouchDist = dist;
+                    }
+                }, { passive: false });
+                canvas.addEventListener('touchend', () => { dragging = false; lastTouchDist = null; });
+
+                // Scroll = zoom (desktop)
+                canvas.addEventListener('wheel', e => {
+                    e.preventDefault();
+                    scale = Math.max(minScale, scale * (e.deltaY < 0 ? 1.08 : 0.93));
+                    draw();
+                }, { passive: false });
+
+                // Confirmar
+                document.getElementById('crop-ok').addEventListener('click', () => {
+                    // Gera canvas final 400×400 para upload
+                    const out = document.createElement('canvas');
+                    out.width = 400; out.height = 400;
+                    const ratio = 400 / SIZE;
+                    const octx = out.getContext('2d');
+                    // Recorte circular
+                    octx.beginPath(); octx.arc(200, 200, 200, 0, Math.PI * 2); octx.clip();
+                    const w = srcImg.width * scale * ratio;
+                    const h = srcImg.height * scale * ratio;
+                    octx.drawImage(srcImg, 200 - w/2 + ox * ratio, 200 - h/2 + oy * ratio, w, h);
+                    out.toBlob(blob => {
+                        const dataUrl = out.toDataURL('image/jpeg', 0.88);
+                        overlay.remove();
+                        onConfirm(blob, dataUrl);
+                    }, 'image/jpeg', 0.88);
+                });
+
+                document.getElementById('crop-cancel').addEventListener('click', () => overlay.remove());
+            };
+            srcImg.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    },
+
     async uploadFotoPerfil(alunoId) {
-        const input = document.getElementById('input-foto-perfil');
-        if (!input || !input.files || !input.files[0]) return alert("Nenhuma foto selecionada.");
-        const file = input.files[0];
+        const blob = this._fotoCropBlob;
+        if (!blob) return alert("Nenhuma foto selecionada. Escolha e ajuste a foto antes de enviar.");
         const btnUpload = document.getElementById('btn-upload-foto');
         if (btnUpload) { btnUpload.innerText = "Enviando..."; btnUpload.disabled = true; }
         try {
             if (typeof firebase.storage !== 'function') return alert("Firebase Storage não carregado.");
-            const blobReduzido = await this.redimensionarImagem(file, 400);
             const storage = firebase.storage();
             const storageRef = storage.ref().child(`fotos_perfil/${alunoId}.jpg`);
-            const snapshot = await storageRef.put(blobReduzido, { contentType: 'image/jpeg' });
+            const snapshot = await storageRef.put(blob, { contentType: 'image/jpeg' });
             const url = await snapshot.ref.getDownloadURL();
             await db.collection("alunos").doc(alunoId).update({ fotoPerfil: url });
             const imgEl = document.getElementById('foto-perfil-preview');
             if (imgEl) imgEl.src = url;
             GaditasFiltros.atualizarFotoHeader(url);
+            this._fotoCropBlob = null;
             alert("✅ Foto atualizada com sucesso! OSS!");
         } catch (e) {
             alert("Erro ao enviar foto: " + e.message);
@@ -312,13 +414,12 @@ const GaditasFiltros = {
                 btnEscolher.addEventListener('click', () => inputFoto.click());
                 inputFoto.addEventListener('change', () => {
                     if (!inputFoto.files || !inputFoto.files[0]) return;
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
+                    GaditasFiltros.abrirCropFoto(inputFoto.files[0], (blob, dataUrl) => {
+                        GaditasFiltros._fotoCropBlob = blob;
                         const img = document.getElementById('foto-perfil-preview');
-                        if (img) img.src = e.target.result;
+                        if (img) img.src = dataUrl;
                         if (btnEnviar) btnEnviar.style.display = 'inline-block';
-                    };
-                    reader.readAsDataURL(inputFoto.files[0]);
+                    });
                 });
             }
             if (btnEnviar) {

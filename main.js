@@ -3345,6 +3345,20 @@ const academia = {
             }
         } catch(e) { console.warn("Verificação duplicado falhou:", e.message); }
 
+        // Verifica limite de alunos por turma
+        const _limiteCheckin = (academia.getGrade()?.limites || {})[t];
+        if (_limiteCheckin) {
+            try {
+                const inicioHoje = new Date(); inicioHoje.setHours(0,0,0,0);
+                const snapTurma = await db.collection("checkins").where("turma", "==", t).get();
+                const totalHoje = snapTurma.docs.filter(d => d.data().data >= inicioHoje.getTime()).length;
+                if (totalHoje >= _limiteCheckin) {
+                    alert(`🚫 Turma lotada!\n\nA turma "${t}" atingiu o limite de ${_limiteCheckin} aluno(s) hoje.\n\nFale com a academia para mais informações.`);
+                    return;
+                }
+            } catch(e) { console.warn("Verificação limite turma falhou:", e.message); }
+        }
+
         const agora = new Date().getTime();
         await Promise.all([
             db.collection("checkins").add({ alunoId: auth.currentUser.id, alunoNome: auth.currentUser.nome, turma: t, data: agora }),
@@ -7214,6 +7228,7 @@ Ele voltará a ser aluno normal.`)) return;
                     }
                     const desativ = this._aulaDesativada(d, slot);
                     const durSlot = duracoes[slot] || (grade.duracaoAula || 90);
+                    const limSlot = (grade.limites || {})[slot] || '';
                     const slotEsc = slot.replace(/'/g, "\\'");
                     html += '<div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:8px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; gap:6px; opacity:' + (desativ ? '0.45' : '1') + ';">' +
                         '<span style="color:' + (desativ ? '#64748b' : '#e2e8f0') + '; font-size:0.83rem; font-weight:600; flex:1; text-decoration:' + (desativ ? 'line-through' : 'none') + ';">' + slot + '</span>' +
@@ -7222,6 +7237,10 @@ Ele voltará a ser aluno normal.`)) return;
                         'onchange="academia.salvarDuracaoSlot(\'' + slotEsc + '\', this.value)" ' +
                         'style="width:48px; padding:4px 5px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:5px; font-size:0.7rem; text-align:center; outline:none;"/>' +
                         '<span style="color:#475569; font-size:0.55rem; font-weight:600;">min</span>' +
+                        '<input type="number" value="' + limSlot + '" min="1" max="999" placeholder="&#x221e;" title="Limite de alunos por aula (vazio = sem limite)" ' +
+                        'onchange="academia.salvarLimiteSlot(\'' + slotEsc + '\', this.value)" ' +
+                        'style="width:40px; padding:4px 5px; background:#0f172a; border:1px solid #334155; color:#a78bfa; border-radius:5px; font-size:0.7rem; text-align:center; outline:none;"/>' +
+                        '<span style="color:#475569; font-size:0.55rem; font-weight:600;">&#x1F465;</span>' +
                         '<button onclick="academia.toggleAulaAtiva(' + d + ', \'' + slotEsc + '\')" title="' + (desativ ? 'Reativar' : 'Desativar') + '" style="background:none; border:none; cursor:pointer; padding:4px 3px; font-size:0.9rem;">' + (desativ ? '🟢' : '🔴') + '</button>' +
                         '<button onclick="academia.removerHorarioAdmin(' + d + ', \'' + slotEsc + '\')" ' +
                         'style="background:none; border:none; color:#f43f5e; cursor:pointer; padding:4px 6px; font-size:0.9rem;"><i class="fas fa-times"></i></button>' +
@@ -7262,7 +7281,10 @@ Ele voltará a ser aluno normal.`)) return;
                         </div>
                         <div style="flex:1; min-width:0;">
                             <div style="font-size:0.82rem; font-weight:700; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${turma || slot}</div>
-                            <span style="font-size:0.52rem; color:${accentColor}; font-weight:800; letter-spacing:0.6px;">${tagLabel}</span>
+                            <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
+                                <span style="font-size:0.52rem; color:${accentColor}; font-weight:800; letter-spacing:0.6px;">${tagLabel}</span>
+                                ${(grade.limites || {})[slot] ? `<span style="background:#2e1065; color:#a78bfa; font-size:0.5rem; font-weight:800; padding:1px 5px; border-radius:4px;">👥 máx ${grade.limites[slot]}</span>` : ''}
+                            </div>
                         </div>
                     </div>`;
                 });
@@ -7472,6 +7494,19 @@ Ele voltará a ser aluno normal.`)) return;
         try {
             await db.collection('configuracoes').doc('horarios').set({ duracoes: grade.duracoes }, { merge: true });
         } catch(e) { console.warn('Erro ao salvar duração do slot:', e); }
+    },
+
+    // Salva o limite de alunos por slot (vazio = sem limite)
+    async salvarLimiteSlot(slot, valor) {
+        const grade = this.getGrade();
+        if (!grade.limites) grade.limites = {};
+        const n = parseInt(valor);
+        if (n > 0) grade.limites[slot] = n;
+        else delete grade.limites[slot];
+        this.gradeFirebase = grade;
+        try {
+            await db.collection('configuracoes').doc('horarios').set({ limites: grade.limites }, { merge: true });
+        } catch(e) { console.warn('Erro ao salvar limite do slot:', e); }
     },
 
     async adicionarHorarioAdmin(dia) {

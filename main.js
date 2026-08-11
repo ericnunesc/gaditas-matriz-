@@ -15560,65 +15560,97 @@ const loja = {
         }
     },
 
-    async renderPedidosAdmin() {
+    _filtroPedidos: 'todos',
+
+    async renderPedidosAdmin(filtro) {
+        if (filtro !== undefined) this._filtroPedidos = filtro;
+        const f = this._filtroPedidos || 'todos';
         const container = document.getElementById('loja-admin-pedidos');
         if (!container) return;
         container.innerHTML = '<small style="color:#475569; font-size:0.65rem;">Carregando...</small>';
         try {
             const snap = await db.collection('loja_pedidos').get();
-            if (snap.empty) {
-                container.innerHTML = '<div style="text-align:center; padding:20px; color:#475569; font-size:0.7rem;">Nenhum pedido ainda.</div>';
-                return;
-            }
-            // Ordena client-side (evita necessidade de índice)
-            snap.docs.sort((a, b) => (b.data().data || 0) - (a.data().data || 0));
-            const pendentes = snap.docs.filter(d => d.data().status === 'pendente').length;
+
+            // Ordena por data decrescente
+            const docs = snap.docs.sort((a, b) => (b.data().data || 0) - (a.data().data || 0));
+
+            const pendentes = docs.filter(d => d.data().status === 'pendente').length;
             const badge = document.getElementById('badge-pedidos-loja');
             if (badge) { badge.textContent = pendentes; badge.style.display = pendentes > 0 ? 'block' : 'none'; }
 
+            const counts = { todos: docs.length };
+            docs.forEach(d => { const s = d.data().status || 'pendente'; counts[s] = (counts[s]||0)+1; });
+
+            const filtros = [
+                { key:'todos',    label:'Todos',    cor:'#64748b' },
+                { key:'pendente', label:'Pendente', cor:'#f59e0b' },
+                { key:'pago',     label:'Pago',     cor:'#3b82f6' },
+                { key:'entregue', label:'Entregue', cor:'#10b981' },
+                { key:'cancelado',label:'Cancelado',cor:'#ef4444' },
+            ];
+
+            const barFiltros = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+                ${filtros.map(ft => {
+                    const ativo = f === ft.key;
+                    const n = counts[ft.key] || 0;
+                    return `<button onclick="loja.renderPedidosAdmin('${ft.key}')"
+                        style="background:${ativo ? ft.cor+'22' : '#0f172a'};border:1px solid ${ativo ? ft.cor : '#334155'};color:${ativo ? ft.cor : '#64748b'};padding:5px 10px;border-radius:20px;font-size:0.6rem;font-weight:800;cursor:pointer;">
+                        ${ft.label}${n > 0 ? ' ('+n+')' : ''}
+                    </button>`;
+                }).join('')}
+            </div>`;
+
+            const filtrados = f === 'todos' ? docs : docs.filter(d => (d.data().status||'pendente') === f);
+
+            if (filtrados.length === 0) {
+                container.innerHTML = barFiltros + '<div style="text-align:center;padding:20px;color:#475569;font-size:0.7rem;">Nenhum pedido nesta categoria.</div>';
+                return;
+            }
+
             const statusCor   = { pendente:'#f59e0b', pago:'#3b82f6', entregue:'#10b981', cancelado:'#ef4444' };
             const statusLabel = { pendente:'⏳ Pendente', pago:'💳 Pago', entregue:'✅ Entregue', cancelado:'❌ Cancelado' };
-            container.innerHTML = snap.docs.map(d => {
+
+            container.innerHTML = barFiltros + filtrados.map(d => {
                 const o = { id: d.id, ...d.data() };
                 const cor = statusCor[o.status] || '#64748b';
                 const pid = o.produtoId || '';
                 const vari = (o.variacao || '').replace(/'/g, "\\'");
                 return `
-                    <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:8px;">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-                            <div style="flex:1; min-width:0; margin-right:8px;">
-                                <div style="font-size:0.75rem; font-weight:800; color:white;">${o.alunoNome}</div>
-                                <div style="font-size:0.65rem; color:#94a3b8; margin-top:2px;">${o.produtoNome}${o.variacao ? ' · ' + o.variacao : ''}</div>
-                                <div style="font-size:0.55rem; color:#64748b; margin-top:2px;">${new Date(o.data).toLocaleDateString('pt-BR')} · #${o.id.slice(-6).toUpperCase()}</div>
+                    <div style="background:#0f172a;border:1px solid #1e293b;border-left:3px solid ${cor};border-radius:10px;padding:12px;margin-bottom:8px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                            <div style="flex:1;min-width:0;margin-right:8px;">
+                                <div style="font-size:0.75rem;font-weight:800;color:white;">${o.alunoNome}</div>
+                                <div style="font-size:0.65rem;color:#94a3b8;margin-top:2px;">${o.produtoNome}${o.variacao ? ' · '+o.variacao : ''}</div>
+                                <div style="font-size:0.55rem;color:#64748b;margin-top:2px;">${new Date(o.data).toLocaleDateString('pt-BR')} · #${o.id.slice(-6).toUpperCase()}</div>
                             </div>
-                            <div style="text-align:right; flex-shrink:0;">
-                                <div style="font-size:0.8rem; font-weight:800; color:#10b981;">R$ ${(o.preco||0).toFixed(2).replace('.', ',')}</div>
-                                <div style="font-size:0.55rem; font-weight:800; color:${cor}; margin-top:4px;">${statusLabel[o.status]||o.status}</div>
+                            <div style="text-align:right;flex-shrink:0;">
+                                <div style="font-size:0.8rem;font-weight:800;color:#10b981;">R$ ${(o.preco||0).toFixed(2).replace('.',',')}</div>
+                                <div style="font-size:0.55rem;font-weight:800;color:${cor};margin-top:4px;">${statusLabel[o.status]||o.status}</div>
                             </div>
                         </div>
-                        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                             ${o.status === 'pendente' ? `
-                                <button onclick="loja.atualizarStatusPedido('${o.id}','pago','${pid}','${vari}')" style="background:#3b82f622; border:1px solid #3b82f6; color:#93c5fd; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">✓ MARCAR PAGO</button>
-                                <button onclick="loja.atualizarStatusPedido('${o.id}','cancelado','${pid}','${vari}')" style="background:#ef444422; border:1px solid #ef4444; color:#ef4444; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">✕ CANCELAR</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','pago','${pid}','${vari}')" style="background:#3b82f622;border:1px solid #3b82f6;color:#93c5fd;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">✓ MARCAR PAGO</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','entregue','${pid}','${vari}')" style="background:#10b98122;border:1px solid #10b981;color:#10b981;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">📦 ENTREGAR</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','cancelado','${pid}','${vari}')" style="background:#ef444422;border:1px solid #ef4444;color:#ef4444;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">✕ CANCELAR</button>
                             ` : ''}
                             ${o.status === 'pago' ? `
-                                <button onclick="loja.atualizarStatusPedido('${o.id}','entregue','${pid}','${vari}')" style="background:#10b98122; border:1px solid #10b981; color:#10b981; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">📦 ENTREGAR</button>
-                                <button onclick="loja.atualizarStatusPedido('${o.id}','pendente','${pid}','${vari}')" style="background:#f59e0b22; border:1px solid #f59e0b; color:#f59e0b; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">↩ DESFAZER PAGTO</button>
-                                <button onclick="loja.atualizarStatusPedido('${o.id}','cancelado','${pid}','${vari}')" style="background:#ef444422; border:1px solid #ef4444; color:#ef4444; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">✕ CANCELAR</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','entregue','${pid}','${vari}')" style="background:#10b98122;border:1px solid #10b981;color:#10b981;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">📦 ENTREGAR</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','pendente','${pid}','${vari}')" style="background:#f59e0b22;border:1px solid #f59e0b;color:#f59e0b;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">↩ DESFAZER PAGTO</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','cancelado','${pid}','${vari}')" style="background:#ef444422;border:1px solid #ef4444;color:#ef4444;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">✕ CANCELAR</button>
                             ` : ''}
                             ${o.status === 'entregue' ? `
-                                <button onclick="loja.atualizarStatusPedido('${o.id}','pago','${pid}','${vari}')" style="background:#f59e0b22; border:1px solid #f59e0b; color:#f59e0b; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">↩ DESFAZER ENTREGA</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','pago','${pid}','${vari}')" style="background:#f59e0b22;border:1px solid #f59e0b;color:#f59e0b;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">↩ DESFAZER ENTREGA</button>
                             ` : ''}
                             ${o.status === 'cancelado' ? `
-                                <button onclick="loja.atualizarStatusPedido('${o.id}','pendente','${pid}','${vari}')" style="background:#3b82f622; border:1px solid #3b82f6; color:#93c5fd; padding:5px 10px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer;">↩ REATIVAR</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','pendente','${pid}','${vari}')" style="background:#3b82f622;border:1px solid #3b82f6;color:#93c5fd;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">↩ REATIVAR</button>
                             ` : ''}
-                            <!-- Excluir sempre disponível -->
-                            <button onclick="loja.excluirPedido('${o.id}','${o.status}','${pid}','${vari}')" style="background:none; border:1px solid #475569; color:#64748b; padding:5px 8px; border-radius:6px; font-size:0.58rem; font-weight:800; cursor:pointer; margin-left:auto;">🗑</button>
+                            <button onclick="loja.excluirPedido('${o.id}','${o.status}','${pid}','${vari}')" style="background:none;border:1px solid #475569;color:#64748b;padding:5px 8px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;margin-left:auto;">🗑</button>
                         </div>
                     </div>`;
             }).join('');
         } catch(e) {
-            container.innerHTML = `<small style="color:#ef4444; font-size:0.65rem;">Erro: ${e.message}</small>`;
+            container.innerHTML = `<small style="color:#ef4444;font-size:0.65rem;">Erro: ${e.message}</small>`;
         }
     },
 
@@ -15637,9 +15669,11 @@ const loja = {
             // entregue → pago        : sem mudança (item continua reservado)
             // cancelado→ pendente    : sem mudança (não havia reserva)
             let deltaEstoque = 0;
-            if (statusAtual === 'pendente' && novoStatus === 'pago')     deltaEstoque = -1;
-            if (statusAtual === 'pago'     && novoStatus === 'pendente') deltaEstoque = +1;
-            if (statusAtual === 'pago'     && novoStatus === 'cancelado')deltaEstoque = +1;
+            if (statusAtual === 'pendente' && novoStatus === 'pago')      deltaEstoque = -1;
+            if (statusAtual === 'pendente' && novoStatus === 'entregue')  deltaEstoque = -1;
+            if (statusAtual === 'pago'     && novoStatus === 'pendente')  deltaEstoque = +1;
+            if (statusAtual === 'pago'     && novoStatus === 'cancelado') deltaEstoque = +1;
+            if (statusAtual === 'entregue' && novoStatus === 'pago')      deltaEstoque =  0; // já estava reservado
 
             if (deltaEstoque !== 0 && produtoId && variacaoNome) {
                 await this._ajustarEstoque(produtoId, variacaoNome, deltaEstoque);

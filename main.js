@@ -7253,7 +7253,9 @@ Ele voltará a ser aluno normal.`)) return;
                     'style="width:52px; padding:10px 5px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; outline:none; font-size:0.75rem; text-align:center;"/>' +
                     '<button onclick="academia.adicionarHorarioAdmin(' + d + ')" ' +
                     'style="background:#3b82f6; border:none; color:white; padding:10px 14px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; white-space:nowrap;">+ Add</button>' +
-                    '</div></div>';
+                    '</div>' +
+                    '<button onclick="academia.abrirEspelharDia(' + d + ')" style="margin-top:6px;width:100%;background:#0f172a;border:1px dashed #334155;color:#64748b;border-radius:8px;padding:7px;font-size:0.7rem;font-weight:700;cursor:pointer;">📋 Espelhar este dia para outros dias</button>' +
+                    '</div>';
             } else {
                 // ── Cabeçalho do dia ──
                 html += `<div style="margin-bottom:14px;">
@@ -7494,6 +7496,57 @@ Ele voltará a ser aluno normal.`)) return;
         try {
             await db.collection('configuracoes').doc('horarios').set({ duracoes: grade.duracoes }, { merge: true });
         } catch(e) { console.warn('Erro ao salvar duração do slot:', e); }
+    },
+
+    abrirEspelharDia(diaOrigem) {
+        const diasNomes = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+        const grade = this.getGrade();
+        const slots = (grade[diaOrigem] || grade[String(diaOrigem)] || []).filter(s => s !== 'Sem treinos hoje');
+        if (slots.length === 0) return alert('Este dia não tem turmas cadastradas para espelhar.');
+
+        const ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;background:#000c;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        const checkboxes = [0,1,2,3,4,5,6].filter(i => i !== diaOrigem).map(i =>
+            `<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0f172a;border-radius:8px;cursor:pointer;margin-bottom:6px;">
+                <input type="checkbox" value="${i}" style="width:16px;height:16px;accent-color:#3b82f6;">
+                <span style="font-size:0.85rem;color:#e2e8f0;font-weight:600;">${diasNomes[i]}</span>
+            </label>`
+        ).join('');
+
+        ov.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;max-width:340px;width:100%;">
+                <div style="font-size:1.2rem;text-align:center;margin-bottom:6px;">📋</div>
+                <div style="font-weight:800;color:white;font-size:0.95rem;text-align:center;margin-bottom:4px;">ESPELHAR ${diasNomes[diaOrigem].toUpperCase()}</div>
+                <div style="color:#94a3b8;font-size:0.72rem;text-align:center;margin-bottom:16px;">${slots.length} turma(s) serão copiadas para os dias selecionados</div>
+                <div id="espelhar-checks">${checkboxes}</div>
+                <div style="display:flex;gap:8px;margin-top:16px;">
+                    <button id="btn-esp-cancel" style="flex:1;background:#334155;color:white;border:none;border-radius:10px;padding:10px;font-size:0.8rem;font-weight:700;cursor:pointer;">Cancelar</button>
+                    <button id="btn-esp-ok" style="flex:1;background:#3b82f6;color:white;border:none;border-radius:10px;padding:10px;font-size:0.8rem;font-weight:800;cursor:pointer;">✅ Copiar</button>
+                </div>
+            </div>`;
+        document.body.appendChild(ov);
+        ov.querySelector('#btn-esp-cancel').onclick = () => document.body.removeChild(ov);
+        ov.querySelector('#btn-esp-ok').onclick = async () => {
+            const selecionados = [...ov.querySelectorAll('#espelhar-checks input:checked')].map(el => parseInt(el.value));
+            if (selecionados.length === 0) return alert('Selecione ao menos um dia.');
+            const grade = this.getGrade();
+            const duracoes = grade.duracoes || {};
+            const limites  = grade.limites  || {};
+            const slotsOrig = (grade[diaOrigem] || grade[String(diaOrigem)] || []).filter(s => s !== 'Sem treinos hoje');
+            for (const dia of selecionados) {
+                grade[dia] = [...slotsOrig];
+                // copia durações e limites
+                slotsOrig.forEach(s => {
+                    if (duracoes[s]) { grade.duracoes = grade.duracoes || {}; grade.duracoes[s] = duracoes[s]; }
+                    if (limites[s])  { grade.limites  = grade.limites  || {}; grade.limites[s]  = limites[s];  }
+                });
+            }
+            this.gradeFirebase = grade;
+            await db.collection('configuracoes').doc('horarios').set(grade);
+            document.body.removeChild(ov);
+            this.renderHorarios(true);
+            alert(`✅ Horário de ${diasNomes[diaOrigem]} copiado para: ${selecionados.map(i => diasNomes[i]).join(', ')}`);
+        };
     },
 
     // Salva o limite de alunos por slot (vazio = sem limite)

@@ -15640,7 +15640,8 @@ const loja = {
                                 <button onclick="loja.atualizarStatusPedido('${o.id}','cancelado','${pid}','${vari}')" style="background:#ef444422;border:1px solid #ef4444;color:#ef4444;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">✕ CANCELAR</button>
                             ` : ''}
                             ${o.status === 'entregue' ? `
-                                <button onclick="loja.atualizarStatusPedido('${o.id}','pago','${pid}','${vari}')" style="background:#f59e0b22;border:1px solid #f59e0b;color:#f59e0b;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">↩ DESFAZER ENTREGA</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','pago','${pid}','${vari}')" style="background:#3b82f622;border:1px solid #3b82f6;color:#93c5fd;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">✓ MARCAR PAGO</button>
+                                <button onclick="loja.atualizarStatusPedido('${o.id}','pendente','${pid}','${vari}')" style="background:#f59e0b22;border:1px solid #f59e0b;color:#f59e0b;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">↩ DESFAZER ENTREGA</button>
                             ` : ''}
                             ${o.status === 'cancelado' ? `
                                 <button onclick="loja.atualizarStatusPedido('${o.id}','pendente','${pid}','${vari}')" style="background:#3b82f622;border:1px solid #3b82f6;color:#93c5fd;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">↩ REATIVAR</button>

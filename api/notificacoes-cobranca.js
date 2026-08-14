@@ -105,6 +105,16 @@ export default async function handler(req, res) {
                     if (dias > maiorAtraso) maiorAtraso = dias;
                 }
 
+                // Bloqueia acesso real no Firestore a partir do dia 10
+                if (maiorAtraso >= 10 && aluno.status !== 'trancado') {
+                    try {
+                        await db.collection('alunos').doc(doc.id).update({ status: 'trancado' });
+                        console.log(`🔒 Aluno ${nome} bloqueado no Firestore (${maiorAtraso} dias de atraso)`);
+                    } catch(eBlock) {
+                        console.error(`Erro ao bloquear ${nome}:`, eBlock.message);
+                    }
+                }
+
                 let mensagem = null;
 
                 if (maiorAtraso === 1) {
@@ -115,7 +125,7 @@ export default async function handler(req, res) {
                 } else if (maiorAtraso >= 4 && maiorAtraso % 2 === 0) {
                     mensagem = {
                         title: '🔒 Acesso bloqueado',
-                        body: `${nome}, seu acesso foi bloqueado por fatura em aberto. Regularize sua mensalidade para voltar a treinar. OSS!`
+                        body: `${nome}, seu acesso foi bloqueado por falta de pagamento. Regularize sua mensalidade para voltar a treinar. OSS!`
                     };
                 }
 
@@ -132,7 +142,7 @@ export default async function handler(req, res) {
                         }
                     });
                     enviadas++;
-                    console.log(`✅ Inadimplência enviada para ${nome} (${maiorAtraso} dias)`);
+                    console.log(`✅ Notificação enviada para ${nome} (${maiorAtraso} dias)`);
                 }
             } catch(e) {
                 console.error(`Erro inadimplência ${email}:`, e.message);

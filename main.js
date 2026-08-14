@@ -1598,54 +1598,113 @@ const academia = {
     },
 
     // ── RELATÓRIO IDADES POR MODALIDADE ─────────────────────
-    async renderRelatIdades() {
+    _relatIdadesCache: null,
+
+    async renderRelatIdades(aplicarFiltros) {
         const container = document.getElementById('resultado-relat-idades');
         if (!container) return;
-        if (container.dataset.loaded === '1') return; // já carregado nessa abertura
-        container.dataset.loaded = '1';
-        container.innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
-        try {
-            const snap = await db.collection('alunos').get();
-            const anoAtual = new Date().getFullYear();
 
-            // Agrupa por modalidade → por idade → lista de nomes
-            const grupos = {};
-            snap.forEach(doc => {
-                const a = doc.data();
-                if (!a.nome) return;
-                const mod = (a.modalidade || 'jiujitsu').toLowerCase().trim();
-                const idade = a.nascimento ? anoAtual - new Date(a.nascimento).getFullYear() : null;
-                if (!grupos[mod]) grupos[mod] = {};
-                const chave = idade !== null ? String(idade) : '?';
-                if (!grupos[mod][chave]) grupos[mod][chave] = [];
-                grupos[mod][chave].push(a.nome);
-            });
-
-            if (Object.keys(grupos).length === 0) {
-                container.innerHTML = '<div style="text-align:center;padding:20px;color:#475569;font-size:0.7rem;">Nenhum aluno cadastrado.</div>';
+        // Carrega dados do Firestore só na primeira vez (ou ao atualizar)
+        if (!this._relatIdadesCache || aplicarFiltros === 'reload') {
+            container.innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+            try {
+                const snap = await db.collection('alunos').get();
+                const anoAtual = new Date().getFullYear();
+                const lista = [];
+                const modsSet = new Set();
+                snap.forEach(doc => {
+                    const a = doc.data();
+                    if (!a.nome) return;
+                    const mod = (a.modalidade || 'jiujitsu').toLowerCase().trim();
+                    const idade = a.nascimento ? anoAtual - new Date(a.nascimento).getFullYear() : null;
+                    lista.push({ nome: a.nome, mod, idade });
+                    modsSet.add(mod);
+                });
+                this._relatIdadesCache = { lista, mods: [...modsSet].sort() };
+            } catch(e) {
+                container.innerHTML = `<div style="color:#ef4444;font-size:0.65rem;padding:10px;">Erro: ${e.message}</div>`;
                 return;
             }
+        }
 
-            const modLabels = { jiujitsu:'Jiu-Jitsu', muaythai:'Muay Thai', boxing:'Boxe', wrestling:'Wrestling', judo:'Judô' };
-            const modCores  = { jiujitsu:'#3b82f6', muaythai:'#f59e0b', boxing:'#ef4444', wrestling:'#a78bfa', judo:'#10b981' };
+        const { lista, mods } = this._relatIdadesCache;
+        const modLabels = { jiujitsu:'Jiu-Jitsu', muaythai:'Muay Thai', boxing:'Boxe', wrestling:'Wrestling', judo:'Judô' };
+        const modCores  = { jiujitsu:'#3b82f6', muaythai:'#f59e0b', boxing:'#ef4444', wrestling:'#a78bfa', judo:'#10b981' };
 
-            let html = '';
-            for (const [mod, idadeMap] of Object.entries(grupos).sort()) {
+        // Lê valores dos filtros (se já existem no DOM)
+        const idadeMin = parseInt(document.getElementById('ri-idade-min')?.value) || 0;
+        const idadeMax = parseInt(document.getElementById('ri-idade-max')?.value) || 999;
+        const modFiltro = document.getElementById('ri-mod')?.value || 'todas';
+
+        // Aplica filtros
+        const filtrado = lista.filter(a => {
+            if (modFiltro !== 'todas' && a.mod !== modFiltro) return false;
+            if (a.idade === null) return true; // sem data sempre aparece
+            return a.idade >= idadeMin && a.idade <= idadeMax;
+        });
+
+        // Agrupa por modalidade → idade → nomes
+        const grupos = {};
+        filtrado.forEach(({ nome, mod, idade }) => {
+            if (!grupos[mod]) grupos[mod] = {};
+            const chave = idade !== null ? String(idade) : '?';
+            if (!grupos[mod][chave]) grupos[mod][chave] = [];
+            grupos[mod][chave].push(nome);
+        });
+
+        // Monta barra de filtros
+        const barFiltros = `
+        <div style="background:#1e293b;border-radius:10px;padding:12px;margin-bottom:14px;">
+            <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;margin-bottom:8px;letter-spacing:0.5px;">🔍 FILTROS</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+                <div style="flex:1;min-width:80px;">
+                    <div style="font-size:0.55rem;color:#64748b;margin-bottom:3px;">MODALIDADE</div>
+                    <select id="ri-mod" onchange="academia.renderRelatIdades(true)"
+                        style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 8px;border-radius:7px;font-size:0.65rem;font-weight:700;">
+                        <option value="todas" ${modFiltro==='todas'?'selected':''}>Todas</option>
+                        ${mods.map(m => `<option value="${m}" ${modFiltro===m?'selected':''}>${modLabels[m]||m}</option>`).join('')}
+                    </select>
+                </div>
+                <div style="flex:1;min-width:60px;">
+                    <div style="font-size:0.55rem;color:#64748b;margin-bottom:3px;">IDADE MÍN.</div>
+                    <input id="ri-idade-min" type="number" min="0" max="99" value="${idadeMin||''}" placeholder="0"
+                        oninput="academia.renderRelatIdades(true)"
+                        style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 8px;border-radius:7px;font-size:0.65rem;font-weight:700;box-sizing:border-box;">
+                </div>
+                <div style="flex:1;min-width:60px;">
+                    <div style="font-size:0.55rem;color:#64748b;margin-bottom:3px;">IDADE MÁX.</div>
+                    <input id="ri-idade-max" type="number" min="0" max="99" value="${idadeMax===999?'':idadeMax}" placeholder="99"
+                        oninput="academia.renderRelatIdades(true)"
+                        style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 8px;border-radius:7px;font-size:0.65rem;font-weight:700;box-sizing:border-box;">
+                </div>
+                <button onclick="academia.renderRelatIdades('reload')"
+                    style="background:#0f172a;border:1px solid #334155;color:#64748b;padding:6px 10px;border-radius:7px;font-size:0.6rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+                    <i class="fas fa-sync-alt"></i> Atualizar
+                </button>
+            </div>
+        </div>`;
+
+        // Monta resultado
+        let html = '';
+        const modsVisiveis = Object.keys(grupos).sort();
+
+        if (modsVisiveis.length === 0) {
+            html = '<div style="text-align:center;padding:20px;color:#475569;font-size:0.7rem;">Nenhum aluno encontrado com esses filtros.</div>';
+        } else {
+            for (const mod of modsVisiveis) {
+                const idadeMap = grupos[mod];
                 const cor = modCores[mod] || '#64748b';
                 const label = modLabels[mod] || mod.charAt(0).toUpperCase()+mod.slice(1);
 
-                // Ordena idades: numéricas crescente, '?' no fim
                 const idades = Object.keys(idadeMap).sort((a, b) => {
-                    if (a === '?') return 1;
-                    if (b === '?') return -1;
+                    if (a === '?') return 1; if (b === '?') return -1;
                     return Number(a) - Number(b);
                 });
-
                 const totalMod = idades.reduce((s, k) => s + idadeMap[k].length, 0);
 
                 html += `
                 <div style="margin-bottom:18px;">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
                         <div style="width:4px;height:22px;background:${cor};border-radius:2px;flex-shrink:0;"></div>
                         <span style="font-size:0.75rem;font-weight:800;color:white;text-transform:uppercase;letter-spacing:0.5px;">${label}</span>
                         <span style="font-size:0.6rem;color:#64748b;margin-left:auto;">${totalMod} aluno${totalMod!==1?'s':''}</span>
@@ -1655,35 +1714,24 @@ const academia = {
                 for (const idade of idades) {
                     const alunos = idadeMap[idade];
                     const pct = Math.round((alunos.length / totalMod) * 100);
-                    const label_idade = idade === '?' ? 'Sem data de nasc.' : `${idade} anos`;
+                    const lbl = idade === '?' ? 'Sem data de nasc.' : `${idade} anos`;
                     html += `
                         <div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;">
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-                                <span style="font-size:0.65rem;font-weight:800;color:#e2e8f0;">${label_idade}</span>
+                                <span style="font-size:0.65rem;font-weight:800;color:#e2e8f0;">${lbl}</span>
                                 <span style="font-size:0.65rem;font-weight:800;color:${cor};">${alunos.length} · ${pct}%</span>
                             </div>
-                            <div style="background:#1e293b;border-radius:4px;height:5px;overflow:hidden;margin-bottom:5px;">
+                            <div style="background:#1e293b;border-radius:4px;height:5px;overflow:hidden;margin-bottom:6px;">
                                 <div style="width:${pct}%;height:100%;background:${cor};border-radius:4px;"></div>
                             </div>
-                            <div style="font-size:0.55rem;color:#64748b;line-height:1.6;">${alunos.sort().join(' · ')}</div>
+                            <div style="font-size:0.55rem;color:#64748b;line-height:1.7;">${alunos.sort().join(' · ')}</div>
                         </div>`;
                 }
-
                 html += `</div></div>`;
             }
-
-            // Botão atualizar no topo
-            container.innerHTML = `
-                <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-                    <button onclick="delete document.getElementById('resultado-relat-idades').dataset.loaded;academia.renderRelatIdades()"
-                        style="background:#0f172a;border:1px solid #334155;color:#64748b;padding:5px 10px;border-radius:8px;font-size:0.6rem;font-weight:700;cursor:pointer;">
-                        <i class="fas fa-sync-alt"></i> Atualizar
-                    </button>
-                </div>
-                ${html}`;
-        } catch(e) {
-            container.innerHTML = `<div style="color:#ef4444;font-size:0.65rem;padding:10px;">Erro: ${e.message}</div>`;
         }
+
+        container.innerHTML = barFiltros + html;
     },
 
     async generarRelatorioGraduacao() {

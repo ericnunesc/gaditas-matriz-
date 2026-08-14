@@ -124,8 +124,8 @@ export default async function handler(req, res) {
                     };
                 } else if (maiorAtraso >= 4 && maiorAtraso % 2 === 0) {
                     mensagem = {
-                        title: '🔒 Acesso bloqueado',
-                        body: `${nome}, seu acesso foi bloqueado por falta de pagamento. Regularize sua mensalidade para voltar a treinar. OSS!`
+                        title: '⚠️ Regularize sua fatura',
+                        body: `${nome}, sua mensalidade está em atraso há ${maiorAtraso} dias. Regularize para continuar treinando. OSS!`
                     };
                 }
 

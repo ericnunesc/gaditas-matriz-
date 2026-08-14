@@ -88,25 +88,13 @@ export default async function handler(req, res) {
                     'User-Agent': 'GaditasMatrizApp'
                 };
 
-                // Busca OVERDUE e PROCESSING em paralelo
-                const [respOver, respProc] = await Promise.all([
-                    fetch(`${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=10`, { headers }),
-                    fetch(`${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=PROCESSING&limit=5`, { headers })
-                ]);
-
+                const respOver = await fetch(
+                    `${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=10`,
+                    { headers }
+                );
                 const dadosOver = await respOver.json();
-                const dadosProc = await respProc.json();
 
                 if (!dadosOver.data || dadosOver.data.length === 0) continue;
-
-                // Só ignora notificação se há um pagamento PROCESSING com o MESMO
-                // mês/ano de uma das faturas OVERDUE (cartão pagando justamente a vencida)
-                const mesesOverdue = new Set(dadosOver.data.map(p => p.dueDate.slice(0, 7)));
-                const pagandoVencida = (dadosProc.data || []).some(p => mesesOverdue.has(p.dueDate.slice(0, 7)));
-                if (pagandoVencida) {
-                    console.log(`⏳ ${nome} tem pagamento de cartão processando para fatura vencida — notificação ignorada`);
-                    continue;
-                }
 
                 // Considera o maior atraso entre as faturas
                 let maiorAtraso = 0;

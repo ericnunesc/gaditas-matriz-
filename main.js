@@ -1613,6 +1613,7 @@ const academia = {
                 snap.forEach(doc => {
                     const a = doc.data();
                     if (!a.nome) return;
+                    if (a.status === 'trancado' || a.status === 'inativo') return; // só ativos
                     const mod = (a.modalidade || 'jiujitsu').toLowerCase().trim();
                     const idade = a.nascimento ? anoAtual - new Date(a.nascimento).getFullYear() : null;
                     lista.push({ nome: a.nome, mod, idade });

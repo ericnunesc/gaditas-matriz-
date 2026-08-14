@@ -97,13 +97,16 @@ export default async function handler(req, res) {
                 const dadosOver = await respOver.json();
                 const dadosProc = await respProc.json();
 
-                // Se há pagamento em PROCESSAMENTO, o aluno está pagando — não notificar
-                if (dadosProc.data && dadosProc.data.length > 0) {
-                    console.log(`⏳ ${nome} tem pagamento em processamento — notificação ignorada`);
+                if (!dadosOver.data || dadosOver.data.length === 0) continue;
+
+                // Só ignora notificação se há um pagamento PROCESSING com o MESMO
+                // mês/ano de uma das faturas OVERDUE (cartão pagando justamente a vencida)
+                const mesesOverdue = new Set(dadosOver.data.map(p => p.dueDate.slice(0, 7)));
+                const pagandoVencida = (dadosProc.data || []).some(p => mesesOverdue.has(p.dueDate.slice(0, 7)));
+                if (pagandoVencida) {
+                    console.log(`⏳ ${nome} tem pagamento de cartão processando para fatura vencida — notificação ignorada`);
                     continue;
                 }
-
-                if (!dadosOver.data || dadosOver.data.length === 0) continue;
 
                 // Considera o maior atraso entre as faturas
                 let maiorAtraso = 0;

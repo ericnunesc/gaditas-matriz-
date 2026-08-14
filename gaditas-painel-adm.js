@@ -1498,6 +1498,15 @@ const GaditasPainelAdm = {
                 return;
             }
 
+            // Monta mapa: clienteId → Set de meses com PROCESSING ("YYYY-MM")
+            // Só conta como "processando" se o mês/ano da fatura PROCESSING bater
+            // com um dos meses OVERDUE do mesmo cliente
+            const procPorCliente = {}; // clienteId → Set<"YYYY-MM">
+            (dadosProc.data || []).forEach(p => {
+                if (!procPorCliente[p.customer]) procPorCliente[p.customer] = new Set();
+                procPorCliente[p.customer].add(p.dueDate.slice(0, 7)); // "YYYY-MM"
+            });
+
             // Agrupa por cliente
             const porCliente = {};
             const dataHoje = new Date();
@@ -1511,13 +1520,20 @@ const GaditasPainelAdm = {
                         nome: fatura.customerName || '',
                         email: fatura.customerEmail || '',
                         faturas: [],
-                        processando: clientesProcessando.has(clienteId) // pagando no cartão
+                        processando: false // calculado depois
                     };
                 }
 
                 const vencimento = new Date(fatura.dueDate + 'T00:00:00');
                 vencimento.setHours(0, 0, 0, 0);
                 const diasAtraso = Math.floor((dataHoje - vencimento) / (1000 * 60 * 60 * 24));
+                const mesAno = fatura.dueDate.slice(0, 7);
+
+                // Se há uma fatura PROCESSING com o mesmo mês desta fatura OVERDUE,
+                // significa que o aluno está pagando justamente esta cobrança no cartão
+                if (procPorCliente[clienteId]?.has(mesAno)) {
+                    porCliente[clienteId].processando = true;
+                }
 
                 porCliente[clienteId].faturas.push({
                     id: fatura.id,
@@ -1671,9 +1687,12 @@ const GaditasPainelAdm = {
             ]);
             const [dataOver, dataProc] = await Promise.all([resOver.json(), resProc.json()]);
 
-            // Se tem pagamento de cartão em processamento, avisa e não envia cobrança
-            if (dataProc.data && dataProc.data.length > 0) {
-                alert(`⏳ ${nome} tem um pagamento de cartão em PROCESSAMENTO.\n\nNão é necessário enviar cobrança — aguarde a confirmação do Asaas (geralmente 1-2 dias úteis).`);
+            // Só bloqueia o WhatsApp se o pagamento PROCESSING é do mesmo mês
+            // que uma das faturas OVERDUE (cartão pagando justamente a vencida)
+            const mesesOver = new Set((dataOver.data || []).map(p => p.dueDate.slice(0, 7)));
+            const pagandoVencida = (dataProc.data || []).some(p => mesesOver.has(p.dueDate.slice(0, 7)));
+            if (pagandoVencida) {
+                alert(`⏳ ${nome} tem um pagamento de cartão em PROCESSAMENTO para a mensalidade vencida.\n\nNão é necessário enviar cobrança — aguarde a confirmação do Asaas (1-2 dias úteis).`);
                 return;
             }
 

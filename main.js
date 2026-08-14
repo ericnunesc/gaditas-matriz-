@@ -1598,17 +1598,15 @@ const academia = {
     },
 
     // ── RELATÓRIO IDADES POR MODALIDADE ─────────────────────
-    _relatIdadesCache: null,
-
     async renderRelatIdades(aplicarFiltros) {
         const container = document.getElementById('resultado-relat-idades');
         if (!container) return;
 
-        // Carrega dados do Firestore só na primeira vez (ou ao atualizar)
-        if (!this._relatIdadesCache || aplicarFiltros === 'reload') {
+        // Variável de cache no escopo do módulo (evita problemas com 'this')
+        if (!window._relatIdadesCacheGaditas || aplicarFiltros === 'reload') {
             container.innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
             try {
-                const snap = await db.collection('alunos').get();
+                const snap = await db.collection("alunos").get();
                 const anoAtual = new Date().getFullYear();
                 const lista = [];
                 const modsSet = new Set();
@@ -1620,14 +1618,15 @@ const academia = {
                     lista.push({ nome: a.nome, mod, idade });
                     modsSet.add(mod);
                 });
-                this._relatIdadesCache = { lista, mods: [...modsSet].sort() };
+                window._relatIdadesCacheGaditas = { lista, mods: [...modsSet].sort() };
             } catch(e) {
-                container.innerHTML = `<div style="color:#ef4444;font-size:0.65rem;padding:10px;">Erro: ${e.message}</div>`;
+                container.innerHTML = `<div style="color:#ef4444;font-size:0.65rem;padding:10px;">❌ Erro ao carregar: ${e.message || e}</div>`;
+                console.error('[renderRelatIdades]', e);
                 return;
             }
         }
 
-        const { lista, mods } = this._relatIdadesCache;
+        const { lista, mods } = window._relatIdadesCacheGaditas;
         const modLabels = { jiujitsu:'Jiu-Jitsu', muaythai:'Muay Thai', boxing:'Boxe', wrestling:'Wrestling', judo:'Judô' };
         const modCores  = { jiujitsu:'#3b82f6', muaythai:'#f59e0b', boxing:'#ef4444', wrestling:'#a78bfa', judo:'#10b981' };
 

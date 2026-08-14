@@ -1630,7 +1630,42 @@ const academia = {
         const modLabels = { jiujitsu:'Jiu-Jitsu', muaythai:'Muay Thai', boxing:'Boxe', wrestling:'Wrestling', judo:'Judô' };
         const modCores  = { jiujitsu:'#3b82f6', muaythai:'#f59e0b', boxing:'#ef4444', wrestling:'#a78bfa', judo:'#10b981' };
 
-        // Lê valores dos filtros (se já existem no DOM)
+        // Cria a barra de filtros UMA VEZ — depois só atualiza o div de resultados
+        if (!document.getElementById('ri-mod')) {
+            container.innerHTML = `
+            <div style="background:#1e293b;border-radius:10px;padding:12px;margin-bottom:14px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;margin-bottom:8px;letter-spacing:0.5px;">🔍 FILTROS</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+                    <div style="flex:1;min-width:80px;">
+                        <div style="font-size:0.55rem;color:#64748b;margin-bottom:3px;">MODALIDADE</div>
+                        <select id="ri-mod" onchange="academia.renderRelatIdades(true)"
+                            style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 8px;border-radius:7px;font-size:0.65rem;font-weight:700;">
+                            <option value="todas">Todas</option>
+                            ${mods.map(m => `<option value="${m}">${modLabels[m]||m}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div style="flex:1;min-width:60px;">
+                        <div style="font-size:0.55rem;color:#64748b;margin-bottom:3px;">IDADE MÍN.</div>
+                        <input id="ri-idade-min" type="number" min="0" max="99" placeholder="0"
+                            oninput="academia.renderRelatIdades(true)"
+                            style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 8px;border-radius:7px;font-size:0.65rem;font-weight:700;box-sizing:border-box;">
+                    </div>
+                    <div style="flex:1;min-width:60px;">
+                        <div style="font-size:0.55rem;color:#64748b;margin-bottom:3px;">IDADE MÁX.</div>
+                        <input id="ri-idade-max" type="number" min="0" max="99" placeholder="99"
+                            oninput="academia.renderRelatIdades(true)"
+                            style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 8px;border-radius:7px;font-size:0.65rem;font-weight:700;box-sizing:border-box;">
+                    </div>
+                    <button onclick="window._relatIdadesCacheGaditas=null;academia.renderRelatIdades()"
+                        style="background:#0f172a;border:1px solid #334155;color:#64748b;padding:6px 10px;border-radius:7px;font-size:0.6rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+                        <i class="fas fa-sync-alt"></i> Atualizar
+                    </button>
+                </div>
+            </div>
+            <div id="ri-resultado"></div>`;
+        }
+
+        // Lê valores dos filtros do DOM (os inputs NÃO são recriados)
         const idadeMin = parseInt(document.getElementById('ri-idade-min')?.value) || 0;
         const idadeMax = parseInt(document.getElementById('ri-idade-max')?.value) || 999;
         const modFiltro = document.getElementById('ri-mod')?.value || 'todas';
@@ -1651,39 +1686,7 @@ const academia = {
             grupos[mod][chave].push(nome);
         });
 
-        // Monta barra de filtros
-        const barFiltros = `
-        <div style="background:#1e293b;border-radius:10px;padding:12px;margin-bottom:14px;">
-            <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;margin-bottom:8px;letter-spacing:0.5px;">🔍 FILTROS</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
-                <div style="flex:1;min-width:80px;">
-                    <div style="font-size:0.55rem;color:#64748b;margin-bottom:3px;">MODALIDADE</div>
-                    <select id="ri-mod" onchange="academia.renderRelatIdades(true)"
-                        style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 8px;border-radius:7px;font-size:0.65rem;font-weight:700;">
-                        <option value="todas" ${modFiltro==='todas'?'selected':''}>Todas</option>
-                        ${mods.map(m => `<option value="${m}" ${modFiltro===m?'selected':''}>${modLabels[m]||m}</option>`).join('')}
-                    </select>
-                </div>
-                <div style="flex:1;min-width:60px;">
-                    <div style="font-size:0.55rem;color:#64748b;margin-bottom:3px;">IDADE MÍN.</div>
-                    <input id="ri-idade-min" type="number" min="0" max="99" value="${idadeMin||''}" placeholder="0"
-                        oninput="academia.renderRelatIdades(true)"
-                        style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 8px;border-radius:7px;font-size:0.65rem;font-weight:700;box-sizing:border-box;">
-                </div>
-                <div style="flex:1;min-width:60px;">
-                    <div style="font-size:0.55rem;color:#64748b;margin-bottom:3px;">IDADE MÁX.</div>
-                    <input id="ri-idade-max" type="number" min="0" max="99" value="${idadeMax===999?'':idadeMax}" placeholder="99"
-                        oninput="academia.renderRelatIdades(true)"
-                        style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 8px;border-radius:7px;font-size:0.65rem;font-weight:700;box-sizing:border-box;">
-                </div>
-                <button onclick="academia.renderRelatIdades('reload')"
-                    style="background:#0f172a;border:1px solid #334155;color:#64748b;padding:6px 10px;border-radius:7px;font-size:0.6rem;font-weight:700;cursor:pointer;white-space:nowrap;">
-                    <i class="fas fa-sync-alt"></i> Atualizar
-                </button>
-            </div>
-        </div>`;
-
-        // Monta resultado
+        // Monta resultado — só atualiza o div interno, sem recriar os inputs
         let html = '';
         const modsVisiveis = Object.keys(grupos).sort();
 
@@ -1694,13 +1697,11 @@ const academia = {
                 const idadeMap = grupos[mod];
                 const cor = modCores[mod] || '#64748b';
                 const label = modLabels[mod] || mod.charAt(0).toUpperCase()+mod.slice(1);
-
                 const idades = Object.keys(idadeMap).sort((a, b) => {
                     if (a === '?') return 1; if (b === '?') return -1;
                     return Number(a) - Number(b);
                 });
                 const totalMod = idades.reduce((s, k) => s + idadeMap[k].length, 0);
-
                 html += `
                 <div style="margin-bottom:18px;">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
@@ -1709,7 +1710,6 @@ const academia = {
                         <span style="font-size:0.6rem;color:#64748b;margin-left:auto;">${totalMod} aluno${totalMod!==1?'s':''}</span>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:5px;">`;
-
                 for (const idade of idades) {
                     const alunos = idadeMap[idade];
                     const pct = Math.round((alunos.length / totalMod) * 100);
@@ -1730,7 +1730,9 @@ const academia = {
             }
         }
 
-        container.innerHTML = barFiltros + html;
+        // Atualiza só o div de resultados — os inputs ficam intactos
+        const resultado = document.getElementById('ri-resultado');
+        if (resultado) resultado.innerHTML = html;
     },
 
     async generarRelatorioGraduacao() {

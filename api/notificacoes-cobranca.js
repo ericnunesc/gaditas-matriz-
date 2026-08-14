@@ -112,7 +112,7 @@ export default async function handler(req, res) {
                         title: '⚠️ Fatura em atraso',
                         body: `Olá ${nome}! Sua mensalidade venceu ontem. Regularize para continuar treinando sem problemas.`
                     };
-                } else if (maiorAtraso === 4) {
+                } else if (maiorAtraso >= 4) {
                     mensagem = {
                         title: '🔒 Acesso bloqueado',
                         body: `${nome}, seu acesso foi bloqueado por fatura em aberto. Regularize sua mensalidade para voltar a treinar. OSS!`

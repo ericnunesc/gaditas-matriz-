@@ -1469,18 +1469,25 @@ const GaditasPainelAdm = {
         }, 15000);
         
         try {
-            // Busca pagamentos vencidos no Asaas
-            const resp = await fetch(`/api/asaas?endpoint=payments&status=OVERDUE&limit=100`);
+            // Busca OVERDUE e PROCESSING em paralelo
+            const [resp, respProc] = await Promise.all([
+                fetch(`/api/asaas?endpoint=payments&status=OVERDUE&limit=100`),
+                fetch(`/api/asaas?endpoint=payments&status=PROCESSING&limit=100`)
+            ]);
             clearTimeout(timeoutId);
-            
+
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            
+
             const dados = await resp.json();
+            const dadosProc = await respProc.json();
             if (dados.errors) throw new Error(dados.errors[0]?.description || 'Erro Asaas');
-            
+
+            // IDs de clientes com pagamento em processamento (pagando no cartão)
+            const clientesProcessando = new Set((dadosProc.data || []).map(p => p.customer));
+
             if (loading) loading.classList.add('hidden');
             if (conteudo) conteudo.classList.remove('hidden');
-            
+
             if (!dados.data || dados.data.length === 0) {
                 conteudo.innerHTML = `
                     <div style="text-align:center; padding:20px; background:#064e3b; border:1px solid #10b981; border-radius:12px;">
@@ -1490,7 +1497,7 @@ const GaditasPainelAdm = {
                     </div>`;
                 return;
             }
-            
+
             // Agrupa por cliente
             const porCliente = {};
             const dataHoje = new Date();
@@ -1503,7 +1510,8 @@ const GaditasPainelAdm = {
                         asaasId: clienteId,
                         nome: fatura.customerName || '',
                         email: fatura.customerEmail || '',
-                        faturas: []
+                        faturas: [],
+                        processando: clientesProcessando.has(clienteId) // pagando no cartão
                     };
                 }
 
@@ -1538,8 +1546,9 @@ const GaditasPainelAdm = {
             const clientes = Object.values(porCliente);
             const totalAlunos = clientes.length;
             const totalValor = dados.data.reduce((s, f) => s + f.value, 0);
-            const bloqueados = clientes.filter(c => c.faturas.some(f => f.diasAtraso > 5)).length;
-            
+            const bloqueados = clientes.filter(c => !c.processando && c.faturas.some(f => f.diasAtraso > 5)).length;
+            const processando = clientes.filter(c => c.processando).length;
+
             // Resumo geral
             let html = `
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px;">
@@ -1556,6 +1565,7 @@ const GaditasPainelAdm = {
                         <span style="font-size:0.85rem; font-weight:900; color:#10b981;">${totalValor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
                     </div>
                 </div>
+                ${processando > 0 ? `<div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.65rem;color:#93c5fd;font-weight:700;">⏳ ${processando} aluno${processando>1?'s':''} com pagamento de cartão em processamento — marcados abaixo</div>` : ''}
 
                 <button onclick="GaditasPainelAdm.buscarInadimplentes()" style="width:100%; background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:10px; border-radius:8px; font-size:0.75rem; font-weight:700; cursor:pointer; margin-bottom:16px;">
                     <i class="fas fa-sync-alt"></i> ATUALIZAR LISTA
@@ -1563,17 +1573,23 @@ const GaditasPainelAdm = {
 
                 <div id="adm-lista-inadimplentes">
             `;
-            
-            // Lista de alunos
+
+            // Lista de alunos — processando primeiro, depois por atraso decrescente
             clientes
-                .sort((a, b) => Math.max(...b.faturas.map(f => f.diasAtraso)) - Math.max(...a.faturas.map(f => f.diasAtraso)))
+                .sort((a, b) => {
+                    if (a.processando && !b.processando) return -1;
+                    if (!a.processando && b.processando) return 1;
+                    return Math.max(...b.faturas.map(f => f.diasAtraso)) - Math.max(...a.faturas.map(f => f.diasAtraso));
+                })
                 .forEach(cliente => {
                     const maiorAtraso = Math.max(...cliente.faturas.map(f => f.diasAtraso));
                     const totalDevido = cliente.faturas.reduce((s, f) => s + f.valor, 0);
-                    const bloqueado = maiorAtraso > 5;
-                    const corBorda = bloqueado ? '#f43f5e' : '#f59e0b';
-                    const corTag = bloqueado ? '#f43f5e' : '#f59e0b';
-                    const tagTexto = bloqueado ? `🔒 BLOQUEADO (${maiorAtraso} dias)` : `⚠️ ${maiorAtraso} dia${maiorAtraso > 1 ? 's' : ''} de atraso`;
+                    const bloqueado = !cliente.processando && maiorAtraso > 5;
+                    const corBorda = cliente.processando ? '#3b82f6' : bloqueado ? '#f43f5e' : '#f59e0b';
+                    const corTag   = corBorda;
+                    const tagTexto = cliente.processando
+                        ? `⏳ PAGAMENTO EM PROCESSAMENTO`
+                        : bloqueado ? `🔒 BLOQUEADO (${maiorAtraso} dias)` : `⚠️ ${maiorAtraso} dia${maiorAtraso > 1 ? 's' : ''} de atraso`;
                     
                     const faturasHtml = cliente.faturas.map(f => `
                         <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:8px 10px; border-radius:8px; margin-top:6px; gap:6px;">
@@ -1642,29 +1658,26 @@ const GaditasPainelAdm = {
             if (tel.length < 10) { alert('Número inválido.'); return; }
         }
 
-        // Busca cobranças VENCIDAS: status PENDING (recente) + OVERDUE (muito atrasado)
+        // Busca cobranças VENCIDAS: status OVERDUE + verifica PROCESSING
         let linhasFaturas = '';
         let totalDevido = 0;
         try {
             const hoje = new Date(); hoje.setHours(0,0,0,0);
 
-            // Busca PENDING e OVERDUE em paralelo
-            const [resPend, resOver] = await Promise.all([
-                fetch(`/api/asaas?endpoint=payments&customer=${asaasId}&status=PENDING&limit=20`),
-                fetch(`/api/asaas?endpoint=payments&customer=${asaasId}&status=OVERDUE&limit=20`)
+            // Busca OVERDUE e PROCESSING em paralelo
+            const [resOver, resProc] = await Promise.all([
+                fetch(`/api/asaas?endpoint=payments&customer=${asaasId}&status=OVERDUE&limit=20`),
+                fetch(`/api/asaas?endpoint=payments&customer=${asaasId}&status=PROCESSING&limit=5`)
             ]);
-            const [dataPend, dataOver] = await Promise.all([resPend.json(), resOver.json()]);
+            const [dataOver, dataProc] = await Promise.all([resOver.json(), resProc.json()]);
 
-            // Junta e deduplica por id
-            const todasPend = [...(dataPend.data || []), ...(dataOver.data || [])];
-            const vistas = new Set();
-            const vencidas = todasPend
-                .filter(p => {
-                    if (vistas.has(p.id)) return false;
-                    vistas.add(p.id);
-                    const venc = new Date(p.dueDate + 'T00:00:00'); venc.setHours(0,0,0,0);
-                    return venc < hoje; // só as que já passaram do vencimento
-                })
+            // Se tem pagamento de cartão em processamento, avisa e não envia cobrança
+            if (dataProc.data && dataProc.data.length > 0) {
+                alert(`⏳ ${nome} tem um pagamento de cartão em PROCESSAMENTO.\n\nNão é necessário enviar cobrança — aguarde a confirmação do Asaas (geralmente 1-2 dias úteis).`);
+                return;
+            }
+
+            const vencidas = (dataOver.data || [])
                 .sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)); // mais antiga primeiro
 
             vencidas.forEach(p => {

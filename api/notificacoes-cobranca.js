@@ -82,23 +82,32 @@ export default async function handler(req, res) {
             if (!email) continue;
 
             try {
-                const resp = await fetch(
-                    `${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=10`,
-                    {
-                        headers: {
-                            'access_token': asaasKey.trim(),
-                            'Content-Type': 'application/json',
-                            'User-Agent': 'GaditasMatrizApp'
-                        }
-                    }
-                );
+                const headers = {
+                    'access_token': asaasKey.trim(),
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'GaditasMatrizApp'
+                };
 
-                const dados = await resp.json();
-                if (!dados.data || dados.data.length === 0) continue;
+                // Busca OVERDUE e PROCESSING em paralelo
+                const [respOver, respProc] = await Promise.all([
+                    fetch(`${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=10`, { headers }),
+                    fetch(`${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=PROCESSING&limit=5`, { headers })
+                ]);
+
+                const dadosOver = await respOver.json();
+                const dadosProc = await respProc.json();
+
+                // Se há pagamento em PROCESSAMENTO, o aluno está pagando — não notificar
+                if (dadosProc.data && dadosProc.data.length > 0) {
+                    console.log(`⏳ ${nome} tem pagamento em processamento — notificação ignorada`);
+                    continue;
+                }
+
+                if (!dadosOver.data || dadosOver.data.length === 0) continue;
 
                 // Considera o maior atraso entre as faturas
                 let maiorAtraso = 0;
-                for (const fatura of dados.data) {
+                for (const fatura of dadosOver.data) {
                     const vencimento = new Date(fatura.dueDate + 'T00:00:00');
                     vencimento.setHours(0, 0, 0, 0);
                     const dias = Math.floor((hoje - vencimento) / (1000 * 60 * 60 * 24));

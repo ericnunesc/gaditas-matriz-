@@ -88,8 +88,13 @@ export default async function handler(req, res) {
                     'User-Agent': 'GaditasMatrizApp'
                 };
 
+                // Busca apenas faturas vencidas nos últimos 60 dias (evita faturas antigas esquecidas)
+                const limite60 = new Date(hoje);
+                limite60.setDate(limite60.getDate() - 60);
+                const limite60Str = `${limite60.getFullYear()}-${String(limite60.getMonth()+1).padStart(2,'0')}-${String(limite60.getDate()).padStart(2,'0')}`;
+
                 const respOver = await fetch(
-                    `${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=10`,
+                    `${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&dueDate[ge]=${limite60Str}&limit=10`,
                     { headers }
                 );
                 const dadosOver = await respOver.json();

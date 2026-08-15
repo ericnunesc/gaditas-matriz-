@@ -4364,8 +4364,9 @@ Ele voltará a ser aluno normal.`)) return;
                     const valor = f.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                     const vencStr = f.dueDate.split('-').reverse().join('/');
                     const isConf = f.status === 'CONFIRMED';
-                    const tagLabel = isConf ? '⏳ PROCESSANDO' : 'PAGO';
-                    const tagCor = isConf ? '#f59e0b' : '#10b981';
+                    // CONFIRMED = cartão aprovado aguardando liquidação bancária (já está pago)
+                    const tagLabel = isConf ? '💳 CONFIRMADO' : 'PAGO';
+                    const tagCor = isConf ? '#3b82f6' : '#10b981';
                     html += `<div style="background:#0f172a; border:1px solid ${tagCor}44; border-left:3px solid ${tagCor}; border-radius:8px; padding:10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;"><div><div style="font-size:0.85rem; font-weight:800; color:white;">${valor}</div><div style="font-size:0.65rem; color:#64748b;">Ref: ${vencStr}</div></div><span style="font-size:0.6rem; font-weight:800; color:${tagCor}; background:${tagCor}22; padding:3px 8px; border-radius:6px;">${tagLabel}</span></div>`;
                 });
             }

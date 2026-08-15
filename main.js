@@ -15516,10 +15516,13 @@ const loja = {
                     // Carrossel
                     const imgs = fotos.map((f,i) => `<img src="${f}" style="min-width:100%;height:100%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`).join('');
                     const dots = fotos.map((_,i) => `<div id="carousel-dot-${i}" onclick="loja._irParaFoto(${i})" style="width:${i===0?'18px':'8px'};height:8px;border-radius:4px;background:${i===0?'white':'rgba(255,255,255,0.4)'};cursor:pointer;transition:all 0.2s;"></div>`).join('');
+                    const arrowStyle = 'position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.55);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:5;backdrop-filter:blur(4px);';
                     return `<div style="position:relative;margin-bottom:16px;">
                         <div id="carousel-track-wrap" style="width:100%;aspect-ratio:1.2;background:#1e293b;border-radius:14px;overflow:hidden;">
                             <div id="carousel-track" style="display:flex;height:100%;transition:transform 0.3s ease;">${imgs}</div>
                         </div>
+                        <button onclick="loja._carouselAnterior()" style="${arrowStyle}left:10px;">‹</button>
+                        <button onclick="loja._carouselProximo(${fotos.length})" style="${arrowStyle}right:10px;">›</button>
                         <div style="display:flex;justify-content:center;gap:6px;margin-top:8px;align-items:center;">${dots}</div>
                     </div>`;
                 })()}
@@ -15562,12 +15565,14 @@ const loja = {
         document.body.appendChild(modal);
     },
 
+    _carouselIdx: 0,
+
     _irParaFoto(i) {
         const track = document.getElementById('carousel-track');
         const wrap  = document.getElementById('carousel-track-wrap');
         if (!track || !wrap) return;
-        const w = wrap.offsetWidth;
-        track.style.transform = `translateX(-${i * w}px)`;
+        this._carouselIdx = i;
+        track.style.transform = `translateX(-${i * wrap.offsetWidth}px)`;
         const fotos = this._produtoAtual?.fotos?.length ? this._produtoAtual.fotos : (this._produtoAtual?.foto ? [this._produtoAtual.foto] : []);
         fotos.forEach((_, idx) => {
             const dot = document.getElementById('carousel-dot-' + idx);
@@ -15575,6 +15580,18 @@ const loja = {
             dot.style.width  = idx === i ? '18px' : '8px';
             dot.style.background = idx === i ? 'white' : 'rgba(255,255,255,0.4)';
         });
+    },
+
+    _carouselProximo(total) {
+        const next = (this._carouselIdx + 1) % total;
+        this._irParaFoto(next);
+    },
+
+    _carouselAnterior() {
+        const fotos = this._produtoAtual?.fotos?.length ? this._produtoAtual.fotos : (this._produtoAtual?.foto ? [this._produtoAtual.foto] : []);
+        const total = fotos.length;
+        const prev = (this._carouselIdx - 1 + total) % total;
+        this._irParaFoto(prev);
     },
 
     _selecionarVariacao(index) {

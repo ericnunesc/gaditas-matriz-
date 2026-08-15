@@ -107,27 +107,33 @@ export default async function handler(req, res) {
                     'User-Agent': 'GaditasMatrizApp'
                 };
 
-                // Busca apenas faturas vencidas nos últimos 60 dias (evita faturas antigas esquecidas)
-                const limite60 = new Date(hoje);
-                limite60.setDate(limite60.getDate() - 60);
-                const limite60Str = `${limite60.getFullYear()}-${String(limite60.getMonth()+1).padStart(2,'0')}-${String(limite60.getDate()).padStart(2,'0')}`;
-
+                // Busca faturas OVERDUE — filtramos por data NO CÓDIGO (não depende do Asaas aceitar dueDate[ge])
                 const respOver = await fetch(
-                    `${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&dueDate[ge]=${limite60Str}&limit=10`,
+                    `${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=50`,
                     { headers }
                 );
                 const dadosOver = await respOver.json();
 
                 if (!dadosOver.data || dadosOver.data.length === 0) continue;
 
-                // Considera o maior atraso entre as faturas
+                // Filtra apenas faturas vencidas nos últimos 60 dias (ignora dívidas antigas esquecidas)
+                const limite60 = new Date(hoje);
+                limite60.setDate(limite60.getDate() - 60);
+
+                // Considera o maior atraso entre as faturas RECENTES
                 let maiorAtraso = 0;
                 for (const fatura of dadosOver.data) {
                     const vencimento = new Date(fatura.dueDate + 'T00:00:00');
                     vencimento.setHours(0, 0, 0, 0);
+                    if (vencimento < limite60) {
+                        console.log(`⏭️ Ignorando fatura antiga de ${nome}: ${fatura.dueDate}`);
+                        continue; // ignora faturas muito antigas
+                    }
                     const dias = Math.floor((hoje - vencimento) / (1000 * 60 * 60 * 24));
-                    if (dias > maiorAtraso) maiorAtraso = dias;
+                    if (dias > 0 && dias > maiorAtraso) maiorAtraso = dias; // só conta dias POSITIVOS (vencidas de verdade)
                 }
+
+                if (maiorAtraso === 0) continue; // nenhuma fatura recente vencida
 
                 // Bloqueia acesso real no Firestore a partir do dia 10
                 if (maiorAtraso >= 10 && aluno.status !== 'trancado') {

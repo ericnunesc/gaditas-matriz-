@@ -11011,7 +11011,7 @@ const aniversario = {
         document.body.appendChild(modal);
     },
 
-    // ── CARD ADMIN — HOJE E ESTA SEMANA ───────────────────
+    // ── CARD ADMIN — HOJE, ESTA SEMANA E TODO O MÊS ──────
     async renderAdminAniversariantes() {
         const container = document.getElementById('lista-aniversariantes');
         if (!container) return;
@@ -11021,81 +11021,74 @@ const aniversario = {
             const snap = await db.collection('alunos').get();
             const hoje = new Date();
             hoje.setHours(0, 0, 0, 0);
+            const mesAtual = hoje.getMonth();
+            const anoAtual = hoje.getFullYear();
 
-            const hoje7 = [];  // próximos 7 dias (inclui hoje)
+            const lista = [];
 
             snap.docs.forEach(doc => {
-                const a  = { id: doc.id, ...doc.data() };
+                const a = { id: doc.id, ...doc.data() };
                 if (!a.nascimento) return;
-                // Parse sem timezone (evita bug UTC-3)
                 const partes = a.nascimento.split('-');
                 if (partes.length < 3) return;
                 const diaNasc = parseInt(partes[2], 10);
                 const mesNasc = parseInt(partes[1], 10) - 1;
                 const anoNasc = parseInt(partes[0], 10);
-                for (let d = 0; d < 7; d++) {
-                    const dia = new Date(hoje);
-                    dia.setDate(hoje.getDate() + d);
-                    if (diaNasc === dia.getDate() && mesNasc === dia.getMonth()) {
-                        const idade = hoje.getFullYear() - anoNasc;
-                        hoje7.push({ ...a, _diasRestantes: d, _idade: idade });
-                        break;
-                    }
-                }
+                if (mesNasc !== mesAtual) return; // só o mês atual
+                // Dias até o aniversário (pode ser negativo se já passou)
+                const anivEsteAno = new Date(anoAtual, mesNasc, diaNasc);
+                anivEsteAno.setHours(0, 0, 0, 0);
+                const diff = Math.round((anivEsteAno - hoje) / 86400000);
+                const idade = anoAtual - anoNasc;
+                lista.push({ ...a, _diasRestantes: diff, _diaNasc: diaNasc, _idade: idade });
             });
 
-            if (hoje7.length === 0) {
-                container.innerHTML = '<div style="text-align:center;padding:12px;color:#475569;font-size:0.7rem;">Nenhum aniversariante nos próximos 7 dias.</div>';
+            // Ordena por dia do mês
+            lista.sort((a, b) => a._diaNasc - b._diaNasc);
+
+            if (lista.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:12px;color:#475569;font-size:0.7rem;">Nenhum aniversariante este mês.</div>';
                 return;
             }
 
-            // Ordena por dias restantes
-            hoje7.sort((a, b) => a._diasRestantes - b._diasRestantes);
-
-            const hojeList   = hoje7.filter(a => a._diasRestantes === 0);
-            const semanaList = hoje7.filter(a => a._diasRestantes > 0);
-
             const diasSemana = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
             const renderItem = (a) => {
-                const isHoje = a._diasRestantes === 0;
-                const diaRef = isHoje ? '🎂 HOJE!' : (() => {
-                    const d = new Date(hoje);
-                    d.setDate(hoje.getDate() + a._diasRestantes);
-                    return diasSemana[d.getDay()] + ' ' + d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-                })();
-                const nomeEsc  = a.nome.replace(/'/g,"\\'");
-                const fotoEsc  = (a.fotoPerfil||'').replace(/'/g,"\\'");
-                const temFoto  = !!a.fotoPerfil;
-                const btnCard  = isHoje
+                const isHoje   = a._diasRestantes === 0;
+                const isSemana = a._diasRestantes > 0 && a._diasRestantes <= 7;
+                const jaPassou = a._diasRestantes < 0;
+                const cor      = isHoje ? '#f59e0b' : isSemana ? '#60a5fa' : jaPassou ? '#475569' : 'white';
+                const bg       = isHoje ? '#1c1400' : jaPassou ? '#0a0f1a' : '#0f172a';
+                const border   = isHoje ? '#f59e0b' : isSemana ? '#3b82f655' : '#1e293b';
+                const dRef     = isHoje ? '🎂 HOJE!'
+                               : a._diasRestantes === 1 ? 'Amanhã'
+                               : a._diasRestantes > 1 ? `${a._diaNasc.toString().padStart(2,'0')}/${(mesAtual+1).toString().padStart(2,'0')}`
+                               : `${a._diaNasc.toString().padStart(2,'0')}/${(mesAtual+1).toString().padStart(2,'0')} ✓`;
+                const nomeEsc = a.nome.replace(/'/g,"\\'");
+                const fotoEsc = (a.fotoPerfil||'').replace(/'/g,"\\'");
+                const temFoto = !!a.fotoPerfil;
+                const btnCard = isHoje
                     ? `<button onclick="aniversario.gerarCardAniversario('${nomeEsc}','${fotoEsc}',${a._idade})"
                         style="background:#78350f;border:1px solid #f59e0b;color:#fbbf24;padding:5px 10px;border-radius:7px;font-size:0.58rem;font-weight:800;cursor:pointer;white-space:nowrap;margin-left:8px;"
                         title="${temFoto ? 'Tem foto cadastrada' : 'Sem foto cadastrada'}">
-                        ${temFoto ? '📸' : '🖊️'} Card</button>`
-                    : '';
+                        ${temFoto ? '📸' : '🖊️'} Card</button>` : '';
                 return `
-                    <div style="display:flex;justify-content:space-between;align-items:center;background:${isHoje ? '#1c1400' : '#0f172a'};border:1px solid ${isHoje ? '#f59e0b' : '#334155'};border-radius:8px;padding:9px 12px;margin-bottom:6px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;background:${bg};border:1px solid ${border};border-radius:8px;padding:9px 12px;margin-bottom:6px;opacity:${jaPassou?'0.5':'1'};">
                         <div>
-                            <div style="font-size:0.75rem;font-weight:800;color:${isHoje ? '#f59e0b' : 'white'};">${a.nome}</div>
+                            <div style="font-size:0.75rem;font-weight:800;color:${cor};">${a.nome}</div>
                             <div style="font-size:0.58rem;color:#64748b;margin-top:2px;">${a.faixa || '—'} · ${a._idade} anos</div>
                         </div>
                         <div style="display:flex;align-items:center;">
-                            <div style="font-size:0.6rem;font-weight:800;color:${isHoje ? '#f59e0b' : '#64748b'};white-space:nowrap;">${diaRef}</div>
+                            <div style="font-size:0.6rem;font-weight:800;color:${cor};white-space:nowrap;">${dRef}</div>
                             ${btnCard}
                         </div>
                     </div>`;
             };
 
-            let html = '';
-            if (hojeList.length > 0) {
-                html += `<div style="font-size:0.58rem;color:#f59e0b;font-weight:800;margin-bottom:6px;letter-spacing:0.8px;">🎂 HOJE</div>`;
-                html += hojeList.map(renderItem).join('');
-            }
-            if (semanaList.length > 0) {
-                html += `<div style="font-size:0.58rem;color:#64748b;font-weight:800;margin:${hojeList.length ? '12px' : '0'} 0 6px;letter-spacing:0.8px;">📅 ESTA SEMANA</div>`;
-                html += semanaList.map(renderItem).join('');
-            }
-
+            const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            let html = `<div style="font-size:0.58rem;color:#f59e0b;font-weight:800;margin-bottom:10px;letter-spacing:0.8px;">🎂 ${meses[mesAtual].toUpperCase()} (${lista.length} aniversariante${lista.length>1?'s':''})</div>`;
+            html += lista.map(renderItem).join('');
             container.innerHTML = html;
+
         } catch(e) {
             container.innerHTML = `<small style="color:#ef4444;font-size:0.65rem;">Erro: ${e.message}</small>`;
         }

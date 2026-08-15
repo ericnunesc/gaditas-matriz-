@@ -4553,9 +4553,13 @@ Ele voltará a ser aluno normal.`)) return;
                     }
                 }
                 if (tC) {
-                    tC.innerHTML = docsOrdenados.slice(0,1).map(doc => `
-                        <div style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;"><span style="color: #ef4444; font-weight: 800; font-size: 0.85rem; letter-spacing: 0.5px;"><i class="fas fa-exclamation-triangle"></i> COMUNICADO OFICIAL:</span><small style="font-size:0.6rem; opacity:0.4; color:#fff;">${doc.data().dataFormatada}</small></div>
-                        <div style="font-size:0.85rem; color:#f1f5f9; line-height: 1.5; font-weight: 500;">${doc.data().texto}</div>`).join('');
+                    tC.innerHTML = docsOrdenados.slice(0,1).map(doc => {
+                        const av = doc.data();
+                        return `
+                        <div style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;"><span style="color: #ef4444; font-weight: 800; font-size: 0.85rem; letter-spacing: 0.5px;"><i class="fas fa-exclamation-triangle"></i> COMUNICADO OFICIAL:</span><small style="font-size:0.6rem; opacity:0.4; color:#fff;">${av.dataFormatada}</small></div>
+                        <div style="font-size:0.85rem; color:#f1f5f9; line-height: 1.5; font-weight: 500;">${av.texto}</div>
+                        ${av.imagemUrl ? `<img src="${av.imagemUrl}" style="width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin-top:10px;" onerror="this.style.display='none'"/>` : ''}`;
+                    }).join('');
                 }
                 if (lH) lH.innerHTML = docsOrdenados.map(doc => {
                     const av = doc.data();
@@ -4565,6 +4569,7 @@ Ele voltará a ser aluno normal.`)) return;
                             <small style="font-size:0.6rem; color:var(--text-muted);">${av.dataFormatada}</small>${tag}
                         </div>
                         <div style="color:#ccc; font-size:0.8rem; line-height:1.4;">${av.texto}</div>
+                        ${av.imagemUrl ? `<img src="${av.imagemUrl}" style="width:100%; max-height:200px; object-fit:cover; border-radius:8px; margin-top:8px;" onerror="this.style.display='none'"/>` : ''}
                     </div>`;
                 }).join('');
                 if (lE) {
@@ -5613,6 +5618,30 @@ Ele voltará a ser aluno normal.`)) return;
         } catch(e) { alert("Erro."); }
     },
 
+    previewImagemMural(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const label = document.getElementById('mural-imagem-label');
+        const preview = document.getElementById('mural-imagem-preview');
+        const thumb = document.getElementById('mural-imagem-thumb');
+        const reader = new FileReader();
+        reader.onload = e => {
+            thumb.src = e.target.result;
+            preview.style.display = 'block';
+            if (label) label.textContent = '✅ ' + file.name;
+        };
+        reader.readAsDataURL(file);
+    },
+
+    removerImagemMural() {
+        const input = document.getElementById('mural-imagem-input');
+        const preview = document.getElementById('mural-imagem-preview');
+        const label = document.getElementById('mural-imagem-label');
+        if (input) input.value = '';
+        if (preview) preview.style.display = 'none';
+        if (label) label.textContent = '📎 Adicionar imagem (opcional)';
+    },
+
     async salvarAvisoMural() {
         const txt = document.getElementById('input-mural').value.trim();
         if (!txt) return alert("Escreva um comunicado antes de publicar.");
@@ -5627,10 +5656,32 @@ Ele voltará a ser aluno normal.`)) return;
             'muaythai': '🥊 Muay Thai'
         };
         try {
+            // Upload de imagem opcional
+            let imagemUrl = null;
+            const imgInput = document.getElementById('mural-imagem-input');
+            const imgFile = imgInput?.files[0];
+            if (imgFile) {
+                const base64 = await new Promise((res, rej) => {
+                    const r = new FileReader();
+                    r.onload = e => res(e.target.result);
+                    r.onerror = rej;
+                    r.readAsDataURL(imgFile);
+                });
+                const imageBase64 = base64.split(',')[1]; // remove o prefixo "data:image/...;base64,"
+                const resp = await fetch('/api/upload-story', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageBase64, fileName: `comunicado_${Date.now()}.jpg` })
+                });
+                const data = await resp.json();
+                if (data.url) imagemUrl = data.url;
+            }
+
             await db.collection("mural_avisos").add({
                 texto: txt, publico, alunoId: publico === 'individual' ? this.alunoMuralSelecionado.id : null,
                 alunoNome: publico === 'individual' ? this.alunoMuralSelecionado.nome : null,
                 labelPublico: labelPublico[publico] || publico,
+                imagemUrl,
                 data: new Date().getTime(),
                 dataFormatada: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
             });
@@ -5668,6 +5719,7 @@ Ele voltará a ser aluno normal.`)) return;
             } catch(ePush) { console.warn('Erro ao montar push do mural:', ePush); }
 
             document.getElementById('input-mural').value = "";
+            this.removerImagemMural();
             this.alunoMuralSelecionado = null;
             this.selecionarPublicoMural('todos');
             alert(`🎯 Comunicado publicado para: ${labelPublico[publico]}!`);

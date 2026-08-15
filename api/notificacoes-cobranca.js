@@ -34,6 +34,25 @@ export default async function handler(req, res) {
     let enviadas = 0;
     let erros = 0;
 
+    // ── LOCK ANTI-DUPLICATA ────────────────────────────────────
+    // Garante que o cron só executa UMA vez por dia (Vercel pode disparar 2x)
+    const lockId = `cobranca_${hoje.toISOString().split('T')[0]}`;
+    const lockRef = db.collection('cron_locks').doc(lockId);
+    try {
+        await db.runTransaction(async (tx) => {
+            const lockDoc = await tx.get(lockRef);
+            if (lockDoc.exists) throw new Error('JA_EXECUTOU');
+            tx.set(lockRef, { executadoEm: new Date().toISOString() });
+        });
+    } catch(eLock) {
+        if (eLock.message === 'JA_EXECUTOU') {
+            console.log(`🔒 Cron cobrança já executou hoje (${lockId}). Abortando duplicata.`);
+            return res.status(200).json({ ok: true, msg: 'Já executou hoje', duplicata: true });
+        }
+        // Erro de transação — continua mesmo assim para não perder notificações
+        console.warn('⚠️ Falha no lock, continuando:', eLock.message);
+    }
+
     try {
         const alunosSnap = await db.collection('alunos')
             .where('fcmToken', '!=', null)

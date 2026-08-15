@@ -117,6 +117,23 @@ const iniciarCadastroApp = () => {
 
             await dbInstance.collection("alunos").doc(user.uid).set(novoAluno);
 
+            // Push para o admin avisando da nova matrícula
+            try {
+                const adminDoc = await dbInstance.collection('configuracoes').doc('admin_config').get();
+                const adminToken = adminDoc.exists ? adminDoc.data().fcmToken : null;
+                if (adminToken) {
+                    await fetch('/api/push-comunicado', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            tokens: [adminToken],
+                            title: '🎉 Nova Matrícula!',
+                            body: `${nome} acabou de se matricular na Gaditas Matriz!`
+                        })
+                    });
+                }
+            } catch(_) { /* não bloqueia o cadastro */ }
+
             alert("Matrícula realizada com sucesso! Seja bem-vindo à Gaditas Matriz! OSS.");
             window.location.href = "index.html";
 

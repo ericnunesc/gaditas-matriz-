@@ -9660,7 +9660,9 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         document.getElementById('banner-dependente')?.remove();
     },
 
-    async atualizarTurmasDinamicas() {
+    _unsubVagasCheckin: null,
+
+    atualizarTurmasDinamicas() {
         const container = document.getElementById('turmas-checkin-btns'); if (!container) return;
         const hiddenSel = document.getElementById('select-turma-aluno');
         const todas = academia.getGrade()[new Date().getDay()] || academia.getGrade()[String(new Date().getDay())] || [];
@@ -9704,49 +9706,45 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         // Sincroniza hidden select (para funções que ainda lêem dele)
         if (hiddenSel) hiddenSel.innerHTML = visiveis.map(t => `<option value="${t}">${t}</option>`).join('');
 
-        // Busca contagem de check-ins de hoje para calcular vagas restantes
         const limites = academia.getGrade()?.limites || {};
         const inicioHoje = new Date(); inicioHoje.setHours(0,0,0,0);
-        const contagemHoje = {};
-        const turmasComLimite = visiveis.filter(t => limites[t]);
-        if (turmasComLimite.length > 0) {
-            try {
-                const snapHoje = await db.collection("checkins").get();
-                snapHoje.docs.forEach(d => {
-                    const c = d.data();
-                    if (c.data >= inicioHoje.getTime() && c.turma) {
-                        contagemHoje[c.turma] = (contagemHoje[c.turma] || 0) + 1;
-                    }
-                });
-            } catch(e) { console.warn("Erro ao buscar vagas:", e.message); }
-        }
 
+        // Função auxiliar que atualiza só os badges de vagas (sem recriar botões)
+        const _atualizarBadgesVagas = (contagemHoje) => {
+            visiveis.forEach((t, i) => {
+                const badge = document.getElementById(`vaga-badge-${i}`);
+                const btn   = document.getElementById(`btn-turma-${i}`);
+                if (!badge || !btn) return;
+                const limite = limites[t];
+                if (!limite) return;
+                const vagas  = limite - (contagemHoje[t] || 0);
+                const lotado = vagas <= 0;
+                badge.innerHTML = lotado
+                    ? `<span style="background:#7f1d1d;color:#fca5a5;font-size:0.6rem;font-weight:800;padding:2px 7px;border-radius:20px;margin-left:6px;">🚫 LOTADO</span>`
+                    : `<span style="background:#14532d;color:#86efac;font-size:0.6rem;font-weight:800;padding:2px 7px;border-radius:20px;margin-left:6px;">${vagas} vaga${vagas===1?'':'s'}</span>`;
+                btn.disabled = lotado;
+                btn.style.cursor = lotado ? 'not-allowed' : 'pointer';
+                btn.style.opacity = lotado ? '0.5' : '1';
+            });
+        };
+
+        // Render inicial dos botões
         academia._turmaSelecionada = null;
-        container.innerHTML = visiveis.map(t => {
+        container.innerHTML = visiveis.map((t, i) => {
             const isMT   = academia._isTurmaMT(t);
             const isKids = academia._isTurmaKids(t);
             const cor    = isMT ? '#7f1d1d' : isKids ? '#312e81' : '#0c4a6e';
             const borda  = isMT ? '#ef4444' : isKids ? '#818cf8' : '#3b82f6';
             const emoji  = isMT ? '🥊' : isKids ? '⭐' : '🥋';
             const tEsc   = t.replace(/'/g,"\\'");
-            const limite = limites[t];
-            const ocupado = contagemHoje[t] || 0;
-            const vagas   = limite ? limite - ocupado : null;
-            const lotado  = vagas !== null && vagas <= 0;
-            const vagaTag = limite
-                ? lotado
-                    ? `<span style="background:#7f1d1d;color:#fca5a5;font-size:0.6rem;font-weight:800;padding:2px 7px;border-radius:20px;margin-left:6px;">🚫 LOTADO</span>`
-                    : `<span style="background:#14532d;color:#86efac;font-size:0.6rem;font-weight:800;padding:2px 7px;border-radius:20px;margin-left:6px;">${vagas} vaga${vagas===1?'':'s'}</span>`
-                : '';
             return `<div style="display:flex;gap:6px;align-items:stretch;">
-                <button onclick="ui._selecionarTurmaCheckin('${tEsc}', this)"
-                    style="flex:1;padding:14px 16px;background:${lotado?'#1c1917':cor};border:2px solid ${lotado?'#78716c':borda};color:${lotado?'#78716c':'white'};
-                    border-radius:12px;font-weight:800;cursor:${lotado?'not-allowed':'pointer'};font-size:0.88rem;text-align:left;
-                    display:flex;align-items:center;gap:10px;transition:all 0.15s;"
-                    ${lotado?'disabled':''}>
+                <button id="btn-turma-${i}" onclick="ui._selecionarTurmaCheckin('${tEsc}', this)"
+                    style="flex:1;padding:14px 16px;background:${cor};border:2px solid ${borda};color:white;
+                    border-radius:12px;font-weight:800;cursor:pointer;font-size:0.88rem;text-align:left;
+                    display:flex;align-items:center;gap:10px;transition:all 0.15s;">
                     <span style="font-size:1.3rem;">${emoji}</span>
                     <span style="flex:1;">${t}</span>
-                    ${vagaTag}
+                    <span id="vaga-badge-${i}"></span>
                 </button>
                 <button onclick="ui._toggleVerTurma('${tEsc}',this)"
                     style="padding:0 12px;background:#0f172a;border:2px solid ${borda}44;color:#94a3b8;
@@ -9760,6 +9758,21 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
         if (qt) qt.style.display = 'none';
         const btnVer = document.getElementById('btn-ver-quem-treina');
         if (btnVer) btnVer.style.display = 'none';
+
+        // Listener em tempo real — atualiza badges a cada novo check-in
+        if (this._unsubVagasCheckin) this._unsubVagasCheckin(); // cancela listener anterior
+        if (visiveis.some(t => limites[t])) {
+            this._unsubVagasCheckin = db.collection("checkins")
+                .where("data", ">=", inicioHoje.getTime())
+                .onSnapshot(snap => {
+                    const cont = {};
+                    snap.docs.forEach(d => {
+                        const c = d.data();
+                        if (c.turma) cont[c.turma] = (cont[c.turma] || 0) + 1;
+                    });
+                    _atualizarBadgesVagas(cont);
+                }, e => console.warn("Listener vagas:", e.message));
+        }
     },
 
     _toggleVerTurma(turma, btn) {

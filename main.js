@@ -15509,9 +15509,20 @@ const loja = {
                     <button onclick="loja.fecharProduto()" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:8px 14px; border-radius:8px; font-size:0.7rem; font-weight:700; cursor:pointer;">← VOLTAR</button>
                     ${auth.role === 'admin' ? `<button onclick="loja.fecharProduto(); loja.abrirModalProduto('${id}')" style="background:#1e3a8a; border:1px solid #3b82f655; color:#93c5fd; padding:8px 14px; border-radius:8px; font-size:0.62rem; font-weight:700; cursor:pointer;">✏️ EDITAR</button>` : ''}
                 </div>
-                <div style="width:100%; aspect-ratio:1.2; background:#1e293b; border-radius:14px; overflow:hidden; margin-bottom:16px; display:flex; align-items:center; justify-content:center;">
-                    ${p.foto ? `<img src="${p.foto}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=font-size:4rem>🛒</span>'">` : '<span style="font-size:4rem;">🛒</span>'}
-                </div>
+                ${(() => {
+                    const fotos = (p.fotos?.length ? p.fotos : (p.foto ? [p.foto] : [])).filter(Boolean);
+                    if (fotos.length === 0) return '<div style="width:100%;aspect-ratio:1.2;background:#1e293b;border-radius:14px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;font-size:4rem;">🛒</div>';
+                    if (fotos.length === 1) return `<div style="width:100%;aspect-ratio:1.2;background:#1e293b;border-radius:14px;overflow:hidden;margin-bottom:16px;"><img src="${fotos[0]}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'"></div>`;
+                    // Carrossel
+                    const imgs = fotos.map((f,i) => `<img src="${f}" style="min-width:100%;height:100%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`).join('');
+                    const dots = fotos.map((_,i) => `<div id="carousel-dot-${i}" onclick="loja._irParaFoto(${i})" style="width:${i===0?'18px':'8px'};height:8px;border-radius:4px;background:${i===0?'white':'rgba(255,255,255,0.4)'};cursor:pointer;transition:all 0.2s;"></div>`).join('');
+                    return `<div style="position:relative;margin-bottom:16px;">
+                        <div id="carousel-track-wrap" style="width:100%;aspect-ratio:1.2;background:#1e293b;border-radius:14px;overflow:hidden;">
+                            <div id="carousel-track" style="display:flex;height:100%;transition:transform 0.3s ease;">${imgs}</div>
+                        </div>
+                        <div style="display:flex;justify-content:center;gap:6px;margin-top:8px;align-items:center;">${dots}</div>
+                    </div>`;
+                })()}
                 <div style="font-size:0.6rem; color:#64748b; font-weight:700; letter-spacing:0.5px; margin-bottom:4px;">${(p.categoria || 'produto').toUpperCase()}</div>
                 <div style="font-size:1.1rem; font-weight:800; color:white; margin-bottom:8px;">${p.nome}</div>
                 <div style="font-size:1.3rem; font-weight:800; color:#10b981; margin-bottom:${p.descricao ? '12px' : '16px'};">R$ ${(p.preco || 0).toFixed(2).replace('.', ',')}</div>
@@ -15549,6 +15560,21 @@ const loja = {
                 </div>
             </div>`;
         document.body.appendChild(modal);
+    },
+
+    _irParaFoto(i) {
+        const track = document.getElementById('carousel-track');
+        const wrap  = document.getElementById('carousel-track-wrap');
+        if (!track || !wrap) return;
+        const w = wrap.offsetWidth;
+        track.style.transform = `translateX(-${i * w}px)`;
+        const fotos = this._produtoAtual?.fotos?.length ? this._produtoAtual.fotos : (this._produtoAtual?.foto ? [this._produtoAtual.foto] : []);
+        fotos.forEach((_, idx) => {
+            const dot = document.getElementById('carousel-dot-' + idx);
+            if (!dot) return;
+            dot.style.width  = idx === i ? '18px' : '8px';
+            dot.style.background = idx === i ? 'white' : 'rgba(255,255,255,0.4)';
+        });
     },
 
     _selecionarVariacao(index) {
@@ -15980,6 +16006,8 @@ const loja = {
         document.getElementById('modal-editar-produto')?.remove();
         const p = id ? (this._produtos.find(x => x.id === id) || null) : null;
         this._variacoesTemp = p ? JSON.parse(JSON.stringify(p.variacoes || [])) : [];
+        // Inicializa fotos: usa array 'fotos' se existir, senão converte 'foto' único
+        this._fotosTemp = p ? (p.fotos?.length ? [...p.fotos] : (p.foto ? [p.foto] : [])) : [];
 
         const categorias = ['kimono', 'rashguard', 'camisa', 'boné', 'bandagem', 'protetor', 'luva', 'acessório', 'outro'];
         const modal = document.createElement('div');
@@ -16015,24 +16043,13 @@ const loja = {
                         <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:5px;">DESCRIÇÃO</small>
                         <textarea id="prod-descricao" rows="3" placeholder="Descreva o produto..." style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.78rem;resize:vertical;box-sizing:border-box;">${p?.descricao||''}</textarea>
                     </div>
-                    <!-- Foto com upload de arquivo -->
+                    <!-- Fotos múltiplas -->
                     <div>
-                        <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:6px;">FOTO DO PRODUTO</small>
-                        <div style="display:flex;gap:10px;align-items:flex-start;">
-                            <div id="prod-foto-preview" style="width:64px;height:64px;background:#0f172a;border:1px solid #334155;border-radius:10px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.8rem;">
-                                ${p?.foto ? `<img src="${p.foto}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='🛒'">` : '🛒'}
-                            </div>
-                            <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
-                                <button type="button" onclick="document.getElementById('prod-foto-file').click()"
-                                    style="width:100%;padding:9px;background:#1e3a8a;border:1px solid #3b82f655;color:#93c5fd;border-radius:8px;font-size:0.68rem;font-weight:800;cursor:pointer;">
-                                    📁 BUSCAR ARQUIVO
-                                </button>
-                                <input type="file" id="prod-foto-file" accept="image/*" onchange="loja._uploadFoto(this.files[0])" style="display:none;">
-                                <input id="prod-foto" type="url" value="${p?.foto||''}" placeholder="ou cole a URL: https://..."
-                                    oninput="loja._atualizarPreviewFoto(this.value)"
-                                    style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;box-sizing:border-box;">
-                            </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                            <small style="font-size:0.6rem;color:#64748b;font-weight:700;">FOTOS DO PRODUTO (até 5)</small>
+                            <small style="font-size:0.55rem;color:#475569;">1ª = capa</small>
                         </div>
+                        <div id="prod-fotos-grid" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
                         <div id="prod-foto-status" style="font-size:0.58rem;color:#64748b;margin-top:5px;min-height:14px;"></div>
                     </div>
                     <div>
@@ -16067,6 +16084,59 @@ const loja = {
             </div>`;
         document.body.appendChild(modal);
         this._renderVariacoesTemp();
+        this._renderFotosTemp();
+    },
+
+    _renderFotosTemp() {
+        const grid = document.getElementById('prod-fotos-grid');
+        if (!grid) return;
+        const max = 5;
+        let html = this._fotosTemp.map((url, i) => `
+            <div style="position:relative;width:72px;height:72px;flex-shrink:0;">
+                <img src="${url}" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:2px solid ${i===0?'#3b82f6':'#334155'};"
+                    onerror="this.style.display='none'">
+                ${i===0 ? '<div style="position:absolute;bottom:2px;left:2px;background:#3b82f6;color:white;font-size:0.4rem;font-weight:800;border-radius:4px;padding:1px 4px;">CAPA</div>' : ''}
+                <button onclick="loja._removerFotoTemp(${i})"
+                    style="position:absolute;top:-6px;right:-6px;background:#ef4444;border:none;color:white;border-radius:50%;width:20px;height:20px;font-size:0.6rem;cursor:pointer;font-weight:800;line-height:1;">✕</button>
+            </div>`).join('');
+        if (this._fotosTemp.length < max) {
+            html += `
+            <label style="width:72px;height:72px;flex-shrink:0;background:#0f172a;border:2px dashed #334155;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:4px;">
+                <span style="font-size:1.4rem;">📷</span>
+                <span style="font-size:0.5rem;color:#64748b;font-weight:700;">ADICIONAR</span>
+                <input type="file" accept="image/*" style="display:none;" onchange="loja._uploadFotoTemp(this.files[0])">
+            </label>`;
+        }
+        grid.innerHTML = html;
+    },
+
+    async _uploadFotoTemp(file) {
+        if (!file) return;
+        const status = document.getElementById('prod-foto-status');
+        if (status) status.innerHTML = '<span style="color:#f59e0b;">⏳ Enviando imagem...</span>';
+        try {
+            const base64 = await this._comprimirImagem(file, 800, 0.85);
+            // Tenta Firebase Storage primeiro
+            try {
+                const nomeArq = 'loja/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const ref  = getStorage().ref(nomeArq);
+                const snap = await ref.put(file);
+                const url  = await snap.ref.getDownloadURL();
+                this._fotosTemp.push(url);
+            } catch(_) {
+                this._fotosTemp.push(base64); // fallback base64
+            }
+            this._renderFotosTemp();
+            if (status) status.innerHTML = '<span style="color:#10b981;">✅ Imagem adicionada!</span>';
+            setTimeout(() => { if (status) status.innerHTML = ''; }, 2000);
+        } catch(e) {
+            if (status) status.innerHTML = '<span style="color:#ef4444;">❌ Erro ao processar imagem.</span>';
+        }
+    },
+
+    _removerFotoTemp(i) {
+        this._fotosTemp.splice(i, 1);
+        this._renderFotosTemp();
     },
 
     _renderVariacoesTemp() {
@@ -16108,7 +16178,6 @@ const loja = {
         const preco     = parseFloat(document.getElementById('prod-preco')?.value);
         const categoria = document.getElementById('prod-categoria')?.value;
         const descricao = document.getElementById('prod-descricao')?.value.trim();
-        const foto      = document.getElementById('prod-foto')?.value.trim();
         const link      = document.getElementById('prod-link')?.value.trim();
         const ativo     = document.getElementById('prod-ativo')?.checked ?? true;
         const destaque  = document.getElementById('prod-destaque')?.checked ?? false;
@@ -16117,9 +16186,12 @@ const loja = {
         if (isNaN(preco)||preco<=0) { alert('Preço inválido.'); return; }
 
         const variacoes = this._variacoesTemp.filter(v => v.nome.trim() !== '');
+        const fotos = this._fotosTemp.filter(Boolean);
         const dados = {
             nome, preco, categoria, descricao: descricao||'',
-            foto: foto||'', linkPagamento: link||'',
+            fotos,                        // array de imagens
+            foto: fotos[0] || '',         // manter compatibilidade
+            linkPagamento: link||'',
             variacoes, ativo, destaque, ordem: 0,
             atualizadoEm: new Date().getTime()
         };

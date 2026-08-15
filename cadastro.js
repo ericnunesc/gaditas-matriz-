@@ -119,10 +119,10 @@ const iniciarCadastroApp = () => {
 
             // Push para o admin avisando da nova matrícula (via API server-side)
             try {
-                await fetch('/api/matricula-nova', {
+                await fetch('/api/push-comunicado', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nome })
+                    body: JSON.stringify({ novaMatricula: true, nome })
                 });
             } catch(_) { /* não bloqueia o cadastro */ }
 

@@ -50,13 +50,12 @@
 <h1>🔍 Diagnóstico de Cobrança</h1>
 <p class="sub">Simula o disparo de amanhã sem enviar nada nem bloquear ninguém.</p>
 
-<div id="login-aviso">
-    <i class="fas fa-spinner spinner" style="font-size:1.5rem; color:#3b82f6; display:block; margin-bottom:12px;"></i>
-    Verificando autenticação...
-</div>
-
-<div id="conteudo" style="display:none;">
+<div id="conteudo">
     <div class="card">
+        <div style="font-size:0.7rem; color:#94a3b8; font-weight:700; margin-bottom:8px;">🔐 SENHA DO ADMIN</div>
+        <input type="password" id="inputSenha" placeholder="Digite a senha do admin"
+            style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; border-radius:8px; color:white; font-size:0.9rem; margin-bottom:12px; outline:none;"
+            onkeydown="if(event.key==='Enter') rodarDiagnostico()"/>
         <button class="btn btn-run" id="btnRodar" onclick="rodarDiagnostico()">
             🔍 SIMULAR DISPARO DE AMANHÃ
         </button>
@@ -89,34 +88,14 @@
     </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script>
-firebase.initializeApp({
-    apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
-    authDomain: "gaditasmatriz.firebaseapp.com",
-    projectId: "gaditasmatriz",
-    storageBucket: "gaditasmatriz.firebasestorage.app",
-    messagingSenderId: "166834416988",
-    appId: "1:166834416988:web:2921c95c87c42019282599"
-});
-const auth = firebase.auth();
 let _relatorio = [];
 let _filtroAtivo = 'todos';
 
-auth.onAuthStateChanged(async user => {
-    const aviso = document.getElementById('login-aviso');
-    const conteudo = document.getElementById('conteudo');
-    if (!user) {
-        aviso.innerHTML = `<p style="color:#f87171;">Você precisa estar logado como admin.<br><a href="index.html" style="color:#3b82f6;">Fazer login</a></p>`;
-        return;
-    }
-    aviso.style.display = 'none';
-    conteudo.style.display = 'block';
-});
-
 async function rodarDiagnostico() {
+    const senha = document.getElementById('inputSenha').value.trim();
+    if (!senha) return alert('Digite a senha do admin.');
+
     const btn = document.getElementById('btnRodar');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner" style="animation:spin 1s linear infinite;display:inline-block;margin-right:8px;"></i>Consultando Asaas... pode demorar alguns minutos';
@@ -124,11 +103,8 @@ async function rodarDiagnostico() {
     document.getElementById('resultado').style.display = 'none';
 
     try {
-        const user = auth.currentUser;
-        const token = await user.getIdToken();
-
         const resp = await fetch('/api/notificacoes-cobranca?dry=true', {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': `Bearer ${senha}` }
         });
         const dados = await resp.json();
 

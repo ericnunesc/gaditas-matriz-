@@ -24,16 +24,15 @@ export default async function handler(req, res) {
     if (authHeader === `Bearer ${process.env.CRON_SECRET}`) {
         // autenticação normal do cron — ok
     } else if (isDry && authHeader?.startsWith('Bearer ')) {
-        // modo diagnóstico: valida token Firebase do admin logado
+        // modo diagnóstico: valida senha do admin contra o Firestore
         try {
-            const idToken = authHeader.split('Bearer ')[1];
-            const decoded = await admin.auth().verifyIdToken(idToken);
-            if (!decoded.uid) throw new Error('UID inválido');
-            // verifica se é admin no Firestore
-            const adminDoc = await db.collection('admins').doc(decoded.uid).get();
-            if (!adminDoc.exists) return res.status(403).json({ error: 'Usuário não é admin' });
+            const senha = authHeader.split('Bearer ')[1];
+            const cfgDoc = await db.collection('configuracoes').doc('admin_config').get();
+            if (!cfgDoc.exists) return res.status(403).json({ error: 'Config admin não encontrada' });
+            const adminPass = cfgDoc.data().pass;
+            if (!adminPass || senha !== adminPass) return res.status(403).json({ error: 'Senha incorreta' });
         } catch(e) {
-            return res.status(401).json({ error: 'Token inválido: ' + e.message });
+            return res.status(401).json({ error: 'Erro ao validar: ' + e.message });
         }
     } else {
         return res.status(401).json({ error: 'Não autorizado' });

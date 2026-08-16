@@ -23,6 +23,9 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: 'Não autorizado' });
     }
 
+    // ?dry=true → simula o cron sem enviar mensagens nem bloquear ninguém
+    const isDry = req.query.dry === 'true';
+
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const diaHoje = hoje.getDate();
@@ -33,24 +36,25 @@ export default async function handler(req, res) {
 
     let enviadas = 0;
     let erros = 0;
+    const relatorio = []; // usado só no modo dry
 
-    // ── LOCK ANTI-DUPLICATA ────────────────────────────────────
-    // Garante que o cron só executa UMA vez por dia (Vercel pode disparar 2x)
-    const lockId = `cobranca_${hoje.toISOString().split('T')[0]}`;
-    const lockRef = db.collection('cron_locks').doc(lockId);
-    try {
-        await db.runTransaction(async (tx) => {
-            const lockDoc = await tx.get(lockRef);
-            if (lockDoc.exists) throw new Error('JA_EXECUTOU');
-            tx.set(lockRef, { executadoEm: new Date().toISOString() });
-        });
-    } catch(eLock) {
-        if (eLock.message === 'JA_EXECUTOU') {
-            console.log(`🔒 Cron cobrança já executou hoje (${lockId}). Abortando duplicata.`);
-            return res.status(200).json({ ok: true, msg: 'Já executou hoje', duplicata: true });
+    // ── LOCK ANTI-DUPLICATA (pula no modo dry) ─────────────────
+    if (!isDry) {
+        const lockId = `cobranca_${hoje.toISOString().split('T')[0]}`;
+        const lockRef = db.collection('cron_locks').doc(lockId);
+        try {
+            await db.runTransaction(async (tx) => {
+                const lockDoc = await tx.get(lockRef);
+                if (lockDoc.exists) throw new Error('JA_EXECUTOU');
+                tx.set(lockRef, { executadoEm: new Date().toISOString() });
+            });
+        } catch(eLock) {
+            if (eLock.message === 'JA_EXECUTOU') {
+                console.log(`🔒 Cron cobrança já executou hoje. Abortando duplicata.`);
+                return res.status(200).json({ ok: true, msg: 'Já executou hoje', duplicata: true });
+            }
+            console.warn('⚠️ Falha no lock, continuando:', eLock.message);
         }
-        // Erro de transação — continua mesmo assim para não perder notificações
-        console.warn('⚠️ Falha no lock, continuando:', eLock.message);
     }
 
     try {
@@ -69,27 +73,30 @@ export default async function handler(req, res) {
             // ── 1. NOTIFICAÇÃO DE ANIVERSÁRIO ──────────────────
             try {
                 if (aluno.nascimento) {
-                    const partes = aluno.nascimento.split('-'); // YYYY-MM-DD
+                    const partes = aluno.nascimento.split('-');
                     const diaNasc = parseInt(partes[2]);
                     const mesNasc = parseInt(partes[1]);
 
                     if (diaNasc === diaHoje && mesNasc === mesHoje) {
-                        await admin.messaging().send({
-                            token,
-                            notification: {
-                                title: '🎂 Feliz Aniversário!',
-                                body: `Parabéns, ${nome}! A família Gaditas deseja a você um dia incrível. OSS! 🦁🥋`
-                            },
-                            webpush: {
+                        if (!isDry) {
+                            await admin.messaging().send({
+                                token,
                                 notification: {
-                                    icon: 'https://gaditas-matriz.vercel.app/gaditasstore.png',
-                                    badge: 'https://gaditas-matriz.vercel.app/gaditasstore.png',
-                                    vibrate: [200, 100, 200, 100, 200]
+                                    title: '🎂 Feliz Aniversário!',
+                                    body: `Parabéns, ${nome}! A família Gaditas deseja a você um dia incrível. OSS! 🦁🥋`
+                                },
+                                webpush: {
+                                    notification: {
+                                        icon: 'https://gaditas-matriz.vercel.app/gaditasstore.png',
+                                        badge: 'https://gaditas-matriz.vercel.app/gaditasstore.png',
+                                        vibrate: [200, 100, 200, 100, 200]
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                         enviadas++;
-                        console.log(`🎂 Aniversário enviado para ${nome}`);
+                        if (isDry) relatorio.push({ nome, email, acao: '🎂 Aniversário — push seria enviado' });
+                        console.log(`🎂 Aniversário ${isDry?'(dry)':''} para ${nome}`);
                     }
                 }
             } catch(e) {
@@ -98,9 +105,8 @@ export default async function handler(req, res) {
             }
 
             // ── 2. NOTIFICAÇÃO DE INADIMPLÊNCIA ────────────────
-            // Dependentes não têm fatura própria — a cobrança é do responsável
             if (aluno.responsavelId) {
-                console.log(`⏭️ Dependente ignorado: ${nome}`);
+                if (isDry) relatorio.push({ nome, email: email||'—', acao: '⏭️ Dependente — ignorado' });
                 continue;
             }
 
@@ -113,63 +119,71 @@ export default async function handler(req, res) {
                     'User-Agent': 'GaditasMatrizApp'
                 };
 
-                // Busca faturas marcadas como OVERDUE no Asaas
                 const respOver = await fetch(
                     `${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=50`,
                     { headers }
                 );
                 const dadosOver = await respOver.json();
 
-                if (!dadosOver.data || dadosOver.data.length === 0) continue;
+                if (!dadosOver.data || dadosOver.data.length === 0) {
+                    if (isDry) relatorio.push({ nome, email, acao: '✅ Sem faturas OVERDUE no Asaas' });
+                    continue;
+                }
 
                 const limite60 = new Date(hoje);
                 limite60.setDate(limite60.getDate() - 60);
 
                 let maiorAtraso = 0;
+                const faturasDry = [];
+
                 for (const fatura of dadosOver.data) {
                     const vencimento = new Date(fatura.dueDate + 'T00:00:00');
                     vencimento.setHours(0, 0, 0, 0);
 
-                    // Ignora faturas muito antigas
                     if (vencimento < limite60) {
-                        console.log(`⏭️ Fatura antiga ignorada [${nome}]: ${fatura.dueDate}`);
+                        faturasDry.push(`  ⏭️ ${fatura.dueDate} — antiga (>60 dias), ignorada`);
                         continue;
                     }
 
-                    // Busca o status ATUAL da fatura diretamente no Asaas pelo ID
-                    // Evita falsos positivos: Asaas pode demorar a tirar do OVERDUE
-                    // mesmo após pagamento por cartão (CONFIRMED) ou boleto (RECEIVED)
                     const respFatura = await fetch(`${asaasUrl}/payments/${fatura.id}`, { headers });
                     const faturaAtual = await respFatura.json();
                     const statusAtual = faturaAtual.status;
 
                     if (['RECEIVED', 'CONFIRMED', 'REFUNDED',
                          'CHARGEBACK_DISPUTE', 'CHARGEBACK_REQUESTED'].includes(statusAtual)) {
-                        console.log(`✅ Fatura ${fatura.id} status=${statusAtual} — ignorada [${nome}]`);
+                        faturasDry.push(`  ✅ ${fatura.dueDate} — status=${statusAtual}, ignorada`);
                         continue;
                     }
 
                     const dias = Math.floor((hoje - vencimento) / (1000 * 60 * 60 * 24));
                     if (dias > 0 && dias > maiorAtraso) maiorAtraso = dias;
+                    faturasDry.push(`  ⚠️ ${fatura.dueDate} — status=${statusAtual}, ${dias} dias de atraso`);
                 }
 
                 if (maiorAtraso === 0) {
-                    console.log(`✅ Nenhuma fatura real em atraso para ${nome} — pulando`);
+                    if (isDry) relatorio.push({ nome, email, acao: '✅ Sem atraso real após filtros', faturas: faturasDry });
                     continue;
                 }
 
-                // Bloqueia acesso real no Firestore a partir do dia 10
-                if (maiorAtraso >= 10 && aluno.status !== 'trancado') {
-                    try {
-                        await db.collection('alunos').doc(doc.id).update({ status: 'trancado' });
-                        console.log(`🔒 Aluno ${nome} bloqueado no Firestore (${maiorAtraso} dias de atraso)`);
-                    } catch(eBlock) {
-                        console.error(`Erro ao bloquear ${nome}:`, eBlock.message);
+                // Bloqueio
+                let acaoBloqueio = '';
+                if (maiorAtraso >= 10) {
+                    if (aluno.status === 'trancado') {
+                        acaoBloqueio = `🔒 Já trancado no Firestore`;
+                    } else {
+                        acaoBloqueio = `🔴 SERIA BLOQUEADO (${maiorAtraso} dias)`;
+                        if (!isDry) {
+                            try {
+                                await db.collection('alunos').doc(doc.id).update({ status: 'trancado' });
+                            } catch(eBlock) {
+                                console.error(`Erro ao bloquear ${nome}:`, eBlock.message);
+                            }
+                        }
                     }
                 }
 
+                // Push
                 let mensagem = null;
-
                 if (maiorAtraso === 1) {
                     mensagem = {
                         title: '⚠️ Fatura em atraso',
@@ -183,24 +197,53 @@ export default async function handler(req, res) {
                 }
 
                 if (mensagem) {
-                    await admin.messaging().send({
-                        token,
-                        notification: mensagem,
-                        webpush: {
-                            notification: {
-                                icon: 'https://gaditas-matriz.vercel.app/gaditasstore.png',
-                                badge: 'https://gaditas-matriz.vercel.app/gaditasstore.png',
-                                vibrate: [200, 100, 200]
+                    if (!isDry) {
+                        await admin.messaging().send({
+                            token,
+                            notification: mensagem,
+                            webpush: {
+                                notification: {
+                                    icon: 'https://gaditas-matriz.vercel.app/gaditasstore.png',
+                                    badge: 'https://gaditas-matriz.vercel.app/gaditasstore.png',
+                                    vibrate: [200, 100, 200]
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                     enviadas++;
-                    console.log(`✅ Notificação enviada para ${nome} (${maiorAtraso} dias)`);
+                    if (isDry) relatorio.push({
+                        nome, email,
+                        maiorAtraso,
+                        acao: `📲 PUSH SERIA ENVIADO — "${mensagem.title}"`,
+                        bloqueio: acaoBloqueio || 'sem bloqueio',
+                        faturas: faturasDry
+                    });
+                } else {
+                    if (isDry) relatorio.push({
+                        nome, email,
+                        maiorAtraso,
+                        acao: `🔕 Atraso de ${maiorAtraso} dias — dia sem push (${maiorAtraso===1?'dia 1':maiorAtraso%2!==0?'dia ímpar':''})`,
+                        bloqueio: acaoBloqueio || 'sem bloqueio',
+                        faturas: faturasDry
+                    });
                 }
+
             } catch(e) {
                 console.error(`Erro inadimplência ${email}:`, e.message);
+                if (isDry) relatorio.push({ nome, email, acao: `❌ ERRO: ${e.message}` });
                 erros++;
             }
+        }
+
+        if (isDry) {
+            return res.status(200).json({
+                dry: true,
+                data: hoje.toLocaleDateString('pt-BR'),
+                totalAlunos: alunosSnap.size,
+                pushsQueSeriam: enviadas,
+                erros,
+                relatorio
+            });
         }
 
         return res.status(200).json({

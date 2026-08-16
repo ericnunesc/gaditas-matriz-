@@ -23,156 +23,255 @@
         .aluno-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; padding: 12px; margin-bottom: 8px; }
         .aluno-nome { font-weight: 800; font-size: 0.85rem; margin-bottom: 2px; }
         .aluno-email { font-size: 0.65rem; color: #64748b; margin-bottom: 8px; }
-        .acao { font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; display: inline-block; margin-bottom: 8px; }
-        .acao-push    { background: #1e3a8a44; color: #60a5fa; border: 1px solid #3b82f644; }
-        .acao-block   { background: #3b000e44; color: #f87171; border: 1px solid #f8717144; }
-        .acao-ok      { background: #05280e44; color: #4ade80; border: 1px solid #4ade8044; }
-        .acao-dep     { background: #1c1c1c; color: #64748b; border: 1px solid #33415544; }
-        .acao-err     { background: #2d160044; color: #fbbf24; border: 1px solid #fbbf2444; }
+        .acao { font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; display: inline-block; margin-bottom: 6px; }
+        .acao-push  { background: #1e3a8a44; color: #60a5fa; border: 1px solid #3b82f644; }
+        .acao-block { background: #3b000e44; color: #f87171; border: 1px solid #f8717144; }
+        .acao-ok    { background: #05280e44; color: #4ade80; border: 1px solid #4ade8044; }
+        .acao-dep   { background: #1c1c1c; color: #64748b; border: 1px solid #33415544; }
+        .acao-mudo  { background: #1c1400; color: #fbbf24; border: 1px solid #fbbf2444; }
         .fatura-linha { font-size: 0.68rem; color: #94a3b8; padding: 3px 0; border-bottom: 1px solid #1e293b; }
         .fatura-linha:last-child { border-bottom: none; }
         .dias-badge { font-size: 0.6rem; font-weight: 800; background: #7f1d1d; color: #fca5a5; padding: 2px 7px; border-radius: 5px; margin-left: 6px; }
-        .bloqueio-badge { font-size: 0.65rem; font-weight: 800; color: #f87171; display: block; margin-top: 4px; }
-        #login-aviso { text-align: center; padding: 40px 20px; color: #64748b; }
-        .spinner { display: inline-block; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .block-badge { font-size: 0.65rem; font-weight: 800; color: #f87171; margin-top: 4px; display:block; }
         .filtro { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
         .filtro button { padding: 6px 14px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #94a3b8; font-size: 0.7rem; font-weight: 700; cursor: pointer; }
         .filtro button.ativo { background: #1e3a8a; border-color: #3b82f6; color: #60a5fa; }
+        #progresso { font-size: 0.72rem; color: #64748b; text-align: center; margin-top: 8px; min-height: 18px; }
+        input[type=password], input[type=text] { width:100%; padding:12px; background:#0f172a; border:1px solid #334155; border-radius:8px; color:white; font-size:0.9rem; margin-bottom:12px; outline:none; }
+        input:focus { border-color: #3b82f6; }
     </style>
 </head>
 <body>
 
-<div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+<div style="margin-bottom:8px;">
     <a href="index.html" style="color:#64748b; text-decoration:none; font-size:0.8rem;">← Voltar</a>
 </div>
-
 <h1>🔍 Diagnóstico de Cobrança</h1>
 <p class="sub">Simula o disparo de amanhã sem enviar nada nem bloquear ninguém.</p>
 
-<div id="conteudo">
-    <div class="card">
-        <div style="font-size:0.7rem; color:#94a3b8; font-weight:700; margin-bottom:8px;">🔐 SENHA DO ADMIN</div>
-        <input type="password" id="inputSenha" placeholder="Digite a senha do admin"
-            style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; border-radius:8px; color:white; font-size:0.9rem; margin-bottom:12px; outline:none;"
-            onkeydown="if(event.key==='Enter') rodarDiagnostico()"/>
-        <button class="btn btn-run" id="btnRodar" onclick="rodarDiagnostico()">
-            🔍 SIMULAR DISPARO DE AMANHÃ
-        </button>
-    </div>
-
-    <div id="resultado" style="display:none;">
-        <div class="resumo">
-            <div class="stat">
-                <div class="stat-val" id="stat-push" style="color:#60a5fa;">—</div>
-                <div class="stat-lbl">receberiam push</div>
-            </div>
-            <div class="stat">
-                <div class="stat-val" id="stat-block" style="color:#f87171;">—</div>
-                <div class="stat-lbl">seriam bloqueados</div>
-            </div>
-            <div class="stat">
-                <div class="stat-val" id="stat-ok" style="color:#4ade80;">—</div>
-                <div class="stat-lbl">sem ação</div>
-            </div>
-        </div>
-
-        <div class="filtro">
-            <button class="ativo" onclick="filtrar('todos', this)">Todos</button>
-            <button onclick="filtrar('push', this)">📲 Com push</button>
-            <button onclick="filtrar('block', this)">🔴 Bloqueados</button>
-            <button onclick="filtrar('ok', this)">✅ Em dia</button>
-        </div>
-
-        <div id="lista-alunos"></div>
-    </div>
+<div class="card">
+    <div style="font-size:0.7rem; color:#94a3b8; font-weight:700; margin-bottom:8px;">🔐 SENHA DO ADMIN</div>
+    <input type="password" id="inputSenha" placeholder="Senha do admin"
+        onkeydown="if(event.key==='Enter') rodar()"/>
+    <button class="btn btn-run" id="btnRodar" onclick="rodar()">
+        🔍 SIMULAR DISPARO DE AMANHÃ
+    </button>
+    <div id="progresso"></div>
 </div>
 
-<script>
-let _relatorio = [];
-let _filtroAtivo = 'todos';
+<div id="resultado" style="display:none;">
+    <div class="resumo">
+        <div class="stat">
+            <div class="stat-val" id="stat-push" style="color:#60a5fa;">0</div>
+            <div class="stat-lbl">receberiam push</div>
+        </div>
+        <div class="stat">
+            <div class="stat-val" id="stat-block" style="color:#f87171;">0</div>
+            <div class="stat-lbl">seriam bloqueados</div>
+        </div>
+        <div class="stat">
+            <div class="stat-val" id="stat-ok" style="color:#4ade80;">0</div>
+            <div class="stat-lbl">sem ação</div>
+        </div>
+    </div>
+    <div class="filtro">
+        <button class="ativo" onclick="filtrar('todos',this)">Todos</button>
+        <button onclick="filtrar('push',this)">📲 Push</button>
+        <button onclick="filtrar('block',this)">🔴 Bloqueados</button>
+        <button onclick="filtrar('ok',this)">✅ Em dia</button>
+        <button onclick="filtrar('dep',this)">⏭️ Dependentes</button>
+    </div>
+    <div id="lista"></div>
+</div>
 
-async function rodarDiagnostico() {
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+    apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+    authDomain: "gaditasmatriz.firebaseapp.com",
+    projectId: "gaditasmatriz",
+    storageBucket: "gaditasmatriz.firebasestorage.app",
+    messagingSenderId: "166834416988",
+    appId: "1:166834416988:web:2921c95c87c42019282599"
+});
+const db   = firebase.firestore();
+const auth = firebase.auth();
+auth.signInAnonymously().catch(e => console.warn('anon:', e.message));
+
+let _relatorio = [];
+
+function prog(txt) { document.getElementById('progresso').textContent = txt; }
+
+async function rodar() {
     const senha = document.getElementById('inputSenha').value.trim();
     if (!senha) return alert('Digite a senha do admin.');
 
+    // Valida senha contra Firestore
+    prog('Verificando senha...');
     const btn = document.getElementById('btnRodar');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner" style="animation:spin 1s linear infinite;display:inline-block;margin-right:8px;"></i>Consultando Asaas... pode demorar alguns minutos';
-
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
     document.getElementById('resultado').style.display = 'none';
+    _relatorio = [];
 
     try {
-        const resp = await fetch('/api/notificacoes-cobranca?dry=true', {
-            headers: { 'Authorization': `Bearer ${senha}` }
-        });
-        const dados = await resp.json();
+        const cfgDoc = await db.collection('configuracoes').doc('admin_config').get();
+        if (!cfgDoc.exists || cfgDoc.data().pass !== senha) {
+            btn.disabled = false; btn.innerHTML = '🔍 SIMULAR DISPARO DE AMANHÃ';
+            prog('');
+            return alert('Senha incorreta.');
+        }
 
-        if (!resp.ok) throw new Error(dados.error || 'Erro desconhecido');
+        // Carrega alunos com token FCM
+        prog('Carregando alunos...');
+        const snap = await db.collection('alunos').where('fcmToken', '!=', null).get();
+        const docs = snap.docs;
+        const total = docs.length;
 
-        _relatorio = dados.relatorio || [];
-        renderizarResultado(dados);
+        const hoje = new Date(); hoje.setHours(0,0,0,0);
+        const diaHoje = hoje.getDate(), mesHoje = hoje.getMonth()+1;
+        const limite60 = new Date(hoje); limite60.setDate(limite60.getDate()-60);
 
+        // Processa em lotes de 5 para não travar o browser
+        const LOTE = 5;
+        for (let i = 0; i < docs.length; i += LOTE) {
+            const lote = docs.slice(i, i+LOTE);
+            await Promise.all(lote.map(doc => processarAluno(doc, hoje, diaHoje, mesHoje, limite60)));
+            prog(`Processando... ${Math.min(i+LOTE, total)} / ${total} alunos`);
+        }
+
+        renderResultado();
     } catch(e) {
         alert('Erro: ' + e.message);
     } finally {
         btn.disabled = false;
         btn.innerHTML = '🔄 SIMULAR NOVAMENTE';
+        prog('');
     }
 }
 
-function renderizarResultado(dados) {
-    const pushCount  = _relatorio.filter(a => a.acao?.includes('PUSH')).length;
-    const blockCount = _relatorio.filter(a => a.bloqueio?.includes('SERIA BLOQUEADO')).length;
-    const okCount    = _relatorio.filter(a => a.acao?.includes('✅') || a.acao?.includes('⏭️')).length;
+async function processarAluno(doc, hoje, diaHoje, mesHoje, limite60) {
+    const aluno = doc.data();
+    const nome  = (aluno.nome || 'Atleta').split(' ')[0];
+    const email = aluno.email || '';
 
+    // Dependente
+    if (aluno.responsavelId) {
+        _relatorio.push({ nome, email, tipo:'dep', acao:'⏭️ Dependente — ignorado' });
+        return;
+    }
+
+    // Sem email
+    if (!email) {
+        _relatorio.push({ nome, email:'sem email', tipo:'ok', acao:'✅ Sem email — ignorado' });
+        return;
+    }
+
+    try {
+        // Busca OVERDUE
+        const respOver = await fetch(`/api/asaas?endpoint=payments&customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=50`);
+        const dadosOver = await respOver.json();
+
+        if (!dadosOver.data || dadosOver.data.length === 0) {
+            _relatorio.push({ nome, email, tipo:'ok', acao:'✅ Sem faturas OVERDUE' });
+            return;
+        }
+
+        let maiorAtraso = 0;
+        const faturas = [];
+
+        for (const fatura of dadosOver.data) {
+            const venc = new Date(fatura.dueDate + 'T00:00:00'); venc.setHours(0,0,0,0);
+            if (venc < limite60) { faturas.push(`⏭️ ${fatura.dueDate} — antiga (>60d), ignorada`); continue; }
+
+            // Busca status real da fatura
+            const rFat = await fetch(`/api/asaas?endpoint=payments/${fatura.id}`);
+            const fat  = await rFat.json();
+            const st   = fat.status;
+
+            if (['RECEIVED','CONFIRMED','REFUNDED','CHARGEBACK_DISPUTE','CHARGEBACK_REQUESTED'].includes(st)) {
+                faturas.push(`✅ ${fatura.dueDate} — ${st} (paga/processando)`);
+                continue;
+            }
+
+            const dias = Math.floor((hoje - venc) / 86400000);
+            if (dias > 0 && dias > maiorAtraso) maiorAtraso = dias;
+            faturas.push(`⚠️ ${fatura.dueDate} — ${st}, ${dias}d de atraso`);
+        }
+
+        if (maiorAtraso === 0) {
+            _relatorio.push({ nome, email, tipo:'ok', acao:'✅ Sem atraso real após filtros', faturas });
+            return;
+        }
+
+        const seriaBlock = maiorAtraso >= 10 && aluno.status !== 'trancado';
+        const jaBlock    = maiorAtraso >= 10 && aluno.status === 'trancado';
+
+        let acao, tipo;
+        if (maiorAtraso === 1) {
+            acao = `📲 PUSH — "⚠️ Fatura em atraso" (${maiorAtraso}d)`;
+            tipo = 'push';
+        } else if (maiorAtraso >= 4 && maiorAtraso % 2 === 0) {
+            acao = `📲 PUSH — "⚠️ Regularize sua fatura" (${maiorAtraso}d)`;
+            tipo = 'push';
+        } else {
+            acao = `🔕 Dia ${maiorAtraso} — sem push (dia sem disparo)`;
+            tipo = 'mudo';
+        }
+
+        _relatorio.push({
+            nome, email, tipo,
+            maiorAtraso, acao,
+            seriaBlock, jaBlock,
+            faturas
+        });
+
+    } catch(e) {
+        _relatorio.push({ nome, email, tipo:'ok', acao:`❌ Erro: ${e.message}` });
+    }
+}
+
+function renderResultado() {
+    const pushCount  = _relatorio.filter(a => a.tipo === 'push').length;
+    const blockCount = _relatorio.filter(a => a.seriaBlock).length;
+    const okCount    = _relatorio.filter(a => a.tipo === 'ok').length;
     document.getElementById('stat-push').textContent  = pushCount;
     document.getElementById('stat-block').textContent = blockCount;
     document.getElementById('stat-ok').textContent    = okCount;
     document.getElementById('resultado').style.display = 'block';
-
     renderLista(_relatorio);
 }
 
 function filtrar(tipo, btn) {
-    _filtroAtivo = tipo;
     document.querySelectorAll('.filtro button').forEach(b => b.classList.remove('ativo'));
     btn.classList.add('ativo');
-    const lista = tipo === 'todos'  ? _relatorio :
-                  tipo === 'push'   ? _relatorio.filter(a => a.acao?.includes('PUSH')) :
-                  tipo === 'block'  ? _relatorio.filter(a => a.bloqueio?.includes('SERIA BLOQUEADO')) :
-                  _relatorio.filter(a => a.acao?.includes('✅') || a.acao?.includes('⏭️'));
+    const lista = tipo === 'todos' ? _relatorio :
+                  tipo === 'push'  ? _relatorio.filter(a => a.tipo === 'push') :
+                  tipo === 'block' ? _relatorio.filter(a => a.seriaBlock) :
+                  tipo === 'dep'   ? _relatorio.filter(a => a.tipo === 'dep') :
+                  _relatorio.filter(a => a.tipo === 'ok');
     renderLista(lista);
 }
 
 function renderLista(lista) {
-    const cont = document.getElementById('lista-alunos');
-    if (!lista.length) { cont.innerHTML = '<p style="color:#64748b;text-align:center;padding:20px;">Nenhum resultado neste filtro.</p>'; return; }
+    const cont = document.getElementById('lista');
+    if (!lista.length) { cont.innerHTML = '<p style="color:#64748b;text-align:center;padding:20px;">Nenhum resultado.</p>'; return; }
 
     cont.innerHTML = lista.map(a => {
-        const isPush  = a.acao?.includes('PUSH');
-        const isBlock = a.bloqueio?.includes('SERIA BLOQUEADO');
-        const isDep   = a.acao?.includes('Dependente');
-        const isErr   = a.acao?.includes('ERRO');
-
-        const acaoClass = isPush ? 'acao-push' : isBlock ? 'acao-block' : isDep ? 'acao-dep' : isErr ? 'acao-err' : 'acao-ok';
-
-        const faturasHtml = (a.faturas || []).map(f =>
-            `<div class="fatura-linha">${f}</div>`
-        ).join('');
-
-        const bloqueioHtml = a.bloqueio && a.bloqueio !== 'sem bloqueio'
-            ? `<div class="bloqueio-badge">🔴 ${a.bloqueio}</div>` : '';
-
-        const diasHtml = a.maiorAtraso
-            ? `<span class="dias-badge">${a.maiorAtraso} dias</span>` : '';
-
+        const cls = a.tipo === 'push' ? 'acao-push' : a.tipo === 'dep' ? 'acao-dep' :
+                    a.tipo === 'mudo' ? 'acao-mudo' : 'acao-ok';
+        const diasBadge = a.maiorAtraso ? `<span class="dias-badge">${a.maiorAtraso}d</span>` : '';
+        const blockBadge = a.seriaBlock ? `<span class="block-badge">🔴 SERIA BLOQUEADO agora</span>` :
+                           a.jaBlock    ? `<span class="block-badge" style="color:#f59e0b;">🔒 Já está trancado</span>` : '';
+        const faturasHtml = (a.faturas||[]).map(f => `<div class="fatura-linha">${f}</div>`).join('');
         return `
         <div class="aluno-card">
-            <div class="aluno-nome">${a.nome} ${diasHtml}</div>
-            <div class="aluno-email">${a.email || '—'}</div>
-            <span class="acao ${acaoClass}">${a.acao}</span>
-            ${bloqueioHtml}
+            <div class="aluno-nome">${a.nome} ${diasBadge}</div>
+            <div class="aluno-email">${a.email}</div>
+            <span class="acao ${cls}">${a.acao}</span>
+            ${blockBadge}
             ${faturasHtml ? `<div style="margin-top:8px;">${faturasHtml}</div>` : ''}
         </div>`;
     }).join('');

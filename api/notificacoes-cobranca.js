@@ -98,6 +98,12 @@ export default async function handler(req, res) {
             }
 
             // ── 2. NOTIFICAÇÃO DE INADIMPLÊNCIA ────────────────
+            // Dependentes não têm fatura própria — a cobrança é do responsável
+            if (aluno.responsavelId) {
+                console.log(`⏭️ Dependente ignorado: ${nome}`);
+                continue;
+            }
+
             if (!email) continue;
 
             try {
@@ -107,7 +113,7 @@ export default async function handler(req, res) {
                     'User-Agent': 'GaditasMatrizApp'
                 };
 
-                // Busca faturas OVERDUE dos últimos 60 dias
+                // Busca faturas marcadas como OVERDUE no Asaas
                 const respOver = await fetch(
                     `${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=50`,
                     { headers }
@@ -116,21 +122,6 @@ export default async function handler(req, res) {
 
                 if (!dadosOver.data || dadosOver.data.length === 0) continue;
 
-                // Busca pagamentos confirmados/recebidos dos últimos 60 dias para cruzar
-                const [respRec, respConf] = await Promise.all([
-                    fetch(`${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=RECEIVED&limit=20`, { headers }),
-                    fetch(`${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=CONFIRMED&limit=20`, { headers })
-                ]);
-                const dadosRec  = await respRec.json();
-                const dadosConf = await respConf.json();
-
-                // Datas de vencimento que já foram pagas (RECEIVED ou CONFIRMED)
-                const dueDatesPagas = new Set([
-                    ...(dadosRec.data  || []).map(p => p.dueDate),
-                    ...(dadosConf.data || []).map(p => p.dueDate)
-                ]);
-
-                // Filtra: últimos 60 dias, realmente vencida (dias > 0), e NÃO foi paga
                 const limite60 = new Date(hoje);
                 limite60.setDate(limite60.getDate() - 60);
 
@@ -139,12 +130,22 @@ export default async function handler(req, res) {
                     const vencimento = new Date(fatura.dueDate + 'T00:00:00');
                     vencimento.setHours(0, 0, 0, 0);
 
+                    // Ignora faturas muito antigas
                     if (vencimento < limite60) {
                         console.log(`⏭️ Fatura antiga ignorada [${nome}]: ${fatura.dueDate}`);
                         continue;
                     }
-                    if (dueDatesPagas.has(fatura.dueDate)) {
-                        console.log(`✅ Fatura paga (RECEIVED/CONFIRMED) ignorada [${nome}]: ${fatura.dueDate}`);
+
+                    // Busca o status ATUAL da fatura diretamente no Asaas pelo ID
+                    // Evita falsos positivos: Asaas pode demorar a tirar do OVERDUE
+                    // mesmo após pagamento por cartão (CONFIRMED) ou boleto (RECEIVED)
+                    const respFatura = await fetch(`${asaasUrl}/payments/${fatura.id}`, { headers });
+                    const faturaAtual = await respFatura.json();
+                    const statusAtual = faturaAtual.status;
+
+                    if (['RECEIVED', 'CONFIRMED', 'REFUNDED',
+                         'CHARGEBACK_DISPUTE', 'CHARGEBACK_REQUESTED'].includes(statusAtual)) {
+                        console.log(`✅ Fatura ${fatura.id} status=${statusAtual} — ignorada [${nome}]`);
                         continue;
                     }
 

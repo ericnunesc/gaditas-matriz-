@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Diagnóstico de Cobrança — Gaditas</title>
+    <link rel="icon" type="image/png" href="gaditasstore.png?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; min-height: 100vh; padding: 24px 16px 60px; }
+        h1 { font-size: 1.1rem; font-weight: 800; margin-bottom: 4px; }
+        .sub { font-size: 0.75rem; color: #64748b; margin-bottom: 24px; }
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+        .btn { width: 100%; padding: 14px; font-weight: 800; font-size: 0.9rem; border: none; border-radius: 10px; cursor: pointer; }
+        .btn-run { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; }
+        .btn-run:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+        .resumo { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 20px 0; }
+        .stat { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; text-align: center; }
+        .stat-val { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+        .stat-lbl { font-size: 0.6rem; color: #64748b; margin-top: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .aluno-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+        .aluno-nome { font-weight: 800; font-size: 0.85rem; margin-bottom: 2px; }
+        .aluno-email { font-size: 0.65rem; color: #64748b; margin-bottom: 8px; }
+        .acao { font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; display: inline-block; margin-bottom: 8px; }
+        .acao-push    { background: #1e3a8a44; color: #60a5fa; border: 1px solid #3b82f644; }
+        .acao-block   { background: #3b000e44; color: #f87171; border: 1px solid #f8717144; }
+        .acao-ok      { background: #05280e44; color: #4ade80; border: 1px solid #4ade8044; }
+        .acao-dep     { background: #1c1c1c; color: #64748b; border: 1px solid #33415544; }
+        .acao-err     { background: #2d160044; color: #fbbf24; border: 1px solid #fbbf2444; }
+        .fatura-linha { font-size: 0.68rem; color: #94a3b8; padding: 3px 0; border-bottom: 1px solid #1e293b; }
+        .fatura-linha:last-child { border-bottom: none; }
+        .dias-badge { font-size: 0.6rem; font-weight: 800; background: #7f1d1d; color: #fca5a5; padding: 2px 7px; border-radius: 5px; margin-left: 6px; }
+        .bloqueio-badge { font-size: 0.65rem; font-weight: 800; color: #f87171; display: block; margin-top: 4px; }
+        #login-aviso { text-align: center; padding: 40px 20px; color: #64748b; }
+        .spinner { display: inline-block; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .filtro { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+        .filtro button { padding: 6px 14px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #94a3b8; font-size: 0.7rem; font-weight: 700; cursor: pointer; }
+        .filtro button.ativo { background: #1e3a8a; border-color: #3b82f6; color: #60a5fa; }
+    </style>
+</head>
+<body>
+
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+    <a href="index.html" style="color:#64748b; text-decoration:none; font-size:0.8rem;">← Voltar</a>
+</div>
+
+<h1>🔍 Diagnóstico de Cobrança</h1>
+<p class="sub">Simula o disparo de amanhã sem enviar nada nem bloquear ninguém.</p>
+
+<div id="login-aviso">
+    <i class="fas fa-spinner spinner" style="font-size:1.5rem; color:#3b82f6; display:block; margin-bottom:12px;"></i>
+    Verificando autenticação...
+</div>
+
+<div id="conteudo" style="display:none;">
+    <div class="card">
+        <button class="btn btn-run" id="btnRodar" onclick="rodarDiagnostico()">
+            🔍 SIMULAR DISPARO DE AMANHÃ
+        </button>
+    </div>
+
+    <div id="resultado" style="display:none;">
+        <div class="resumo">
+            <div class="stat">
+                <div class="stat-val" id="stat-push" style="color:#60a5fa;">—</div>
+                <div class="stat-lbl">receberiam push</div>
+            </div>
+            <div class="stat">
+                <div class="stat-val" id="stat-block" style="color:#f87171;">—</div>
+                <div class="stat-lbl">seriam bloqueados</div>
+            </div>
+            <div class="stat">
+                <div class="stat-val" id="stat-ok" style="color:#4ade80;">—</div>
+                <div class="stat-lbl">sem ação</div>
+            </div>
+        </div>
+
+        <div class="filtro">
+            <button class="ativo" onclick="filtrar('todos', this)">Todos</button>
+            <button onclick="filtrar('push', this)">📲 Com push</button>
+            <button onclick="filtrar('block', this)">🔴 Bloqueados</button>
+            <button onclick="filtrar('ok', this)">✅ Em dia</button>
+        </div>
+
+        <div id="lista-alunos"></div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+    apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+    authDomain: "gaditasmatriz.firebaseapp.com",
+    projectId: "gaditasmatriz",
+    storageBucket: "gaditasmatriz.firebasestorage.app",
+    messagingSenderId: "166834416988",
+    appId: "1:166834416988:web:2921c95c87c42019282599"
+});
+const auth = firebase.auth();
+let _relatorio = [];
+let _filtroAtivo = 'todos';
+
+auth.onAuthStateChanged(async user => {
+    const aviso = document.getElementById('login-aviso');
+    const conteudo = document.getElementById('conteudo');
+    if (!user) {
+        aviso.innerHTML = `<p style="color:#f87171;">Você precisa estar logado como admin.<br><a href="index.html" style="color:#3b82f6;">Fazer login</a></p>`;
+        return;
+    }
+    aviso.style.display = 'none';
+    conteudo.style.display = 'block';
+});
+
+async function rodarDiagnostico() {
+    const btn = document.getElementById('btnRodar');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner" style="animation:spin 1s linear infinite;display:inline-block;margin-right:8px;"></i>Consultando Asaas... pode demorar alguns minutos';
+
+    document.getElementById('resultado').style.display = 'none';
+
+    try {
+        const user = auth.currentUser;
+        const token = await user.getIdToken();
+
+        const resp = await fetch('/api/notificacoes-cobranca?dry=true', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const dados = await resp.json();
+
+        if (!resp.ok) throw new Error(dados.error || 'Erro desconhecido');
+
+        _relatorio = dados.relatorio || [];
+        renderizarResultado(dados);
+
+    } catch(e) {
+        alert('Erro: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🔄 SIMULAR NOVAMENTE';
+    }
+}
+
+function renderizarResultado(dados) {
+    const pushCount  = _relatorio.filter(a => a.acao?.includes('PUSH')).length;
+    const blockCount = _relatorio.filter(a => a.bloqueio?.includes('SERIA BLOQUEADO')).length;
+    const okCount    = _relatorio.filter(a => a.acao?.includes('✅') || a.acao?.includes('⏭️')).length;
+
+    document.getElementById('stat-push').textContent  = pushCount;
+    document.getElementById('stat-block').textContent = blockCount;
+    document.getElementById('stat-ok').textContent    = okCount;
+    document.getElementById('resultado').style.display = 'block';
+
+    renderLista(_relatorio);
+}
+
+function filtrar(tipo, btn) {
+    _filtroAtivo = tipo;
+    document.querySelectorAll('.filtro button').forEach(b => b.classList.remove('ativo'));
+    btn.classList.add('ativo');
+    const lista = tipo === 'todos'  ? _relatorio :
+                  tipo === 'push'   ? _relatorio.filter(a => a.acao?.includes('PUSH')) :
+                  tipo === 'block'  ? _relatorio.filter(a => a.bloqueio?.includes('SERIA BLOQUEADO')) :
+                  _relatorio.filter(a => a.acao?.includes('✅') || a.acao?.includes('⏭️'));
+    renderLista(lista);
+}
+
+function renderLista(lista) {
+    const cont = document.getElementById('lista-alunos');
+    if (!lista.length) { cont.innerHTML = '<p style="color:#64748b;text-align:center;padding:20px;">Nenhum resultado neste filtro.</p>'; return; }
+
+    cont.innerHTML = lista.map(a => {
+        const isPush  = a.acao?.includes('PUSH');
+        const isBlock = a.bloqueio?.includes('SERIA BLOQUEADO');
+        const isDep   = a.acao?.includes('Dependente');
+        const isErr   = a.acao?.includes('ERRO');
+
+        const acaoClass = isPush ? 'acao-push' : isBlock ? 'acao-block' : isDep ? 'acao-dep' : isErr ? 'acao-err' : 'acao-ok';
+
+        const faturasHtml = (a.faturas || []).map(f =>
+            `<div class="fatura-linha">${f}</div>`
+        ).join('');
+
+        const bloqueioHtml = a.bloqueio && a.bloqueio !== 'sem bloqueio'
+            ? `<div class="bloqueio-badge">🔴 ${a.bloqueio}</div>` : '';
+
+        const diasHtml = a.maiorAtraso
+            ? `<span class="dias-badge">${a.maiorAtraso} dias</span>` : '';
+
+        return `
+        <div class="aluno-card">
+            <div class="aluno-nome">${a.nome} ${diasHtml}</div>
+            <div class="aluno-email">${a.email || '—'}</div>
+            <span class="acao ${acaoClass}">${a.acao}</span>
+            ${bloqueioHtml}
+            ${faturasHtml ? `<div style="margin-top:8px;">${faturasHtml}</div>` : ''}
+        </div>`;
+    }).join('');
+}
+</script>
+</body>
+</html>

@@ -19,12 +19,25 @@ const db = admin.firestore();
 
 export default async function handler(req, res) {
     const authHeader = req.headers.authorization;
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const isDry = req.query.dry === 'true';
+
+    if (authHeader === `Bearer ${process.env.CRON_SECRET}`) {
+        // autenticação normal do cron — ok
+    } else if (isDry && authHeader?.startsWith('Bearer ')) {
+        // modo diagnóstico: valida token Firebase do admin logado
+        try {
+            const idToken = authHeader.split('Bearer ')[1];
+            const decoded = await admin.auth().verifyIdToken(idToken);
+            if (!decoded.uid) throw new Error('UID inválido');
+            // verifica se é admin no Firestore
+            const adminDoc = await db.collection('admins').doc(decoded.uid).get();
+            if (!adminDoc.exists) return res.status(403).json({ error: 'Usuário não é admin' });
+        } catch(e) {
+            return res.status(401).json({ error: 'Token inválido: ' + e.message });
+        }
+    } else {
         return res.status(401).json({ error: 'Não autorizado' });
     }
-
-    // ?dry=true → simula o cron sem enviar mensagens nem bloquear ninguém
-    const isDry = req.query.dry === 'true';
 
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);

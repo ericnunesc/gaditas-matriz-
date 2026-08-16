@@ -4278,16 +4278,22 @@ Ele voltará a ser aluno normal.`)) return;
             
             const dadosCliente = await resCliente.json();
             if (!dadosCliente.data || dadosCliente.data.length === 0) { conteudo.innerHTML = `<p style="color:#f59e0b;">Aluno não localizado no Asaas.<br><small style="color:#64748b;">${email}</small></p>`; return; }
-            const customerId = dadosCliente.data[0].id;
-            const [resPendente, resVencida, resPago, resConf, resSubs] = await Promise.all([
-                fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=PENDING&limit=10`),
-                fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=OVERDUE&limit=10`),
-                fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=RECEIVED&limit=5`),
-                fetch(`${asaasUrl}?endpoint=payments&customer=${customerId}&status=CONFIRMED&limit=5`),
-                fetch(`${asaasUrl}?endpoint=subscriptions&customer=${customerId}&status=ACTIVE&limit=5`)
-            ]);
-            const _pend = await resPendente.json(); const _venc = await resVencida.json();
-            const _recv = await resPago.json(); const _conf = await resConf.json(); const subs = await resSubs.json();
+            // Busca faturas de TODOS os clientes com esse email (evita pegar o errado quando há duplicatas no Asaas)
+            const customerIds = dadosCliente.data.map(c => c.id);
+            const todasRespostas = await Promise.all(customerIds.flatMap(cid => [
+                fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=PENDING&limit=10`),
+                fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=OVERDUE&limit=10`),
+                fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=RECEIVED&limit=5`),
+                fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=CONFIRMED&limit=5`),
+                fetch(`${asaasUrl}?endpoint=subscriptions&customer=${cid}&status=ACTIVE&limit=5`)
+            ]));
+            const todasJson = await Promise.all(todasRespostas.map(r => r.json()));
+            // Consolida resultados de todos os clientes
+            const _pend = { data: customerIds.flatMap((_, i) => todasJson[i*5+0]?.data || []) };
+            const _venc = { data: customerIds.flatMap((_, i) => todasJson[i*5+1]?.data || []) };
+            const _recv = { data: customerIds.flatMap((_, i) => todasJson[i*5+2]?.data || []) };
+            const _conf = { data: customerIds.flatMap((_, i) => todasJson[i*5+3]?.data || []) };
+            const subs  = { data: customerIds.flatMap((_, i) => todasJson[i*5+4]?.data || []) };
             // CONFIRMED = pago mas aguardando liquidação — não é inadimplente
             const idsConfirmados = new Set((_conf.data||[]).map(p => p.id));
             // Combina PENDING + OVERDUE mas remove os que já foram confirmados

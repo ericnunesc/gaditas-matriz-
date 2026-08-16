@@ -131,14 +131,33 @@ export default async function handler(req, res) {
                     'User-Agent': 'GaditasMatrizApp'
                 };
 
-                const respOver = await fetch(
-                    `${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=50`,
-                    { headers }
-                );
+                // Busca OVERDUE e pagamentos recentes em paralelo
+                const [respOver, respRec, respConf] = await Promise.all([
+                    fetch(`${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=50`, { headers }),
+                    fetch(`${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=RECEIVED&limit=10`, { headers }),
+                    fetch(`${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=CONFIRMED&limit=10`, { headers })
+                ]);
                 const dadosOver = await respOver.json();
+                const dadosRec  = await respRec.json();
+                const dadosConf = await respConf.json();
 
                 if (!dadosOver.data || dadosOver.data.length === 0) {
                     if (isDry) relatorio.push({ nome, email, acao: '✅ Sem faturas OVERDUE no Asaas' });
+                    continue;
+                }
+
+                // Se tiver pagamento (RECEIVED ou CONFIRMED) nos últimos 40 dias → em dia
+                // Assinaturas recorrentes acumulam OVERDUEs antigas mesmo após pagamento
+                const limite40 = new Date(hoje);
+                limite40.setDate(limite40.getDate() - 40);
+                const pagamentoRecente = [...(dadosRec.data||[]), ...(dadosConf.data||[])].find(p => {
+                    const dataRef = new Date(((p.paymentDate || p.dueDate) + 'T00:00:00'));
+                    return dataRef >= limite40;
+                });
+                if (pagamentoRecente) {
+                    const refData = (pagamentoRecente.paymentDate || pagamentoRecente.dueDate);
+                    console.log(`✅ Pagamento recente (${pagamentoRecente.status} em ${refData}) — ignorando OVERDUEs de ${nome}`);
+                    if (isDry) relatorio.push({ nome, email, acao: `✅ Pagamento recente (${pagamentoRecente.status} · ${refData}) — em dia` });
                     continue;
                 }
 

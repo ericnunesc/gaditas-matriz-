@@ -170,12 +170,29 @@ async function processarAluno(doc, hoje, diaHoje, mesHoje, limite60) {
     }
 
     try {
-        // Busca OVERDUE
-        const respOver = await fetch(`/api/asaas?endpoint=payments&customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=50`);
+        // Busca OVERDUE e pagamentos recentes em paralelo
+        const [respOver, respRec, respConf] = await Promise.all([
+            fetch(`/api/asaas?endpoint=payments&customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=50`),
+            fetch(`/api/asaas?endpoint=payments&customerEmail=${encodeURIComponent(email)}&status=RECEIVED&limit=10`),
+            fetch(`/api/asaas?endpoint=payments&customerEmail=${encodeURIComponent(email)}&status=CONFIRMED&limit=10`)
+        ]);
         const dadosOver = await respOver.json();
+        const dadosRec  = await respRec.json();
+        const dadosConf = await respConf.json();
 
         if (!dadosOver.data || dadosOver.data.length === 0) {
             _relatorio.push({ nome, email, tipo:'ok', acao:'✅ Sem faturas OVERDUE' });
+            return;
+        }
+
+        // Se tiver pagamento recente (40 dias) → em dia mesmo com OVERDUEs antigos
+        const limite40 = new Date(hoje); limite40.setDate(limite40.getDate()-40);
+        const pgRecente = [...(dadosRec.data||[]), ...(dadosConf.data||[])].find(p => {
+            return new Date(((p.paymentDate||p.dueDate)+'T00:00:00')) >= limite40;
+        });
+        if (pgRecente) {
+            const ref = pgRecente.paymentDate || pgRecente.dueDate;
+            _relatorio.push({ nome, email, tipo:'ok', acao:`✅ Pagamento recente (${pgRecente.status} · ${ref}) — em dia` });
             return;
         }
 

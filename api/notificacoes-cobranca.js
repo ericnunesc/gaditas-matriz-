@@ -131,15 +131,30 @@ export default async function handler(req, res) {
                     'User-Agent': 'GaditasMatrizApp'
                 };
 
-                // Busca OVERDUE e pagamentos recentes em paralelo
-                const [respOver, respRec, respConf] = await Promise.all([
-                    fetch(`${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=50`, { headers }),
-                    fetch(`${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=RECEIVED&limit=10`, { headers }),
-                    fetch(`${asaasUrl}/payments?customerEmail=${encodeURIComponent(email)}&status=CONFIRMED&limit=10`, { headers })
-                ]);
-                const dadosOver = await respOver.json();
-                const dadosRec  = await respRec.json();
-                const dadosConf = await respConf.json();
+                // Busca o customerId no Asaas pelo email (igual ao modal financeiro)
+                const respCliente = await fetch(`${asaasUrl}/customers?email=${encodeURIComponent(email)}&limit=10`, { headers });
+                const dadosCliente = await respCliente.json();
+                if (!dadosCliente.data || dadosCliente.data.length === 0) {
+                    if (isDry) relatorio.push({ nome, email, acao: '✅ Não encontrado no Asaas' });
+                    continue;
+                }
+                const customerIds = dadosCliente.data.map(c => c.id);
+
+                // Busca faturas de todos os clientes com esse email (evita duplicatas)
+                const todasRespostas = await Promise.all(customerIds.flatMap(cid => [
+                    fetch(`${asaasUrl}/payments?customer=${cid}&status=OVERDUE&limit=50`, { headers }),
+                    fetch(`${asaasUrl}/payments?customer=${cid}&status=RECEIVED&limit=10`, { headers }),
+                    fetch(`${asaasUrl}/payments?customer=${cid}&status=CONFIRMED&limit=10`, { headers })
+                ]));
+                const todasJson = await Promise.all(todasRespostas.map(r => r.json()));
+
+                const overdues  = customerIds.flatMap((_, i) => todasJson[i*3+0]?.data || []);
+                const recebidos = customerIds.flatMap((_, i) => todasJson[i*3+1]?.data || []);
+                const confirmados = customerIds.flatMap((_, i) => todasJson[i*3+2]?.data || []);
+
+                const dadosOver = { data: overdues };
+                const dadosRec  = { data: recebidos };
+                const dadosConf = { data: confirmados };
 
                 if (!dadosOver.data || dadosOver.data.length === 0) {
                     if (isDry) relatorio.push({ nome, email, acao: '✅ Sem faturas OVERDUE no Asaas' });
@@ -150,7 +165,7 @@ export default async function handler(req, res) {
                 // Assinaturas recorrentes acumulam OVERDUEs antigas mesmo após pagamento
                 const limite40 = new Date(hoje);
                 limite40.setDate(limite40.getDate() - 40);
-                const pagamentoRecente = [...(dadosRec.data||[]), ...(dadosConf.data||[])].find(p => {
+                const pagamentoRecente = [...dadosRec.data, ...dadosConf.data].find(p => {
                     const dataRef = new Date(((p.paymentDate || p.dueDate) + 'T00:00:00'));
                     return dataRef >= limite40;
                 });

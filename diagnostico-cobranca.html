@@ -170,24 +170,34 @@ async function processarAluno(doc, hoje, diaHoje, mesHoje, limite60) {
     }
 
     try {
-        // Busca OVERDUE e pagamentos recentes em paralelo
-        const [respOver, respRec, respConf] = await Promise.all([
-            fetch(`/api/asaas?endpoint=payments&customerEmail=${encodeURIComponent(email)}&status=OVERDUE&limit=50`),
-            fetch(`/api/asaas?endpoint=payments&customerEmail=${encodeURIComponent(email)}&status=RECEIVED&limit=10`),
-            fetch(`/api/asaas?endpoint=payments&customerEmail=${encodeURIComponent(email)}&status=CONFIRMED&limit=10`)
-        ]);
-        const dadosOver = await respOver.json();
-        const dadosRec  = await respRec.json();
-        const dadosConf = await respConf.json();
+        // Busca customerId pelo email (igual ao modal financeiro do app)
+        const respCliente = await fetch(`/api/asaas?endpoint=customers&email=${encodeURIComponent(email)}&limit=10`);
+        const dadosCliente = await respCliente.json();
+        if (!dadosCliente.data || dadosCliente.data.length === 0) {
+            _relatorio.push({ nome, email, tipo:'ok', acao:'✅ Não encontrado no Asaas' });
+            return;
+        }
+        const customerIds = dadosCliente.data.map(c => c.id);
 
-        if (!dadosOver.data || dadosOver.data.length === 0) {
+        // Busca faturas de todos os clientes com esse email
+        const todasRespostas = await Promise.all(customerIds.flatMap(cid => [
+            fetch(`/api/asaas?endpoint=payments&customer=${cid}&status=OVERDUE&limit=50`),
+            fetch(`/api/asaas?endpoint=payments&customer=${cid}&status=RECEIVED&limit=10`),
+            fetch(`/api/asaas?endpoint=payments&customer=${cid}&status=CONFIRMED&limit=10`)
+        ]));
+        const todasJson = await Promise.all(todasRespostas.map(r => r.json()));
+        const overdues    = customerIds.flatMap((_, i) => todasJson[i*3+0]?.data || []);
+        const recebidos   = customerIds.flatMap((_, i) => todasJson[i*3+1]?.data || []);
+        const confirmados = customerIds.flatMap((_, i) => todasJson[i*3+2]?.data || []);
+
+        if (overdues.length === 0) {
             _relatorio.push({ nome, email, tipo:'ok', acao:'✅ Sem faturas OVERDUE' });
             return;
         }
 
         // Se tiver pagamento recente (40 dias) → em dia mesmo com OVERDUEs antigos
         const limite40 = new Date(hoje); limite40.setDate(limite40.getDate()-40);
-        const pgRecente = [...(dadosRec.data||[]), ...(dadosConf.data||[])].find(p => {
+        const pgRecente = [...recebidos, ...confirmados].find(p => {
             return new Date(((p.paymentDate||p.dueDate)+'T00:00:00')) >= limite40;
         });
         if (pgRecente) {
@@ -199,7 +209,7 @@ async function processarAluno(doc, hoje, diaHoje, mesHoje, limite60) {
         let maiorAtraso = 0;
         const faturas = [];
 
-        for (const fatura of dadosOver.data) {
+        for (const fatura of overdues) {
             const venc = new Date(fatura.dueDate + 'T00:00:00'); venc.setHours(0,0,0,0);
             if (venc < limite60) { faturas.push(`⏭️ ${fatura.dueDate} — antiga (>60d), ignorada`); continue; }
 

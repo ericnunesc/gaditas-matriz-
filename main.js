@@ -20106,7 +20106,10 @@ const cronometro = {
     },
 
     _adjCustomTempo(d) {
-        this._customTempoPending = Math.max(30, Math.min(3600, (this._customTempoPending || this._tempoSel) + d));
+        const cur = this._customTempoPending || this._tempoSel;
+        const step = cur <= 30 ? 5 : 30; // ≤30s → ajuste de 5 em 5; acima → 30 em 30
+        const dir = d > 0 ? 1 : -1;
+        this._customTempoPending = Math.max(5, Math.min(3600, cur + dir * step));
         const el = document.getElementById('cron-custom-display');
         if (el) el.textContent = this._fmt(this._customTempoPending);
     },

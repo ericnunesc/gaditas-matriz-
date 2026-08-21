@@ -587,13 +587,23 @@ const auth = {
                 const snapProf = await db.collection('professores').doc(sessao.id).get();
                 if (snapProf.exists) {
                     this.role = 'professor';
-                    this.currentUser = { id: snapProf.id, ...snapProf.data() };
+                    this.currentUser = { id: snapProf.id, colecao: 'professores', ...snapProf.data() };
+                    // Botão relatório de comissão — só se liberado pelo admin
+                    if (snapProf.data().verRelatorioComissao) {
+                        const btnDiv = document.getElementById('btn-relatorio-comissao-prof');
+                        if (btnDiv) btnDiv.innerHTML = `<button onclick="comissaoProf.abrirRelatorio()" style="width:100%;padding:10px;background:#1c1000;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;margin-bottom:10px;">💵 Meu Relatório de Comissão</button>`;
+                    }
                 } else {
                     const snapAluno = await db.collection('alunos').doc(sessao.id).get();
                     if (!snapAluno.exists) { localStorage.removeItem('gaditas_sessao'); return false; }
                     this.role = 'professor';
                     this.eAluno = true; // professor promovido — mantém funções de aluno
-                    this.currentUser = { id: snapAluno.id, ...snapAluno.data() };
+                    this.currentUser = { id: snapAluno.id, colecao: 'alunos', ...snapAluno.data() };
+                    // Botão relatório de comissão — só se liberado pelo admin
+                    if (snapAluno.data().verRelatorioComissao) {
+                        const btnDiv = document.getElementById('btn-relatorio-comissao-prof');
+                        if (btnDiv) btnDiv.innerHTML = `<button onclick="comissaoProf.abrirRelatorio()" style="width:100%;padding:10px;background:#1c1000;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;margin-bottom:10px;">💵 Meu Relatório de Comissão</button>`;
+                    }
                     if (snapAluno.data().email) {
                         try { await firebase.auth().signInWithEmailAndPassword(snapAluno.data().email, snapAluno.data().senha || ''); } catch(_) {}
                     }

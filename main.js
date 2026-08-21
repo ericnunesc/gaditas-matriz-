@@ -2780,18 +2780,19 @@ const academia = {
         const profFiltro = this.filtroProfessorAtual || 'all';
 
         // Popular select de professores com quem tem aluno vinculado
-        const selProf = document.getElementById('filtro-professor');
-        if (selProf) {
+        const profWrap = document.getElementById('filtro-professor-wrap');
+        if (profWrap) {
             const profMap = {}; // id → nome
             snap.forEach(doc => {
                 const pm = doc.data().professoresMod || {};
                 Object.values(pm).forEach(p => { if (p && p.id) profMap[p.id] = p.nome; });
             });
             const profIds = Object.keys(profMap).sort((a,b) => profMap[a].localeCompare(profMap[b]));
-            const currentVal = selProf.value;
-            selProf.innerHTML = '<option value="all">👨‍🏫 FILTRAR POR PROFESSOR</option>' +
-                profIds.map(id => `<option value="${id}"${currentVal===id?' selected':''}>${profMap[id]}</option>`).join('');
-            selProf.style.display = '';
+            const currentVal = (document.getElementById('filtro-professor') || {}).value || 'all';
+            profWrap.innerHTML = `<select id="filtro-professor" onchange="academia.filtroProfessorAtual=this.value;academia.renderAlunos();" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:15px;">
+                <option value="all">👨‍🏫 FILTRAR POR PROFESSOR</option>
+                ${profIds.map(id => `<option value="${id}"${currentVal===id?' selected':''}>${profMap[id]}</option>`).join('')}
+            </select>`;
         }
 
         // Turmas e categorias do professor

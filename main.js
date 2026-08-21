@@ -20151,7 +20151,9 @@ const cronometro = {
     },
 
     _adjIntervalo(d) {
-        this._intervaloSeg = Math.max(0, Math.min(600, this._intervaloSeg + d));
+        const step = this._intervaloSeg <= 30 ? 5 : 30; // ≤30s → 5 em 5; acima → 30 em 30
+        const dir = d > 0 ? 1 : -1;
+        this._intervaloSeg = Math.max(0, Math.min(600, this._intervaloSeg + dir * step));
         const el = document.getElementById('cron-intervalo-val'); if (el) el.textContent = this._fmt(this._intervaloSeg);
     },
 

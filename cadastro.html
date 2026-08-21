@@ -400,6 +400,12 @@
                     if (!nome || !email || !pass || !cpf || !telefone || !cep || !rua || !numero || !bairro || !cidade || !estado) {
                         return alert("Por favor, preencha todos os campos obrigatórios.");
                     }
+                    // Valida CPF (dígitos verificadores)
+                    try {
+                        (function(c){ const n=c.replace(/\D/g,''); if(n.length!==11||/^(\d)\1{10}$/.test(n))throw 1; let s=0; for(let i=0;i<9;i++)s+=+n[i]*(10-i); let r=(s*10)%11; if(r===10||r===11)r=0; if(r!==+n[9])throw 1; s=0; for(let i=0;i<10;i++)s+=+n[i]*(11-i); r=(s*10)%11; if(r===10||r===11)r=0; if(r!==+n[10])throw 1; })(cpf);
+                    } catch(_) {
+                        return alert("⚠️ CPF inválido!\n\nVerifique o CPF digitado e corrija antes de continuar.");
+                    }
                     if (!planoSelecionado) {
                         return alert("Por favor, selecione um plano de pagamento.");
                     }
@@ -423,30 +429,24 @@
                         btnReg.innerText = "CADASTRANDO NO ASAAS...";
                         let asaasId = null;
                         try {
-                            // Busca por CPF apenas se informado (CPF vazio quebra a busca no Asaas)
-                            if (cpf) {
-                                const resCpf = await fetch(`/api/asaas?endpoint=customers&cpfCnpj=${cpf}`);
-                                const dadosCpf = await resCpf.json();
-                                if (dadosCpf.data && dadosCpf.data.length > 0) asaasId = dadosCpf.data[0].id;
-                            }
-                            // Busca por e-mail se não achou por CPF
-                            if (!asaasId) {
+                            const resCpf = await fetch(`/api/asaas?endpoint=customers&cpfCnpj=${cpf}`);
+                            const dadosCpf = await resCpf.json();
+                            if (dadosCpf.data && dadosCpf.data.length > 0) {
+                                asaasId = dadosCpf.data[0].id;
+                            } else {
                                 const resEmail = await fetch(`/api/asaas?endpoint=customers&email=${encodeURIComponent(email)}`);
                                 const dadosEmail = await resEmail.json();
-                                if (dadosEmail.data && dadosEmail.data.length > 0) asaasId = dadosEmail.data[0].id;
-                            }
-                            // Cria cliente se não encontrado
-                            if (!asaasId) {
-                                const clienteBody = { name: nome, email, mobilePhone: telefone, postalCode: cep, address: rua, addressNumber: numero, complement: complemento, province: bairro, city: cidade, state: estado };
-                                if (cpf) clienteBody.cpfCnpj = cpf; // só envia CPF se preenchido
-                                const resCriar = await fetch(`/api/asaas?endpoint=customers`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(clienteBody)
-                                });
-                                const dadosCriado = await resCriar.json();
-                                if (dadosCriado.id) asaasId = dadosCriado.id;
-                                else console.warn('⚠️ Asaas não criou cliente:', dadosCriado);
+                                if (dadosEmail.data && dadosEmail.data.length > 0) {
+                                    asaasId = dadosEmail.data[0].id;
+                                } else {
+                                    const resCriar = await fetch(`/api/asaas?endpoint=customers`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ name: nome, email, cpfCnpj: cpf, mobilePhone: telefone, postalCode: cep, address: rua, addressNumber: numero, complement: complemento, province: bairro, city: cidade, state: estado })
+                                    });
+                                    const dadosCriado = await resCriar.json();
+                                    if (dadosCriado.id) asaasId = dadosCriado.id;
+                                }
                             }
                         } catch(errAsaas) { console.warn('Erro Asaas cliente:', errAsaas.message); }
 

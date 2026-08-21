@@ -2894,6 +2894,7 @@ const academia = {
                     <button onclick="graduacaoHistorico.abrirModal('${doc.id}')" title="Graduações" style="background:#1e1040;border:none;color:#a78bfa;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-medal"></i></button>
                     <button onclick="avaliacaoFisica.abrirMenu('${doc.id}')" title="Avaliação Física" style="background:#0c2a1a;border:none;color:#10b981;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-chart-line"></i></button>
                     ${isAdmin ? `<button onclick="academia.verFinanceiroAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Financeiro" style="background:#064e3b;border:none;color:#10b981;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-dollar-sign"></i></button>` : ''}
+                    ${isAdmin ? `<button onclick="comissaoProf.vincularProfessor('${doc.id}','${a.nome.replace(/'/g,"\\'")}')" title="Vincular Professor" style="background:#1c1000;border:1px solid #f59e0b;color:#f59e0b;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;" title="Professor responsável"><i class="fas fa-chalkboard-teacher"></i>${a.professorNome ? ` <span style="font-size:0.55rem;">${a.professorNome.split(' ')[0]}</span>` : ''}</button>` : ''}
                     ${isAdmin ? (trancado
                         ? `<button onclick="academia.ativarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Reativar" style="background:#1e3a8a;border:none;color:#60a5fa;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-lock-open"></i></button>`
                         : `<button onclick="academia.trancarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Trancar" style="background:#1c1000;border:1px solid #92400e;color:#f59e0b;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-lock"></i></button>`)
@@ -4164,6 +4165,7 @@ const academia = {
                         <button onclick="profComms.abrirConvocacao('${doc.id}','${p.nome.replace(/'/g,"\\'")}','${turmas}')" style="background:#10b981;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">📋 Convocar</button>
                         <button onclick="profComms.abrirRecado('${doc.id}','${p.nome.replace(/'/g,"\\'")}','alunos')" style="background:#3b82f6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">💬 Recado</button>
                         <button onclick="academia.editarTurmasProf('${doc.id}','alunos')" style="background:#8b5cf6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">✏️ Turmas</button>
+                        <button onclick="comissaoProf.editarValor('${doc.id}','alunos','${p.nome.replace(/'/g,"\\'")}',${p.valorPorAluno||0})" style="background:#1c1000;border:1px solid #f59e0b;color:#f59e0b;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">💵 R$${p.valorPorAluno||0}</button>
                         <button onclick="academia.removerPrivilegioProf('${doc.id}','${p.nome.replace(/'/g,"\\'")}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.8rem;" title="Remover privilégio"><i class="fas fa-user-minus"></i></button>
                     </div>
                 </div>
@@ -4191,6 +4193,7 @@ const academia = {
                         <button onclick="profComms.abrirConvocacao('${doc.id}','${p.nome.replace(/'/g,"\\'")}','${turmas}')" style="background:#10b981;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">📋 Convocar</button>
                         <button onclick="profComms.abrirRecado('${doc.id}','${p.nome.replace(/'/g,"\\'")}','professores')" style="background:#3b82f6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">💬 Recado</button>
                         <button onclick="academia.editarTurmasProf('${doc.id}','professores')" style="background:#8b5cf6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">✏️ Turmas</button>
+                        <button onclick="comissaoProf.editarValor('${doc.id}','professores','${p.nome.replace(/'/g,"\\'")}',${p.valorPorAluno||0})" style="background:#1c1000;border:1px solid #f59e0b;color:#f59e0b;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">💵 R$${p.valorPorAluno||0}</button>
                         <button onclick="academia.excluirProf('${doc.id}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.8rem;"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
@@ -19987,6 +19990,203 @@ document.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════════════════════
 // CRONÔMETRO DE LUTA — JIU-JITSU
 // ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// COMISSÃO DE PROFESSORES
+// ══════════════════════════════════════════════════════════
+const comissaoProf = {
+
+    // ── Vincular aluno a professor (só admin) ──────────────
+    async vincularProfessor(alunoId, nomeAluno) {
+        // Carrega professores
+        const [snapProfs, snapPromovidos] = await Promise.all([
+            db.collection('professores').get(),
+            db.collection('alunos').where('role','==','professor').get()
+        ]);
+        const profs = [];
+        snapProfs.docs.forEach(d => { if (d.data().role !== 'financeiro') profs.push({ id: d.id, nome: d.data().nome, col: 'professores' }); });
+        snapPromovidos.docs.forEach(d => profs.push({ id: d.id, nome: d.data().nome, col: 'alunos' }));
+        profs.sort((a,b) => a.nome.localeCompare(b.nome));
+
+        // Modal
+        const modal = document.createElement('div');
+        modal.id = 'modal-vincular-prof';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
+                <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;margin-bottom:4px;">👨‍🏫 Vincular Professor</div>
+                <div style="font-size:0.65rem;color:#94a3b8;margin-bottom:16px;">${nomeAluno.toUpperCase()}</div>
+                <select id="sel-vincular-prof" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.8rem;margin-bottom:12px;">
+                    <option value="">— Sem professor (Admin) —</option>
+                    ${profs.map(p => `<option value="${p.id}|${p.col}|${p.nome.replace(/"/g,'')}">${p.nome}</option>`).join('')}
+                </select>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="comissaoProf._confirmarVincular('${alunoId}')" style="flex:1;padding:11px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-weight:800;cursor:pointer;">✅ Salvar</button>
+                    <button onclick="document.getElementById('modal-vincular-prof').remove()" style="flex:1;padding:11px;background:#334155;border:none;color:#e2e8f0;border-radius:10px;font-weight:700;cursor:pointer;">✕ Cancelar</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async _confirmarVincular(alunoId) {
+        const sel = document.getElementById('sel-vincular-prof');
+        const val = sel?.value || '';
+        try {
+            if (!val) {
+                await db.collection('alunos').doc(alunoId).update({
+                    professorId: firebase.firestore.FieldValue.delete(),
+                    professorNome: firebase.firestore.FieldValue.delete()
+                });
+            } else {
+                const [profId, , profNome] = val.split('|');
+                await db.collection('alunos').doc(alunoId).update({ professorId: profId, professorNome: profNome });
+            }
+            document.getElementById('modal-vincular-prof')?.remove();
+            academia.renderAlunos?.();
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    // ── Editar valor por aluno do professor ────────────────
+    async editarValor(profId, colecao, nome, valorAtual) {
+        const novo = prompt(`Valor por aluno pago — ${nome}:\n(Atual: R$ ${valorAtual})`, valorAtual || '0');
+        if (novo === null) return;
+        const val = parseFloat(novo.replace(',','.'));
+        if (isNaN(val) || val < 0) return alert('Valor inválido.');
+        await db.collection(colecao).doc(profId).update({ valorPorAluno: val });
+        alert(`✅ Valor atualizado: R$ ${val.toFixed(2)}/aluno`);
+        academia.renderProfessores();
+    },
+
+    // ── Relatório de comissão ──────────────────────────────
+    async abrirRelatorio() {
+        const modal = document.createElement('div');
+        modal.id = 'modal-comissao';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="width:100%;max-width:480px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <div style="font-size:0.9rem;font-weight:800;color:#f59e0b;">💵 Relatório de Comissão</div>
+                    <button onclick="document.getElementById('modal-comissao').remove()" style="background:#334155;border:none;color:white;padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+                <div id="comissao-corpo" style="color:#94a3b8;text-align:center;padding:20px;">⏳ Carregando...</div>
+            </div>`;
+        document.body.appendChild(modal);
+        await this._carregarRelatorio();
+    },
+
+    async _carregarRelatorio() {
+        const corpo = document.getElementById('comissao-corpo');
+        if (!corpo) return;
+        try {
+            // Carrega professores e alunos ativos
+            const [snapProfs, snapPromovidos, snapAlunos] = await Promise.all([
+                db.collection('professores').get(),
+                db.collection('alunos').where('role','==','professor').get(),
+                db.collection('alunos').where('status','!=','trancado').get()
+            ]);
+
+            // Monta mapa de professores
+            const profs = {};
+            snapProfs.docs.forEach(d => {
+                const p = d.data();
+                if (p.role === 'financeiro') return;
+                profs[d.id] = { nome: p.nome, valor: p.valorPorAluno || 0, alunos: [], pagaram: 0 };
+            });
+            snapPromovidos.docs.forEach(d => {
+                const p = d.data();
+                profs[d.id] = profs[d.id] || { nome: p.nome, valor: p.valorPorAluno || 0, alunos: [], pagaram: 0 };
+            });
+
+            // Bucket "Admin" para alunos sem professor
+            profs['__admin__'] = { nome: '👑 Admin (sem professor)', valor: 0, alunos: [], pagaram: 0, isAdmin: true };
+
+            // Distribui alunos
+            const alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() }));
+            alunos.forEach(a => {
+                const pid = a.professorId || '__admin__';
+                if (!profs[pid]) profs[pid] = { nome: '❓ Professor removido', valor: 0, alunos: [], pagaram: 0 };
+                profs[pid].alunos.push(a);
+            });
+
+            // Verifica pagamentos do mês atual via Asaas
+            const mesAtual = new Date();
+            const inicio = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1).toISOString().split('T')[0];
+            const fim = new Date(mesAtual.getFullYear(), mesAtual.getMonth()+1, 0).toISOString().split('T')[0];
+
+            // Para cada professor, verifica quantos alunos pagaram no mês
+            const asaasUrl = '/api/asaas';
+            for (const pid of Object.keys(profs)) {
+                const p = profs[pid];
+                if (p.isAdmin || p.alunos.length === 0 || p.valor === 0) continue;
+                let pagaram = 0;
+                for (const aluno of p.alunos) {
+                    if (!aluno.email) continue;
+                    try {
+                        const r = await fetch(`${asaasUrl}?endpoint=customers&email=${encodeURIComponent(aluno.email)}`);
+                        const d = await r.json();
+                        if (!d.data?.length) continue;
+                        const cid = d.data[0].id;
+                        const rp = await fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=RECEIVED&limit=5`);
+                        const dp = await rp.json();
+                        const pagouMes = (dp.data || []).some(p => (p.paymentDate || p.dueDate || '') >= inicio && (p.paymentDate || p.dueDate || '') <= fim);
+                        if (pagouMes) pagaram++;
+                    } catch(_) {}
+                }
+                p.pagaram = pagaram;
+            }
+
+            // Renderiza
+            const mes = mesAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+            let html = `<div style="font-size:0.6rem;color:#64748b;font-weight:800;margin-bottom:12px;text-align:center;letter-spacing:1px;">${mes.toUpperCase()}</div>`;
+            let totalGeral = 0;
+
+            Object.values(profs).sort((a,b) => b.alunos.length - a.alunos.length).forEach(p => {
+                if (p.isAdmin) return; // Admin fica no final
+                const total = p.pagaram * p.valor;
+                totalGeral += total;
+                html += `
+                <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:14px;margin-bottom:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <div style="font-size:0.8rem;font-weight:800;color:#e2e8f0;">👨‍🏫 ${p.nome.toUpperCase()}</div>
+                        <div style="font-size:0.7rem;font-weight:800;color:#f59e0b;">R$ ${total.toFixed(2)}</div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+                        <div style="background:#1e293b;border-radius:8px;padding:8px;">
+                            <div style="font-size:1rem;font-weight:900;color:#60a5fa;">${p.alunos.length}</div>
+                            <div style="font-size:0.5rem;color:#64748b;font-weight:700;">ATIVOS</div>
+                        </div>
+                        <div style="background:#1e293b;border-radius:8px;padding:8px;">
+                            <div style="font-size:1rem;font-weight:900;color:#10b981;">${p.pagaram}</div>
+                            <div style="font-size:0.5rem;color:#64748b;font-weight:700;">PAGARAM</div>
+                        </div>
+                        <div style="background:#1e293b;border-radius:8px;padding:8px;">
+                            <div style="font-size:0.75rem;font-weight:900;color:#f59e0b;">R$ ${p.valor.toFixed(2)}</div>
+                            <div style="font-size:0.5rem;color:#64748b;font-weight:700;">/ALUNO</div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            // Admin
+            const admin = profs['__admin__'];
+            html += `
+            <div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:12px;margin-bottom:10px;opacity:0.7;">
+                <div style="font-size:0.75rem;font-weight:800;color:#94a3b8;">👑 Sem professor vinculado</div>
+                <div style="font-size:0.65rem;color:#64748b;margin-top:4px;">${admin.alunos.length} aluno(s) — pertencem ao Admin</div>
+            </div>`;
+
+            html += `
+            <div style="background:#1c1000;border:2px solid #f59e0b;border-radius:12px;padding:14px;text-align:center;margin-top:4px;">
+                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:1px;margin-bottom:4px;">TOTAL A PAGAR NO MÊS</div>
+                <div style="font-size:1.8rem;font-weight:900;color:#f59e0b;">R$ ${totalGeral.toFixed(2)}</div>
+            </div>`;
+
+            corpo.innerHTML = html;
+        } catch(e) {
+            if (corpo) corpo.innerHTML = `<p style="color:#f43f5e;">Erro: ${e.message}</p>`;
+        }
+    },
+};
+
 const cronometro = {
     _timer: null, _segundos: 0, _rodando: false,
     _tempoSel: 300, _overtime: false,

@@ -4171,6 +4171,7 @@ const academia = {
                         <button onclick="profComms.abrirRecado('${doc.id}','${p.nome.replace(/'/g,"\\'")}','alunos')" style="background:#3b82f6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">💬 Recado</button>
                         <button onclick="academia.editarTurmasProf('${doc.id}','alunos')" style="background:#8b5cf6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">✏️ Turmas</button>
                         <button onclick="comissaoProf.editarValor('${doc.id}','alunos','${p.nome.replace(/'/g,"\\'")}',${p.valorPorAluno||0})" style="background:#1c1000;border:1px solid #f59e0b;color:#f59e0b;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">💵 R$${p.valorPorAluno||0}</button>
+                        <button onclick="comissaoProf.toggleAcessoRelatorio('${doc.id}','alunos',${!!p.verRelatorioComissao})" style="background:${p.verRelatorioComissao?'#064e3b':'#1e293b'};border:1px solid ${p.verRelatorioComissao?'#10b981':'#334155'};color:${p.verRelatorioComissao?'#10b981':'#64748b'};padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">${p.verRelatorioComissao?'👁 Relatório ON':'👁 Relatório OFF'}</button>
                         <button onclick="academia.removerPrivilegioProf('${doc.id}','${p.nome.replace(/'/g,"\\'")}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.8rem;" title="Remover privilégio"><i class="fas fa-user-minus"></i></button>
                     </div>
                 </div>
@@ -4199,6 +4200,7 @@ const academia = {
                         <button onclick="profComms.abrirRecado('${doc.id}','${p.nome.replace(/'/g,"\\'")}','professores')" style="background:#3b82f6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">💬 Recado</button>
                         <button onclick="academia.editarTurmasProf('${doc.id}','professores')" style="background:#8b5cf6;border:none;color:white;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">✏️ Turmas</button>
                         <button onclick="comissaoProf.editarValor('${doc.id}','professores','${p.nome.replace(/'/g,"\\'")}',${p.valorPorAluno||0})" style="background:#1c1000;border:1px solid #f59e0b;color:#f59e0b;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">💵 R$${p.valorPorAluno||0}</button>
+                        <button onclick="comissaoProf.toggleAcessoRelatorio('${doc.id}','professores',${!!p.verRelatorioComissao})" style="background:${p.verRelatorioComissao?'#064e3b':'#1e293b'};border:1px solid ${p.verRelatorioComissao?'#10b981':'#334155'};color:${p.verRelatorioComissao?'#10b981':'#64748b'};padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.65rem;font-weight:700;white-space:nowrap;">${p.verRelatorioComissao?'👁 Relatório ON':'👁 Relatório OFF'}</button>
                         <button onclick="academia.excluirProf('${doc.id}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.8rem;"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
@@ -20069,6 +20071,13 @@ const comissaoProf = {
             document.getElementById('modal-vincular-prof')?.remove();
             academia.renderAlunos?.();
         } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    // ── Toggle acesso do professor ao próprio relatório ────
+    async toggleAcessoRelatorio(profId, colecao, atual) {
+        const novo = !atual;
+        await db.collection(colecao).doc(profId).update({ verRelatorioComissao: novo });
+        academia.renderProfessores();
     },
 
     // ── Editar valor/aluno do Admin (sem professor) ────────

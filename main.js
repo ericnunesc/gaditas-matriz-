@@ -20239,9 +20239,13 @@ const comissaoProf = {
                             cid = d.data?.[0]?.id || null;
                         }
                         if (!cid) continue;
-                        const rp = await fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=RECEIVED&limit=5`);
-                        const dp = await rp.json();
-                        aluno._pagou = (dp.data || []).some(pg => (pg.paymentDate || pg.dueDate || '') >= inicio && (pg.paymentDate || pg.dueDate || '') <= fim);
+                        const [rpR, rpC] = await Promise.all([
+                            fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=RECEIVED&limit=10`),
+                            fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=CONFIRMED&limit=10`)
+                        ]);
+                        const [dpR, dpC] = await Promise.all([rpR.json(), rpC.json()]);
+                        const pagamentos = [...(dpR.data || []), ...(dpC.data || [])];
+                        aluno._pagou = pagamentos.some(pg => (pg.paymentDate || pg.dueDate || '') >= inicio && (pg.paymentDate || pg.dueDate || '') <= fim);
                     } catch(_) {}
                 }
                 p.pagaram = p.alunos.filter(a => a._pagou).length;

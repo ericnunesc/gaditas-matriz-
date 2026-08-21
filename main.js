@@ -20589,7 +20589,7 @@ const cronometro = {
             this._segundos--;
             this._atualizar();
             if (this._segundos <= 30 && this._segundos > 0 && this._segundos % 30 === 0 && !this._emIntervalo) this._tocarApito('aviso');
-            if (this._segundos > 0 && this._segundos <= 10 && !this._emIntervalo && !this._overtime) this._tocarApito('tick');
+            if (this._segundos > 0 && this._segundos <= 10 && !this._overtime) this._tocarApito(this._segundos <= 3 ? 'tick-urgente' : 'tick');
             if (this._segundos <= 0) {
                 this._parar();
                 if (this._overtime) {
@@ -20694,7 +20694,8 @@ const cronometro = {
                 };
                 if (tipo==='inicio') { beep(1050,0.12,0,0.7); beep(1050,0.12,0.18,0.7); }
                 else if (tipo==='aviso') { beep(1400,0.08,0,1.0); beep(1400,0.08,0.13,1.0); beep(1400,0.08,0.26,1.0); }
-                else if (tipo==='tick') { beep(880,0.06,0,0.5); }
+                else if (tipo==='tick') { beep(1000,0.1,0,0.75); }
+                else if (tipo==='tick-urgente') { beep(1300,0.14,0,1.0); beep(1300,0.14,0.18,1.0); }
                 else if (tipo==='fim') { beep(1200,0.6,0,1.0); beep(1200,0.6,0.75,1.0); beep(1200,1.0,1.5,1.0); }
             };
             if (ctx.state === 'suspended') { ctx.resume().then(play); } else { play(); }

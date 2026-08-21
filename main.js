@@ -20223,26 +20223,28 @@ const comissaoProf = {
             const inicio = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1).toISOString().split('T')[0];
             const fim = new Date(mesAtual.getFullYear(), mesAtual.getMonth()+1, 0).toISOString().split('T')[0];
 
-            // Para cada professor, verifica quantos alunos pagaram no mês
+            // Para cada professor, verifica quais alunos pagaram no mês (por nome)
             const asaasUrl = '/api/asaas';
             for (const pid of Object.keys(profs)) {
                 const p = profs[pid];
                 if (p.isAdmin || p.alunos.length === 0 || p.valor === 0) continue;
-                let pagaram = 0;
                 for (const aluno of p.alunos) {
-                    if (!aluno.email) continue;
+                    aluno._pagou = false;
+                    const customerId = aluno.asaasId || null;
                     try {
-                        const r = await fetch(`${asaasUrl}?endpoint=customers&email=${encodeURIComponent(aluno.email)}`);
-                        const d = await r.json();
-                        if (!d.data?.length) continue;
-                        const cid = d.data[0].id;
+                        let cid = customerId;
+                        if (!cid && aluno.email) {
+                            const r = await fetch(`${asaasUrl}?endpoint=customers&email=${encodeURIComponent(aluno.email)}`);
+                            const d = await r.json();
+                            cid = d.data?.[0]?.id || null;
+                        }
+                        if (!cid) continue;
                         const rp = await fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=RECEIVED&limit=5`);
                         const dp = await rp.json();
-                        const pagouMes = (dp.data || []).some(p => (p.paymentDate || p.dueDate || '') >= inicio && (p.paymentDate || p.dueDate || '') <= fim);
-                        if (pagouMes) pagaram++;
+                        aluno._pagou = (dp.data || []).some(pg => (pg.paymentDate || pg.dueDate || '') >= inicio && (pg.paymentDate || pg.dueDate || '') <= fim);
                     } catch(_) {}
                 }
-                p.pagaram = pagaram;
+                p.pagaram = p.alunos.filter(a => a._pagou).length;
             }
 
             // Renderiza
@@ -20250,32 +20252,72 @@ const comissaoProf = {
             let html = `<div style="font-size:0.6rem;color:#64748b;font-weight:800;margin-bottom:12px;text-align:center;letter-spacing:1px;">${mes.toUpperCase()}</div>`;
             let totalGeral = 0;
 
+            const modLabel = m => m === 'muaythai' ? '🥊 Muay Thai' : m === 'jiujitsu' ? '🥋 Jiu-Jitsu' : m ? m : '—';
+
             // Só lista professores com valor/aluno configurado (> 0); professor vê só o próprio
             Object.values(profs).filter(p => !p.isAdmin && p.valor > 0 && (isAdmin || p._id === profIdLogado)).sort((a,b) => b.alunos.length - a.alunos.length).forEach(p => {
                 const total = p.pagaram * p.valor;
                 totalGeral += total;
+                const pid = p._id || p.nome;
+
+                // Agrupa alunos por modalidade
+                const porMod = {};
+                p.alunos.forEach(a => {
+                    const m = a._mod || 'sem-mod';
+                    if (!porMod[m]) porMod[m] = { pagaram: [], pendentes: [] };
+                    if (a._pagou) porMod[m].pagaram.push(a.nome);
+                    else porMod[m].pendentes.push(a.nome);
+                });
+
+                const detalheId = `rel-detalhe-${pid}`;
+                let detalheHtml = '';
+                Object.entries(porMod).forEach(([mod, grupo]) => {
+                    detalheHtml += `<div style="margin-bottom:8px;">
+                        <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;margin-bottom:5px;letter-spacing:0.5px;">${modLabel(mod)}</div>`;
+                    if (grupo.pagaram.length) {
+                        detalheHtml += `<div style="background:#052e16;border:1px solid #166534;border-radius:7px;padding:7px;margin-bottom:4px;">
+                            <div style="font-size:0.55rem;font-weight:800;color:#10b981;margin-bottom:4px;">✅ PAGARAM (${grupo.pagaram.length})</div>
+                            ${grupo.pagaram.map(n => `<div style="font-size:0.65rem;color:#d1fae5;padding:2px 0;">${n}</div>`).join('')}
+                        </div>`;
+                    }
+                    if (grupo.pendentes.length) {
+                        detalheHtml += `<div style="background:#2d0a0a;border:1px solid #7f1d1d;border-radius:7px;padding:7px;">
+                            <div style="font-size:0.55rem;font-weight:800;color:#f87171;margin-bottom:4px;">⏳ EM ABERTO (${grupo.pendentes.length})</div>
+                            ${grupo.pendentes.map(n => `<div style="font-size:0.65rem;color:#fecaca;padding:2px 0;">${n}</div>`).join('')}
+                        </div>`;
+                    }
+                    detalheHtml += `</div>`;
+                });
+
                 html += `
-                <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:14px;margin-bottom:10px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;margin-bottom:10px;overflow:hidden;">
+                    <div onclick="(function(el){el.style.display=el.style.display==='none'?'block':'none'})(document.getElementById('${detalheId}'))"
+                        style="display:flex;justify-content:space-between;align-items:center;padding:14px;cursor:pointer;">
                         <div style="font-size:0.8rem;font-weight:800;color:#e2e8f0;">👨‍🏫 ${p.nome.toUpperCase()}</div>
-                        <div style="text-align:right;">
-                            <div style="font-size:0.45rem;color:#94a3b8;font-weight:700;letter-spacing:1px;">A RECEBER</div>
-                            <div style="font-size:1rem;font-weight:900;color:#f59e0b;">R$ ${total.toFixed(2)}</div>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="text-align:right;">
+                                <div style="font-size:0.45rem;color:#94a3b8;font-weight:700;letter-spacing:1px;">A RECEBER</div>
+                                <div style="font-size:1rem;font-weight:900;color:#f59e0b;">R$ ${total.toFixed(2)}</div>
+                            </div>
+                            <span style="color:#64748b;font-size:0.75rem;">▼</span>
                         </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
-                        <div style="background:#1e293b;border-radius:8px;padding:8px;">
-                            <div style="font-size:1rem;font-weight:900;color:#60a5fa;">${p.alunos.length}</div>
-                            <div style="font-size:0.5rem;color:#64748b;font-weight:700;">ATIVOS</div>
+                    <div style="padding:0 14px 14px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;margin-bottom:10px;">
+                            <div style="background:#1e293b;border-radius:8px;padding:8px;">
+                                <div style="font-size:1rem;font-weight:900;color:#60a5fa;">${p.alunos.length}</div>
+                                <div style="font-size:0.5rem;color:#64748b;font-weight:700;">ATIVOS</div>
+                            </div>
+                            <div style="background:#1e293b;border-radius:8px;padding:8px;">
+                                <div style="font-size:1rem;font-weight:900;color:#10b981;">${p.pagaram}</div>
+                                <div style="font-size:0.5rem;color:#64748b;font-weight:700;">PAGARAM</div>
+                            </div>
+                            <div style="background:#1e293b;border-radius:8px;padding:8px;">
+                                <div style="font-size:0.75rem;font-weight:900;color:#f59e0b;">R$ ${p.valor.toFixed(2)}</div>
+                                <div style="font-size:0.5rem;color:#64748b;font-weight:700;">/ALUNO</div>
+                            </div>
                         </div>
-                        <div style="background:#1e293b;border-radius:8px;padding:8px;">
-                            <div style="font-size:1rem;font-weight:900;color:#10b981;">${p.pagaram}</div>
-                            <div style="font-size:0.5rem;color:#64748b;font-weight:700;">PAGARAM</div>
-                        </div>
-                        <div style="background:#1e293b;border-radius:8px;padding:8px;">
-                            <div style="font-size:0.75rem;font-weight:900;color:#f59e0b;">R$ ${p.valor.toFixed(2)}</div>
-                            <div style="font-size:0.5rem;color:#64748b;font-weight:700;">/ALUNO</div>
-                        </div>
+                        <div id="${detalheId}" style="display:none;">${detalheHtml}</div>
                     </div>
                 </div>`;
             });

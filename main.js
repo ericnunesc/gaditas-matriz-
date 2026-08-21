@@ -2894,7 +2894,12 @@ const academia = {
                     <button onclick="graduacaoHistorico.abrirModal('${doc.id}')" title="Graduações" style="background:#1e1040;border:none;color:#a78bfa;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-medal"></i></button>
                     <button onclick="avaliacaoFisica.abrirMenu('${doc.id}')" title="Avaliação Física" style="background:#0c2a1a;border:none;color:#10b981;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-chart-line"></i></button>
                     ${isAdmin ? `<button onclick="academia.verFinanceiroAluno('${doc.id}', '${a.nome.replace(/'/g, "\\'")}')" title="Financeiro" style="background:#064e3b;border:none;color:#10b981;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-dollar-sign"></i></button>` : ''}
-                    ${isAdmin ? `<button onclick="comissaoProf.vincularProfessor('${doc.id}','${a.nome.replace(/'/g,"\\'")}')" title="Vincular Professor" style="background:#1c1000;border:1px solid #f59e0b;color:#f59e0b;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;" title="Professor responsável"><i class="fas fa-chalkboard-teacher"></i>${a.professorNome ? ` <span style="font-size:0.55rem;">${a.professorNome.split(' ')[0]}</span>` : ''}</button>` : ''}
+                    ${isAdmin ? (() => {
+                        const pm = a.professoresMod || {};
+                        const nomes = Object.values(pm).filter(Boolean).map(p => p.nome.split(' ')[0]);
+                        const label = nomes.length ? nomes.join('/') : '';
+                        return `<button onclick="comissaoProf.vincularProfessor('${doc.id}','${a.nome.replace(/'/g,"\\'")}')" title="Professor por modalidade" style="background:#1c1000;border:1px solid #f59e0b;color:#f59e0b;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-chalkboard-teacher"></i>${label ? ` <span style="font-size:0.52rem;">${label}</span>` : ''}</button>`;
+                    })() : ''}
                     ${isAdmin ? (trancado
                         ? `<button onclick="academia.ativarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Reativar" style="background:#1e3a8a;border:none;color:#60a5fa;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-lock-open"></i></button>`
                         : `<button onclick="academia.trancarAluno('${doc.id}','${a.nome.replace(/'/g, "\\'")}')" title="Trancar" style="background:#1c1000;border:1px solid #92400e;color:#f59e0b;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-lock"></i></button>`)
@@ -19995,51 +20000,72 @@ document.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════════════════════
 const comissaoProf = {
 
-    // ── Vincular aluno a professor (só admin) ──────────────
+    // ── Vincular aluno a professor por modalidade (só admin) ─
     async vincularProfessor(alunoId, nomeAluno) {
-        // Carrega professores
+        const alunoDoc = await db.collection('alunos').doc(alunoId).get();
+        const aluno = alunoDoc.data();
+        const modalidade = aluno.modalidade || 'jiujitsu'; // 'jiujitsu' | 'muaythai' | 'ambos'
+
         const [snapProfs, snapPromovidos] = await Promise.all([
             db.collection('professores').get(),
             db.collection('alunos').where('role','==','professor').get()
         ]);
         const profs = [];
-        snapProfs.docs.forEach(d => { if (d.data().role !== 'financeiro') profs.push({ id: d.id, nome: d.data().nome, col: 'professores' }); });
-        snapPromovidos.docs.forEach(d => profs.push({ id: d.id, nome: d.data().nome, col: 'alunos' }));
+        snapProfs.docs.forEach(d => { if (d.data().role !== 'financeiro') profs.push({ id: d.id, nome: d.data().nome }); });
+        snapPromovidos.docs.forEach(d => profs.push({ id: d.id, nome: d.data().nome }));
         profs.sort((a,b) => a.nome.localeCompare(b.nome));
 
-        // Modal
+        const opcoes = `<option value="">— Admin (sem professor) —</option>${profs.map(p=>`<option value="${p.id}|${p.nome.replace(/"/g,'')}">${p.nome}</option>`).join('')}`;
+        const profAtual = aluno.professoresMod || {};
+
+        const modsAtivas = [];
+        if (modalidade === 'jiujitsu' || modalidade === 'ambos') modsAtivas.push({ key: 'jiujitsu', label: '🥋 Jiu-Jitsu' });
+        if (modalidade === 'muaythai' || modalidade === 'ambos') modsAtivas.push({ key: 'muaythai', label: '🥊 Muay Thai' });
+
+        const sel = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.8rem;margin-bottom:12px;';
+
         const modal = document.createElement('div');
         modal.id = 'modal-vincular-prof';
         modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
         modal.innerHTML = `
             <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
-                <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;margin-bottom:4px;">👨‍🏫 Vincular Professor</div>
+                <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;margin-bottom:4px;">👨‍🏫 Professor por Modalidade</div>
                 <div style="font-size:0.65rem;color:#94a3b8;margin-bottom:16px;">${nomeAluno.toUpperCase()}</div>
-                <select id="sel-vincular-prof" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.8rem;margin-bottom:12px;">
-                    <option value="">— Sem professor (Admin) —</option>
-                    ${profs.map(p => `<option value="${p.id}|${p.col}|${p.nome.replace(/"/g,'')}">${p.nome}</option>`).join('')}
-                </select>
-                <div style="display:flex;gap:8px;">
-                    <button onclick="comissaoProf._confirmarVincular('${alunoId}')" style="flex:1;padding:11px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-weight:800;cursor:pointer;">✅ Salvar</button>
+                ${modsAtivas.map(m => `
+                    <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">${m.label}</div>
+                    <select id="sel-prof-${m.key}" style="${sel}">
+                        ${opcoes.replace(`value="${(profAtual[m.key]?.id||'')}|`, `value="${(profAtual[m.key]?.id||'')}|" selected`)}
+                    </select>`).join('')}
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                    <button onclick="comissaoProf._confirmarVincular('${alunoId}',[${modsAtivas.map(m=>`'${m.key}'`).join(',')}])" style="flex:1;padding:11px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-weight:800;cursor:pointer;">✅ Salvar</button>
                     <button onclick="document.getElementById('modal-vincular-prof').remove()" style="flex:1;padding:11px;background:#334155;border:none;color:#e2e8f0;border-radius:10px;font-weight:700;cursor:pointer;">✕ Cancelar</button>
                 </div>
             </div>`;
         document.body.appendChild(modal);
+
+        // Pré-seleciona professores atuais
+        modsAtivas.forEach(m => {
+            const el = document.getElementById(`sel-prof-${m.key}`);
+            if (el && profAtual[m.key]?.id) {
+                for (const opt of el.options) { if (opt.value.startsWith(profAtual[m.key].id + '|')) { opt.selected = true; break; } }
+            }
+        });
     },
 
-    async _confirmarVincular(alunoId) {
-        const sel = document.getElementById('sel-vincular-prof');
-        const val = sel?.value || '';
+    async _confirmarVincular(alunoId, mods) {
         try {
-            if (!val) {
-                await db.collection('alunos').doc(alunoId).update({
-                    professorId: firebase.firestore.FieldValue.delete(),
-                    professorNome: firebase.firestore.FieldValue.delete()
-                });
-            } else {
-                const [profId, , profNome] = val.split('|');
-                await db.collection('alunos').doc(alunoId).update({ professorId: profId, professorNome: profNome });
-            }
+            const professoresMod = {};
+            mods.forEach(mod => {
+                const sel = document.getElementById(`sel-prof-${mod}`);
+                const val = sel?.value || '';
+                if (val) {
+                    const [id, nome] = val.split('|');
+                    professoresMod[mod] = { id, nome };
+                } else {
+                    professoresMod[mod] = null;
+                }
+            });
+            await db.collection('alunos').doc(alunoId).update({ professoresMod });
             document.getElementById('modal-vincular-prof')?.remove();
             academia.renderAlunos?.();
         } catch(e) { alert('Erro: ' + e.message); }
@@ -20099,12 +20125,21 @@ const comissaoProf = {
             // Bucket "Admin" para alunos sem professor
             profs['__admin__'] = { nome: '👑 Admin (sem professor)', valor: 0, alunos: [], pagaram: 0, isAdmin: true };
 
-            // Distribui alunos
+            // Distribui alunos por professor/modalidade
             const alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() }));
             alunos.forEach(a => {
-                const pid = a.professorId || '__admin__';
-                if (!profs[pid]) profs[pid] = { nome: '❓ Professor removido', valor: 0, alunos: [], pagaram: 0 };
-                profs[pid].alunos.push(a);
+                const pm = a.professoresMod || {};
+                const mods = Object.keys(pm).filter(m => pm[m]?.id);
+                if (mods.length === 0) {
+                    // Sem professor → Admin
+                    profs['__admin__'].alunos.push({ ...a, _mod: null });
+                } else {
+                    mods.forEach(mod => {
+                        const pid = pm[mod].id;
+                        if (!profs[pid]) profs[pid] = { nome: '❓ Professor removido', valor: 0, alunos: [], pagaram: 0 };
+                        profs[pid].alunos.push({ ...a, _mod: mod });
+                    });
+                }
             });
 
             // Verifica pagamentos do mês atual via Asaas

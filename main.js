@@ -588,22 +588,12 @@ const auth = {
                 if (snapProf.exists) {
                     this.role = 'professor';
                     this.currentUser = { id: snapProf.id, colecao: 'professores', ...snapProf.data() };
-                    // Botão relatório de comissão — só se liberado pelo admin
-                    if (snapProf.data().verRelatorioComissao) {
-                        const btnDiv = document.getElementById('btn-relatorio-comissao-prof');
-                        if (btnDiv) btnDiv.innerHTML = `<button onclick="comissaoProf.abrirRelatorio()" style="width:100%;padding:10px;background:#1c1000;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;margin-bottom:10px;">💵 Meu Relatório de Comissão</button>`;
-                    }
                 } else {
                     const snapAluno = await db.collection('alunos').doc(sessao.id).get();
                     if (!snapAluno.exists) { localStorage.removeItem('gaditas_sessao'); return false; }
                     this.role = 'professor';
                     this.eAluno = true; // professor promovido — mantém funções de aluno
                     this.currentUser = { id: snapAluno.id, colecao: 'alunos', ...snapAluno.data() };
-                    // Botão relatório de comissão — só se liberado pelo admin
-                    if (snapAluno.data().verRelatorioComissao) {
-                        const btnDiv = document.getElementById('btn-relatorio-comissao-prof');
-                        if (btnDiv) btnDiv.innerHTML = `<button onclick="comissaoProf.abrirRelatorio()" style="width:100%;padding:10px;background:#1c1000;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;margin-bottom:10px;">💵 Meu Relatório de Comissão</button>`;
-                    }
                     if (snapAluno.data().email) {
                         try { await firebase.auth().signInWithEmailAndPassword(snapAluno.data().email, snapAluno.data().senha || ''); } catch(_) {}
                     }
@@ -619,6 +609,16 @@ const auth = {
                 }
             }
             this.sucesso();
+            // Injetar botão de comissão APÓS sucesso() para garantir que o DOM já está renderizado
+            if (this.role === 'professor') {
+                setTimeout(() => {
+                    const dados = this.currentUser || {};
+                    if (dados.verRelatorioComissao) {
+                        const btnDiv = document.getElementById('btn-relatorio-comissao-prof');
+                        if (btnDiv) btnDiv.innerHTML = `<button onclick="comissaoProf.abrirRelatorio()" style="width:100%;padding:10px;background:#1c1000;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;margin-bottom:10px;">💵 Meu Relatório de Comissão</button>`;
+                    }
+                }, 300);
+            }
             return true;
         } catch(e) {
             localStorage.removeItem('gaditas_sessao');
@@ -2777,6 +2777,22 @@ const academia = {
         const isAdmin = auth.role === 'admin'; const anoAtual = new Date().getFullYear();
         let cardsHtml = "";
         const faixaFiltro = document.getElementById('filtro-avancado-faixas') ? document.getElementById('filtro-avancado-faixas').value : "all";
+        const profFiltro = this.filtroProfessorAtual || 'all';
+
+        // Popular select de professores com quem tem aluno vinculado
+        const selProf = document.getElementById('filtro-professor');
+        if (selProf) {
+            const profMap = {}; // id → nome
+            snap.forEach(doc => {
+                const pm = doc.data().professoresMod || {};
+                Object.values(pm).forEach(p => { if (p && p.id) profMap[p.id] = p.nome; });
+            });
+            const profIds = Object.keys(profMap).sort((a,b) => profMap[a].localeCompare(profMap[b]));
+            const currentVal = selProf.value;
+            selProf.innerHTML = '<option value="all">👨‍🏫 FILTRAR POR PROFESSOR</option>' +
+                profIds.map(id => `<option value="${id}"${currentVal===id?' selected':''}>${profMap[id]}</option>`).join('');
+            selProf.style.display = '';
+        }
 
         // Turmas e categorias do professor
         const turmasProf = (auth.role === 'professor' && auth.currentUser?.turmasAcesso) ? auth.currentUser.turmasAcesso : [];
@@ -2800,6 +2816,13 @@ const academia = {
             if (this.categoriaFiltroAtual === "kids" && !isKids) return;
             if (faixaFiltro !== "all" && a.faixa !== faixaFiltro) return;
             if (this.filtroInativos && eng.label !== 'Inativo') return;
+
+            // Filtro por professor
+            if (profFiltro !== 'all') {
+                const pm = a.professoresMod || {};
+                const vinculado = Object.values(pm).some(p => p && p.id === profFiltro);
+                if (!vinculado) return;
+            }
 
             // Filtro por modalidade
             const alunoMod = a.modalidade || 'jiujitsu';

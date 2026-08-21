@@ -890,7 +890,7 @@
 
                 <input type="text" id="input-busca-aluno" placeholder="Buscar atleta por nome..." oninput="academia.filtrarPorNomeDigitado()" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:10px;"/>
                 
-                <select id="filtro-avancado-faixas" onchange="GaditasFiltros.faixaFiltroAtual = this.value; academia.renderAlunos();" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-top: -4px; margin-bottom: 15px;">
+                <select id="filtro-avancado-faixas" onchange="GaditasFiltros.faixaFiltroAtual = this.value; academia.renderAlunos();" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-top: -4px; margin-bottom: 8px;">
                     <option value="all">🥋 FILTRAR POR COR DE FAIXA</option>
                     <option value="Branca">FAIXA BRANCA</option>
                     <option value="Cinza/Branca">FAIXA CINZA/BRANCA</option>
@@ -909,6 +909,10 @@
                     <option value="Roxa">FAIXA ROXA</option>
                     <option value="Marrom">FAIXA MARROM</option>
                     <option value="Preta">FAIXA PRETA</option>
+                </select>
+
+                <select id="filtro-professor" onchange="academia.filtroProfessorAtual = this.value; academia.renderAlunos();" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom: 15px;">
+                    <option value="all">👨‍🏫 FILTRAR POR PROFESSOR</option>
                 </select>
 
                 <div id="list-alunos" class="list-container"></div>

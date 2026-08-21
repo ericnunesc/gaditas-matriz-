@@ -20174,15 +20174,18 @@ const comissaoProf = {
             let html = `<div style="font-size:0.6rem;color:#64748b;font-weight:800;margin-bottom:12px;text-align:center;letter-spacing:1px;">${mes.toUpperCase()}</div>`;
             let totalGeral = 0;
 
-            Object.values(profs).sort((a,b) => b.alunos.length - a.alunos.length).forEach(p => {
-                if (p.isAdmin) return; // Admin fica no final
+            // Só lista professores com valor/aluno configurado (> 0)
+            Object.values(profs).filter(p => !p.isAdmin && p.valor > 0).sort((a,b) => b.alunos.length - a.alunos.length).forEach(p => {
                 const total = p.pagaram * p.valor;
                 totalGeral += total;
                 html += `
                 <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:14px;margin-bottom:10px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                         <div style="font-size:0.8rem;font-weight:800;color:#e2e8f0;">👨‍🏫 ${p.nome.toUpperCase()}</div>
-                        <div style="font-size:0.7rem;font-weight:800;color:#f59e0b;">R$ ${total.toFixed(2)}</div>
+                        <div style="text-align:right;">
+                            <div style="font-size:0.45rem;color:#94a3b8;font-weight:700;letter-spacing:1px;">A RECEBER</div>
+                            <div style="font-size:1rem;font-weight:900;color:#f59e0b;">R$ ${total.toFixed(2)}</div>
+                        </div>
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
                         <div style="background:#1e293b;border-radius:8px;padding:8px;">

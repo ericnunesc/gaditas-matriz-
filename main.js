@@ -1448,6 +1448,88 @@ const academia = {
     toggleBiblioteca() { document.getElementById('secao-historico-tecnica').classList.toggle('hidden'); },
     toggleHistoricoMural() { document.getElementById('secao-historico-mural').classList.toggle('hidden'); },
 
+    // ── RELATÓRIO DE MATRÍCULAS ──────────────────────────────
+    async renderRelatMatriculas() {
+        const container = document.getElementById('resultado-relat-matriculas');
+        if (!container) return;
+        if (container._carregando) return;
+        container._carregando = true;
+        container.innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+        try {
+            const snap = await db.collection('alunos').get();
+            const agora = new Date();
+            // Início da semana atual (domingo)
+            const inicioSemana = new Date(agora);
+            inicioSemana.setHours(0,0,0,0);
+            inicioSemana.setDate(agora.getDate() - agora.getDay());
+
+            const porMes = {}; // 'YYYY-MM' → count
+            let semanaCount = 0;
+
+            snap.forEach(doc => {
+                const d = doc.data();
+                // Aceita Firestore Timestamp (cadastroData) ou ISO string (dataCadastro)
+                let dt = null;
+                if (d.cadastroData && d.cadastroData.toDate) {
+                    dt = d.cadastroData.toDate();
+                } else if (d.dataCadastro) {
+                    dt = new Date(d.dataCadastro);
+                }
+                if (!dt || isNaN(dt)) return;
+
+                // Semana
+                if (dt >= inicioSemana) semanaCount++;
+
+                // Mês
+                const chave = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+                porMes[chave] = (porMes[chave] || 0) + 1;
+            });
+
+            // Últimos 12 meses
+            const meses = [];
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+                const chave = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                const label = d.toLocaleString('pt-BR', { month: 'short', year: '2-digit' }).replace('.','').toUpperCase();
+                meses.push({ chave, label, count: porMes[chave] || 0 });
+            }
+
+            const maxCount = Math.max(...meses.map(m => m.count), 1);
+
+            container.innerHTML = `
+            <div style="background:#0c2a1a;border:1px solid #22c55e33;border-radius:12px;padding:14px;margin-bottom:12px;display:flex;align-items:center;gap:14px;">
+                <div style="text-align:center;">
+                    <div style="font-size:2rem;font-weight:900;color:#22c55e;line-height:1;">${semanaCount}</div>
+                    <div style="font-size:0.6rem;color:#64748b;font-weight:700;margin-top:2px;">ESTA SEMANA</div>
+                </div>
+                <div style="width:1px;height:40px;background:#1e293b;"></div>
+                <div style="font-size:0.72rem;color:#94a3b8;">
+                    Alunos matriculados desde ${inicioSemana.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}.
+                </div>
+            </div>
+            <div style="font-size:0.65rem;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:8px;">MATRÍCULAS POR MÊS (ÚLTIMOS 12 MESES)</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+                ${meses.map(m => `
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="font-size:0.62rem;font-weight:700;color:#94a3b8;width:42px;text-align:right;">${m.label}</div>
+                    <div style="flex:1;background:#1e293b;border-radius:4px;height:18px;overflow:hidden;">
+                        <div style="width:${m.count ? Math.max(4, Math.round(m.count/maxCount*100)) : 0}%;height:100%;background:${m.count ? '#22c55e' : '#1e293b'};border-radius:4px;transition:width .3s;"></div>
+                    </div>
+                    <div style="font-size:0.72rem;font-weight:800;color:${m.count ? '#22c55e' : '#334155'};width:22px;text-align:right;">${m.count}</div>
+                </div>`).join('')}
+            </div>
+            <button onclick="window._relatMatriculasCache=null;academia.renderRelatMatriculas()"
+                style="margin-top:14px;width:100%;background:#0f172a;border:1px solid #334155;color:#64748b;padding:7px;border-radius:8px;font-size:0.62rem;font-weight:700;cursor:pointer;">
+                <i class="fas fa-sync-alt"></i> Atualizar
+            </button>`;
+        } catch(e) {
+            container.innerHTML = `<div style="color:#ef4444;font-size:0.65rem;padding:10px;">❌ Erro: ${e.message||e}</div>`;
+            console.error('[renderRelatMatriculas]', e);
+        } finally {
+            container._carregando = false;
+        }
+    },
+
     // ── RELATÓRIO POR PLANO & VALORES ────────────────────────
     async renderRelatPlanos() {
         const container = document.getElementById('resultado-relat-planos') || document.getElementById('resultado-relatorios');
@@ -20182,20 +20264,24 @@ const cronometro = {
     _tocarApito(tipo) {
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const beep = (freq, dur, delay=0, vol=1.0) => {
-                const osc = ctx.createOscillator(); const gain = ctx.createGain();
-                const comp = ctx.createDynamicsCompressor();
-                osc.connect(gain); gain.connect(comp); comp.connect(ctx.destination);
-                osc.frequency.value = freq; osc.type = 'square';
-                gain.gain.setValueAtTime(vol, ctx.currentTime+delay);
-                gain.gain.setValueAtTime(vol, ctx.currentTime+delay+dur-0.02);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+delay+dur);
-                osc.start(ctx.currentTime+delay); osc.stop(ctx.currentTime+delay+dur+0.05);
+            // iOS suspende o AudioContext até interação do usuário — resume() garante funcionamento
+            const play = () => {
+                const beep = (freq, dur, delay=0, vol=1.0) => {
+                    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                    const comp = ctx.createDynamicsCompressor();
+                    osc.connect(gain); gain.connect(comp); comp.connect(ctx.destination);
+                    osc.frequency.value = freq; osc.type = 'square';
+                    gain.gain.setValueAtTime(vol, ctx.currentTime+delay);
+                    gain.gain.setValueAtTime(vol, ctx.currentTime+delay+dur-0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+delay+dur);
+                    osc.start(ctx.currentTime+delay); osc.stop(ctx.currentTime+delay+dur+0.05);
+                };
+                if (tipo==='inicio') { beep(1050,0.12,0,0.7); beep(1050,0.12,0.18,0.7); }
+                else if (tipo==='aviso') { beep(1400,0.08,0,1.0); beep(1400,0.08,0.13,1.0); beep(1400,0.08,0.26,1.0); }
+                else if (tipo==='tick') { beep(880,0.06,0,0.5); }
+                else if (tipo==='fim') { beep(1200,0.6,0,1.0); beep(1200,0.6,0.75,1.0); beep(1200,1.0,1.5,1.0); }
             };
-            if (tipo==='inicio') { beep(1050,0.12,0,0.7); beep(1050,0.12,0.18,0.7); }
-            else if (tipo==='aviso') { beep(1400,0.08,0,1.0); beep(1400,0.08,0.13,1.0); beep(1400,0.08,0.26,1.0); }
-            else if (tipo==='tick') { beep(880,0.06,0,0.5); }
-            else if (tipo==='fim') { beep(1200,0.6,0,1.0); beep(1200,0.6,0.75,1.0); beep(1200,1.0,1.5,1.0); }
+            if (ctx.state === 'suspended') { ctx.resume().then(play); } else { play(); }
         } catch(e) {}
     },
 

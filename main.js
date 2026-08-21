@@ -20071,6 +20071,18 @@ const comissaoProf = {
         } catch(e) { alert('Erro: ' + e.message); }
     },
 
+    // ── Editar valor/aluno do Admin (sem professor) ────────
+    async _editarValorAdmin() {
+        const snapCfg = await db.collection('configuracoes').doc('comissao_config').get();
+        const atual = snapCfg.exists ? (snapCfg.data().valorAdmin || 0) : 0;
+        const novo = prompt(`Valor por aluno — Admin (sem professor):\n(Atual: R$ ${atual})`, atual || '0');
+        if (novo === null) return;
+        const val = parseFloat(novo.replace(',','.'));
+        if (isNaN(val) || val < 0) return alert('Valor inválido.');
+        await db.collection('configuracoes').doc('comissao_config').set({ valorAdmin: val }, { merge: true });
+        await this._carregarRelatorio();
+    },
+
     // ── Editar valor por aluno do professor ────────────────
     async editarValor(profId, colecao, nome, valorAtual) {
         const novo = prompt(`Valor por aluno pago — ${nome}:\n(Atual: R$ ${valorAtual})`, valorAtual || '0');
@@ -20103,12 +20115,15 @@ const comissaoProf = {
         const corpo = document.getElementById('comissao-corpo');
         if (!corpo) return;
         try {
-            // Carrega professores e alunos ativos
-            const [snapProfs, snapPromovidos, snapAlunos] = await Promise.all([
+            // Carrega professores, alunos ativos e config de comissão
+            const [snapProfs, snapPromovidos, snapAlunos, snapCfg] = await Promise.all([
                 db.collection('professores').get(),
                 db.collection('alunos').where('role','==','professor').get(),
-                db.collection('alunos').where('status','!=','trancado').get()
+                db.collection('alunos').where('status','!=','trancado').get(),
+                db.collection('configuracoes').doc('comissao_config').get()
             ]);
+            const cfgComissao = snapCfg.exists ? snapCfg.data() : {};
+            const valorAdmin = cfgComissao.valorAdmin || 0;
 
             // Monta mapa de professores
             const profs = {};
@@ -20123,7 +20138,7 @@ const comissaoProf = {
             });
 
             // Bucket "Admin" para alunos sem professor
-            profs['__admin__'] = { nome: '👑 Admin (sem professor)', valor: 0, alunos: [], pagaram: 0, isAdmin: true };
+            profs['__admin__'] = { nome: '👑 Admin (sem professor)', valor: valorAdmin, alunos: [], pagaram: 0, isAdmin: true };
 
             // Distribui alunos por professor/modalidade
             const alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -20206,10 +20221,28 @@ const comissaoProf = {
 
             // Admin
             const admin = profs['__admin__'];
+            const totalAdmin = admin.alunos.length * admin.valor;
+            totalGeral += totalAdmin;
             html += `
-            <div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:12px;margin-bottom:10px;opacity:0.7;">
-                <div style="font-size:0.75rem;font-weight:800;color:#94a3b8;">👑 Sem professor vinculado</div>
-                <div style="font-size:0.65rem;color:#64748b;margin-top:4px;">${admin.alunos.length} aluno(s) — pertencem ao Admin</div>
+            <div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <div style="font-size:0.8rem;font-weight:800;color:#94a3b8;">👑 Sem professor vinculado</div>
+                    <div style="text-align:right;">
+                        <div style="font-size:0.45rem;color:#94a3b8;font-weight:700;letter-spacing:1px;">TOTAL</div>
+                        <div style="font-size:1rem;font-weight:900;color:#f59e0b;">R$ ${totalAdmin.toFixed(2)}</div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;text-align:center;margin-bottom:8px;">
+                    <div style="background:#1e293b;border-radius:8px;padding:8px;">
+                        <div style="font-size:1rem;font-weight:900;color:#60a5fa;">${admin.alunos.length}</div>
+                        <div style="font-size:0.5rem;color:#64748b;font-weight:700;">ALUNOS SEM PROF</div>
+                    </div>
+                    <div style="background:#1e293b;border-radius:8px;padding:8px;">
+                        <div style="font-size:0.75rem;font-weight:900;color:#f59e0b;">R$ ${admin.valor.toFixed(2)}</div>
+                        <div style="font-size:0.5rem;color:#64748b;font-weight:700;">/ALUNO</div>
+                    </div>
+                </div>
+                <button onclick="comissaoProf._editarValorAdmin()" style="width:100%;padding:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.6rem;font-weight:700;cursor:pointer;">⚙️ Alterar valor/aluno Admin</button>
             </div>`;
 
             html += `

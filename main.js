@@ -20225,27 +20225,55 @@ const comissaoProf = {
 
             // Para cada professor, verifica quais alunos pagaram no mês (por nome)
             const asaasUrl = '/api/asaas';
+            // Cache de pagamento por customerId para evitar chamadas duplicadas (titular com vários dependentes)
+            const _cachePagou = {};
+            const _verificarPagouAsaas = async (cid) => {
+                if (_cachePagou[cid] !== undefined) return _cachePagou[cid];
+                const [rpR, rpC] = await Promise.all([
+                    fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=RECEIVED&limit=10`),
+                    fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=CONFIRMED&limit=10`)
+                ]);
+                const [dpR, dpC] = await Promise.all([rpR.json(), rpC.json()]);
+                const pagamentos = [...(dpR.data || []), ...(dpC.data || [])];
+                const pagou = pagamentos.some(pg => (pg.paymentDate || pg.dueDate || '') >= inicio && (pg.paymentDate || pg.dueDate || '') <= fim);
+                _cachePagou[cid] = pagou;
+                return pagou;
+            };
+            const _getCid = async (aluno) => {
+                if (aluno.asaasId) return aluno.asaasId;
+                if (aluno.email) {
+                    const r = await fetch(`${asaasUrl}?endpoint=customers&email=${encodeURIComponent(aluno.email)}`);
+                    const d = await r.json();
+                    return d.data?.[0]?.id || null;
+                }
+                return null;
+            };
+
+            // Mapa de todos os alunos por id (para buscar titular)
+            const alunosMapGlobal = {};
+            snapAlunos.docs.forEach(d => { alunosMapGlobal[d.id] = d.data(); });
+
             for (const pid of Object.keys(profs)) {
                 const p = profs[pid];
                 if (p.isAdmin || p.alunos.length === 0 || p.valor === 0) continue;
                 for (const aluno of p.alunos) {
                     aluno._pagou = false;
-                    const customerId = aluno.asaasId || null;
                     try {
-                        let cid = customerId;
-                        if (!cid && aluno.email) {
-                            const r = await fetch(`${asaasUrl}?endpoint=customers&email=${encodeURIComponent(aluno.email)}`);
-                            const d = await r.json();
-                            cid = d.data?.[0]?.id || null;
+                        // Se for dependente, verificar se o titular pagou
+                        if (aluno.responsavelId) {
+                            const titular = alunosMapGlobal[aluno.responsavelId];
+                            if (titular) {
+                                const cidTitular = await _getCid({ asaasId: titular.asaasId, email: titular.email });
+                                if (cidTitular) {
+                                    aluno._pagou = await _verificarPagouAsaas(cidTitular);
+                                    if (aluno._pagou) continue;
+                                }
+                            }
                         }
+                        // Verificar pagamento próprio
+                        const cid = await _getCid(aluno);
                         if (!cid) continue;
-                        const [rpR, rpC] = await Promise.all([
-                            fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=RECEIVED&limit=10`),
-                            fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=CONFIRMED&limit=10`)
-                        ]);
-                        const [dpR, dpC] = await Promise.all([rpR.json(), rpC.json()]);
-                        const pagamentos = [...(dpR.data || []), ...(dpC.data || [])];
-                        aluno._pagou = pagamentos.some(pg => (pg.paymentDate || pg.dueDate || '') >= inicio && (pg.paymentDate || pg.dueDate || '') <= fim);
+                        aluno._pagou = await _verificarPagouAsaas(cid);
                     } catch(_) {}
                 }
                 p.pagaram = p.alunos.filter(a => a._pagou).length;

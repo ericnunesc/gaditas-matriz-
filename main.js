@@ -20110,6 +20110,17 @@ const comissaoProf = {
 
     // ── Relatório de comissão ──────────────────────────────
     async abrirRelatorio() {
+        // Professor só acessa se tiver permissão liberada pelo admin
+        if (auth.role === 'professor') {
+            const profId = auth.currentUser?.id;
+            const colecao = auth.currentUser?.colecao || 'professores';
+            if (profId) {
+                const snap = await db.collection(colecao).doc(profId).get();
+                if (!snap.exists || !snap.data().verRelatorioComissao) {
+                    return alert('⛔ Acesso não liberado pelo administrador.');
+                }
+            }
+        }
         const modal = document.createElement('div');
         modal.id = 'modal-comissao';
         modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:16px;box-sizing:border-box;';
@@ -20128,6 +20139,8 @@ const comissaoProf = {
     async _carregarRelatorio() {
         const corpo = document.getElementById('comissao-corpo');
         if (!corpo) return;
+        const isAdmin = auth.role === 'admin';
+        const profIdLogado = !isAdmin ? (auth.currentUser?.id || null) : null;
         try {
             // Carrega professores, alunos ativos e config de comissão
             const [snapProfs, snapPromovidos, snapAlunos, snapCfg] = await Promise.all([
@@ -20144,11 +20157,11 @@ const comissaoProf = {
             snapProfs.docs.forEach(d => {
                 const p = d.data();
                 if (p.role === 'financeiro') return;
-                profs[d.id] = { nome: p.nome, valor: p.valorPorAluno || 0, alunos: [], pagaram: 0 };
+                profs[d.id] = { _id: d.id, nome: p.nome, valor: p.valorPorAluno || 0, alunos: [], pagaram: 0 };
             });
             snapPromovidos.docs.forEach(d => {
                 const p = d.data();
-                profs[d.id] = profs[d.id] || { nome: p.nome, valor: p.valorPorAluno || 0, alunos: [], pagaram: 0 };
+                profs[d.id] = profs[d.id] || { _id: d.id, nome: p.nome, valor: p.valorPorAluno || 0, alunos: [], pagaram: 0 };
             });
 
             // Bucket "Admin" para alunos sem professor
@@ -20203,8 +20216,8 @@ const comissaoProf = {
             let html = `<div style="font-size:0.6rem;color:#64748b;font-weight:800;margin-bottom:12px;text-align:center;letter-spacing:1px;">${mes.toUpperCase()}</div>`;
             let totalGeral = 0;
 
-            // Só lista professores com valor/aluno configurado (> 0)
-            Object.values(profs).filter(p => !p.isAdmin && p.valor > 0).sort((a,b) => b.alunos.length - a.alunos.length).forEach(p => {
+            // Só lista professores com valor/aluno configurado (> 0); professor vê só o próprio
+            Object.values(profs).filter(p => !p.isAdmin && p.valor > 0 && (isAdmin || p._id === profIdLogado)).sort((a,b) => b.alunos.length - a.alunos.length).forEach(p => {
                 const total = p.pagaram * p.valor;
                 totalGeral += total;
                 html += `
@@ -20233,8 +20246,9 @@ const comissaoProf = {
                 </div>`;
             });
 
-            // Admin
+            // Admin — só o admin vê esse bloco
             const admin = profs['__admin__'];
+            if (isAdmin) {
             const totalAdmin = admin.alunos.length * admin.valor;
             totalGeral += totalAdmin;
             html += `
@@ -20259,11 +20273,15 @@ const comissaoProf = {
                 <button onclick="comissaoProf._editarValorAdmin()" style="width:100%;padding:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.6rem;font-weight:700;cursor:pointer;">⚙️ Alterar valor/aluno Admin</button>
             </div>`;
 
-            html += `
-            <div style="background:#1c1000;border:2px solid #f59e0b;border-radius:12px;padding:14px;text-align:center;margin-top:4px;">
-                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:1px;margin-bottom:4px;">TOTAL A PAGAR NO MÊS</div>
-                <div style="font-size:1.8rem;font-weight:900;color:#f59e0b;">R$ ${totalGeral.toFixed(2)}</div>
-            </div>`;
+            } // fim if(isAdmin) bloco admin
+
+            if (isAdmin) {
+                html += `
+                <div style="background:#1c1000;border:2px solid #f59e0b;border-radius:12px;padding:14px;text-align:center;margin-top:4px;">
+                    <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:1px;margin-bottom:4px;">TOTAL A PAGAR NO MÊS</div>
+                    <div style="font-size:1.8rem;font-weight:900;color:#f59e0b;">R$ ${totalGeral.toFixed(2)}</div>
+                </div>`;
+            }
 
             corpo.innerHTML = html;
         } catch(e) {

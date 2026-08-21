@@ -4144,6 +4144,11 @@ const academia = {
 
     async renderProfessores() {
         const l = document.getElementById('list-professores'); if(!l || auth.role !== 'admin') return;
+        // Botões exclusivos do admin
+        const btnsAdmin = document.getElementById('btns-admin-prof');
+        if (btnsAdmin) btnsAdmin.innerHTML = `
+            <button onclick="academia.criarUsuarioFinanceiro()" style="width:100%;padding:9px;background:#0f172a;border:1px solid #22c55e;color:#22c55e;border-radius:8px;font-size:0.65rem;font-weight:800;cursor:pointer;margin-bottom:8px;">💰 Criar Acesso Financeiro</button>
+            <button onclick="comissaoProf.abrirRelatorio()" style="width:100%;padding:9px;background:#0f172a;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.65rem;font-weight:800;cursor:pointer;margin-bottom:8px;">💵 Relatório de Comissão</button>`;
         let html = '';
 
         // Alunos promovidos a professor

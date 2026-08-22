@@ -20229,14 +20229,16 @@ const comissaoProf = {
             const _cachePagou = {};
             const _verificarPagouAsaas = async (cid) => {
                 if (_cachePagou[cid] !== undefined) return _cachePagou[cid];
-                // Filtra direto por dueDate no mês atual para não depender do limit
-                const qs = `&customer=${cid}&dueDate[ge]=${inicio}&dueDate[le]=${fim}&limit=5`;
                 const [rpR, rpC] = await Promise.all([
-                    fetch(`${asaasUrl}?endpoint=payments&status=RECEIVED${qs}`),
-                    fetch(`${asaasUrl}?endpoint=payments&status=CONFIRMED${qs}`)
+                    fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=RECEIVED&limit=20`),
+                    fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=CONFIRMED&limit=20`)
                 ]);
                 const [dpR, dpC] = await Promise.all([rpR.json(), rpC.json()]);
-                const pagou = (dpR.data?.length > 0) || (dpC.data?.length > 0);
+                // RECEIVED: usa paymentDate (data que efetivamente pagou — pode ser atrasado)
+                // CONFIRMED: usa dueDate (ainda não liquidou, mas está em processamento)
+                const pagouReceived = (dpR.data || []).some(pg => (pg.paymentDate || pg.dueDate || '') >= inicio && (pg.paymentDate || pg.dueDate || '') <= fim);
+                const pagouConfirmed = (dpC.data || []).some(pg => (pg.dueDate || '') >= inicio && (pg.dueDate || '') <= fim);
+                const pagou = pagouReceived || pagouConfirmed;
                 _cachePagou[cid] = pagou;
                 return pagou;
             };

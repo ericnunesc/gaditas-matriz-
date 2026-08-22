@@ -20229,14 +20229,14 @@ const comissaoProf = {
             const _cachePagou = {};
             const _verificarPagouAsaas = async (cid) => {
                 if (_cachePagou[cid] !== undefined) return _cachePagou[cid];
+                // Filtra direto por dueDate no mês atual para não depender do limit
+                const qs = `&customer=${cid}&dueDate[ge]=${inicio}&dueDate[le]=${fim}&limit=5`;
                 const [rpR, rpC] = await Promise.all([
-                    fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=RECEIVED&limit=10`),
-                    fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=CONFIRMED&limit=10`)
+                    fetch(`${asaasUrl}?endpoint=payments&status=RECEIVED${qs}`),
+                    fetch(`${asaasUrl}?endpoint=payments&status=CONFIRMED${qs}`)
                 ]);
                 const [dpR, dpC] = await Promise.all([rpR.json(), rpC.json()]);
-                // Pagou o mês atual = tem cobrança com dueDate no mês atual e status RECEIVED ou CONFIRMED
-                const todos = [...(dpR.data || []), ...(dpC.data || [])];
-                const pagou = todos.some(pg => (pg.dueDate || '') >= inicio && (pg.dueDate || '') <= fim);
+                const pagou = (dpR.data?.length > 0) || (dpC.data?.length > 0);
                 _cachePagou[cid] = pagou;
                 return pagou;
             };

@@ -20234,12 +20234,13 @@ const comissaoProf = {
                     fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=CONFIRMED&limit=10`)
                 ]);
                 const [dpR, dpC] = await Promise.all([rpR.json(), rpC.json()]);
-                const pagamentos = [...(dpR.data || []), ...(dpC.data || [])];
-                // paymentDate = liquidado; confirmedDate = em processamento; dueDate = vencimento (fallback)
-                const pagou = pagamentos.some(pg => {
-                    const data = pg.paymentDate || pg.confirmedDate || pg.dueDate || '';
-                    return data >= inicio && data <= fim;
-                });
+                // CONFIRMED = em processamento agora → conta como pago sem checar data
+                // RECEIVED = liquidado → verifica se é do mês atual
+                const pagou = (dpC.data?.length > 0) ||
+                    (dpR.data || []).some(pg => {
+                        const data = pg.paymentDate || pg.dueDate || '';
+                        return data >= inicio && data <= fim;
+                    });
                 _cachePagou[cid] = pagou;
                 return pagou;
             };

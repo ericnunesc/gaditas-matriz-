@@ -20164,17 +20164,37 @@ const comissaoProf = {
                     <div style="font-size:0.9rem;font-weight:800;color:#f59e0b;">💵 Relatório de Comissão</div>
                     <button onclick="document.getElementById('modal-comissao').remove()" style="background:#334155;border:none;color:white;padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
                 </div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:14px;">
+                    <button onclick="comissaoProf._navMes(-1)" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:800;font-size:0.8rem;">‹ Anterior</button>
+                    <div id="comissao-mes-label" style="font-size:0.7rem;font-weight:800;color:#94a3b8;min-width:120px;text-align:center;"></div>
+                    <button id="comissao-btn-prox" onclick="comissaoProf._navMes(1)" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:800;font-size:0.8rem;">Próximo ›</button>
+                </div>
                 <div id="comissao-corpo" style="color:#94a3b8;text-align:center;padding:20px;">⏳ Carregando...</div>
             </div>`;
         document.body.appendChild(modal);
+        this._mesOffset = 0;
         await this._carregarRelatorio();
+    },
+
+    _navMes(delta) {
+        this._mesOffset = (this._mesOffset || 0) + delta;
+        if (this._mesOffset > 0) this._mesOffset = 0; // não vai para o futuro
+        // Esconde botão "Próximo" se já está no mês atual
+        const btnProx = document.getElementById('comissao-btn-prox');
+        if (btnProx) btnProx.style.visibility = this._mesOffset < 0 ? 'visible' : 'hidden';
+        this._carregarRelatorio();
     },
 
     async _carregarRelatorio() {
         const corpo = document.getElementById('comissao-corpo');
         if (!corpo) return;
+        corpo.innerHTML = '⏳ Carregando...';
         const isAdmin = auth.role === 'admin';
         const profIdLogado = !isAdmin ? (auth.currentUser?.id || null) : null;
+        const offset = this._mesOffset || 0;
+        // Esconde botão próximo se mês atual
+        const btnProx = document.getElementById('comissao-btn-prox');
+        if (btnProx) btnProx.style.visibility = offset < 0 ? 'visible' : 'hidden';
         try {
             // Carrega professores, alunos ativos e config de comissão
             const [snapProfs, snapPromovidos, snapAlunos, snapCfg] = await Promise.all([
@@ -20218,10 +20238,15 @@ const comissaoProf = {
                 }
             });
 
-            // Verifica pagamentos do mês atual via Asaas
-            const mesAtual = new Date();
-            const inicio = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1).toISOString().split('T')[0];
-            const fim = new Date(mesAtual.getFullYear(), mesAtual.getMonth()+1, 0).toISOString().split('T')[0];
+            // Mês de referência (offset 0 = atual, -1 = anterior, etc.)
+            const mesRef = new Date();
+            mesRef.setDate(1);
+            mesRef.setMonth(mesRef.getMonth() + offset);
+            const inicio = new Date(mesRef.getFullYear(), mesRef.getMonth(), 1).toISOString().split('T')[0];
+            const fim = new Date(mesRef.getFullYear(), mesRef.getMonth()+1, 0).toISOString().split('T')[0];
+            // Atualiza label do mês
+            const labelEl = document.getElementById('comissao-mes-label');
+            if (labelEl) labelEl.textContent = mesRef.toLocaleString('pt-BR',{month:'long',year:'numeric'}).toUpperCase();
 
             // Para cada professor, verifica quais alunos pagaram no mês (por nome)
             const asaasUrl = '/api/asaas';
@@ -20289,8 +20314,7 @@ const comissaoProf = {
             }
 
             // Renderiza
-            const mes = mesAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-            let html = `<div style="font-size:0.6rem;color:#64748b;font-weight:800;margin-bottom:12px;text-align:center;letter-spacing:1px;">${mes.toUpperCase()}</div>`;
+            let html = ``;
             let totalGeral = 0;
 
             const modLabel = m => m === 'muaythai' ? '🥊 Muay Thai' : m === 'jiujitsu' ? '🥋 Jiu-Jitsu' : m ? m : '—';

@@ -20235,7 +20235,11 @@ const comissaoProf = {
                 ]);
                 const [dpR, dpC] = await Promise.all([rpR.json(), rpC.json()]);
                 const pagamentos = [...(dpR.data || []), ...(dpC.data || [])];
-                const pagou = pagamentos.some(pg => (pg.paymentDate || pg.dueDate || '') >= inicio && (pg.paymentDate || pg.dueDate || '') <= fim);
+                // paymentDate = liquidado; confirmedDate = em processamento; dueDate = vencimento (fallback)
+                const pagou = pagamentos.some(pg => {
+                    const data = pg.paymentDate || pg.confirmedDate || pg.dueDate || '';
+                    return data >= inicio && data <= fim;
+                });
                 _cachePagou[cid] = pagou;
                 return pagou;
             };

@@ -20225,8 +20225,28 @@ const comissaoProf = {
 
             // Para cada professor, verifica quais alunos pagaram no mês (por nome)
             const asaasUrl = '/api/asaas';
-            // Cache de pagamento por customerId para evitar chamadas duplicadas (titular com vários dependentes)
+            // Cache por email/asaasId para evitar chamadas duplicadas
+            const _cacheCids = {};
             const _cachePagou = {};
+
+            // Retorna TODOS os customer IDs para um aluno (pode ter duplicatas no Asaas)
+            const _getCids = async (aluno) => {
+                const key = aluno.asaasId || aluno.email || aluno.id;
+                if (_cacheCids[key] !== undefined) return _cacheCids[key];
+                if (aluno.asaasId) { _cacheCids[key] = [aluno.asaasId]; return [aluno.asaasId]; }
+                if (aluno.email) {
+                    try {
+                        const r = await fetch(`${asaasUrl}?endpoint=customers&email=${encodeURIComponent(aluno.email)}`);
+                        const d = await r.json();
+                        const ids = (d.data || []).map(c => c.id);
+                        _cacheCids[key] = ids;
+                        return ids;
+                    } catch(_) {}
+                }
+                _cacheCids[key] = [];
+                return [];
+            };
+
             const _verificarPagouAsaas = async (cid) => {
                 if (_cachePagou[cid] !== undefined) return _cachePagou[cid];
                 const [rpR, rpC] = await Promise.all([
@@ -20234,22 +20254,19 @@ const comissaoProf = {
                     fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=CONFIRMED&limit=20`)
                 ]);
                 const [dpR, dpC] = await Promise.all([rpR.json(), rpC.json()]);
-                // RECEIVED: usa paymentDate (data que efetivamente pagou — pode ser atrasado)
-                // CONFIRMED: usa dueDate (ainda não liquidou, mas está em processamento)
-                const pagouReceived = (dpR.data || []).some(pg => (pg.paymentDate || pg.dueDate || '') >= inicio && (pg.paymentDate || pg.dueDate || '') <= fim);
-                const pagouConfirmed = (dpC.data || []).some(pg => (pg.dueDate || '') >= inicio && (pg.dueDate || '') <= fim);
-                const pagou = pagouReceived || pagouConfirmed;
+                // RECEIVED: paymentDate = quando de fato pagou (pode ter vencido mês anterior)
+                // CONFIRMED: dueDate = vencimento do mês atual
+                const pagouR = (dpR.data || []).some(pg => (pg.paymentDate || pg.dueDate || '') >= inicio && (pg.paymentDate || pg.dueDate || '') <= fim);
+                const pagouC = (dpC.data || []).some(pg => (pg.dueDate || '') >= inicio && (pg.dueDate || '') <= fim);
+                const pagou = pagouR || pagouC;
                 _cachePagou[cid] = pagou;
                 return pagou;
             };
-            const _getCid = async (aluno) => {
-                if (aluno.asaasId) return aluno.asaasId;
-                if (aluno.email) {
-                    const r = await fetch(`${asaasUrl}?endpoint=customers&email=${encodeURIComponent(aluno.email)}`);
-                    const d = await r.json();
-                    return d.data?.[0]?.id || null;
-                }
-                return null;
+
+            const _alunoPageu = async (aluno) => {
+                const cids = await _getCids(aluno);
+                for (const cid of cids) { if (await _verificarPagouAsaas(cid)) return true; }
+                return false;
             };
 
             // Mapa de todos os alunos por id (para buscar titular)
@@ -20262,21 +20279,12 @@ const comissaoProf = {
                 for (const aluno of p.alunos) {
                     aluno._pagou = false;
                     try {
-                        // Se for dependente, verificar se o titular pagou
+                        // Se dependente, verifica o titular primeiro
                         if (aluno.responsavelId) {
                             const titular = alunosMapGlobal[aluno.responsavelId];
-                            if (titular) {
-                                const cidTitular = await _getCid({ asaasId: titular.asaasId, email: titular.email });
-                                if (cidTitular) {
-                                    aluno._pagou = await _verificarPagouAsaas(cidTitular);
-                                    if (aluno._pagou) continue;
-                                }
-                            }
+                            if (titular && await _alunoPageu(titular)) { aluno._pagou = true; continue; }
                         }
-                        // Verificar pagamento próprio
-                        const cid = await _getCid(aluno);
-                        if (!cid) continue;
-                        aluno._pagou = await _verificarPagouAsaas(cid);
+                        aluno._pagou = await _alunoPageu(aluno);
                     } catch(_) {}
                 }
                 p.pagaram = p.alunos.filter(a => a._pagou).length;

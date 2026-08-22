@@ -20234,13 +20234,9 @@ const comissaoProf = {
                     fetch(`${asaasUrl}?endpoint=payments&customer=${cid}&status=CONFIRMED&limit=10`)
                 ]);
                 const [dpR, dpC] = await Promise.all([rpR.json(), rpC.json()]);
-                // CONFIRMED = em processamento agora → conta como pago sem checar data
-                // RECEIVED = liquidado → verifica se é do mês atual
-                const pagou = (dpC.data?.length > 0) ||
-                    (dpR.data || []).some(pg => {
-                        const data = pg.paymentDate || pg.dueDate || '';
-                        return data >= inicio && data <= fim;
-                    });
+                // Pagou o mês atual = tem cobrança com dueDate no mês atual e status RECEIVED ou CONFIRMED
+                const todos = [...(dpR.data || []), ...(dpC.data || [])];
+                const pagou = todos.some(pg => (pg.dueDate || '') >= inicio && (pg.dueDate || '') <= fim);
                 _cachePagou[cid] = pagou;
                 return pagou;
             };

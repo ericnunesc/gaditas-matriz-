@@ -20180,7 +20180,7 @@ const comissaoProf = {
             const [snapProfs, snapPromovidos, snapAlunos, snapCfg] = await Promise.all([
                 db.collection('professores').get(),
                 db.collection('alunos').where('role','==','professor').get(),
-                db.collection('alunos').where('status','!=','trancado').get(),
+                db.collection('alunos').get(), // filtra trancado abaixo (where != exclui docs sem o campo)
                 db.collection('configuracoes').doc('comissao_config').get()
             ]);
             const cfgComissao = snapCfg.exists ? snapCfg.data() : {};
@@ -20201,8 +20201,8 @@ const comissaoProf = {
             // Bucket "Admin" para alunos sem professor
             profs['__admin__'] = { nome: '👑 Admin (sem professor)', valor: valorAdmin, alunos: [], pagaram: 0, isAdmin: true };
 
-            // Distribui alunos por professor/modalidade
-            const alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() }));
+            // Distribui alunos por professor/modalidade (exclui trancados; alunos sem status também entram)
+            const alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.status !== 'trancado');
             alunos.forEach(a => {
                 const pm = a.professoresMod || {};
                 const mods = Object.keys(pm).filter(m => pm[m]?.id);

@@ -15757,7 +15757,7 @@ const loja = {
     async _confirmarPedido(produtoId) {
         const p = this._produtoAtual;
         if (!p) return;
-        if (auth.role !== 'aluno') { alert('Apenas alunos podem fazer pedidos.'); return; }
+        if (auth.role !== 'aluno' && auth.role !== 'professor') { alert('Apenas alunos e professores podem fazer pedidos.'); return; }
         const btn = document.getElementById('btn-fazer-pedido');
         if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Processando...'; }
         try {

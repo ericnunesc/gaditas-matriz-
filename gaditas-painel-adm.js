@@ -1304,7 +1304,7 @@ const GaditasPainelAdm = {
                     const cpfNoAsaas = (dadosBusca.data[0].cpfCnpj || '').replace(/\D/g,'');
                     if (!cpfNoAsaas) {
                         await fetch('/api/asaas?endpoint=customers/' + asaasId, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            method: 'PUT', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ name: nome, email, cpfCnpj: cpfAluno })
                         });
                     }

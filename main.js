@@ -1012,10 +1012,10 @@ const academia = {
     async salvarConfiguracaoPlanos() {
         const taxaInput = parseFloat(document.getElementById('plano-taxa-matricula')?.value);
         const planos = {
-            mensal:        { valor: parseFloat(document.getElementById('plano-val-mensal').value) || 120,     label: 'Mensal',     ciclo: 'mês' },
-            trimestral:    { valor: parseFloat(document.getElementById('plano-val-trimestral').value) || 110, label: 'Trimestral', ciclo: 'mês' },
-            semestral:     { valor: parseFloat(document.getElementById('plano-val-semestral').value) || 100,  label: 'Semestral',  ciclo: 'mês' },
-            anual:         { valor: parseFloat(document.getElementById('plano-val-anual').value) || 90,       label: 'Anual',      ciclo: 'mês' },
+            mensal:        { valor: parseFloat(document.getElementById('plano-val-mensal').value) || 120,     label: 'Mensal',     ciclo: 'mês', billingType: document.getElementById('plano-billing-mensal').value },
+            trimestral:    { valor: parseFloat(document.getElementById('plano-val-trimestral').value) || 110, label: 'Trimestral', ciclo: 'mês', billingType: document.getElementById('plano-billing-trimestral').value },
+            semestral:     { valor: parseFloat(document.getElementById('plano-val-semestral').value) || 100,  label: 'Semestral',  ciclo: 'mês', billingType: document.getElementById('plano-billing-semestral').value },
+            anual:         { valor: parseFloat(document.getElementById('plano-val-anual').value) || 90,       label: 'Anual',      ciclo: 'mês', billingType: document.getElementById('plano-billing-anual').value },
             taxaMatricula: isNaN(taxaInput) ? 0 : taxaInput
         };
         await db.collection('configuracoes').doc('planos').set(planos);
@@ -1041,7 +1041,14 @@ const academia = {
                             <div>
                                 <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${planos[key].label.toUpperCase()} (R$/mês)</small>
                                 <input type="number" id="plano-val-${key}" value="${planos[key].valor}" step="0.01"
-                                    style="width:100%; padding:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.85rem; font-weight:700;"/>
+                                    style="width:100%; padding:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.85rem; font-weight:700; box-sizing:border-box;"/>
+                                <small style="color:#64748b; font-size:0.55rem; font-weight:800; display:block; margin:6px 0 3px;">FORMA DE PAGAMENTO</small>
+                                <select id="plano-billing-${key}" style="width:100%; padding:8px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.72rem;">
+                                    <option value="UNDEFINED" ${(planos[key].billingType||'UNDEFINED')==='UNDEFINED'?'selected':''}>🔀 Pix, Boleto ou Cartão</option>
+                                    <option value="PIX" ${(planos[key].billingType||'')==='PIX'?'selected':''}>⚡ Pix</option>
+                                    <option value="BOLETO" ${(planos[key].billingType||'')==='BOLETO'?'selected':''}>📄 Boleto</option>
+                                    <option value="CREDIT_CARD" ${(planos[key].billingType||'')==='CREDIT_CARD'?'selected':''}>💳 Cartão de Crédito</option>
+                                </select>
                             </div>`).join('')}
                     </div>
                     <div style="margin-top:14px; padding-top:12px; border-top:1px solid #1e293b;">

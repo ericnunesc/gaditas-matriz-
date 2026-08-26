@@ -1160,13 +1160,17 @@ const GaditasPainelAdm = {
                 btn.style.color = '#94a3b8';
             }
         });
-        // Preenche valor sugerido do plano se configurado
+        // Preenche valor e forma de pagamento configurados para o plano
         try {
             academia.carregarConfiguracaoPlanos().then(planos => {
                 const p = planos[tipo];
                 if (p && p.valor > 0) {
                     const input = document.getElementById('plano-valor');
                     if (input && !input.value) input.value = p.valor.toFixed(2);
+                }
+                if (p && p.billingType) {
+                    const sel = document.getElementById('plano-tipo');
+                    if (sel) sel.value = p.billingType;
                 }
             });
         } catch(e) {}

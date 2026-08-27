@@ -639,13 +639,9 @@ const academia = {
     leoesFichaTemp: { leaoAtencao: 0, leaoComportamento: 0, leaoCompanheirismo: 0, leaoDisciplina: 0 },
 
     gradeHorarios: {
-        1: ["06:00 - BJJ", "16:00 - BJJ", "17:40 - Kids 1", "18:30 - Kids 2", "20:20 - BJJ"],
-        2: ["16:00 - Submission", "19:00 - Kids 1 e 2", "20:00 - Submission", "22:30 - BJJ"],
-        3: ["06:00 - BJJ", "16:00 - BJJ", "17:40 - Kids 1", "18:30 - Kids 2", "20:20 - BJJ"],
-        4: ["16:00 - Submission", "19:00 - Kids 1 e 2", "20:00 - Submission", "22:30 - BJJ"],
-        5: ["06:00 - BJJ", "16:00 - BJJ", "17:40 - Kids 1", "18:30 - Kids 2", "20:20 - BJJ"],
-        6: ["09:30 - Submission"],
-        0: ["Sem treinos hoje"]
+        0: ["Sem treinos hoje"], 1: ["Sem treinos hoje"], 2: ["Sem treinos hoje"],
+        3: ["Sem treinos hoje"], 4: ["Sem treinos hoje"], 5: ["Sem treinos hoje"],
+        6: ["Sem treinos hoje"]
     },
     gradeFirebase: null,
     _modoEdicaoHorarios: false,
@@ -7507,14 +7503,28 @@ Ele voltará a ser aluno normal.`)) return;
     },
 
     async carregarGradeFirebase() {
-        try {
-            const doc = await db.collection('configuracoes').doc('horarios').get();
-            this.gradeFirebase = doc.exists ? doc.data() : { ...this.gradeHorarios };
-        } catch(e) {
-            if (!this.gradeFirebase) this.gradeFirebase = { ...this.gradeHorarios };
+        // onSnapshot: atualiza em tempo real quando o admin altera horários
+        if (!this._gradeUnsub) {
+            this._gradeUnsub = db.collection('configuracoes').doc('horarios').onSnapshot(doc => {
+                this.gradeFirebase = doc.exists ? doc.data() : { ...this.gradeHorarios };
+                if (typeof ui !== 'undefined') ui.atualizarTurmasDinamicas();
+                // Se a aba de horários estiver aberta, re-renderiza sem buscar de novo
+                const tabHor = document.getElementById('tab-horarios');
+                if (tabHor && tabHor.style.display !== 'none' && !tabHor.classList.contains('hidden')) {
+                    this.renderHorarios(true);
+                }
+            }, e => {
+                console.warn('Erro listener horários:', e);
+                if (!this.gradeFirebase) this.gradeFirebase = { ...this.gradeHorarios };
+            });
         }
-        // Atualiza o select de turmas do aluno após a grade do Firebase carregar
-        if (typeof ui !== 'undefined') ui.atualizarTurmasDinamicas();
+        // Aguarda o primeiro snapshot (resolve quando gradeFirebase estiver preenchido)
+        if (!this.gradeFirebase) {
+            await new Promise(resolve => {
+                const check = () => { if (this.gradeFirebase) resolve(); else setTimeout(check, 100); };
+                check();
+            });
+        }
         return this.gradeFirebase;
     },
 

@@ -3043,15 +3043,31 @@ const academia = {
             batch.commit().catch(() => {});
         }
 
+        // Ordena turmas pelo horário (nome começa com HH:MM — ordem alfabética = ordem cronológica)
+        const turmasOrdenadas = Object.keys(g).sort();
         let h = "";
-        for (const t in g) {
+        for (const t of turmasOrdenadas) {
+            // Ordena check-ins dentro da turma: mais antigo primeiro
+            g[t].sort((a, b) => {
+                const da = a.data ? new Date(a.data).getTime() : 0;
+                const db_ = b.data ? new Date(b.data).getTime() : 0;
+                return da - db_;
+            });
             h += `<h4 style="color:#3b82f6; font-size:0.7rem; margin:15px 0 6px 4px; font-weight:800; letter-spacing:0.5px;">${t.toUpperCase()}</h4>`;
             h += g[t].map(c => {
                 const al = info[c.alunoId] || {};
                 const cor = ui.getCorFaixa(al.faixa || 'Branca');
                 const nomeEsc = (al.nome||c.alunoNome||'').replace(/'/g,'');
                 const foto = al.fotoPerfil ? `<img src="${al.fotoPerfil}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid ${cor};flex-shrink:0;cursor:pointer;" onclick="verFotoAluno('${al.fotoPerfil}','${nomeEsc}')">` : `<div style="width:40px;height:40px;border-radius:50%;background:#334155;border:2px solid ${cor};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">👤</div>`;
-                return `<div class="item-card" style="border-left:4px solid ${cor};display:flex;align-items:center;gap:10px;">${foto}<span style="font-size:0.85rem;color:#e2e8f0;font-weight:600;flex:1;">${c.alunoNome}</span><div style="display:flex;gap:6px;"><button onclick="academia.aprovar('${c.id}','${c.alunoId}','${c.turma}')" style="background:#062f1d;color:#10b981;border:none;padding:8px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;"><i class="fas fa-check"></i></button><button onclick="academia.recusarCheckin('${c.id}')" style="background:#3b0707;color:#ef4444;border:none;padding:8px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;"><i class="fas fa-times"></i></button></div></div>`;
+                // Badge de data — mostra sempre (destaca em amarelo se for de outro dia)
+                let dataExib = '';
+                if (c.data) {
+                    const d = new Date(c.data);
+                    const dStr = d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+                    const eHoje = d.toLocaleDateString('pt-BR') === hoje;
+                    dataExib = `<span style="font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:4px;white-space:nowrap;background:${eHoje ? '#0f2027' : '#422006'};color:${eHoje ? '#64748b' : '#f59e0b'};border:1px solid ${eHoje ? '#1e293b' : '#92400e'};">${eHoje ? 'hoje' : dStr}</span>`;
+                }
+                return `<div class="item-card" style="border-left:4px solid ${cor};display:flex;align-items:center;gap:10px;">${foto}<div style="flex:1;min-width:0;"><span style="font-size:0.85rem;color:#e2e8f0;font-weight:600;display:block;">${c.alunoNome}</span>${dataExib}</div><div style="display:flex;gap:6px;"><button onclick="academia.aprovar('${c.id}','${c.alunoId}','${c.turma}')" style="background:#062f1d;color:#10b981;border:none;padding:8px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;"><i class="fas fa-check"></i></button><button onclick="academia.recusarCheckin('${c.id}')" style="background:#3b0707;color:#ef4444;border:none;padding:8px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;"><i class="fas fa-times"></i></button></div></div>`;
             }).join('');
         }
         l.innerHTML = h || "<p style='color:var(--text-muted); text-align:center; font-size:0.8rem; padding:10px;'>Nenhum check-in pendente.</p>";

@@ -331,6 +331,7 @@ const auth = {
         // ── ENQUETE ATIVA (aparece como popup bloqueante) ─
         if (this.role === 'aluno') {
             setTimeout(() => enquetes.verificarEnqueteAtiva(), 2000);
+            setTimeout(() => pesquisas.verificarPesquisaAtiva(), 3500);
         }
 
         // ── BANNER ATIVE AS NOTIFICAÇÕES (só para alunos) ─
@@ -22386,6 +22387,7 @@ const pesquisas = {
                     <div style="font-size:0.55rem;color:#64748b;margin-bottom:8px;">${p.perguntas?.length || 0} pergunta(s) · ${this._publicoLabel(p.publico)} · criada em ${p.dataCriacao}</div>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
                         <button onclick="pesquisas.verRelatorio('${pid}')" style="flex:1;padding:6px;background:#1e3a5f;border:1px solid #3b82f6;color:#93c5fd;border-radius:6px;font-size:0.62rem;font-weight:800;cursor:pointer;">📊 Relatório</button>
+                        <button onclick="pesquisas.abrirEditar('${pid}')" style="flex:1;padding:6px;background:#1e293b;border:1px solid #a78bfa;color:#a78bfa;border-radius:6px;font-size:0.62rem;font-weight:800;cursor:pointer;">✏️ Editar</button>
                         <button onclick="pesquisas.toggleAtiva('${pid}',${!p.ativa})" style="flex:1;padding:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.62rem;font-weight:800;cursor:pointer;">${p.ativa ? '⏸ Desativar' : '▶ Ativar'}</button>
                         <button onclick="pesquisas.excluir('${pid}')" style="padding:6px 8px;background:none;border:1px solid #f43f5e44;color:#f43f5e;border-radius:6px;font-size:0.62rem;cursor:pointer;">🗑</button>
                     </div>
@@ -22454,9 +22456,9 @@ const pesquisas = {
                     <option value="nota" ${q.tipo==='nota'?'selected':''}>⭐ Nota 1-5</option>
                     <option value="multipla" ${q.tipo==='multipla'?'selected':''}>🔘 Múltipla escolha</option>
                 </select>
-                ${q.tipo==='multipla' ? `<input value="${(q.opcoes||[]).join(', ').replace(/"/g,'&quot;')}" placeholder="opção1, opção2, opção3..."
-                    oninput="window._pesqPerguntas[${i}].opcoes=this.value.split(',').map(s=>s.trim()).filter(Boolean)"
-                    style="width:100%;box-sizing:border-box;padding:7px;background:#0f172a;border:1px solid #334155;color:white;border-radius:5px;font-size:0.68rem;outline:none;font-family:inherit;" placeholder="opção1, opção2, opção3"/>` : ''}
+                ${q.tipo==='multipla' ? `<input value="${(q.opcoes||[]).join('; ').replace(/"/g,'&quot;')}" placeholder="opção1; opção2; opção3..."
+                    oninput="window._pesqPerguntas[${i}].opcoes=this.value.split(';').map(s=>s.trim()).filter(Boolean)"
+                    style="width:100%;box-sizing:border-box;padding:7px;background:#0f172a;border:1px solid #334155;color:white;border-radius:5px;font-size:0.68rem;outline:none;font-family:inherit;"/>` : ''}
             </div>
         `).join('');
     },
@@ -22496,6 +22498,267 @@ const pesquisas = {
             alert('✅ Pesquisa criada e ativada!');
             this.renderPainelAdmin();
         } catch(e) { alert('Erro ao criar: ' + e.message); }
+    },
+
+    // ── EDITAR PESQUISA EXISTENTE ─────────────────────────────────────────────
+
+    async abrirEditar(pesquisaId) {
+        document.getElementById('modal-editar-pesquisa')?.remove();
+        const snap = await db.collection('pesquisas').doc(pesquisaId).get();
+        if (!snap.exists) return;
+        const p = snap.data();
+        const publicos = [
+            { v:'todos', l:'👥 Todos os alunos' }, { v:'kids', l:'🏅 Somente Kids' },
+            { v:'bjj_adulto', l:'🥋 BJJ Adulto' }, { v:'mt', l:'🥊 Muay Thai' },
+            { v:'faixas_bjj', l:'🎖 Por faixas (BJJ Adulto)' }, { v:'alunos', l:'👤 Alunos específicos' },
+        ];
+        window._pesqEditPerguntas = JSON.parse(JSON.stringify(p.perguntas || []));
+        window._pesqEditPublico   = JSON.parse(JSON.stringify(p.publico || { tipo:'todos', faixas:[], alunoIds:[] }));
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-editar-pesquisa';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.98);z-index:10000;overflow-y:auto;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="max-width:440px;margin:0 auto;padding-bottom:60px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <div style="font-size:0.9rem;font-weight:800;color:white;">✏️ EDITAR PESQUISA</div>
+                    <button onclick="document.getElementById('modal-editar-pesquisa').remove()" style="background:#334155;border:none;color:white;padding:8px 14px;border-radius:8px;font-size:0.8rem;font-weight:700;cursor:pointer;">✕</button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div>
+                        <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:5px;">TÍTULO *</small>
+                        <input id="pesq-edit-titulo" type="text" maxlength="100" value="${(p.titulo||'').replace(/"/g,'&quot;')}"
+                            style="width:100%;box-sizing:border-box;padding:11px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.8rem;outline:none;font-family:inherit;">
+                    </div>
+                    <div>
+                        <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:5px;">PÚBLICO-ALVO</small>
+                        <select id="pesq-edit-publico-tipo" onchange="pesquisas._changeEditPublico(this.value)"
+                            style="width:100%;box-sizing:border-box;padding:8px 10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;">
+                            ${publicos.map(pu => `<option value="${pu.v}" ${(p.publico?.tipo||'todos')===pu.v?'selected':''}>${pu.l}</option>`).join('')}
+                        </select>
+                        <div id="pesq-edit-publico-extra"></div>
+                    </div>
+                    <div>
+                        <small style="font-size:0.6rem;color:#64748b;font-weight:700;display:block;margin-bottom:6px;">PERGUNTAS</small>
+                        <div id="pesq-edit-perguntas-cont"></div>
+                        <button onclick="pesquisas._addEditPergunta()" style="width:100%;padding:7px;background:#1e293b;border:1px dashed #334155;color:#64748b;border-radius:6px;font-size:0.62rem;cursor:pointer;margin-top:4px;">+ Adicionar pergunta</button>
+                    </div>
+                    <button onclick="pesquisas._salvarEditar('${pesquisaId}')" id="btn-salvar-editar-pesquisa"
+                        style="width:100%;padding:14px;background:#a78bfa;color:white;border:none;border-radius:10px;font-weight:800;font-size:0.85rem;cursor:pointer;">
+                        💾 SALVAR ALTERAÇÕES
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        this._renderEditFormPerguntas();
+        setTimeout(() => document.getElementById('pesq-edit-titulo')?.focus(), 100);
+    },
+
+    _renderEditFormPerguntas() {
+        const cont = document.getElementById('pesq-edit-perguntas-cont');
+        if (!cont) return;
+        if (!window._pesqEditPerguntas) window._pesqEditPerguntas = [];
+        cont.innerHTML = window._pesqEditPerguntas.map((q, i) => `
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:8px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                    <span style="font-size:0.55rem;color:#64748b;font-weight:700;">PERGUNTA ${i+1}</span>
+                    <button onclick="pesquisas._removerEditPergunta(${i})" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.7rem;">✕</button>
+                </div>
+                <input value="${q.texto.replace(/"/g,'&quot;')}" placeholder="Texto da pergunta..." maxlength="200"
+                    oninput="window._pesqEditPerguntas[${i}].texto=this.value"
+                    style="width:100%;box-sizing:border-box;padding:7px;background:#0f172a;border:1px solid #334155;color:white;border-radius:5px;font-size:0.72rem;outline:none;margin-bottom:5px;font-family:inherit;"/>
+                <select onchange="pesquisas._changeEditTipo(${i},this.value)"
+                    style="width:100%;padding:6px;background:#0f172a;border:1px solid #334155;color:white;border-radius:5px;font-size:0.68rem;outline:none;margin-bottom:${q.tipo==='multipla'?'5px':'0'};">
+                    <option value="texto" ${q.tipo==='texto'?'selected':''}>📝 Resposta livre</option>
+                    <option value="nota" ${q.tipo==='nota'?'selected':''}>⭐ Nota 1-5</option>
+                    <option value="multipla" ${q.tipo==='multipla'?'selected':''}>🔘 Múltipla escolha</option>
+                </select>
+                ${q.tipo==='multipla' ? `<input value="${(q.opcoes||[]).join('; ').replace(/"/g,'&quot;')}" placeholder="opção1; opção2; opção3..."
+                    oninput="window._pesqEditPerguntas[${i}].opcoes=this.value.split(';').map(s=>s.trim()).filter(Boolean)"
+                    style="width:100%;box-sizing:border-box;padding:7px;background:#0f172a;border:1px solid #334155;color:white;border-radius:5px;font-size:0.68rem;outline:none;font-family:inherit;"/>` : ''}
+            </div>
+        `).join('');
+    },
+
+    _addEditPergunta() {
+        if (!window._pesqEditPerguntas) window._pesqEditPerguntas = [];
+        window._pesqEditPerguntas.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,5), texto: '', tipo: 'texto', opcoes: [] });
+        this._renderEditFormPerguntas();
+    },
+
+    _removerEditPergunta(i) {
+        window._pesqEditPerguntas.splice(i, 1);
+        this._renderEditFormPerguntas();
+    },
+
+    _changeEditTipo(i, tipo) {
+        window._pesqEditPerguntas[i].tipo = tipo;
+        this._renderEditFormPerguntas();
+    },
+
+    _changeEditPublico(tipo) {
+        if (!window._pesqEditPublico) window._pesqEditPublico = { tipo: 'todos', faixas: [], alunoIds: [] };
+        window._pesqEditPublico.tipo   = tipo;
+        window._pesqEditPublico.faixas = [];
+        window._pesqEditPublico.alunoIds = [];
+        const extra = document.getElementById('pesq-edit-publico-extra');
+        if (!extra) return;
+        if (tipo === 'faixas_bjj') {
+            const faixas = ['Branca','Azul','Roxa','Marrom','Preta'];
+            extra.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">${faixas.map(f =>
+                `<label style="display:flex;align-items:center;gap:4px;font-size:0.65rem;color:#e2e8f0;cursor:pointer;">
+                    <input type="checkbox" value="${f}" onchange="pesquisas._toggleEditFaixa('${f}',this.checked)" style="accent-color:#a78bfa;"> ${f}
+                </label>`).join('')}</div>`;
+        } else { extra.innerHTML = ''; }
+    },
+
+    _toggleEditFaixa(faixa, checked) {
+        if (!window._pesqEditPublico) window._pesqEditPublico = { tipo: 'faixas_bjj', faixas: [], alunoIds: [] };
+        if (checked) { if (!window._pesqEditPublico.faixas.includes(faixa)) window._pesqEditPublico.faixas.push(faixa); }
+        else window._pesqEditPublico.faixas = window._pesqEditPublico.faixas.filter(f => f !== faixa);
+    },
+
+    async _salvarEditar(pesquisaId) {
+        const titulo = document.getElementById('pesq-edit-titulo')?.value?.trim();
+        if (!titulo) return alert('Digite o título da pesquisa.');
+        const pergs = (window._pesqEditPerguntas || []).filter(q => q.texto.trim());
+        if (!pergs.length) return alert('Adicione ao menos uma pergunta.');
+        const btn = document.getElementById('btn-salvar-editar-pesquisa');
+        if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Salvando...'; }
+        try {
+            await db.collection('pesquisas').doc(pesquisaId).update({
+                titulo,
+                perguntas: pergs,
+                publico: window._pesqEditPublico || { tipo: 'todos', faixas: [], alunoIds: [] },
+            });
+            document.getElementById('modal-editar-pesquisa')?.remove();
+            this.renderPainelAdmin();
+        } catch(e) {
+            if (btn) { btn.disabled = false; btn.innerHTML = '💾 SALVAR ALTERAÇÕES'; }
+            alert('Erro ao salvar: ' + e.message);
+        }
+    },
+
+    // ── POPUP PARA ALUNO (chamado no login) ───────────────────────────────────
+
+    async verificarPesquisaAtiva() {
+        if (auth.role !== 'aluno') return;
+        try {
+            const snap = await db.collection('pesquisas').where('ativa', '==', true).get();
+            if (snap.empty) return;
+            const alunoId = auth.currentUser?.id;
+            const alunoDoc = await db.collection('alunos').doc(alunoId).get();
+            const alunoData = alunoDoc.exists ? alunoDoc.data() : {};
+            for (const doc of snap.docs) {
+                const p = { id: doc.id, ...doc.data() };
+                if (!this._alunoMatchPublico(p.publico, alunoData, alunoId)) continue;
+                const respDoc = await db.collection('pesquisas').doc(p.id).collection('respostas').doc(alunoId).get();
+                if (respDoc.exists) continue;
+                this._abrirPopupPesquisa(p);
+                return;
+            }
+        } catch(e) { console.warn('Pesquisa popup:', e.message); }
+    },
+
+    _abrirPopupPesquisa(p) {
+        document.getElementById('modal-pesquisa-popup')?.remove();
+        const pid = p.id;
+        const pergHtml = (p.perguntas || []).map(q => {
+            let input = '';
+            if (q.tipo === 'texto') {
+                input = `<textarea id="pp-resp-${pid}-${q.id}" maxlength="300" placeholder="Sua resposta..."
+                    style="width:100%;box-sizing:border-box;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:6px;font-size:0.72rem;resize:none;height:60px;outline:none;font-family:inherit;"></textarea>`;
+            } else if (q.tipo === 'nota') {
+                input = `<div style="display:flex;gap:6px;flex-wrap:wrap;">${[1,2,3,4,5].map(n =>
+                    `<button onclick="pesquisas._selecionarNotaPopup('${pid}','${q.id}',${n},this)"
+                        style="flex:1;padding:7px 4px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.7rem;font-weight:800;cursor:pointer;">${n} ⭐</button>`
+                ).join('')}</div>`;
+            } else if (q.tipo === 'multipla') {
+                input = `<div style="display:flex;flex-direction:column;gap:5px;">${(q.opcoes||[]).map(op =>
+                    `<label style="display:flex;align-items:center;gap:8px;font-size:0.72rem;color:#e2e8f0;cursor:pointer;background:#0f172a;border:1px solid #334155;padding:8px 10px;border-radius:6px;">
+                        <input type="radio" name="pp-${pid}-${q.id}" value="${op.replace(/"/g,'&quot;')}" style="accent-color:#f59e0b;"> ${op}
+                    </label>`
+                ).join('')}</div>`;
+            }
+            return `<div style="margin-bottom:14px;">
+                <div style="font-size:0.75rem;color:#e2e8f0;margin-bottom:6px;font-weight:600;">${q.texto}</div>
+                ${input}
+            </div>`;
+        }).join('');
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-pesquisa-popup';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.97);z-index:99998;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border:1px solid #f59e0b55;border-radius:20px;padding:28px 22px;max-width:440px;width:100%;box-shadow:0 0 60px rgba(245,158,11,0.15);margin:auto;">
+                <div style="text-align:center;margin-bottom:22px;">
+                    <div style="font-size:2rem;margin-bottom:10px;">📋</div>
+                    <div style="font-size:0.55rem;color:#f59e0b;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">PESQUISA DA ACADEMIA</div>
+                    <div style="font-size:1rem;font-weight:800;color:white;line-height:1.5;">${p.titulo}</div>
+                    <div style="font-size:0.6rem;color:#64748b;margin-top:6px;">Sua opinião é muito importante para nós! OSS 🥋</div>
+                </div>
+                ${pergHtml}
+                <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+                    <button onclick="pesquisas._enviarRespostasPopup('${pid}')" id="btn-resp-popup-${pid}"
+                        style="width:100%;padding:14px;background:#f59e0b;border:none;color:#0f172a;border-radius:10px;font-weight:800;font-size:0.85rem;cursor:pointer;">
+                        📤 ENVIAR RESPOSTAS
+                    </button>
+                    <button onclick="document.getElementById('modal-pesquisa-popup').remove()"
+                        style="width:100%;padding:10px;background:none;border:1px solid #334155;color:#64748b;border-radius:10px;font-weight:700;font-size:0.75rem;cursor:pointer;">
+                        Responder depois
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    _selecionarNotaPopup(pid, qid, valor, btn) {
+        if (!window._ppNotas) window._ppNotas = {};
+        window._ppNotas[`${pid}-${qid}`] = valor;
+        const parent = btn.parentElement;
+        parent.querySelectorAll('button').forEach(b => { b.style.background='#1e293b'; b.style.color='#94a3b8'; b.style.borderColor='#334155'; });
+        btn.style.background='#f59e0b'; btn.style.color='#0f172a'; btn.style.borderColor='#f59e0b';
+    },
+
+    async _enviarRespostasPopup(pesquisaId) {
+        const pesqDoc = await db.collection('pesquisas').doc(pesquisaId).get();
+        if (!pesqDoc.exists) return;
+        const p = pesqDoc.data();
+        const respostas = {};
+        for (const q of (p.perguntas || [])) {
+            if (q.tipo === 'texto') {
+                respostas[q.id] = document.getElementById(`pp-resp-${pesquisaId}-${q.id}`)?.value?.trim() || '';
+            } else if (q.tipo === 'nota') {
+                respostas[q.id] = window._ppNotas?.[`${pesquisaId}-${q.id}`] || '';
+            } else if (q.tipo === 'multipla') {
+                const checked = document.querySelector(`input[name="pp-${pesquisaId}-${q.id}"]:checked`);
+                respostas[q.id] = checked ? checked.value : '';
+            }
+        }
+        const alunoId = auth.currentUser?.id;
+        const btn = document.getElementById(`btn-resp-popup-${pesquisaId}`);
+        if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Enviando...'; }
+        try {
+            const alunoDoc = await db.collection('alunos').doc(alunoId).get();
+            const alunoData = alunoDoc.exists ? alunoDoc.data() : {};
+            await db.collection('pesquisas').doc(pesquisaId).collection('respostas').doc(alunoId).set({
+                alunoId, alunoNome: alunoData.nome || '', modalidade: alunoData.modalidade || 'bjj',
+                isKids: alunoData.isKids === true, respostas,
+                dataResposta: this._dataHoje(), timestamp: Date.now(),
+            });
+            const modal = document.getElementById('modal-pesquisa-popup');
+            if (modal) {
+                modal.innerHTML = `<div style="background:#1e293b;border:1px solid #10b98155;border-radius:20px;padding:48px 28px;max-width:380px;width:100%;text-align:center;margin:auto;">
+                    <div style="font-size:3.5rem;margin-bottom:14px;">✅</div>
+                    <div style="font-size:1.1rem;font-weight:800;color:#10b981;margin-bottom:8px;">Respostas enviadas!</div>
+                    <div style="font-size:0.75rem;color:#64748b;">Obrigado pela sua opinião. OSS! 🥋</div>
+                </div>`;
+                setTimeout(() => modal.remove(), 2500);
+            }
+        } catch(e) {
+            if (btn) { btn.disabled = false; btn.innerHTML = '📤 ENVIAR RESPOSTAS'; }
+            alert('Erro ao enviar: ' + e.message);
+        }
     },
 
     async toggleAtiva(pesquisaId, novoEstado) {

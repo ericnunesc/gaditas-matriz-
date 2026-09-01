@@ -736,17 +736,45 @@ const GaditasFiltros = {
 
     async gerarPixReal(idCobranca) {
         const conteudo = document.getElementById('financeiro-conteudo');
+        conteudo.innerHTML = `<p style="text-align:center; color:#94a3b8; padding:24px; font-size:0.8rem;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Gerando QR Code PIX...</p>`;
         try {
             const resPix = await fetch(`${this.asaasUrl}?endpoint=payments/${idCobranca}/pixQrCode`);
             const dadosPix = await resPix.json();
+
+            if (!resPix.ok || dadosPix.errors || !dadosPix.encodedImage || !dadosPix.payload) {
+                const msgErro = dadosPix.errors ? dadosPix.errors.map(e => e.description || e.code).join('; ')
+                    : 'Não foi possível gerar o QR Code para esta cobrança.';
+                conteudo.innerHTML = `
+                    <div style="text-align:center; padding:20px; background:#4c0519; border:1px solid #f43f5e; border-radius:12px; margin-bottom:12px;">
+                        <div style="font-size:1.8rem; margin-bottom:10px;">❌</div>
+                        <div style="font-size:0.8rem; color:#fda4af; font-weight:700; margin-bottom:6px;">ERRO AO GERAR PIX</div>
+                        <div style="font-size:0.72rem; color:#fecdd3;">${msgErro}</div>
+                        <div style="font-size:0.65rem; color:#94a3b8; margin-top:8px;">Se o problema persistir, entre em contato com a academia.</div>
+                    </div>
+                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:10px; font-weight:700; cursor:pointer;">← VOLTAR</button>`;
+                return;
+            }
+
             conteudo.innerHTML = `
                 <div style="text-align: center; background: #0f172a; padding: 15px; border-radius: 12px; border: 1px solid #334155;">
+                    <div style="font-size:0.6rem; color:#10b981; font-weight:800; letter-spacing:1px; margin-bottom:10px;">ESCANEIE O QR CODE PIX</div>
                     <div style="background: white; width: 160px; height: 160px; margin: 0 auto 12px auto; padding: 10px; border-radius: 8px;"><img src="data:image/jpeg;base64,${dadosPix.encodedImage}" style="width:100%; height:100%;"></div>
+                    <div style="font-size:0.6rem; color:#64748b; margin-bottom:6px;">ou use o código Pix Copia e Cola:</div>
                     <input type="text" id="pix-copia-cola-real" value="${dadosPix.payload}" readonly style="margin-bottom: 8px; text-align: center; font-size: 0.7rem; background: #1e293b; border: 1px solid #334155; padding: 10px; width: 100%; border-radius: 6px; color:#fff; outline:none;">
-                    <button onclick="navigator.clipboard.writeText(document.getElementById('pix-copia-cola-real').value); alert('Copiado!');" class="btn-save" style="background:#334155; width:100%; padding:12px; border-radius:10px; color:white; border:none; font-weight:700; cursor:pointer;">COPIAR PIX</button>
-                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" class="btn-save" style="background: #f43f5e; width:100%; padding:12px; border-radius:10px; color:white; border:none; font-weight:700; cursor:pointer; margin-top:8px;">VOLTAR</button>
+                    <button onclick="navigator.clipboard.writeText(document.getElementById('pix-copia-cola-real').value).then(()=>alert('Código copiado! Cole no seu banco para pagar. ✅')).catch(()=>{document.getElementById('pix-copia-cola-real').select(); document.execCommand('copy'); alert('Copiado!')});" class="btn-save" style="background:#10b981; width:100%; padding:12px; border-radius:10px; color:white; border:none; font-weight:700; cursor:pointer; margin-bottom:8px;"><i class="fas fa-copy" style="margin-right:5px;"></i>COPIAR CÓDIGO PIX</button>
+                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" class="btn-save" style="background: #334155; width:100%; padding:12px; border-radius:10px; color:white; border:none; font-weight:700; cursor:pointer;">← VOLTAR</button>
                 </div>`;
-        } catch (e) { this.carregarDadosFinanceirosReal(); }
+        } catch (e) {
+            console.error('[gerarPixReal]', e);
+            conteudo.innerHTML = `
+                <div style="text-align:center; padding:20px; background:#4c0519; border:1px solid #f43f5e; border-radius:12px; margin-bottom:12px;">
+                    <div style="font-size:1.8rem; margin-bottom:10px;">⚠️</div>
+                    <div style="font-size:0.8rem; color:#fda4af; font-weight:700; margin-bottom:6px;">FALHA NA CONEXÃO</div>
+                    <div style="font-size:0.72rem; color:#fecdd3;">Não foi possível conectar ao sistema de pagamento. Verifique sua conexão e tente novamente.</div>
+                </div>
+                <button onclick="GaditasFiltros.gerarPixReal('${idCobranca}')" style="width:100%; padding:12px; background:#10b981; border:none; color:white; border-radius:10px; font-weight:700; cursor:pointer; margin-bottom:8px;"><i class="fas fa-redo" style="margin-right:5px;"></i>TENTAR NOVAMENTE</button>
+                <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:10px; font-weight:700; cursor:pointer;">← VOLTAR</button>`;
+        }
     },
 
     abrirFormularioCartaoReal(idCobranca) {

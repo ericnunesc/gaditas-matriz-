@@ -332,7 +332,7 @@ const auth = {
         if (this.role === 'aluno') {
             setTimeout(() => enquetes.verificarEnqueteAtiva(), 2000);
             setTimeout(() => pesquisas.verificarPesquisaAtiva(), 3500);
-            setTimeout(() => premiosAno.verificarVotacaoAtiva(), 5000);
+            setTimeout(() => premiosAno.verificarBannerVotacao(), 4000);
         }
 
         // ── BANNER ATIVE AS NOTIFICAÇÕES (só para alunos) ─
@@ -17766,46 +17766,70 @@ const premiosAno = {
         setTimeout(() => this.abrirConfigVotacao(), 1500);
     },
 
-    async verificarVotacaoAtiva() {
+    async _alunoNoPublico(cfg) {
+        const grupos = cfg.grupos || [];
+        const especificos = (cfg.alunosEspecificos || []).map(a => a.id);
+        if (especificos.includes(auth.currentUser.id)) return true;
+        if (!grupos.length) return false;
+        if (grupos.includes('Todos os alunos')) return true;
+        const alunoDoc = await db.collection('alunos').doc(auth.currentUser.id).get();
+        const d = alunoDoc.exists ? alunoDoc.data() : {};
+        const mod = (d.modalidade || 'jiujitsu').toLowerCase();
+        const idade = d.nascimento ? new Date().getFullYear() - new Date(d.nascimento).getFullYear() : 99;
+        return (grupos.includes('Jiu-Jitsu') && mod !== 'muaythai' && idade > 15)
+            || (grupos.includes('Muay Thai') && mod === 'muaythai')
+            || (grupos.includes('Kids') && idade <= 15);
+    },
+
+    async verificarBannerVotacao() {
         if (!auth.currentUser || auth.role !== 'aluno') return;
+        const banner = document.getElementById('banner-votacao-premios');
+        if (!banner) return;
         try {
             const cfgDoc = await db.collection('premios_votacao').doc(String(this._ano())).get();
-            if (!cfgDoc.exists || !cfgDoc.data().ativa) return;
+            if (!cfgDoc.exists || !cfgDoc.data().ativa) { banner.style.display = 'none'; return; }
             const cfg = cfgDoc.data();
+            if (!(await this._alunoNoPublico(cfg))) { banner.style.display = 'none'; return; }
 
-            // Verifica se o aluno está no público-alvo
-            const grupos = cfg.grupos || [];
-            const especificos = (cfg.alunosEspecificos || []).map(a => a.id);
-            const temGrupoTodos = grupos.includes('Todos os alunos');
-            const alunoDoc = await db.collection('alunos').doc(auth.currentUser.id).get();
-            const alunoData = alunoDoc.exists ? alunoDoc.data() : {};
-            const modalidade = (alunoData.modalidade || 'jiujitsu').toLowerCase();
-            const idade = alunoData.nascimento ? new Date().getFullYear() - new Date(alunoData.nascimento).getFullYear() : 99;
-            const noGrupo = temGrupoTodos
-                || (grupos.includes('Jiu-Jitsu') && modalidade !== 'muaythai' && idade > 15)
-                || (grupos.includes('Muay Thai') && modalidade === 'muaythai')
-                || (grupos.includes('Kids') && idade <= 15)
-                || especificos.includes(auth.currentUser.id);
-            if (!noGrupo) return;
-
-            // Verifica se já votou
+            // Verifica se já votou (para personalizar o botão)
             const votoSnap = await db.collection('premios_votos')
                 .where('ano', '==', this._ano())
                 .where('votanteId', '==', auth.currentUser.id)
                 .limit(1).get();
-            if (!votoSnap.empty) return;
-            this._abrirPopupVotacao();
-        } catch(e) { console.error('[verificarVotacaoAtiva]', e); }
+            const jaVotou = !votoSnap.empty;
+
+            banner.style.display = 'block';
+            banner.innerHTML = `
+                <div onclick="premiosAno._abrirPopupVotacao()" style="cursor:pointer;background:linear-gradient(135deg,#4c1d95,#6d28d9);border:1px solid #8b5cf6;border-radius:14px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;">
+                    <div style="font-size:1.8rem;flex-shrink:0;">🏆</div>
+                    <div>
+                        <div style="font-size:0.75rem;font-weight:800;color:white;margin-bottom:2px;">PRÊMIOS DO ANO ${this._ano()}</div>
+                        <div style="font-size:0.65rem;color:#c4b5fd;">${jaVotou ? '✅ Você já votou! Clique para revisar ou alterar seus votos.' : '🗳️ Vote nos melhores colegas de cada categoria!'}</div>
+                    </div>
+                    <div style="margin-left:auto;font-size:0.65rem;font-weight:800;color:#a78bfa;white-space:nowrap;">${jaVotou ? '✏️ Editar' : 'VOTAR →'}</div>
+                </div>`;
+        } catch(e) { console.error('[verificarBannerVotacao]', e); }
     },
 
     async _abrirPopupVotacao() {
-        // Carrega lista de alunos
-        const snap = await db.collection('alunos').get();
+        // Carrega lista de alunos e votos anteriores em paralelo
+        const [alunosSnap, votosSnap] = await Promise.all([
+            db.collection('alunos').get(),
+            db.collection('premios_votos').where('ano','==',this._ano()).where('votanteId','==',auth.currentUser.id).get()
+        ]);
         const alunos = [];
-        snap.forEach(d => { if (d.data().nome && d.id !== auth.currentUser.id) alunos.push({ id: d.id, nome: d.data().nome }); });
+        alunosSnap.forEach(d => { if (d.data().nome && d.id !== auth.currentUser.id) alunos.push({ id: d.id, nome: d.data().nome }); });
         alunos.sort((a,b) => a.nome.localeCompare(b.nome));
         window._votacaoAlunos = alunos;
-        window._votacaoSelecoes = {}; // { catId: { id, nome } }
+        // Pré-carrega votos anteriores
+        window._votacaoSelecoes = {};
+        window._votacaoVotosIds = {}; // docId por catId para update
+        votosSnap.forEach(doc => {
+            const d = doc.data();
+            window._votacaoSelecoes[d.catId] = { id: d.votadoId, nome: d.votadoNome };
+            window._votacaoVotosIds[d.catId] = doc.id;
+        });
+        const jaVotou = !votosSnap.empty;
 
         let el = document.getElementById('popup-votacao-premios');
         if (!el) { el = document.createElement('div'); el.id = 'popup-votacao-premios'; document.body.appendChild(el); }
@@ -17814,10 +17838,12 @@ const premiosAno = {
             <div style="background:#0f172a;border:2px solid #8b5cf6;border-radius:20px;padding:22px;width:100%;max-width:480px;margin-top:10px;margin-bottom:30px;">
                 <div style="text-align:center;margin-bottom:18px;">
                     <div style="font-size:2rem;">🏆</div>
-                    <div style="font-size:1rem;font-weight:800;color:#a78bfa;">VOTE NOS PRÊMIOS DO ANO</div>
-                    <div style="font-size:0.68rem;color:#64748b;margin-top:4px;">Vote em um colega para cada categoria. Você só pode votar uma vez!</div>
+                    <div style="font-size:1rem;font-weight:800;color:#a78bfa;">${jaVotou ? 'EDITAR MEUS VOTOS' : 'VOTE NOS PRÊMIOS DO ANO'}</div>
+                    <div style="font-size:0.68rem;color:#64748b;margin-top:4px;">${jaVotou ? 'Você já votou! Pode alterar suas escolhas enquanto a votação estiver aberta.' : 'Vote em um colega para cada categoria. Pode alterar enquanto a votação estiver aberta!'}</div>
                 </div>
-                ${this.CATEGORIAS.map(cat => `
+                ${this.CATEGORIAS.map(cat => {
+                    const votoAtual = (window._votacaoSelecoes || {})[cat.id];
+                    return `
                     <div style="margin-bottom:14px;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:12px;" id="voto-cat-${cat.id}">
                         <div style="font-size:0.68rem;font-weight:800;color:#a78bfa;margin-bottom:8px;">${cat.emoji} ${cat.label.toUpperCase()}</div>
                         <div style="position:relative;">
@@ -17827,10 +17853,13 @@ const premiosAno = {
                                 id="voto-input-${cat.id}">
                             <div id="voto-lista-${cat.id}" style="position:absolute;top:100%;left:0;right:0;background:#1e293b;border:1px solid #475569;border-radius:8px;z-index:100;max-height:140px;overflow-y:auto;display:none;"></div>
                         </div>
-                        <div id="voto-sel-${cat.id}" style="margin-top:6px;font-size:0.7rem;color:#64748b;">Nenhum selecionado</div>
-                    </div>`).join('')}
-                <button onclick="premiosAno._enviarVotos()" style="width:100%;padding:14px;background:#8b5cf6;border:none;color:white;border-radius:12px;font-weight:800;font-size:0.88rem;cursor:pointer;margin-top:6px;">✅ ENVIAR MEUS VOTOS</button>
-                <button onclick="document.getElementById('popup-votacao-premios').remove()" style="width:100%;padding:12px;background:#1e293b;border:1px solid #334155;color:#64748b;border-radius:12px;font-weight:700;font-size:0.8rem;cursor:pointer;margin-top:8px;">⏭️ Responder depois</button>
+                        <div id="voto-sel-${cat.id}" style="margin-top:6px;font-size:0.7rem;">
+                            ${votoAtual ? `<span style="color:#10b981;font-weight:700;">✅ ${votoAtual.nome}</span> <span onclick="premiosAno._removerVoto('${cat.id}')" style="color:#f43f5e;cursor:pointer;margin-left:6px;font-size:0.65rem;">✕ remover</span>` : '<span style="color:#64748b;">Nenhum selecionado</span>'}
+                        </div>
+                    </div>`;
+                }).join('')}
+                <button onclick="premiosAno._enviarVotos()" style="width:100%;padding:14px;background:#8b5cf6;border:none;color:white;border-radius:12px;font-weight:800;font-size:0.88rem;cursor:pointer;margin-top:6px;">✅ ${jaVotou ? 'SALVAR ALTERAÇÕES' : 'ENVIAR MEUS VOTOS'}</button>
+                <button onclick="document.getElementById('popup-votacao-premios').remove()" style="width:100%;padding:12px;background:#1e293b;border:1px solid #334155;color:#64748b;border-radius:12px;font-weight:700;font-size:0.8rem;cursor:pointer;margin-top:8px;">← Fechar</button>
                 <div id="votacao-popup-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
             </div>`;
     },
@@ -17867,28 +17896,32 @@ const premiosAno = {
 
     async _enviarVotos() {
         const selecoes = window._votacaoSelecoes || {};
+        const votosIds = window._votacaoVotosIds || {};
         const categoriasSelecionadas = Object.keys(selecoes);
         if (categoriasSelecionadas.length === 0) return alert('Selecione pelo menos um colega para votar!');
         const st = document.getElementById('votacao-popup-status');
-        if (st) st.innerHTML = '<span style="color:#94a3b8;">⏳ Enviando votos...</span>';
+        if (st) st.innerHTML = '<span style="color:#94a3b8;">⏳ Salvando votos...</span>';
         try {
             const ano = this._ano();
             const batch = db.batch();
             categoriasSelecionadas.forEach(catId => {
                 const voto = selecoes[catId];
-                const ref = db.collection('premios_votos').doc();
+                // Usa o doc existente (update) ou cria novo
+                const ref = votosIds[catId]
+                    ? db.collection('premios_votos').doc(votosIds[catId])
+                    : db.collection('premios_votos').doc();
                 batch.set(ref, {
                     ano, catId,
                     votanteId: auth.currentUser.id,
                     votanteNome: auth.currentUser.name || '',
                     votadoId: voto.id,
                     votadoNome: voto.nome,
-                    criadoEm: new Date().toISOString()
+                    atualizadoEm: new Date().toISOString()
                 });
             });
             await batch.commit();
-            if (st) st.innerHTML = '<span style="color:#10b981;font-weight:700;">✅ Votos registrados! Obrigado por participar! 🏆</span>';
-            setTimeout(() => document.getElementById('popup-votacao-premios')?.remove(), 2000);
+            if (st) st.innerHTML = '<span style="color:#10b981;font-weight:700;">✅ Votos salvos! Pode alterar a qualquer momento enquanto a votação estiver aberta. 🏆</span>';
+            setTimeout(() => { document.getElementById('popup-votacao-premios')?.remove(); premiosAno.verificarBannerVotacao(); }, 2000);
         } catch(e) {
             if (st) st.innerHTML = `<span style="color:#f43f5e;">❌ Erro: ${e.message}</span>`;
         }

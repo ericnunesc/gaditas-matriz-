@@ -664,7 +664,7 @@ const GaditasFiltros = {
                             <button onclick="GaditasFiltros.gerarPixReal('${cobranca.id}')" style="flex:1; background:#10b981; border:none; padding:12px; color:white; font-weight:800; border-radius:12px; font-size:0.72rem; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-qrcode" style="margin-right:5px;"></i>PIX</button>
                             <button onclick="GaditasFiltros.abrirFormularioCartaoReal('${cobranca.id}')" style="flex:1; background:#3b82f6; border:none; padding:12px; color:white; font-weight:800; border-radius:12px; font-size:0.72rem; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-credit-card" style="margin-right:5px;"></i>CARTÃO</button>
                         </div>
-                        ${cobranca.invoiceUrl ? `<div style="padding:0 14px 14px;"><a href="${cobranca.invoiceUrl}" target="_blank" style="display:block; text-align:center; padding:10px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:12px; font-size:0.68rem; font-weight:700; text-decoration:none; letter-spacing:0.3px;"><i class="fas fa-external-link-alt" style="margin-right:5px;"></i>ABRIR LINK DE PAGAMENTO</a></div>` : ''}
+                        <div style="padding:0 14px 14px;"><button onclick="GaditasFiltros.abrirLinkPagamento('${cobranca.id}', this)" style="display:block; width:100%; text-align:center; padding:10px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:12px; font-size:0.68rem; font-weight:700; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-external-link-alt" style="margin-right:5px;"></i>ABRIR LINK DE PAGAMENTO</button></div>
                     </div>`;
             });
             
@@ -732,6 +732,24 @@ const GaditasFiltros = {
             console.error(e);
             conteudo.innerHTML = `<p style="color:#f43f5e; text-align:center;">Erro ao carregar histórico.</p>
                 <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer; margin-top:8px;">← VOLTAR</button>`;
+        }
+    },
+
+    async abrirLinkPagamento(idCobranca, btn) {
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando link...'; }
+        try {
+            const res = await fetch(`${this.asaasUrl}?endpoint=payments/${idCobranca}`);
+            const dados = await res.json();
+            const link = dados.invoiceUrl || dados.bankSlipUrl;
+            if (link) {
+                window.open(link, '_blank');
+            } else {
+                alert('Link de pagamento não disponível para esta cobrança. Use o QR Code PIX ou CARTÃO.');
+            }
+        } catch(e) {
+            alert('Erro ao buscar link de pagamento. Tente novamente.');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-external-link-alt" style="margin-right:5px;"></i>ABRIR LINK DE PAGAMENTO'; }
         }
     },
 

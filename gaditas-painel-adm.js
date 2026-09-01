@@ -519,16 +519,25 @@ const GaditasPainelAdm = {
             let asaasId = asaasIdSalvo;
             let clienteAsaas = null;
 
+            // Se o aluno não tem e-mail (ex: criança), usa e-mail gerado pelo CPF
+            let emailAsaas = (email || '').trim();
+            if (!emailAsaas && cpfAluno) emailAsaas = `${cpfAluno}@sem-email.gaditas.com.br`;
+            if (!emailAsaas) {
+                if (resultado) resultado.innerHTML = '<div style="background:#1c0a00; border:1px solid #f43f5e; border-radius:8px; padding:12px; font-size:0.78rem; color:#f43f5e; font-weight:700;">❌ Aluno sem e-mail cadastrado.<br><small style="font-weight:400; color:#94a3b8;">Cadastre um e-mail no perfil do aluno antes de gerar a cobrança.</small></div>';
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bolt"></i> GERAR COBRANÇA'; }
+                return;
+            }
+
             if (!asaasId) {
                 // Tenta buscar pelo e-mail
-                const resBusca = await fetch('/api/asaas?endpoint=customers&email=' + encodeURIComponent(email));
+                const resBusca = await fetch('/api/asaas?endpoint=customers&email=' + encodeURIComponent(emailAsaas));
                 const dadosBusca = await resBusca.json();
                 if (dadosBusca.data && dadosBusca.data.length > 0) {
                     asaasId = dadosBusca.data[0].id;
                     clienteAsaas = dadosBusca.data[0];
                 } else {
                     // Cria o cliente no Asaas já com CPF
-                    const bodyCliente = { name: nome, email };
+                    const bodyCliente = { name: nome, email: emailAsaas };
                     if (cpfAluno.length === 11) bodyCliente.cpfCnpj = cpfAluno;
                     const resCriar = await fetch('/api/asaas?endpoint=customers', {
                         method: 'POST',
@@ -540,6 +549,10 @@ const GaditasPainelAdm = {
                         asaasId = dadosCriado.id;
                         clienteAsaas = dadosCriado;
                         await db.collection('alunos').doc(alunoFirebaseId).update({ asaasId });
+                    } else {
+                        // Mostra erro específico do Asaas
+                        const erroAsaas = dadosCriado.errors ? dadosCriado.errors.map(e => e.description || e.code).join('; ') : JSON.stringify(dadosCriado);
+                        throw new Error(`Asaas rejeitou o cadastro do cliente: ${erroAsaas}`);
                     }
                 }
             }

@@ -17818,7 +17818,7 @@ const premiosAno = {
             db.collection('premios_votos').where('ano','==',this._ano()).where('votanteId','==',auth.currentUser.id).get()
         ]);
         const alunos = [];
-        alunosSnap.forEach(d => { if (d.data().nome && d.id !== auth.currentUser.id) alunos.push({ id: d.id, nome: d.data().nome }); });
+        alunosSnap.forEach(d => { if (d.data().nome && d.id !== auth.currentUser.id) alunos.push({ id: d.id, nome: d.data().nome, foto: d.data().fotoPerfil || null }); });
         alunos.sort((a,b) => a.nome.localeCompare(b.nome));
         window._votacaoAlunos = alunos;
         // Pré-carrega votos anteriores
@@ -17871,19 +17871,50 @@ const premiosAno = {
         const filtrados = (window._votacaoAlunos || []).filter(a => a.nome.toLowerCase().includes(termo.toLowerCase())).slice(0, 8);
         if (!filtrados.length) { lista.style.display = 'none'; return; }
         lista.style.display = 'block';
-        lista.innerHTML = filtrados.map(a => `
-            <div onclick="premiosAno._selecionarVoto('${catId}','${a.id}','${a.nome.replace(/'/g,"\\'")}'); document.getElementById('voto-lista-${catId}').style.display='none';"
-                style="padding:8px 12px;cursor:pointer;font-size:0.75rem;color:#e2e8f0;border-bottom:1px solid #334155;"
+        lista.innerHTML = filtrados.map(a => {
+            const fotoSrc = a.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.nome)}&background=312e81&color=fff&size=80`;
+            const nomeEsc = a.nome.replace(/'/g,"\\'");
+            const fotoEsc = fotoSrc.replace(/'/g,"\\'");
+            return `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid #334155;"
                 onmouseover="this.style.background='#334155'" onmouseout="this.style.background=''">
-                ${a.nome}
-            </div>`).join('');
+                <img src="${fotoSrc}" onclick="premiosAno._ampliarFotoVoto('${fotoEsc}','${nomeEsc}');event.stopPropagation();"
+                    style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #6d28d9;flex-shrink:0;cursor:zoom-in;"
+                    onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(a.nome)}&background=312e81&color=fff&size=80'">
+                <span onclick="premiosAno._selecionarVoto('${catId}','${a.id}','${nomeEsc}'); document.getElementById('voto-lista-${catId}').style.display='none';"
+                    style="font-size:0.75rem;color:#e2e8f0;flex:1;">${a.nome}</span>
+            </div>`;
+        }).join('');
+    },
+
+    _ampliarFotoVoto(src, nome) {
+        let overlay = document.getElementById('voto-foto-overlay');
+        if (!overlay) { overlay = document.createElement('div'); overlay.id = 'voto-foto-overlay'; document.body.appendChild(overlay); }
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:20000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;';
+        overlay.innerHTML = `
+            <img src="${src}" style="max-width:280px;max-height:280px;border-radius:50%;object-fit:cover;border:3px solid #8b5cf6;"
+                onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=312e81&color=fff&size=280'">
+            <div style="font-size:0.9rem;font-weight:800;color:white;">${nome}</div>
+            <button onclick="document.getElementById('voto-foto-overlay').remove()" style="padding:8px 20px;background:#334155;border:none;color:white;border-radius:8px;font-weight:700;cursor:pointer;">✕ Fechar</button>`;
+        overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
     },
 
     _selecionarVoto(catId, alunoId, alunoNome) {
         window._votacaoSelecoes = window._votacaoSelecoes || {};
+        const aluno = (window._votacaoAlunos || []).find(a => a.id === alunoId);
         window._votacaoSelecoes[catId] = { id: alunoId, nome: alunoNome };
+        const fotoSrc = aluno?.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(alunoNome)}&background=312e81&color=fff&size=80`;
+        const fotoEsc = fotoSrc.replace(/'/g,"\\'");
+        const nomeEsc = alunoNome.replace(/'/g,"\\'");
         const sel = document.getElementById(`voto-sel-${catId}`);
-        if (sel) sel.innerHTML = `<span style="color:#10b981;font-weight:700;">✅ ${alunoNome}</span> <span onclick="premiosAno._removerVoto('${catId}')" style="color:#f43f5e;cursor:pointer;margin-left:6px;font-size:0.65rem;">✕ remover</span>`;
+        if (sel) sel.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+                <img src="${fotoSrc}" onclick="premiosAno._ampliarFotoVoto('${fotoEsc}','${nomeEsc}')"
+                    style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #10b981;cursor:zoom-in;flex-shrink:0;"
+                    onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(alunoNome)}&background=312e81&color=fff&size=80'">
+                <span style="color:#10b981;font-weight:700;font-size:0.75rem;">✅ ${alunoNome}</span>
+                <span onclick="premiosAno._removerVoto('${catId}')" style="color:#f43f5e;cursor:pointer;font-size:0.65rem;margin-left:auto;">✕ remover</span>
+            </div>`;
         const input = document.getElementById(`voto-input-${catId}`);
         if (input) { input.value = ''; }
     },

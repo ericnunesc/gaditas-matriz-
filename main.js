@@ -332,6 +332,7 @@ const auth = {
         if (this.role === 'aluno') {
             setTimeout(() => enquetes.verificarEnqueteAtiva(), 2000);
             setTimeout(() => pesquisas.verificarPesquisaAtiva(), 3500);
+            setTimeout(() => premiosAno.verificarVotacaoAtiva(), 5000);
         }
 
         // ── BANNER ATIVE AS NOTIFICAÇÕES (só para alunos) ─
@@ -17640,6 +17641,206 @@ const premiosAno = {
 
                 <div style="font-size:0.6rem;font-weight:800;color:#94a3b8;letter-spacing:1px;margin:16px 0 10px;border-bottom:1px solid #334155;padding-bottom:6px;">MAIS PRESENTES DO ANO</div>
                 ${podio(tops.geral,'🏅 GERAL')}${podio(tops.adulto,'👤 ADULTO JJ')}${podio(tops.kids,'👦 KIDS')}${podio(tops.mt,'🥊 MUAY THAI')}
+            </div>`;
+    },
+
+    // ── VOTAÇÃO PELOS ALUNOS ─────────────────────────────────────────────────
+
+    async abrirConfigVotacao() {
+        // Busca grupos disponíveis (modalidades)
+        const grupos = ['Todos os alunos', 'Jiu-Jitsu', 'Muay Thai', 'Kids'];
+        // Verifica se votação está ativa
+        const cfgDoc = await db.collection('premios_votacao').doc(String(this._ano())).get();
+        const cfg = cfgDoc.exists ? cfgDoc.data() : {};
+        const ativa = cfg.ativa === true;
+
+        let modal = document.getElementById('modal-config-votacao');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-config-votacao'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border:2px solid #8b5cf6;border-radius:16px;padding:22px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:0.9rem;font-weight:800;color:#a78bfa;">🗳️ Votação dos Prêmios</span>
+                    <button onclick="document.getElementById('modal-config-votacao').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+                </div>
+
+                <div style="background:${ativa?'#064e3b':'#1c0a00'};border:1px solid ${ativa?'#10b981':'#f59e0b'};border-radius:10px;padding:10px;margin-bottom:14px;font-size:0.72rem;color:${ativa?'#34d399':'#fcd34d'};font-weight:700;">
+                    ${ativa ? '✅ Votação ATIVA — alunos podem votar agora' : '⏸️ Votação pausada/inativa'}
+                </div>
+
+                <label style="font-size:0.62rem;color:#a78bfa;font-weight:800;display:block;margin-bottom:6px;">ENVIAR PARA QUAL GRUPO?</label>
+                ${grupos.map(g => `
+                    <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;">
+                        <input type="checkbox" value="${g}" ${(cfg.grupos||[]).includes(g)||(!cfg.grupos?.length&&g==='Todos os alunos')?'checked':''} style="width:16px;height:16px;accent-color:#8b5cf6;">
+                        <span style="font-size:0.78rem;color:#e2e8f0;">${g}</span>
+                    </label>`).join('')}
+
+                <div style="display:flex;gap:8px;margin-top:14px;">
+                    <button onclick="premiosAno.ativarVotacao(true)" style="flex:1;padding:12px;background:#8b5cf6;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.8rem;">▶️ ATIVAR VOTAÇÃO</button>
+                    <button onclick="premiosAno.ativarVotacao(false)" style="flex:1;padding:12px;background:#334155;border:none;color:#94a3b8;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.8rem;">⏸️ PAUSAR</button>
+                </div>
+                <button onclick="premiosAno.verRelatorioVotacao()" style="width:100%;margin-top:8px;padding:12px;background:#1a1a00;border:1px solid #f59e0b;color:#fcd34d;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.8rem;">📊 VER RELATÓRIO DE VOTOS</button>
+                <div id="votacao-cfg-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
+            </div>`;
+    },
+
+    async ativarVotacao(ativar) {
+        const checkboxes = document.querySelectorAll('#modal-config-votacao input[type=checkbox]:checked');
+        const grupos = Array.from(checkboxes).map(c => c.value);
+        if (ativar && grupos.length === 0) return alert('Selecione pelo menos um grupo.');
+        await db.collection('premios_votacao').doc(String(this._ano())).set({ ativa: ativar, grupos, atualizadoEm: new Date().toISOString() }, { merge: true });
+        const st = document.getElementById('votacao-cfg-status');
+        if (st) st.innerHTML = `<span style="color:#10b981;">✅ ${ativar ? 'Votação ativada! Alunos receberão o popup ao abrir o app.' : 'Votação pausada.'}</span>`;
+        setTimeout(() => this.abrirConfigVotacao(), 1200);
+    },
+
+    async verificarVotacaoAtiva() {
+        if (!auth.currentUser || auth.role !== 'aluno') return;
+        try {
+            const cfgDoc = await db.collection('premios_votacao').doc(String(this._ano())).get();
+            if (!cfgDoc.exists || !cfgDoc.data().ativa) return;
+            // Verifica se o aluno já votou
+            const votoSnap = await db.collection('premios_votos')
+                .where('ano', '==', this._ano())
+                .where('votanteId', '==', auth.currentUser.id)
+                .limit(1).get();
+            if (!votoSnap.empty) return; // Já votou
+            this._abrirPopupVotacao();
+        } catch(e) { console.error('[verificarVotacaoAtiva]', e); }
+    },
+
+    async _abrirPopupVotacao() {
+        // Carrega lista de alunos
+        const snap = await db.collection('alunos').get();
+        const alunos = [];
+        snap.forEach(d => { if (d.data().nome && d.id !== auth.currentUser.id) alunos.push({ id: d.id, nome: d.data().nome }); });
+        alunos.sort((a,b) => a.nome.localeCompare(b.nome));
+        window._votacaoAlunos = alunos;
+        window._votacaoSelecoes = {}; // { catId: { id, nome } }
+
+        let el = document.getElementById('popup-votacao-premios');
+        if (!el) { el = document.createElement('div'); el.id = 'popup-votacao-premios'; document.body.appendChild(el); }
+        el.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.97);z-index:10000;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
+        el.innerHTML = `
+            <div style="background:#0f172a;border:2px solid #8b5cf6;border-radius:20px;padding:22px;width:100%;max-width:480px;margin-top:10px;margin-bottom:30px;">
+                <div style="text-align:center;margin-bottom:18px;">
+                    <div style="font-size:2rem;">🏆</div>
+                    <div style="font-size:1rem;font-weight:800;color:#a78bfa;">VOTE NOS PRÊMIOS DO ANO</div>
+                    <div style="font-size:0.68rem;color:#64748b;margin-top:4px;">Vote em um colega para cada categoria. Você só pode votar uma vez!</div>
+                </div>
+                ${this.CATEGORIAS.map(cat => `
+                    <div style="margin-bottom:14px;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:12px;" id="voto-cat-${cat.id}">
+                        <div style="font-size:0.68rem;font-weight:800;color:#a78bfa;margin-bottom:8px;">${cat.emoji} ${cat.label.toUpperCase()}</div>
+                        <div style="position:relative;">
+                            <input type="text" placeholder="🔍 Digite o nome do colega..."
+                                oninput="premiosAno._filtrarVotacao('${cat.id}', this.value)"
+                                style="width:100%;padding:9px;background:#0f172a;border:1px solid #475569;color:white;border-radius:8px;font-size:0.75rem;box-sizing:border-box;outline:none;"
+                                id="voto-input-${cat.id}">
+                            <div id="voto-lista-${cat.id}" style="position:absolute;top:100%;left:0;right:0;background:#1e293b;border:1px solid #475569;border-radius:8px;z-index:100;max-height:140px;overflow-y:auto;display:none;"></div>
+                        </div>
+                        <div id="voto-sel-${cat.id}" style="margin-top:6px;font-size:0.7rem;color:#64748b;">Nenhum selecionado</div>
+                    </div>`).join('')}
+                <button onclick="premiosAno._enviarVotos()" style="width:100%;padding:14px;background:#8b5cf6;border:none;color:white;border-radius:12px;font-weight:800;font-size:0.88rem;cursor:pointer;margin-top:6px;">✅ ENVIAR MEUS VOTOS</button>
+                <button onclick="document.getElementById('popup-votacao-premios').remove()" style="width:100%;padding:12px;background:#1e293b;border:1px solid #334155;color:#64748b;border-radius:12px;font-weight:700;font-size:0.8rem;cursor:pointer;margin-top:8px;">⏭️ Responder depois</button>
+                <div id="votacao-popup-status" style="margin-top:8px;text-align:center;font-size:0.72rem;"></div>
+            </div>`;
+    },
+
+    _filtrarVotacao(catId, termo) {
+        const lista = document.getElementById(`voto-lista-${catId}`);
+        if (!lista) return;
+        if (!termo || termo.length < 2) { lista.style.display = 'none'; return; }
+        const filtrados = (window._votacaoAlunos || []).filter(a => a.nome.toLowerCase().includes(termo.toLowerCase())).slice(0, 8);
+        if (!filtrados.length) { lista.style.display = 'none'; return; }
+        lista.style.display = 'block';
+        lista.innerHTML = filtrados.map(a => `
+            <div onclick="premiosAno._selecionarVoto('${catId}','${a.id}','${a.nome.replace(/'/g,"\\'")}'); document.getElementById('voto-lista-${catId}').style.display='none';"
+                style="padding:8px 12px;cursor:pointer;font-size:0.75rem;color:#e2e8f0;border-bottom:1px solid #334155;"
+                onmouseover="this.style.background='#334155'" onmouseout="this.style.background=''">
+                ${a.nome}
+            </div>`).join('');
+    },
+
+    _selecionarVoto(catId, alunoId, alunoNome) {
+        window._votacaoSelecoes = window._votacaoSelecoes || {};
+        window._votacaoSelecoes[catId] = { id: alunoId, nome: alunoNome };
+        const sel = document.getElementById(`voto-sel-${catId}`);
+        if (sel) sel.innerHTML = `<span style="color:#10b981;font-weight:700;">✅ ${alunoNome}</span> <span onclick="premiosAno._removerVoto('${catId}')" style="color:#f43f5e;cursor:pointer;margin-left:6px;font-size:0.65rem;">✕ remover</span>`;
+        const input = document.getElementById(`voto-input-${catId}`);
+        if (input) { input.value = ''; }
+    },
+
+    _removerVoto(catId) {
+        if (window._votacaoSelecoes) delete window._votacaoSelecoes[catId];
+        const sel = document.getElementById(`voto-sel-${catId}`);
+        if (sel) sel.innerHTML = '<span style="color:#64748b;">Nenhum selecionado</span>';
+    },
+
+    async _enviarVotos() {
+        const selecoes = window._votacaoSelecoes || {};
+        const categoriasSelecionadas = Object.keys(selecoes);
+        if (categoriasSelecionadas.length === 0) return alert('Selecione pelo menos um colega para votar!');
+        const st = document.getElementById('votacao-popup-status');
+        if (st) st.innerHTML = '<span style="color:#94a3b8;">⏳ Enviando votos...</span>';
+        try {
+            const ano = this._ano();
+            const batch = db.batch();
+            categoriasSelecionadas.forEach(catId => {
+                const voto = selecoes[catId];
+                const ref = db.collection('premios_votos').doc();
+                batch.set(ref, {
+                    ano, catId,
+                    votanteId: auth.currentUser.id,
+                    votanteNome: auth.currentUser.name || '',
+                    votadoId: voto.id,
+                    votadoNome: voto.nome,
+                    criadoEm: new Date().toISOString()
+                });
+            });
+            await batch.commit();
+            if (st) st.innerHTML = '<span style="color:#10b981;font-weight:700;">✅ Votos registrados! Obrigado por participar! 🏆</span>';
+            setTimeout(() => document.getElementById('popup-votacao-premios')?.remove(), 2000);
+        } catch(e) {
+            if (st) st.innerHTML = `<span style="color:#f43f5e;">❌ Erro: ${e.message}</span>`;
+        }
+    },
+
+    async verRelatorioVotacao() {
+        const ano = this._ano();
+        const snap = await db.collection('premios_votos').where('ano', '==', ano).get();
+        // Conta votos por categoria → votado
+        const mapa = {}; // { catId: { votadoId: { nome, count } } }
+        const votantes = new Set();
+        snap.forEach(doc => {
+            const d = doc.data();
+            votantes.add(d.votanteId);
+            if (!mapa[d.catId]) mapa[d.catId] = {};
+            if (!mapa[d.catId][d.votadoId]) mapa[d.catId][d.votadoId] = { nome: d.votadoNome, count: 0 };
+            mapa[d.catId][d.votadoId].count++;
+        });
+
+        let modal = document.getElementById('modal-relatorio-votacao');
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-relatorio-votacao'; document.body.appendChild(modal); }
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.97);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
+        modal.innerHTML = `
+            <div style="background:#0f172a;border:2px solid #8b5cf6;border-radius:20px;padding:22px;width:100%;max-width:480px;margin-top:10px;margin-bottom:30px;position:relative;">
+                <button onclick="document.getElementById('modal-relatorio-votacao').remove()" style="position:absolute;top:14px;right:14px;background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.75rem;">✕</button>
+                <div style="text-align:center;margin-bottom:18px;">
+                    <div style="font-size:2rem;">📊</div>
+                    <div style="font-size:1rem;font-weight:800;color:#a78bfa;">RELATÓRIO DE VOTOS ${ano}</div>
+                    <div style="font-size:0.68rem;color:#64748b;margin-top:4px;">${votantes.size} aluno(s) votaram até agora</div>
+                </div>
+                ${this.CATEGORIAS.map(cat => {
+                    const votos = Object.values(mapa[cat.id] || {}).sort((a,b) => b.count - a.count);
+                    if (!votos.length) return `<div style="margin-bottom:10px;padding:10px;background:#1e293b;border-radius:10px;border:1px solid #334155;"><div style="font-size:0.65rem;font-weight:800;color:#a78bfa;margin-bottom:4px;">${cat.emoji} ${cat.label}</div><div style="font-size:0.65rem;color:#475569;">Nenhum voto ainda</div></div>`;
+                    return `<div style="margin-bottom:10px;padding:10px;background:#1e293b;border-radius:10px;border:1px solid #334155;">
+                        <div style="font-size:0.65rem;font-weight:800;color:#a78bfa;margin-bottom:6px;">${cat.emoji} ${cat.label}</div>
+                        ${votos.slice(0,3).map((v,i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:#0f172a;border-radius:6px;margin-bottom:3px;">
+                            <span style="font-size:0.72rem;color:#e2e8f0;">${i===0?'🥇':i===1?'🥈':'🥉'} ${v.nome}</span>
+                            <span style="font-size:0.72rem;font-weight:800;color:#a78bfa;">${v.count} voto${v.count>1?'s':''}</span>
+                        </div>`).join('')}
+                    </div>`;
+                }).join('')}
             </div>`;
     },
 };

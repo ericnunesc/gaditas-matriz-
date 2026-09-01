@@ -660,10 +660,11 @@ const GaditasFiltros = {
                                 <i class="fas fa-file-invoice-dollar" style="color:${corTextoTag}; font-size:1.2rem;"></i>
                             </div>
                         </div>
-                        <div style="display:flex; gap:8px; padding:0 14px 14px;">
+                        <div style="display:flex; gap:8px; padding:0 14px 8px;">
                             <button onclick="GaditasFiltros.gerarPixReal('${cobranca.id}')" style="flex:1; background:#10b981; border:none; padding:12px; color:white; font-weight:800; border-radius:12px; font-size:0.72rem; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-qrcode" style="margin-right:5px;"></i>PIX</button>
                             <button onclick="GaditasFiltros.abrirFormularioCartaoReal('${cobranca.id}')" style="flex:1; background:#3b82f6; border:none; padding:12px; color:white; font-weight:800; border-radius:12px; font-size:0.72rem; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-credit-card" style="margin-right:5px;"></i>CARTÃO</button>
                         </div>
+                        ${cobranca.invoiceUrl ? `<div style="padding:0 14px 14px;"><a href="${cobranca.invoiceUrl}" target="_blank" style="display:block; text-align:center; padding:10px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:12px; font-size:0.68rem; font-weight:700; text-decoration:none; letter-spacing:0.3px;"><i class="fas fa-external-link-alt" style="margin-right:5px;"></i>ABRIR LINK DE PAGAMENTO</a></div>` : ''}
                     </div>`;
             });
             

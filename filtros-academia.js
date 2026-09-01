@@ -774,13 +774,19 @@ const GaditasFiltros = {
                 return;
             }
 
+            const chavePix = '8be2e00e-0342-46e4-bd20-f2147743c6c6';
             conteudo.innerHTML = `
                 <div style="text-align: center; background: #0f172a; padding: 15px; border-radius: 12px; border: 1px solid #334155;">
                     <div style="font-size:0.6rem; color:#10b981; font-weight:800; letter-spacing:1px; margin-bottom:10px;">ESCANEIE O QR CODE PIX</div>
-                    <div style="background: white; width: 160px; height: 160px; margin: 0 auto 12px auto; padding: 10px; border-radius: 8px;"><img src="data:image/jpeg;base64,${dadosPix.encodedImage}" style="width:100%; height:100%;"></div>
+                    <div style="background: white; width: 160px; height: 160px; margin: 0 auto 12px auto; padding: 10px; border-radius: 8px;"><img src="data:image/png;base64,${dadosPix.encodedImage}" style="width:100%; height:100%;"></div>
                     <div style="font-size:0.6rem; color:#64748b; margin-bottom:6px;">ou use o código Pix Copia e Cola:</div>
                     <input type="text" id="pix-copia-cola-real" value="${dadosPix.payload}" readonly style="margin-bottom: 8px; text-align: center; font-size: 0.7rem; background: #1e293b; border: 1px solid #334155; padding: 10px; width: 100%; border-radius: 6px; color:#fff; outline:none;">
                     <button onclick="navigator.clipboard.writeText(document.getElementById('pix-copia-cola-real').value).then(()=>alert('Código copiado! Cole no seu banco para pagar. ✅')).catch(()=>{document.getElementById('pix-copia-cola-real').select(); document.execCommand('copy'); alert('Copiado!')});" class="btn-save" style="background:#10b981; width:100%; padding:12px; border-radius:10px; color:white; border:none; font-weight:700; cursor:pointer; margin-bottom:8px;"><i class="fas fa-copy" style="margin-right:5px;"></i>COPIAR CÓDIGO PIX</button>
+                    <div style="margin:8px 0; padding:10px; background:#1e293b; border:1px solid #334155; border-radius:10px; text-align:left;">
+                        <div style="font-size:0.55rem; color:#64748b; font-weight:800; letter-spacing:0.8px; margin-bottom:4px;">OU PAGUE VIA CHAVE PIX:</div>
+                        <div style="font-size:0.65rem; color:#94a3b8; word-break:break-all; margin-bottom:6px;">${chavePix}</div>
+                        <button onclick="navigator.clipboard.writeText('${chavePix}').then(()=>alert('Chave Pix copiada! ✅ Cole no campo \\'Pagar com chave\\' do seu banco.')).catch(()=>prompt('Copie a chave Pix:', '${chavePix}'));" style="width:100%; padding:8px; background:#334155; border:none; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:700; cursor:pointer;"><i class="fas fa-key" style="margin-right:4px;"></i>COPIAR CHAVE PIX</button>
+                    </div>
                     <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" class="btn-save" style="background: #334155; width:100%; padding:12px; border-radius:10px; color:white; border:none; font-weight:700; cursor:pointer;">← VOLTAR</button>
                 </div>`;
         } catch (e) {

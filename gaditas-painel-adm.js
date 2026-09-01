@@ -162,6 +162,19 @@ const GaditasPainelAdm = {
                 <div id="push-inadimp-resultado" style="margin-top:10px;"></div>
             </div>
 
+            <!-- ══ MIGRAR ASSINATURAS PARA PIX ══ -->
+            <div class="card" style="background:#1e293b; border:1px solid #10b98144; padding:15px; border-radius:12px; margin-top:4px;">
+                <div style="font-size:0.7rem; font-weight:800; color:#10b981; margin-bottom:8px; letter-spacing:0.5px;">
+                    <i class="fas fa-exchange-alt"></i> MIGRAR ASSINATURAS PARA PIX
+                </div>
+                <p style="font-size:0.68rem; color:#94a3b8; margin:0 0 10px 0;">Atualiza todas as assinaturas ativas no Asaas com forma "Pix, Boleto ou Cartão" para <strong style="color:#10b981;">Pix puro</strong>. Resolve o erro QR124E no Nubank/Inter.</p>
+                <button onclick="GaditasPainelAdm.migrarAssinaturasParaPix()" id="btn-migrar-pix"
+                    style="width:100%; padding:12px; background:#10b981; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.82rem;">
+                    ⚡ MIGRAR ASSINATURAS PARA PIX AGORA
+                </button>
+                <div id="migrar-pix-resultado" style="margin-top:10px;"></div>
+            </div>
+
             <!-- ══ MUDAR PLANO ══ -->
             <div id="fin-card-mudar-plano" class="card" style="background:#1e293b; border:1px solid #8b5cf644; padding:15px; border-radius:12px; margin-top:4px;">
                 <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#a78bfa; margin-bottom:14px; letter-spacing:0.5px;">
@@ -1706,6 +1719,59 @@ const GaditasPainelAdm = {
             }
         } catch (e) {
             alert('❌ Erro ao excluir fatura: ' + e.message);
+        }
+    },
+
+    async migrarAssinaturasParaPix() {
+        const btn = document.getElementById('btn-migrar-pix');
+        const res = document.getElementById('migrar-pix-resultado');
+        if (btn) { btn.disabled = true; btn.innerText = '⏳ Migrando...'; }
+        if (res) res.innerHTML = '<small style="color:#94a3b8;">⏳ Buscando assinaturas ativas no Asaas...</small>';
+
+        try {
+            // Busca todas as assinaturas ativas (até 100)
+            let offset = 0; const limit = 100;
+            let todasAssinaturas = [];
+            while (true) {
+                const r = await fetch(`/api/asaas?endpoint=subscriptions&status=ACTIVE&limit=${limit}&offset=${offset}`);
+                const d = await r.json();
+                if (!d.data || d.data.length === 0) break;
+                todasAssinaturas = todasAssinaturas.concat(d.data);
+                if (d.data.length < limit) break;
+                offset += limit;
+            }
+
+            const paraAtualizar = todasAssinaturas.filter(s => s.billingType === 'UNDEFINED');
+            if (paraAtualizar.length === 0) {
+                if (res) res.innerHTML = '<div style="background:#064e3b; border:1px solid #10b981; border-radius:8px; padding:10px; font-size:0.75rem; color:#34d399;">✅ Todas as assinaturas já estão configuradas corretamente.</div>';
+                if (btn) { btn.disabled = false; btn.innerHTML = '⚡ MIGRAR ASSINATURAS PARA PIX AGORA'; }
+                return;
+            }
+
+            if (res) res.innerHTML = `<small style="color:#94a3b8;">⏳ Atualizando ${paraAtualizar.length} assinatura(s)...</small>`;
+
+            let ok = 0; let erros = [];
+            for (const assin of paraAtualizar) {
+                try {
+                    const upd = await fetch(`/api/asaas?endpoint=subscriptions/${assin.id}`, {
+                        method: 'POST', // Asaas usa POST para update de subscription
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ billingType: 'PIX' })
+                    });
+                    const d = await upd.json();
+                    if (d.id) ok++;
+                    else erros.push(`${assin.id}: ${d.errors?.[0]?.description || JSON.stringify(d)}`);
+                } catch(e) { erros.push(`${assin.id}: ${e.message}`); }
+            }
+
+            let html = `<div style="background:#064e3b; border:1px solid #10b981; border-radius:8px; padding:10px; margin-bottom:6px; font-size:0.75rem; color:#34d399;">✅ ${ok} de ${paraAtualizar.length} assinatura(s) migrada(s) para PIX.</div>`;
+            if (erros.length > 0) html += `<div style="background:#4c0519; border:1px solid #f43f5e; border-radius:8px; padding:10px; font-size:0.65rem; color:#fda4af;">⚠️ ${erros.length} erro(s):<br>${erros.join('<br>')}</div>`;
+            if (res) res.innerHTML = html;
+
+        } catch(e) {
+            if (res) res.innerHTML = `<div style="background:#4c0519; border:1px solid #f43f5e; border-radius:8px; padding:10px; font-size:0.75rem; color:#f43f5e;">❌ Erro: ${e.message}</div>`;
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '⚡ MIGRAR ASSINATURAS PARA PIX AGORA'; }
         }
     },
 

@@ -317,6 +317,11 @@ const auth = {
         // Badge e painel de solicitações de avaliação física (admin/professor)
         if (this.role === 'admin' || this.role === 'professor') avaliacaoFisica.iniciarListenerSolicitacoes();
 
+        // Push diário de aniversariantes para o admin
+        if (this.role === 'admin') {
+            setTimeout(() => aniversario.notificarAdminAniversariantesHoje(), 5000);
+        }
+
         // ── ANIVERSÁRIO, CONVOCAÇÃO e GRADUAÇÃO — para aluno e professor promovido ─────────────
         if (this.role === 'aluno' || this.role === 'professor') {
             setTimeout(() => aniversario.verificarAniversario(), 800);
@@ -11226,27 +11231,29 @@ const aniversario = {
             const diasSemana = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
             const renderItem = (a) => {
                 const isHoje   = a._diasRestantes === 0;
+                const isOntem  = a._diasRestantes === -1;
                 const isSemana = a._diasRestantes > 0 && a._diasRestantes <= 7;
                 const jaPassou = a._diasRestantes < 0;
-                const cor      = isHoje ? '#f59e0b' : isSemana ? '#60a5fa' : jaPassou ? '#475569' : 'white';
-                const bg       = isHoje ? '#1c1400' : jaPassou ? '#0a0f1a' : '#0f172a';
-                const border   = isHoje ? '#f59e0b' : isSemana ? '#3b82f655' : '#1e293b';
+                const cor      = isHoje ? '#f59e0b' : isOntem ? '#a78bfa' : isSemana ? '#60a5fa' : jaPassou ? '#475569' : 'white';
+                const bg       = isHoje ? '#1c1400' : isOntem ? '#1a0050' : jaPassou ? '#0a0f1a' : '#0f172a';
+                const border   = isHoje ? '#f59e0b' : isOntem ? '#8b5cf6' : isSemana ? '#3b82f655' : '#1e293b';
                 const dRef     = isHoje ? '🎂 HOJE!'
+                               : isOntem ? '⏰ Ontem'
                                : a._diasRestantes === 1 ? 'Amanhã'
                                : a._diasRestantes > 1 ? `${a._diaNasc.toString().padStart(2,'0')}/${(mesAtual+1).toString().padStart(2,'0')}`
                                : `${a._diaNasc.toString().padStart(2,'0')}/${(mesAtual+1).toString().padStart(2,'0')} ✓`;
                 const nomeEsc = a.nome.replace(/'/g,"\\'");
                 const fotoEsc = (a.fotoPerfil||'').replace(/'/g,"\\'");
                 const temFoto = !!a.fotoPerfil;
-                const btnCard = isHoje
+                const btnCard = (isHoje || isOntem)
                     ? `<button onclick="aniversario.gerarCardAniversario('${nomeEsc}','${fotoEsc}',${a._idade})"
-                        style="background:#78350f;border:1px solid #f59e0b;color:#fbbf24;padding:5px 10px;border-radius:7px;font-size:0.58rem;font-weight:800;cursor:pointer;white-space:nowrap;margin-left:8px;"
-                        title="${temFoto ? 'Tem foto cadastrada' : 'Sem foto cadastrada'}">
-                        ${temFoto ? '📸' : '🖊️'} Card</button>` : '';
+                        style="background:${isOntem?'#2e1065':'#78350f'};border:1px solid ${isOntem?'#8b5cf6':'#f59e0b'};color:${isOntem?'#c4b5fd':'#fbbf24'};padding:5px 10px;border-radius:7px;font-size:0.58rem;font-weight:800;cursor:pointer;white-space:nowrap;margin-left:8px;"
+                        title="${isOntem?'Aniversário atrasado — '+(temFoto?'tem foto':'sem foto'):(temFoto ? 'Tem foto cadastrada' : 'Sem foto cadastrada')}">
+                        ${temFoto ? '📸' : '🖊️'} ${isOntem ? 'Card Atrasado' : 'Card'}</button>` : '';
                 return `
-                    <div style="display:flex;justify-content:space-between;align-items:center;background:${bg};border:1px solid ${border};border-radius:8px;padding:9px 12px;margin-bottom:6px;opacity:${jaPassou?'0.5':'1'};">
+                    <div style="display:flex;justify-content:space-between;align-items:center;background:${bg};border:1px solid ${border};border-radius:8px;padding:9px 12px;margin-bottom:6px;opacity:${jaPassou&&!isOntem?'0.5':'1'};">
                         <div>
-                            <div style="font-size:0.75rem;font-weight:800;color:${cor};">${a.nome}</div>
+                            <div style="font-size:0.75rem;font-weight:800;color:${cor};">${a.nome}${isOntem?` <span style="font-size:0.5rem;background:#4c1d95;color:#c4b5fd;padding:2px 6px;border-radius:10px;vertical-align:middle;">ATRASADO</span>`:''}</div>
                             <div style="font-size:0.58rem;color:#64748b;margin-top:2px;">${a.faixa || '—'} · ${a._idade} anos</div>
                         </div>
                         <div style="display:flex;align-items:center;">
@@ -11264,6 +11271,39 @@ const aniversario = {
         } catch(e) {
             container.innerHTML = `<small style="color:#ef4444;font-size:0.65rem;">Erro: ${e.message}</small>`;
         }
+    },
+
+    // Push diário: notifica admin quando há aniversariantes hoje
+    async notificarAdminAniversariantesHoje() {
+        try {
+            const hoje = new Date();
+            const mes  = hoje.getMonth();
+            const dia  = hoje.getDate();
+            const ano  = hoje.getFullYear();
+            const chave = `gaditas_push_aniv_${ano}-${(mes+1).toString().padStart(2,'0')}-${dia.toString().padStart(2,'0')}`;
+            // Só uma vez por dia
+            if (localStorage.getItem(chave)) return;
+            const snap = await db.collection('alunos').get();
+            const nomes = [];
+            snap.docs.forEach(doc => {
+                const a = doc.data();
+                if (!a.nascimento) return;
+                const p = a.nascimento.split('-');
+                if (parseInt(p[2],10) === dia && parseInt(p[1],10) - 1 === mes) {
+                    nomes.push(a.nome?.split(' ')[0] || a.nome);
+                }
+            });
+            if (!nomes.length) return;
+            localStorage.setItem(chave, '1');
+            // Busca token FCM do admin
+            const cfgDoc = await db.collection('configuracoes').doc('admin_config').get();
+            const token = cfgDoc.exists ? cfgDoc.data().fcmToken : null;
+            if (!token) return;
+            const qtd = nomes.length;
+            const title = `🎂 ${qtd} aniversariante${qtd>1?'s':''} hoje!`;
+            const body  = nomes.slice(0,3).join(', ') + (qtd > 3 ? ` e mais ${qtd-3}...` : '');
+            auth._enviarPush(token, title, body);
+        } catch(e) { console.warn('[notificarAdminAniversariantesHoje]', e.message); }
     },
 
     gerarCardAniversario(nome, fotoUrl, idade) {

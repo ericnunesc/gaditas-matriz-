@@ -337,6 +337,9 @@ const auth = {
         if (this.role === 'aluno') {
             setTimeout(() => enquetes.verificarEnqueteAtiva(), 2000);
             setTimeout(() => pesquisas.verificarPesquisaAtiva(), 3500);
+        }
+        // Votação: alunos E professores promovidos (eAluno) têm acesso
+        if (this.role === 'aluno' || this.eAluno) {
             setTimeout(() => premiosAno.verificarBannerVotacao(), 4000);
         }
 
@@ -17822,7 +17825,7 @@ const premiosAno = {
     },
 
     async verificarBannerVotacao() {
-        if (!auth.currentUser || auth.role !== 'aluno') return;
+        if (!auth.currentUser || (auth.role !== 'aluno' && !auth.eAluno)) return;
         const banner = document.getElementById('banner-votacao-premios');
         if (!banner) return;
         try {

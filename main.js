@@ -7962,7 +7962,7 @@ Ele voltará a ser aluno normal.`)) return;
         const cfgDoc = await db.collection('configuracoes').doc('eventos_qr').get();
         const mapa = cfgDoc.exists ? cfgDoc.data() : {};
 
-        const opQR = qrsDisponiveis.map(q => `<option value="${q}">${nomesDisplay[q]||q}</option>`).join('');
+        const opQR = ['<option value="">-- selecionar da grade --</option>', ...qrsDisponiveis.map(q => `<option value="${q}">${nomesDisplay[q]||q}</option>`)].join('');
         const hoje = new Date().toISOString().slice(0,10);
 
         let m = document.getElementById('modal-eventos-qr');
@@ -7993,7 +7993,13 @@ Ele voltará a ser aluno normal.`)) return;
             <div style="background:#1a0050;border:1px solid #4c1d95;border-radius:12px;padding:14px;margin-bottom:16px;">
                 <div style="font-size:0.62rem;color:#a78bfa;font-weight:800;margin-bottom:10px;">➕ NOVO EVENTO</div>
                 <label style="font-size:0.6rem;color:#a78bfa;font-weight:700;display:block;margin-bottom:4px;">QR CODE A USAR</label>
-                <select id="evqr-qr" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;margin-bottom:8px;">${opQR}</select>
+                <div style="display:flex;gap:6px;margin-bottom:6px;">
+                    <input type="text" id="evqr-chave-manual" placeholder="Chave capturada pelo scanner…" readonly style="flex:1;padding:8px;background:#0f172a;border:1px solid #4c1d95;color:#c4b5fd;border-radius:8px;font-size:0.68rem;box-sizing:border-box;">
+                    <button onclick="academia.escanearChaveQREvento()" style="background:#4c1d95;border:1px solid #7c3aed;color:#e9d5ff;padding:8px 10px;border-radius:8px;font-size:0.7rem;font-weight:800;cursor:pointer;white-space:nowrap;">📷 Escanear</button>
+                </div>
+                <div id="evqr-scanner-wrap" style="display:none;margin-bottom:8px;"></div>
+                <div style="font-size:0.55rem;color:#475569;margin-bottom:4px;">ou selecionar turma existente:</div>
+                <select id="evqr-qr" onchange="if(this.value){document.getElementById('evqr-chave-manual').value=this.value;}" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;margin-bottom:8px;">${opQR}</select>
                 <label style="font-size:0.6rem;color:#a78bfa;font-weight:700;display:block;margin-bottom:4px;">NOME DO EVENTO</label>
                 <input type="text" id="evqr-nome" placeholder="Ex: Semana de Treino Especial" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;margin-bottom:8px;box-sizing:border-box;">
                 <div style="display:flex;gap:8px;margin-bottom:8px;">
@@ -8013,8 +8019,34 @@ Ele voltará a ser aluno normal.`)) return;
         </div>`;
     },
 
+    escanearChaveQREvento() {
+        const wrap = document.getElementById('evqr-scanner-wrap');
+        if (!wrap) return;
+        if (wrap.style.display !== 'none') { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+        wrap.style.display = 'block';
+        wrap.innerHTML = '<div id="evqr-reader" style="width:100%;border-radius:10px;overflow:hidden;"></div><div style="font-size:0.6rem;color:#a78bfa;text-align:center;margin-top:4px;">Aponte para o QR code impresso</div>';
+        if (typeof Html5Qrcode === 'undefined') { wrap.innerHTML = '<div style="color:#ef4444;font-size:0.65rem;padding:8px;">Scanner não disponível.</div>'; return; }
+        const scanner = new Html5Qrcode('evqr-reader');
+        scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 200 }, (decoded) => {
+            scanner.stop().catch(()=>{});
+            wrap.style.display = 'none'; wrap.innerHTML = '';
+            let chave = decoded;
+            try {
+                const url = new URL(decoded);
+                chave = url.searchParams.get('checkin') || url.searchParams.get('turma') || decoded;
+            } catch(_) {}
+            const inp = document.getElementById('evqr-chave-manual');
+            const sel = document.getElementById('evqr-qr');
+            if (inp) { inp.value = chave; inp.style.borderColor = '#10b981'; }
+            if (sel) sel.value = '';
+            const st = document.getElementById('evqr-status');
+            if (st) st.innerHTML = `<span style="color:#10b981;">✅ Chave capturada: <b>${chave}</b></span>`;
+        }, ()=>{});
+    },
+
     async salvarEventoQR() {
-        const qr   = document.getElementById('evqr-qr')?.value;
+        const chaveManual = document.getElementById('evqr-chave-manual')?.value.trim();
+        const qr   = chaveManual || document.getElementById('evqr-qr')?.value;
         const nome = document.getElementById('evqr-nome')?.value.trim();
         const data = document.getElementById('evqr-data')?.value;
         const hora = document.getElementById('evqr-hora')?.value;

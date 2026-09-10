@@ -7391,6 +7391,17 @@ Ele voltará a ser aluno normal.`)) return;
                                 return;
                             }
                             if (dentroJanela) {
+                                // Carrega aluno para verificar histórico e incrementar aulas
+                                const alunoRef2 = db.collection('alunos').doc(alunoId);
+                                const alunoDoc2 = await alunoRef2.get();
+                                if (!alunoDoc2.exists) { alert('❌ Aluno não encontrado.'); return; }
+                                const d2 = alunoDoc2.data();
+                                const hojeStr = new Date().toLocaleDateString('pt-BR');
+                                const jaNoHistorico = (d2.historico || []).some(h => h.turma === ev.nome && h.data === hojeStr);
+                                if (jaSnap.exists && jaNoHistorico) {
+                                    alert(`✅ Presença no evento "${ev.nome}" já registrada! OSS!`);
+                                    return;
+                                }
                                 // Salva em checkins_eventos
                                 await db.collection('checkins_eventos').doc(chaveEv).set({
                                     alunoId, alunoNome: auth.currentUser?.nome || '',
@@ -7399,21 +7410,16 @@ Ele voltará a ser aluno normal.`)) return;
                                     qrUsado: turmaQR, registradoEm: agora.getTime()
                                 });
                                 // Incrementa presença do aluno (igual check-in de aula normal)
-                                try {
-                                    const alunoRef2 = db.collection('alunos').doc(alunoId);
-                                    const alunoDoc2 = await alunoRef2.get();
-                                    if (alunoDoc2.exists) {
-                                        const d2 = alunoDoc2.data();
-                                        const isMTev = this._isTurmaMT(turmaQR);
-                                        const h2 = d2.historico || [];
-                                        h2.unshift({ data: new Date().toLocaleDateString('pt-BR'), turma: ev.nome });
-                                        const upd2 = { historico: h2, feedbackPendente: { turma: ev.nome, data: new Date().toLocaleDateString('pt-BR') } };
-                                        if (isMTev) upd2.aulasMT = (d2.aulasMT || 0) + 1;
-                                        else         upd2.aulas   = (d2.aulas   || 0) + 1;
-                                        await alunoRef2.update(upd2);
-                                        this.renderCheckins(); this.renderRanking(); this.carregarMeusCheckinsPendentes();
-                                    }
-                                } catch(_) {}
+                                if (!jaNoHistorico) {
+                                    const isMTev = this._isTurmaMT(turmaQR);
+                                    const h2 = d2.historico || [];
+                                    h2.unshift({ data: hojeStr, turma: ev.nome });
+                                    const upd2 = { historico: h2, feedbackPendente: { turma: ev.nome, data: hojeStr } };
+                                    if (isMTev) upd2.aulasMT = (d2.aulasMT || 0) + 1;
+                                    else         upd2.aulas   = (d2.aulas   || 0) + 1;
+                                    await alunoRef2.update(upd2);
+                                    this.renderCheckins(); this.renderRanking(); this.carregarMeusCheckinsPendentes();
+                                }
                                 alert(`✅ Presença no evento confirmada!\n\n🎉 ${ev.nome}\n📅 ${dataEvStr.split('-').reverse().join('/')}\n\nOSS! 🥋`);
                             } else {
                                 // Fora da janela — pendente

@@ -7418,7 +7418,16 @@ Ele voltará a ser aluno normal.`)) return;
                 }
                 const duracoes = this.gradeFirebase?.duracoes || {};
                 const durQR = duracoes[turmaQR] || (this.gradeFirebase?.duracaoAula) || 90;
-                alert(`⚠️ Check-in enviado para aprovação!\n\nVocê está fora da janela permitida.\nA janela para esta turma é:\n• 15 min antes do início\n• até 15 min após o término (${durQR} min de aula)`);
+                // Calcula horário de início e fim da turma para exibir ao aluno
+                const matchJanela = turmaQR.match(/^(\d{2}):(\d{2})/);
+                let infoHorario = '';
+                if (matchJanela) {
+                    const minIni = parseInt(matchJanela[1]) * 60 + parseInt(matchJanela[2]);
+                    const minFim = minIni + durQR;
+                    const fmt = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+                    infoHorario = `\n⏰ Horário da turma: ${fmt(minIni)} – ${fmt(minFim)}\n🔓 Janela permitida: ${fmt(minIni-15)} – ${fmt(minFim+15)}`;
+                }
+                alert(`⚠️ Check-in enviado para aprovação!\n\n📋 Turma: ${turmaQR}\nVocê está fora da janela de horário.${infoHorario}\n\nSeu check-in ficará pendente até o professor aprovar.`);
             }
         } catch(e) { console.warn("Erro QR:", e.message); }
     },

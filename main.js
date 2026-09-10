@@ -7611,8 +7611,14 @@ Ele voltará a ser aluno normal.`)) return;
                     const durSlot = duracoes[slot] || (grade.duracaoAula || 90);
                     const limSlot = (grade.limites || {})[slot] || '';
                     const slotEsc = slot.replace(/'/g, "\\'");
-                    html += '<div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:8px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; gap:6px; opacity:' + (desativ ? '0.45' : '1') + ';">' +
-                        '<span style="color:' + (desativ ? '#64748b' : '#e2e8f0') + '; font-size:0.83rem; font-weight:600; flex:1; text-decoration:' + (desativ ? 'line-through' : 'none') + ';">' + slot + '</span>' +
+                    const nomeDisp = (grade.nomesDisplay || {})[slot] || slot;
+                    const temAlias = nomeDisp !== slot;
+                    html += '<div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:8px 12px; margin-bottom:6px; opacity:' + (desativ ? '0.45' : '1') + ';">' +
+                        '<div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">' +
+                        '<div style="flex:1; min-width:0;">' +
+                        '<span style="color:' + (desativ ? '#64748b' : '#e2e8f0') + '; font-size:0.83rem; font-weight:600; text-decoration:' + (desativ ? 'line-through' : 'none') + ';">' + nomeDisp + '</span>' +
+                        (temAlias ? '<div style="font-size:0.5rem;color:#475569;margin-top:1px;">🔗 chave QR: ' + slot + '</div>' : '') +
+                        '</div>' +
                         '<div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">' +
                         '<input type="number" value="' + durSlot + '" min="15" max="300" title="Duração desta turma em minutos" ' +
                         'onchange="academia.salvarDuracaoSlot(\'' + slotEsc + '\', this.value)" ' +
@@ -7622,10 +7628,11 @@ Ele voltará a ser aluno normal.`)) return;
                         'onchange="academia.salvarLimiteSlot(\'' + slotEsc + '\', this.value)" ' +
                         'style="width:40px; padding:4px 5px; background:#0f172a; border:1px solid #334155; color:#a78bfa; border-radius:5px; font-size:0.7rem; text-align:center; outline:none;"/>' +
                         '<span style="color:#475569; font-size:0.55rem; font-weight:600;">&#x1F465;</span>' +
+                        '<button onclick="academia.renomearTurmaDisplay(\'' + slotEsc + '\')" title="Alterar nome exibido (sem mudar o QR code)" style="background:none; border:none; cursor:pointer; padding:4px 3px; font-size:0.85rem;">✏️</button>' +
                         '<button onclick="academia.toggleAulaAtiva(' + d + ', \'' + slotEsc + '\')" title="' + (desativ ? 'Reativar' : 'Desativar') + '" style="background:none; border:none; cursor:pointer; padding:4px 3px; font-size:0.9rem;">' + (desativ ? '🟢' : '🔴') + '</button>' +
                         '<button onclick="academia.removerHorarioAdmin(' + d + ', \'' + slotEsc + '\')" ' +
                         'style="background:none; border:none; color:#f43f5e; cursor:pointer; padding:4px 6px; font-size:0.9rem;"><i class="fas fa-times"></i></button>' +
-                        '</div></div>';
+                        '</div></div></div>';
                 });
                 html += '<div style="display:flex; gap:6px; margin-top:4px; align-items:center;">' +
                     '<input type="text" id="input-horario-' + d + '" placeholder="ex: 19:00 - BJJ" ' +
@@ -7651,11 +7658,12 @@ Ele voltará a ser aluno normal.`)) return;
                         return;
                     }
                     if (this._aulaDesativada(d, slot)) return;
-                    const partes = slot.split(' - ');
-                    const hora = partes[0] || slot;
+                    const nomeExib = (grade.nomesDisplay || {})[slot] || slot;
+                    const partes = nomeExib.split(' - ');
+                    const hora = partes[0] || nomeExib;
                     const turma = partes.slice(1).join(' - ') || '';
-                    const isMT = turma.toLowerCase().includes('muay') || turma.toLowerCase().includes('thai') || turma.toLowerCase().includes('kickbox');
-                    const isKids = turma.toLowerCase().includes('kids');
+                    const isMT = nomeExib.toLowerCase().includes('muay') || nomeExib.toLowerCase().includes('thai') || nomeExib.toLowerCase().includes('kickbox');
+                    const isKids = nomeExib.toLowerCase().includes('kids');
                     const accentColor = isMT ? '#f43f5e' : isKids ? '#f59e0b' : '#10b981';
                     const tagLabel = isMT ? 'MUAY THAI' : isKids ? 'KIDS' : 'JIU-JITSU';
                     html += `<div style="background:#1e293b; border:1px solid #334155; border-radius:14px; padding:12px 14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; border-left:3px solid ${accentColor}; ${isHoje ? 'box-shadow:0 2px 10px rgba(0,0,0,0.3);' : ''}">
@@ -7992,6 +8000,29 @@ Ele voltará a ser aluno normal.`)) return;
         if (typeof planoCal !== 'undefined' && planoCal._dia) { const c = document.getElementById('plano-aula-cal-card'); if (c) { c.innerHTML = planoCal._buildCard(); planoCal._bindTextareas?.(); } }
     },
 
+    async renomearTurmaDisplay(slotValor) {
+        const grade = this.getGrade();
+        const nomesDisplay = grade.nomesDisplay || {};
+        const nomeAtual = nomesDisplay[slotValor] || slotValor;
+        const novoNome = prompt(
+            `✏️ Alterar nome exibido para "${slotValor}"\n\nO QR code impresso continuará funcionando.\nDigite o novo nome de exibição (deixe em branco para restaurar o original):`,
+            nomeAtual
+        );
+        if (novoNome === null) return; // cancelou
+        const trimmed = novoNome.trim();
+        if (!trimmed || trimmed === slotValor) {
+            delete nomesDisplay[slotValor]; // restaura original
+        } else {
+            nomesDisplay[slotValor] = trimmed;
+        }
+        grade.nomesDisplay = nomesDisplay;
+        this.gradeFirebase = grade;
+        try {
+            await db.collection('configuracoes').doc('horarios').set(grade);
+        } catch(e) { console.warn('Erro ao salvar nomesDisplay:', e); }
+        this.renderHorarios(true);
+    },
+
     async removerHorarioAdmin(dia, slotValor) {
         if (!confirm(`Remover "${slotValor}"?`)) return;
         const grade = this.getGrade();
@@ -8040,14 +8071,16 @@ Ele voltará a ser aluno normal.`)) return;
         modal.id = 'modal-qr-horarios';
         modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.97); z-index:9999; overflow-y:auto; padding:20px; box-sizing:border-box;';
 
+        const nomesDisplay = (this.gradeFirebase || {}).nomesDisplay || {};
         const cardsHtml = slots.map(slot => {
-            const url    = baseUrl + '?checkin=' + encodeURIComponent(slot);
+            const nomeQR = nomesDisplay[slot] || slot; // nome para exibir no card (sem mudar o QR)
+            const url    = baseUrl + '?checkin=' + encodeURIComponent(slot); // chave original no QR
             const qrUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(url) + '&format=png&margin=2&color=000000&bgcolor=FFFFFF';
             const dias   = slotDias[slot].map(d => diasAbrev[d]).join(' · ');
             const slotEnc = encodeURIComponent(slot);
             return '<div class="qr-card" style="background:white; border-radius:12px; padding:14px 12px; text-align:center;">' +
                 '<div style="font-size:0.5rem; font-weight:800; color:#64748b; letter-spacing:0.8px; margin-bottom:3px;">📅 ' + dias.toUpperCase() + '</div>' +
-                '<div style="font-size:0.75rem; font-weight:800; color:#0f172a; margin-bottom:10px; line-height:1.3;">' + slot.toUpperCase() + '</div>' +
+                '<div style="font-size:0.75rem; font-weight:800; color:#0f172a; margin-bottom:10px; line-height:1.3;">' + nomeQR.toUpperCase() + '</div>' +
                 '<img src="' + qrUrl + '" width="170" height="170" style="display:block; margin:0 auto; border-radius:6px;"/>' +
                 '<div style="font-size:0.42rem; color:#94a3b8; margin-top:8px; margin-bottom:8px; line-height:1.5;">Gaditas Matriz — escaneie para check-in</div>' +
                 '<button onclick="academia.abrirQRIndividual(\'' + slotEnc + '\')" ' +
@@ -8080,10 +8113,11 @@ Ele voltará a ser aluno normal.`)) return;
     },
 
     abrirQRIndividual(slotEnc) {
-        const slot   = decodeURIComponent(slotEnc);
-        const base   = window.location.origin + window.location.pathname.replace(/index\.html$/, '');
-        const url    = base + '?checkin=' + encodeURIComponent(slot);
-        const qrUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(url) + '&format=png&margin=4&color=000000&bgcolor=FFFFFF';
+        const slot    = decodeURIComponent(slotEnc);
+        const nomeExib = ((this.gradeFirebase || {}).nomesDisplay || {})[slot] || slot;
+        const base    = window.location.origin + window.location.pathname.replace(/index\.html$/, '');
+        const url     = base + '?checkin=' + encodeURIComponent(slot); // chave original no QR
+        const qrUrl   = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(url) + '&format=png&margin=4&color=000000&bgcolor=FFFFFF';
 
         const ant = document.getElementById('modal-qr-individual'); if(ant) ant.remove();
         const m = document.createElement('div');
@@ -8094,7 +8128,7 @@ Ele voltará a ser aluno normal.`)) return;
                 <button onclick="document.getElementById('modal-qr-individual').remove()"
                     style="position:absolute;top:10px;right:12px;background:#f1f5f9;border:none;border-radius:6px;padding:4px 10px;font-size:0.8rem;cursor:pointer;font-weight:700;color:#475569;">✕</button>
                 <div style="font-size:0.6rem;font-weight:800;color:#64748b;letter-spacing:1px;margin-bottom:6px;">GADITAS MATRIZ — CHECK-IN</div>
-                <div style="font-size:1.1rem;font-weight:800;color:#0f172a;margin-bottom:16px;line-height:1.3;">${slot.toUpperCase()}</div>
+                <div style="font-size:1.1rem;font-weight:800;color:#0f172a;margin-bottom:16px;line-height:1.3;">${nomeExib.toUpperCase()}</div>
                 <img src="${qrUrl}" width="280" height="280" style="display:block;margin:0 auto;border-radius:10px;"/>
                 <div style="font-size:0.55rem;color:#94a3b8;margin-top:12px;line-height:1.6;">Escaneie com a câmera do celular ou pelo botão no app</div>
             </div>`;

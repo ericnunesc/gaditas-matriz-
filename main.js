@@ -7379,8 +7379,9 @@ Ele voltará a ser aluno normal.`)) return;
                         const minAgora = agora.getHours() * 60 + agora.getMinutes();
                         const dataEvStr = ev.data; // 'YYYY-MM-DD'
                         const dataHoje = agora.toISOString().slice(0, 10);
-                        if (dataEvStr === dataHoje && minAgora >= (minIni - 30) && minAgora <= (minFim + 30)) {
-                            // Registra presença no evento
+                        if (dataEvStr === dataHoje) {
+                            // Mesmo dia do evento — registra independente do horário
+                            const dentroJanela = minAgora >= (minIni - 30) && minAgora <= (minFim + 30);
                             const chaveEv = `${alunoId}_${ev.id || ev.nome}_${dataEvStr}`;
                             const jaSnap = await db.collection('checkins_eventos').doc(chaveEv).get();
                             if (jaSnap.exists) {
@@ -7390,9 +7391,11 @@ Ele voltará a ser aluno normal.`)) return;
                                     alunoId, alunoNome: auth.currentUser?.nome || '',
                                     eventoId: ev.id || '', eventoNome: ev.nome,
                                     data: dataEvStr, hora: agora.toLocaleTimeString('pt-BR'),
-                                    qrUsado: turmaQR, registradoEm: agora.getTime()
+                                    qrUsado: turmaQR, registradoEm: agora.getTime(),
+                                    dentroJanela
                                 });
-                                alert(`✅ Presença no evento confirmada!\n\n🎉 ${ev.nome}\n📅 ${dataEvStr.split('-').reverse().join('/')}\n\nOSS! 🥋`);
+                                const aviso = dentroJanela ? '' : `\n⚠️ Registrado fora do horário previsto (${ev.horaInicio}).`;
+                                alert(`✅ Presença no evento confirmada!\n\n🎉 ${ev.nome}\n📅 ${dataEvStr.split('-').reverse().join('/')}${aviso}\n\nOSS! 🥋`);
                             }
                             return; // não processa como aula normal
                         }

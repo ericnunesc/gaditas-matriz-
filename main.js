@@ -7380,22 +7380,31 @@ Ele voltará a ser aluno normal.`)) return;
                         const dataEvStr = ev.data; // 'YYYY-MM-DD'
                         const dataHoje = agora.toISOString().slice(0, 10);
                         if (dataEvStr === dataHoje) {
-                            // Mesmo dia do evento — registra independente do horário
-                            const dentroJanela = minAgora >= (minIni - 30) && minAgora <= (minFim + 30);
+                            // Mesmo dia — verifica janela de 15min antes/depois
+                            const jEv = 15;
+                            const dentroJanela = minAgora >= (minIni - jEv) && minAgora <= (minFim + jEv);
+                            const fmt2 = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
                             const chaveEv = `${alunoId}_${ev.id || ev.nome}_${dataEvStr}`;
                             const jaSnap = await db.collection('checkins_eventos').doc(chaveEv).get();
                             if (jaSnap.exists) {
                                 alert(`✅ Presença no evento "${ev.nome}" já registrada! OSS!`);
-                            } else {
+                                return;
+                            }
+                            if (dentroJanela) {
                                 await db.collection('checkins_eventos').doc(chaveEv).set({
                                     alunoId, alunoNome: auth.currentUser?.nome || '',
                                     eventoId: ev.id || '', eventoNome: ev.nome,
                                     data: dataEvStr, hora: agora.toLocaleTimeString('pt-BR'),
-                                    qrUsado: turmaQR, registradoEm: agora.getTime(),
-                                    dentroJanela
+                                    qrUsado: turmaQR, registradoEm: agora.getTime()
                                 });
-                                const aviso = dentroJanela ? '' : `\n⚠️ Registrado fora do horário previsto (${ev.horaInicio}).`;
-                                alert(`✅ Presença no evento confirmada!\n\n🎉 ${ev.nome}\n📅 ${dataEvStr.split('-').reverse().join('/')}${aviso}\n\nOSS! 🥋`);
+                                alert(`✅ Presença no evento confirmada!\n\n🎉 ${ev.nome}\n📅 ${dataEvStr.split('-').reverse().join('/')}\n\nOSS! 🥋`);
+                            } else {
+                                // Fora da janela — pendente
+                                const snapCI = await db.collection("checkins").where("alunoId","==",alunoId).get();
+                                if (!snapCI.docs.some(d => d.data().turma === turmaQR)) {
+                                    await db.collection("checkins").add({ alunoId, alunoNome: auth.currentUser?.nome||'', turma: turmaQR, data: agora.getTime() });
+                                }
+                                alert(`⚠️ Check-in enviado para aprovação!\n\n🎟️ Evento: ${ev.nome}\nVocê está fora da janela de horário.\n📅 ${dataEvStr.split('-').reverse().join('/')}\n⏰ Horário: ${fmt2(minIni)} – ${fmt2(minFim)}\n🔓 Janela: ${fmt2(minIni-jEv)} – ${fmt2(minFim+jEv)}\n\nSeu check-in ficará pendente até o professor aprovar.`);
                             }
                             return; // não processa como aula normal
                         }

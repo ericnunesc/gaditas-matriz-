@@ -7354,12 +7354,14 @@ Ele voltará a ser aluno normal.`)) return;
 
     async processarCheckinQR(turmaQR, alunoId) {
         try {
+            let _nomeEvento = null; // guarda nome do evento QR para usar no alert de fora da janela
             // ── EVENTO QR: verifica se este QR está mapeado para um evento ativo ──
             try {
                 const eventoQRDoc = await db.collection('configuracoes').doc('eventos_qr').get();
                 if (eventoQRDoc.exists) {
                     const mapa = eventoQRDoc.data() || {};
                     const ev = mapa[turmaQR];
+                    if (ev && ev.nome) _nomeEvento = ev.nome; // guarda sempre que existir
                     if (ev && ev.ativo) {
                         const agora = new Date();
                         // Verifica janela do evento
@@ -7451,8 +7453,9 @@ Ele voltará a ser aluno normal.`)) return;
                 this.renderRanking();
                 this.carregarMeusCheckinsPendentes();
 
-                alert("✅ Presença computada automaticamente! Turma: " + turmaQR + " OSS! 🥋");
-                push.paraAluno(alunoId, '✅ Presença confirmada!', `Sua presença na turma ${turmaQR} foi registrada. OSS! 🥋`);
+                const _nomeExibOk = _nomeEvento || ((this.gradeFirebase||{}).nomesDisplay||{})[turmaQR] || turmaQR;
+                alert("✅ Presença computada automaticamente! " + (_nomeEvento ? `Evento: ${_nomeExibOk}` : `Turma: ${_nomeExibOk}`) + " OSS! 🥋");
+                push.paraAluno(alunoId, '✅ Presença confirmada!', `Sua presença em "${_nomeExibOk}" foi registrada. OSS! 🥋`);
             } else {
                 // Fora da janela — envia para fila do professor aprovar
                 const snapCI = await db.collection("checkins").where("alunoId", "==", alunoId).get();
@@ -7468,7 +7471,7 @@ Ele voltará a ser aluno normal.`)) return;
                 const durQR = duracoes[turmaQR] || (this.gradeFirebase?.duracaoAula) || 90;
                 const jAntes  = (this.gradeFirebase?.janelaAntes  || {})[turmaQR] ?? 15;
                 const jDepois = (this.gradeFirebase?.janelaDepois || {})[turmaQR] ?? 15;
-                const nomeExibAlert = ((this.gradeFirebase || {}).nomesDisplay || {})[turmaQR] || turmaQR;
+                const nomeExibAlert = _nomeEvento || ((this.gradeFirebase || {}).nomesDisplay || {})[turmaQR] || turmaQR;
                 // Calcula horário de início e fim da turma para exibir ao aluno
                 const matchJanela = turmaQR.match(/^(\d{2}):(\d{2})/);
                 let infoHorario = '';

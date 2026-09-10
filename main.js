@@ -7328,6 +7328,17 @@ Ele voltará a ser aluno normal.`)) return;
         const match = turmaQR.match(/^(\d{2}):(\d{2})/);
         if (!match) return true; // sem horário no nome → sem restrição
 
+        const agora = new Date();
+        const diaHoje = agora.getDay(); // 0=Dom, 1=Seg … 6=Sáb
+
+        // Verifica se a turma existe no dia de hoje na grade
+        const grade = this.gradeFirebase || this.gradeHorarios;
+        if (grade) {
+            const slotsHoje = grade[diaHoje] || grade[String(diaHoje)] || [];
+            const turmaNoHoje = slotsHoje.some(s => s === turmaQR);
+            if (!turmaNoHoje) return false; // turma não acontece hoje → fora da janela
+        }
+
         const minInicio = parseInt(match[1]) * 60 + parseInt(match[2]);
         const duracoes  = this.gradeFirebase?.duracoes || {};
         const duracao   = duracoes[turmaQR] || (this.gradeFirebase?.duracaoAula) || 90;
@@ -7336,7 +7347,6 @@ Ele voltará a ser aluno normal.`)) return;
         const janelaAntes  = (this.gradeFirebase?.janelaAntes  || {})[turmaQR] ?? 15;
         const janelaDepois = (this.gradeFirebase?.janelaDepois || {})[turmaQR] ?? 15;
 
-        const agora    = new Date();
         const minAgora = agora.getHours() * 60 + agora.getMinutes();
 
         return minAgora >= (minInicio - janelaAntes) && minAgora <= (minFim + janelaDepois);

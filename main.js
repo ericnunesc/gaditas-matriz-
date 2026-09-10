@@ -3538,16 +3538,23 @@ const academia = {
         if (!container || auth.role !== 'aluno') return;
         const snap = await db.collection("checkins").where("alunoId", "==", auth.currentUser.id).get();
         if (snap.empty) { container.innerHTML = ''; return; }
+        // Carrega mapa de eventos QR para exibir nome amigável
+        let mapaEventos = {};
+        try { const evDoc = await db.collection('configuracoes').doc('eventos_qr').get(); if (evDoc.exists) mapaEventos = evDoc.data() || {}; } catch(_) {}
+        const nomesDisplay = (this.gradeFirebase || {}).nomesDisplay || {};
         container.innerHTML = `
             <small style="color:#f59e0b; font-weight:800; font-size:0.6rem; display:block; margin:8px 0 6px 0; letter-spacing:0.5px;">
                 <i class="fas fa-clock"></i> AGUARDANDO VALIDAÇÃO DO PROFESSOR:
             </small>` +
             snap.docs.map(doc => {
                 const c = doc.data();
-                return `<div style="background:#0f172a; border:1px solid #f59e0b44; border-left:3px solid #f59e0b; border-radius:8px; padding:10px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                const evNome = mapaEventos[c.turma]?.nome;
+                const nomeExib = evNome || nomesDisplay[c.turma] || c.turma;
+                const isEvento = !!evNome;
+                return `<div style="background:#0f172a; border:1px solid ${isEvento?'#7c3aed44':'#f59e0b44'}; border-left:3px solid ${isEvento?'#8b5cf6':'#f59e0b'}; border-radius:8px; padding:10px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <div style="font-size:0.8rem; font-weight:700; color:#e2e8f0;">⏳ ${c.turma}</div>
-                        <div style="font-size:0.6rem; color:#64748b; margin-top:2px;">Check-in pendente</div>
+                        <div style="font-size:0.8rem; font-weight:700; color:#e2e8f0;">${isEvento?'🎟️':'⏳'} ${nomeExib}</div>
+                        <div style="font-size:0.6rem; color:#64748b; margin-top:2px;">${isEvento?'Presença em evento pendente':'Check-in pendente'}</div>
                     </div>
                     <button onclick="academia.cancelarMeuCheckin('${doc.id}')" style="background:#4c0519; border:none; color:#f43f5e; padding:7px 12px; border-radius:6px; font-size:0.7rem; font-weight:800; cursor:pointer; white-space:nowrap;">
                         <i class="fas fa-times"></i> CANCELAR

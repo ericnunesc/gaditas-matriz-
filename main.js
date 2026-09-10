@@ -7354,6 +7354,42 @@ Ele voltará a ser aluno normal.`)) return;
 
     async processarCheckinQR(turmaQR, alunoId) {
         try {
+            // ── EVENTO QR: verifica se este QR está mapeado para um evento ativo ──
+            try {
+                const eventoQRDoc = await db.collection('configuracoes').doc('eventos_qr').get();
+                if (eventoQRDoc.exists) {
+                    const mapa = eventoQRDoc.data() || {};
+                    const ev = mapa[turmaQR];
+                    if (ev && ev.ativo) {
+                        const agora = new Date();
+                        // Verifica janela do evento
+                        const [hIni, mIni] = (ev.horaInicio || '00:00').split(':').map(Number);
+                        const minIni = hIni * 60 + mIni;
+                        const minFim = minIni + (ev.duracao || 120);
+                        const minAgora = agora.getHours() * 60 + agora.getMinutes();
+                        const dataEvStr = ev.data; // 'YYYY-MM-DD'
+                        const dataHoje = agora.toISOString().slice(0, 10);
+                        if (dataEvStr === dataHoje && minAgora >= (minIni - 30) && minAgora <= (minFim + 30)) {
+                            // Registra presença no evento
+                            const chaveEv = `${alunoId}_${ev.id || ev.nome}_${dataEvStr}`;
+                            const jaSnap = await db.collection('checkins_eventos').doc(chaveEv).get();
+                            if (jaSnap.exists) {
+                                alert(`✅ Presença no evento "${ev.nome}" já registrada! OSS!`);
+                            } else {
+                                await db.collection('checkins_eventos').doc(chaveEv).set({
+                                    alunoId, alunoNome: auth.currentUser?.nome || '',
+                                    eventoId: ev.id || '', eventoNome: ev.nome,
+                                    data: dataEvStr, hora: agora.toLocaleTimeString('pt-BR'),
+                                    qrUsado: turmaQR, registradoEm: agora.getTime()
+                                });
+                                alert(`✅ Presença no evento confirmada!\n\n🎉 ${ev.nome}\n📅 ${dataEvStr.split('-').reverse().join('/')}\n\nOSS! 🥋`);
+                            }
+                            return; // não processa como aula normal
+                        }
+                    }
+                }
+            } catch(_) {}
+
             const alunoRef = db.collection("alunos").doc(alunoId);
             const alunoDoc = await alunoRef.get();
             if (!alunoDoc.exists) return;
@@ -7597,7 +7633,8 @@ Ele voltará a ser aluno normal.`)) return;
                     ${modoEditar ? 'EDITAR HORÁRIOS' : 'Horários e Turmas'}
                 </span>
                 ${isAdmin
-                    ? '<div style="display:flex; gap:6px;">' +
+                    ? '<div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">' +
+                      '<button onclick="academia.abrirEventosQR()" style="background:#1a0050; border:1px solid #8b5cf6; color:#a78bfa; padding:8px 12px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🎟️ EVENTO QR</button>' +
                       '<button onclick="academia.gerarQRCodesHorarios()" style="background:#1e3a8a; border:1px solid #3b82f6; color:#60a5fa; padding:8px 12px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">📱 QR CODES</button>' +
                       '<button onclick="academia.toggleEdicaoHorarios()" style="background:' + (modoEditar ? '#334155' : '#f59e0b') + '; border:none; color:' + (modoEditar ? 'white' : '#000') + '; padding:8px 14px; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">' + (modoEditar ? '✕ FECHAR' : '✏️ EDITAR') + '</button>' +
                       '</div>'
@@ -7908,6 +7945,113 @@ Ele voltará a ser aluno normal.`)) return;
         try {
             await db.collection('configuracoes').doc('horarios').set({ duracoes: grade.duracoes }, { merge: true });
         } catch(e) { console.warn('Erro ao salvar duração do slot:', e); }
+    },
+
+    async abrirEventosQR() {
+        // Lista todos os QR codes da grade para selecionar
+        const grade = this.getGrade();
+        const qrsDisponiveis = [];
+        for (let d = 0; d <= 6; d++) {
+            const slots = (grade[d] || grade[String(d)] || []).filter(s => s && s !== 'Sem treinos hoje');
+            slots.forEach(s => { if (!qrsDisponiveis.includes(s)) qrsDisponiveis.push(s); });
+        }
+        qrsDisponiveis.sort();
+        const nomesDisplay = grade.nomesDisplay || {};
+
+        // Carrega eventos existentes
+        const cfgDoc = await db.collection('configuracoes').doc('eventos_qr').get();
+        const mapa = cfgDoc.exists ? cfgDoc.data() : {};
+
+        const opQR = qrsDisponiveis.map(q => `<option value="${q}">${nomesDisplay[q]||q}</option>`).join('');
+        const hoje = new Date().toISOString().slice(0,10);
+
+        let m = document.getElementById('modal-eventos-qr');
+        if (!m) { m = document.createElement('div'); m.id = 'modal-eventos-qr'; document.body.appendChild(m); }
+        m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
+
+        const eventosAtivos = Object.entries(mapa).map(([chaveQR, ev]) => `
+            <div style="background:#1e0a40;border:1px solid #6d28d9;border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <div>
+                    <div style="font-size:0.72rem;font-weight:800;color:#c4b5fd;">${ev.nome}</div>
+                    <div style="font-size:0.6rem;color:#64748b;">📅 ${(ev.data||'').split('-').reverse().join('/')} · ⏰ ${ev.horaInicio||'?'} · ${ev.duracao||120}min</div>
+                    <div style="font-size:0.55rem;color:#475569;margin-top:2px;">🔗 QR: ${nomesDisplay[chaveQR]||chaveQR}</div>
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0;">
+                    <button onclick="academia.verPresencasEventoQR('${chaveQR.replace(/'/g,"\\'")}','${ev.nome.replace(/'/g,"\\'")}')" style="background:#0f172a;border:1px solid #334155;color:#94a3b8;padding:5px 9px;border-radius:7px;font-size:0.6rem;font-weight:700;cursor:pointer;">👥 Ver</button>
+                    <button onclick="academia.toggleEventoQR('${chaveQR.replace(/'/g,"\\'")}',${ev.ativo?'false':'true'})" style="background:${ev.ativo?'#064e3b':'#1c0a00'};border:1px solid ${ev.ativo?'#10b981':'#f59e0b'};color:${ev.ativo?'#34d399':'#fcd34d'};padding:5px 9px;border-radius:7px;font-size:0.6rem;font-weight:700;cursor:pointer;">${ev.ativo?'✅ Ativo':'⏸️ Pausado'}</button>
+                    <button onclick="academia.removerEventoQR('${chaveQR.replace(/'/g,"\\'")}','${ev.nome.replace(/'/g,"\\'")}');" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.85rem;padding:4px;">🗑️</button>
+                </div>
+            </div>`).join('') || '<div style="color:#475569;font-size:0.7rem;padding:8px 0;">Nenhum evento QR cadastrado.</div>';
+
+        m.innerHTML = `<div style="background:#0f172a;border:2px solid #6d28d9;border-radius:20px;padding:22px;width:100%;max-width:460px;margin-top:10px;margin-bottom:30px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <span style="font-size:0.9rem;font-weight:800;color:#a78bfa;">🎟️ Evento QR</span>
+                <button onclick="document.getElementById('modal-eventos-qr').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+            </div>
+            <div style="font-size:0.6rem;color:#64748b;margin-bottom:12px;">Use um QR code já impresso para registrar presença em um evento específico.</div>
+
+            <div style="background:#1a0050;border:1px solid #4c1d95;border-radius:12px;padding:14px;margin-bottom:16px;">
+                <div style="font-size:0.62rem;color:#a78bfa;font-weight:800;margin-bottom:10px;">➕ NOVO EVENTO</div>
+                <label style="font-size:0.6rem;color:#a78bfa;font-weight:700;display:block;margin-bottom:4px;">QR CODE A USAR</label>
+                <select id="evqr-qr" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;margin-bottom:8px;">${opQR}</select>
+                <label style="font-size:0.6rem;color:#a78bfa;font-weight:700;display:block;margin-bottom:4px;">NOME DO EVENTO</label>
+                <input type="text" id="evqr-nome" placeholder="Ex: Semana de Treino Especial" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;margin-bottom:8px;box-sizing:border-box;">
+                <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <div style="flex:1;"><label style="font-size:0.6rem;color:#a78bfa;font-weight:700;display:block;margin-bottom:4px;">DATA</label>
+                    <input type="date" id="evqr-data" value="${hoje}" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;box-sizing:border-box;"></div>
+                    <div style="flex:1;"><label style="font-size:0.6rem;color:#a78bfa;font-weight:700;display:block;margin-bottom:4px;">HORA INÍCIO</label>
+                    <input type="time" id="evqr-hora" value="09:00" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;box-sizing:border-box;"></div>
+                    <div style="width:80px;"><label style="font-size:0.6rem;color:#a78bfa;font-weight:700;display:block;margin-bottom:4px;">DURAÇÃO (min)</label>
+                    <input type="number" id="evqr-dur" value="120" min="15" max="720" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.75rem;box-sizing:border-box;text-align:center;"></div>
+                </div>
+                <button onclick="academia.salvarEventoQR()" style="width:100%;padding:11px;background:#8b5cf6;border:none;color:white;border-radius:10px;font-weight:800;cursor:pointer;">✅ CRIAR EVENTO</button>
+                <div id="evqr-status" style="margin-top:6px;text-align:center;font-size:0.7rem;"></div>
+            </div>
+
+            <div style="font-size:0.6rem;color:#a78bfa;font-weight:800;margin-bottom:8px;">📋 EVENTOS CADASTRADOS</div>
+            <div id="evqr-lista">${eventosAtivos}</div>
+        </div>`;
+    },
+
+    async salvarEventoQR() {
+        const qr   = document.getElementById('evqr-qr')?.value;
+        const nome = document.getElementById('evqr-nome')?.value.trim();
+        const data = document.getElementById('evqr-data')?.value;
+        const hora = document.getElementById('evqr-hora')?.value;
+        const dur  = parseInt(document.getElementById('evqr-dur')?.value) || 120;
+        const st   = document.getElementById('evqr-status');
+        if (!qr || !nome || !data || !hora) { if (st) st.innerHTML = '<span style="color:#ef4444;">Preencha todos os campos.</span>'; return; }
+        const id = `ev_${Date.now()}`;
+        await db.collection('configuracoes').doc('eventos_qr').set({ [qr]: { id, nome, data, horaInicio: hora, duracao: dur, ativo: true, criadoEm: new Date().toISOString() } }, { merge: true });
+        if (st) st.innerHTML = '<span style="color:#10b981;">✅ Evento criado!</span>';
+        setTimeout(() => this.abrirEventosQR(), 800);
+    },
+
+    async toggleEventoQR(chaveQR, novoEstado) {
+        await db.collection('configuracoes').doc('eventos_qr').set({ [chaveQR]: { ativo: novoEstado } }, { merge: true });
+        this.abrirEventosQR();
+    },
+
+    async removerEventoQR(chaveQR, nome) {
+        if (!confirm(`Remover evento "${nome}"?`)) return;
+        await db.collection('configuracoes').doc('eventos_qr').update({ [chaveQR]: firebase.firestore.FieldValue.delete() });
+        this.abrirEventosQR();
+    },
+
+    async verPresencasEventoQR(chaveQR, nomeEvento) {
+        const snap = await db.collection('checkins_eventos').where('qrUsado', '==', chaveQR).orderBy('registradoEm', 'desc').limit(200).get();
+        let m = document.getElementById('modal-presencas-evqr');
+        if (!m) { m = document.createElement('div'); m.id = 'modal-presencas-evqr'; document.body.appendChild(m); }
+        m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.97);z-index:10000;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;';
+        const linhas = snap.empty ? '<div style="color:#475569;font-size:0.72rem;padding:12px;">Nenhuma presença registrada.</div>'
+            : snap.docs.map(doc => { const d = doc.data(); return `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#0f172a;border-radius:8px;margin-bottom:5px;"><span style="font-size:0.72rem;color:#e2e8f0;">${d.alunoNome||d.alunoId}</span><span style="font-size:0.65rem;color:#64748b;">${(d.data||'').split('-').reverse().join('/')} ${d.hora||''}</span></div>`; }).join('');
+        m.innerHTML = `<div style="background:#0f172a;border:2px solid #6d28d9;border-radius:20px;padding:22px;width:100%;max-width:420px;margin-top:10px;margin-bottom:30px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <div><div style="font-size:0.85rem;font-weight:800;color:#a78bfa;">👥 Presenças</div><div style="font-size:0.65rem;color:#64748b;">${nomeEvento} · ${snap.size} presença(s)</div></div>
+                <button onclick="document.getElementById('modal-presencas-evqr').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+            </div>
+            ${linhas}
+        </div>`;
     },
 
     async salvarJanelaSlot(slot, tipo, valorStr) {

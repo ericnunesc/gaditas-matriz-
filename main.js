@@ -7986,8 +7986,9 @@ Ele voltará a ser aluno normal.`)) return;
                     <div style="font-size:0.6rem;color:#64748b;">📅 ${(ev.data||'').split('-').reverse().join('/')} · ⏰ ${ev.horaInicio||'?'} · ${ev.duracao||120}min</div>
                     <div style="font-size:0.55rem;color:#475569;margin-top:2px;">🔗 QR: ${nomesDisplay[chaveQR]||chaveQR}</div>
                 </div>
-                <div style="display:flex;gap:6px;flex-shrink:0;">
+                <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
                     <button onclick="academia.verPresencasEventoQR('${chaveQR.replace(/'/g,"\\'")}','${ev.nome.replace(/'/g,"\\'")}')" style="background:#0f172a;border:1px solid #334155;color:#94a3b8;padding:5px 9px;border-radius:7px;font-size:0.6rem;font-weight:700;cursor:pointer;">👥 Ver</button>
+                    <button onclick="academia.editarEventoQR('${chaveQR.replace(/'/g,"\\'")}','${ev.nome.replace(/'/g,"\\'")}','${ev.data||''}','${ev.horaInicio||''}',${ev.duracao||120})" style="background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;padding:5px 9px;border-radius:7px;font-size:0.6rem;font-weight:700;cursor:pointer;">✏️ Editar</button>
                     <button onclick="academia.toggleEventoQR('${chaveQR.replace(/'/g,"\\'")}',${ev.ativo?'false':'true'})" style="background:${ev.ativo?'#064e3b':'#1c0a00'};border:1px solid ${ev.ativo?'#10b981':'#f59e0b'};color:${ev.ativo?'#34d399':'#fcd34d'};padding:5px 9px;border-radius:7px;font-size:0.6rem;font-weight:700;cursor:pointer;">${ev.ativo?'✅ Ativo':'⏸️ Pausado'}</button>
                     <button onclick="academia.removerEventoQR('${chaveQR.replace(/'/g,"\\'")}','${ev.nome.replace(/'/g,"\\'")}');" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.85rem;padding:4px;">🗑️</button>
                 </div>
@@ -8052,6 +8053,24 @@ Ele voltará a ser aluno normal.`)) return;
             const st = document.getElementById('evqr-status');
             if (st) st.innerHTML = `<span style="color:#10b981;">✅ Chave capturada: <b>${chave}</b></span>`;
         }, ()=>{});
+    },
+
+    editarEventoQR(chaveQR, nome, data, horaInicio, duracao) {
+        const inp = document.getElementById('evqr-chave-manual');
+        const sel = document.getElementById('evqr-qr');
+        const nomeEl = document.getElementById('evqr-nome');
+        const dataEl = document.getElementById('evqr-data');
+        const horaEl = document.getElementById('evqr-hora');
+        const durEl  = document.getElementById('evqr-dur');
+        if (inp)   { inp.value = chaveQR; inp.style.borderColor = '#3b82f6'; }
+        if (sel)   sel.value = '';
+        if (nomeEl) nomeEl.value = nome;
+        if (dataEl) dataEl.value = data;
+        if (horaEl) horaEl.value = horaInicio;
+        if (durEl)  durEl.value  = duracao;
+        // Scroll para o formulário
+        document.getElementById('evqr-status').innerHTML = '<span style="color:#93c5fd;">✏️ Editando — ajuste os campos e clique em CRIAR EVENTO para salvar.</span>';
+        document.getElementById('evqr-chave-manual')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     },
 
     async salvarEventoQR() {

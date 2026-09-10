@@ -7362,13 +7362,14 @@ Ele voltará a ser aluno normal.`)) return;
     async processarCheckinQR(turmaQR, alunoId) {
         try {
             let _nomeEvento = null; // guarda nome do evento QR para usar no alert de fora da janela
+            let _eventoData = null; // guarda dados completos do evento (hora, duração)
             // ── EVENTO QR: verifica se este QR está mapeado para um evento ativo ──
             try {
                 const eventoQRDoc = await db.collection('configuracoes').doc('eventos_qr').get();
                 if (eventoQRDoc.exists) {
                     const mapa = eventoQRDoc.data() || {};
                     const ev = mapa[turmaQR];
-                    if (ev && ev.nome) _nomeEvento = ev.nome; // guarda sempre que existir
+                    if (ev && ev.nome) { _nomeEvento = ev.nome; _eventoData = ev; } // guarda sempre que existir
                     if (ev && ev.ativo) {
                         const agora = new Date();
                         // Verifica janela do evento
@@ -7474,21 +7475,32 @@ Ele voltará a ser aluno normal.`)) return;
                         db.collection("alunos").doc(alunoId).update({ ultimoCheckin: agora }),
                     ]);
                 }
-                const duracoes = this.gradeFirebase?.duracoes || {};
-                const durQR = duracoes[turmaQR] || (this.gradeFirebase?.duracaoAula) || 90;
-                const jAntes  = (this.gradeFirebase?.janelaAntes  || {})[turmaQR] ?? 15;
-                const jDepois = (this.gradeFirebase?.janelaDepois || {})[turmaQR] ?? 15;
                 const nomeExibAlert = _nomeEvento || ((this.gradeFirebase || {}).nomesDisplay || {})[turmaQR] || turmaQR;
-                // Calcula horário de início e fim da turma para exibir ao aluno
-                const matchJanela = turmaQR.match(/^(\d{2}):(\d{2})/);
+                const fmt = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
                 let infoHorario = '';
-                if (matchJanela) {
-                    const minIni = parseInt(matchJanela[1]) * 60 + parseInt(matchJanela[2]);
-                    const minFim = minIni + durQR;
-                    const fmt = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
-                    infoHorario = `\n⏰ Horário da turma: ${fmt(minIni)} – ${fmt(minFim)}\n🔓 Janela permitida: ${fmt(minIni-jAntes)} – ${fmt(minFim+jDepois)}`;
+                if (_eventoData && _eventoData.horaInicio) {
+                    // É um evento QR — usa horário e duração do evento
+                    const [hEv, mEv] = (_eventoData.horaInicio).split(':').map(Number);
+                    const minIniEv = hEv * 60 + mEv;
+                    const durEv = _eventoData.duracao || 120;
+                    const minFimEv = minIniEv + durEv;
+                    const dataEvFmt = (_eventoData.data||'').split('-').reverse().join('/');
+                    infoHorario = `\n📅 Data do evento: ${dataEvFmt}\n⏰ Horário: ${fmt(minIniEv)} – ${fmt(minFimEv)}\n🔓 Janela: ${fmt(minIniEv-30)} – ${fmt(minFimEv+30)}`;
+                } else {
+                    // Turma normal — usa tempo da chave QR
+                    const duracoes = this.gradeFirebase?.duracoes || {};
+                    const durQR = duracoes[turmaQR] || (this.gradeFirebase?.duracaoAula) || 90;
+                    const jAntes  = (this.gradeFirebase?.janelaAntes  || {})[turmaQR] ?? 15;
+                    const jDepois = (this.gradeFirebase?.janelaDepois || {})[turmaQR] ?? 15;
+                    const matchJanela = turmaQR.match(/^(\d{2}):(\d{2})/);
+                    if (matchJanela) {
+                        const minIni = parseInt(matchJanela[1]) * 60 + parseInt(matchJanela[2]);
+                        const minFim = minIni + durQR;
+                        infoHorario = `\n⏰ Horário da turma: ${fmt(minIni)} – ${fmt(minFim)}\n🔓 Janela permitida: ${fmt(minIni-jAntes)} – ${fmt(minFim+jDepois)}`;
+                    }
                 }
-                alert(`⚠️ Check-in enviado para aprovação!\n\n📋 Turma: ${nomeExibAlert}\nVocê está fora da janela de horário.${infoHorario}\n\nSeu check-in ficará pendente até o professor aprovar.`);
+                const labelTipo = _eventoData ? '🎟️ Evento' : '📋 Turma';
+                alert(`⚠️ Check-in enviado para aprovação!\n\n${labelTipo}: ${nomeExibAlert}\nVocê está fora da janela de horário.${infoHorario}\n\nSeu check-in ficará pendente até o professor aprovar.`);
             }
         } catch(e) { console.warn("Erro QR:", e.message); }
     },

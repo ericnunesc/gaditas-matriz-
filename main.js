@@ -7333,11 +7333,13 @@ Ele voltará a ser aluno normal.`)) return;
         const duracao   = duracoes[turmaQR] || (this.gradeFirebase?.duracaoAula) || 90;
         const minFim    = minInicio + duracao;
 
+        const janelaAntes  = (this.gradeFirebase?.janelaAntes  || {})[turmaQR] ?? 15;
+        const janelaDepois = (this.gradeFirebase?.janelaDepois || {})[turmaQR] ?? 15;
+
         const agora    = new Date();
         const minAgora = agora.getHours() * 60 + agora.getMinutes();
 
-        // Janela: 15 min antes do início até 15 min após o término
-        return minAgora >= (minInicio - 15) && minAgora <= (minFim + 15);
+        return minAgora >= (minInicio - janelaAntes) && minAgora <= (minFim + janelaDepois);
     },
 
     async processarCheckinQR(turmaQR, alunoId) {
@@ -7418,6 +7420,9 @@ Ele voltará a ser aluno normal.`)) return;
                 }
                 const duracoes = this.gradeFirebase?.duracoes || {};
                 const durQR = duracoes[turmaQR] || (this.gradeFirebase?.duracaoAula) || 90;
+                const jAntes  = (this.gradeFirebase?.janelaAntes  || {})[turmaQR] ?? 15;
+                const jDepois = (this.gradeFirebase?.janelaDepois || {})[turmaQR] ?? 15;
+                const nomeExibAlert = ((this.gradeFirebase || {}).nomesDisplay || {})[turmaQR] || turmaQR;
                 // Calcula horário de início e fim da turma para exibir ao aluno
                 const matchJanela = turmaQR.match(/^(\d{2}):(\d{2})/);
                 let infoHorario = '';
@@ -7425,9 +7430,9 @@ Ele voltará a ser aluno normal.`)) return;
                     const minIni = parseInt(matchJanela[1]) * 60 + parseInt(matchJanela[2]);
                     const minFim = minIni + durQR;
                     const fmt = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
-                    infoHorario = `\n⏰ Horário da turma: ${fmt(minIni)} – ${fmt(minFim)}\n🔓 Janela permitida: ${fmt(minIni-15)} – ${fmt(minFim+15)}`;
+                    infoHorario = `\n⏰ Horário da turma: ${fmt(minIni)} – ${fmt(minFim)}\n🔓 Janela permitida: ${fmt(minIni-jAntes)} – ${fmt(minFim+jDepois)}`;
                 }
-                alert(`⚠️ Check-in enviado para aprovação!\n\n📋 Turma: ${turmaQR}\nVocê está fora da janela de horário.${infoHorario}\n\nSeu check-in ficará pendente até o professor aprovar.`);
+                alert(`⚠️ Check-in enviado para aprovação!\n\n📋 Turma: ${nomeExibAlert}\nVocê está fora da janela de horário.${infoHorario}\n\nSeu check-in ficará pendente até o professor aprovar.`);
             }
         } catch(e) { console.warn("Erro QR:", e.message); }
     },
@@ -7628,6 +7633,14 @@ Ele voltará a ser aluno normal.`)) return;
                         'onchange="academia.salvarLimiteSlot(\'' + slotEsc + '\', this.value)" ' +
                         'style="width:40px; padding:4px 5px; background:#0f172a; border:1px solid #334155; color:#a78bfa; border-radius:5px; font-size:0.7rem; text-align:center; outline:none;"/>' +
                         '<span style="color:#475569; font-size:0.55rem; font-weight:600;">&#x1F465;</span>' +
+                        '<span style="color:#475569; font-size:0.48rem; font-weight:600; margin-left:2px;" title="Minutos antes do início para liberar check-in">▶</span>' +
+                        '<input type="number" value="' + ((grade.janelaAntes||{})[slot]??15) + '" min="0" max="120" title="Minutos ANTES do início que libera o check-in (padrão 15)" ' +
+                        'onchange="academia.salvarJanelaSlot(\'' + slotEsc + '\',\'antes\',this.value)" ' +
+                        'style="width:36px; padding:4px 3px; background:#0f172a; border:1px solid #1e40af55; color:#60a5fa; border-radius:5px; font-size:0.7rem; text-align:center; outline:none;" />' +
+                        '<span style="color:#475569; font-size:0.48rem; font-weight:600;" title="Minutos após o término para liberar check-in">◀</span>' +
+                        '<input type="number" value="' + ((grade.janelaDepois||{})[slot]??15) + '" min="0" max="120" title="Minutos APÓS o término que aceita check-in (padrão 15)" ' +
+                        'onchange="academia.salvarJanelaSlot(\'' + slotEsc + '\',\'depois\',this.value)" ' +
+                        'style="width:36px; padding:4px 3px; background:#0f172a; border:1px solid #0f4c3555; color:#34d399; border-radius:5px; font-size:0.7rem; text-align:center; outline:none;" />' +
                         '<button onclick="academia.renomearTurmaDisplay(\'' + slotEsc + '\')" title="Alterar nome exibido (sem mudar o QR code)" style="background:none; border:none; cursor:pointer; padding:4px 3px; font-size:0.85rem;">✏️</button>' +
                         '<button onclick="academia.toggleAulaAtiva(' + d + ', \'' + slotEsc + '\')" title="' + (desativ ? 'Reativar' : 'Desativar') + '" style="background:none; border:none; cursor:pointer; padding:4px 3px; font-size:0.9rem;">' + (desativ ? '🟢' : '🔴') + '</button>' +
                         '<button onclick="academia.removerHorarioAdmin(' + d + ', \'' + slotEsc + '\')" ' +
@@ -7885,6 +7898,19 @@ Ele voltará a ser aluno normal.`)) return;
         try {
             await db.collection('configuracoes').doc('horarios').set({ duracoes: grade.duracoes }, { merge: true });
         } catch(e) { console.warn('Erro ao salvar duração do slot:', e); }
+    },
+
+    async salvarJanelaSlot(slot, tipo, valorStr) {
+        const val = parseInt(valorStr);
+        if (isNaN(val) || val < 0 || val > 120) return;
+        const grade = this.getGrade();
+        const campo = tipo === 'antes' ? 'janelaAntes' : 'janelaDepois';
+        if (!grade[campo]) grade[campo] = {};
+        grade[campo][slot] = val;
+        this.gradeFirebase = grade;
+        try {
+            await db.collection('configuracoes').doc('horarios').set({ [campo]: grade[campo] }, { merge: true });
+        } catch(e) { console.warn('Erro ao salvar janela:', e); }
     },
 
     abrirEspelharDia(diaOrigem) {

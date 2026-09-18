@@ -23550,11 +23550,15 @@ const pesquisas = {
                     </div>`).join('')}</div>
                 </details>` : '';
 
+            // Store data for print function
+            pesquisas._printData = { p, respostas };
+
             card.innerHTML = `
             <div style="background:#1e293b;border:1px solid #f59e0b44;border-left:3px solid #f59e0b;border-radius:12px;padding:15px;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
                     <button onclick="pesquisas.renderPainelAdmin()" style="background:none;border:none;color:#f59e0b;cursor:pointer;font-size:0.8rem;padding:0;">←</button>
-                    <span style="font-size:0.75rem;font-weight:800;color:#f59e0b;">📊 RELATÓRIO</span>
+                    <span style="font-size:0.75rem;font-weight:800;color:#f59e0b;flex:1;">📊 RELATÓRIO</span>
+                    <button onclick="pesquisas.imprimirRelatorio()" style="background:#f59e0b;border:none;color:#0f172a;cursor:pointer;font-size:0.65rem;font-weight:800;padding:4px 10px;border-radius:6px;">🖨️ IMPRIMIR</button>
                 </div>
                 <div style="font-size:0.8rem;font-weight:700;color:#e2e8f0;margin-bottom:4px;">${p.titulo}</div>
                 <div style="font-size:0.6rem;color:#64748b;margin-bottom:12px;">${respostas.length} aluno(s) responderam</div>
@@ -23565,6 +23569,69 @@ const pesquisas = {
             const c = document.getElementById('card-pesquisas-admin');
             if (c) c.innerHTML = `<div style="background:#1e293b;border-radius:12px;padding:15px;color:#f43f5e;font-size:0.72rem;">Erro: ${e.message}</div>`;
         }
+    },
+
+    imprimirRelatorio() {
+        const d = pesquisas._printData;
+        if (!d) return;
+        const { p, respostas } = d;
+
+        const questoesHtml = (p.perguntas || []).map(q => {
+            const vals = respostas.map(r => r.respostas?.[q.id]).filter(v => v !== undefined && v !== '');
+            let resumo = '';
+            if (q.tipo === 'nota') {
+                const media = vals.length ? (vals.reduce((a,b) => a + Number(b), 0) / vals.length).toFixed(1) : '-';
+                resumo = `<p style="margin:4px 0 0;font-size:13px;">Média: <strong>${media}/5</strong> · ${vals.length} resposta(s)</p>`;
+            } else if (q.tipo === 'multipla') {
+                const cnt = {};
+                vals.forEach(v => { cnt[v] = (cnt[v]||0) + 1; });
+                resumo = Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([k,v]) => {
+                    const pct = vals.length ? Math.round(v/vals.length*100) : 0;
+                    return `<div style="margin:3px 0;font-size:13px;">${k}: <strong>${v} (${pct}%)</strong>
+                        <div style="height:6px;background:#e5e7eb;border-radius:3px;margin-top:2px;"><div style="height:6px;width:${pct}%;background:#f59e0b;border-radius:3px;"></div></div>
+                    </div>`;
+                }).join('');
+            } else {
+                resumo = vals.map(v => `<div style="border-left:3px solid #d1d5db;padding-left:8px;margin:3px 0;font-size:13px;color:#374151;">"${v}"</div>`).join('');
+            }
+            return `<div style="border:1px solid #e5e7eb;border-radius:6px;padding:10px;margin-bottom:10px;">
+                <div style="font-weight:700;font-size:14px;margin-bottom:4px;">${q.texto}</div>
+                ${resumo}
+            </div>`;
+        }).join('');
+
+        const alunosHtml = respostas.map(r =>
+            `<tr>
+                <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb;">${r.alunoNome}</td>
+                <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb;color:#6b7280;">${r.dataResposta}</td>
+                ${(p.perguntas||[]).map(q => `<td style="padding:5px 8px;border-bottom:1px solid #e5e7eb;">${r.respostas?.[q.id] ?? '—'}</td>`).join('')}
+            </tr>`
+        ).join('');
+
+        const thCols = (p.perguntas||[]).map(q => `<th style="padding:6px 8px;background:#f3f4f6;text-align:left;font-size:12px;">${q.texto}</th>`).join('');
+
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+        <title>Relatório — ${p.titulo}</title>
+        <style>body{font-family:sans-serif;padding:24px;color:#111;}h1{font-size:20px;margin-bottom:4px;}h2{font-size:15px;margin:20px 0 10px;color:#374151;}table{width:100%;border-collapse:collapse;font-size:13px;}@media print{button{display:none;}}</style>
+        </head><body>
+        <h1>📊 ${p.titulo}</h1>
+        <p style="color:#6b7280;font-size:13px;margin:0 0 16px;">${respostas.length} aluno(s) responderam</p>
+        <h2>Resumo por pergunta</h2>
+        ${questoesHtml}
+        <h2>Respostas por aluno (${respostas.length})</h2>
+        <table>
+            <thead><tr>
+                <th style="padding:6px 8px;background:#f3f4f6;text-align:left;font-size:12px;">Aluno</th>
+                <th style="padding:6px 8px;background:#f3f4f6;text-align:left;font-size:12px;">Data</th>
+                ${thCols}
+            </tr></thead>
+            <tbody>${alunosHtml}</tbody>
+        </table>
+        <script>window.onload=()=>window.print();<\/script>
+        </body></html>`;
+
+        const w = window.open('', '_blank');
+        if (w) { w.document.write(html); w.document.close(); }
     },
 
     // ── CARD DO ALUNO ─────────────────────────────────────────────────────────

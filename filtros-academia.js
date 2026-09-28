@@ -534,6 +534,44 @@ const GaditasFiltros = {
         mainContent.appendChild(tab); return tab;
     },
 
+    async solicitarTrancamento() {
+        const alunoId = auth.currentUser.id;
+        const alunoNome = auth.currentUser.nome || '';
+        const alunoEmail = auth.currentUser.email || '';
+
+        // Verifica se já tem solicitação pendente
+        const snap = await db.collection('trancamentos_solicitacoes')
+            .where('alunoId', '==', alunoId).where('status', '==', 'pendente').get();
+        if (!snap.empty) {
+            alert('Você já tem uma solicitação de trancamento pendente.\nAguarde o retorno da academia.');
+            return;
+        }
+
+        const confirmar = confirm(
+            'Deseja solicitar o trancamento da sua matrícula?\n\n' +
+            '• Plano mensal: trancamento sem multa\n' +
+            '• Outros planos: pode ser gerada multa contratual\n\n' +
+            'A academia entrará em contato para finalizar.'
+        );
+        if (!confirmar) return;
+
+        try {
+            await db.collection('trancamentos_solicitacoes').add({
+                alunoId, alunoNome, alunoEmail,
+                data: Date.now(), status: 'pendente'
+            });
+            // Notifica admin via push
+            try {
+                const cfg = await db.collection('configuracoes').doc('admin_config').get();
+                const token = cfg.exists ? cfg.data().fcmToken : null;
+                if (token) auth._enviarPush(token, '🔒 Solicitação de Trancamento', `${alunoNome} solicitou trancamento de matrícula`);
+            } catch(_) {}
+            alert('✅ Solicitação enviada!\nA academia entrará em contato em breve.');
+        } catch(e) {
+            alert('Erro ao enviar solicitação: ' + e.message);
+        }
+    },
+
     // 🆕 FUNÇÃO DE CONFIANÇA SILENCIOSA PARA VERIFICAR BLOQUEIO DE INADIMPLÊNCIA ANTES DO CHECK-IN
     async verificarBloqueioInadimplencia(emailAtleta) {
         try {
@@ -541,17 +579,24 @@ const GaditasFiltros = {
             const dadosCliente = await resCliente.json();
             if (!dadosCliente.data || dadosCliente.data.length === 0) return false;
 
-            const customerId = dadosCliente.data[0].id;
-            const resCobrancas = await fetch(`${this.asaasUrl}?endpoint=payments&customer=${customerId}&status=PENDING&limit=20`);
-            const dadosCobrancas = await resCobrancas.json();
-            if (!dadosCobrancas.data || dadosCobrancas.data.length === 0) {
+            const customerIds = dadosCliente.data.map(c => c.id);
+            const respostas = await Promise.all(customerIds.flatMap(cid => [
+                fetch(`${this.asaasUrl}?endpoint=payments&customer=${cid}&status=PENDING&limit=20`),
+                fetch(`${this.asaasUrl}?endpoint=payments&customer=${cid}&status=OVERDUE&limit=20`)
+            ]));
+            const jsons = await Promise.all(respostas.map(r => r.json()));
+            const todasCobrancas = customerIds.flatMap((_, i) => [
+                ...(jsons[i*2+0]?.data || []),
+                ...(jsons[i*2+1]?.data || [])
+            ]);
+            if (todasCobrancas.length === 0) {
                 this.statusBloqueado = false; return false;
             }
 
             const dataHoje = new Date(); dataHoje.setHours(0,0,0,0);
             let bloqueado = false;
 
-            dadosCobrancas.data.forEach(cobranca => {
+            todasCobrancas.forEach(cobranca => {
                 const dataFatura = new Date(cobranca.dueDate + "T00:00:00"); dataFatura.setHours(0,0,0,0);
                 // Calcula a diferença em dias corridos entre hoje e o vencimento
                 const diferencaTempo = dataHoje.getTime() - dataFatura.getTime();
@@ -587,14 +632,17 @@ const GaditasFiltros = {
                 return;
             }
 
-            const customerId = dadosCliente.data[0].id;
-            const [resPending, resOverdue] = await Promise.all([
-                fetch(`${this.asaasUrl}?endpoint=payments&customer=${customerId}&status=PENDING&limit=20`),
-                fetch(`${this.asaasUrl}?endpoint=payments&customer=${customerId}&status=OVERDUE&limit=20`)
-            ]);
-            const [dataPending, dataOverdue] = await Promise.all([resPending.json(), resOverdue.json()]);
+            const customerIds = dadosCliente.data.map(c => c.id);
+            const todasRespostas = await Promise.all(customerIds.flatMap(cid => [
+                fetch(`${this.asaasUrl}?endpoint=payments&customer=${cid}&status=PENDING&limit=20`),
+                fetch(`${this.asaasUrl}?endpoint=payments&customer=${cid}&status=OVERDUE&limit=20`)
+            ]));
+            const todasJson = await Promise.all(todasRespostas.map(r => r.json()));
             const dadosCobrancas = {
-                data: [...(dataOverdue.data || []), ...(dataPending.data || [])]
+                data: customerIds.flatMap((_, i) => [
+                    ...(todasJson[i*2+1]?.data || []),
+                    ...(todasJson[i*2+0]?.data || [])
+                ])
             };
 
             if(document.getElementById('financeiro-loading')) document.getElementById('financeiro-loading').classList.add('hidden');
@@ -618,34 +666,50 @@ const GaditasFiltros = {
             dadosCobrancas.data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
 
             this.cobrancasAbertas = dadosCobrancas.data;
-            let htmlFaturas = `<div style="font-size:0.55rem; color:#f59e0b; font-weight:800; letter-spacing:0.8px; margin-bottom:14px; display:flex; align-items:center; gap:6px;"><i class="fas fa-exclamation-triangle"></i>${this.cobrancasAbertas.length} FATURA(S) PENDENTE(S)</div>`;
-            
             const dataHoje = new Date(); dataHoje.setHours(0,0,0,0);
             let algumBloqueioAtivo = false;
 
-            this.cobrancasAbertas.forEach((cobranca) => {
+            // Separa: urgentes (vencidas/hoje/até 10 dias) e futuras distantes (>10 dias)
+            const urgentes = [];
+            const futuras = [];
+            this.cobrancasAbertas.forEach(c => {
+                const df = new Date(c.dueDate + "T00:00:00"); df.setHours(0,0,0,0);
+                const dias = Math.floor((dataHoje.getTime() - df.getTime()) / 86400000); // positivo = vencida
+                if (dias >= -10) urgentes.push({ c, dias });
+                else futuras.push({ c, dias });
+            });
+
+            const totalLabel = this.cobrancasAbertas.length;
+            let htmlFaturas = `<div style="font-size:0.55rem; color:#f59e0b; font-weight:800; letter-spacing:0.8px; margin-bottom:14px; display:flex; align-items:center; gap:6px;"><i class="fas fa-exclamation-triangle"></i>${totalLabel} FATURA(S) PENDENTE(S)</div>`;
+
+            urgentes.forEach(({ c: cobranca, dias: diferencaDias }, idx) => {
                 const valorFormatado = cobranca.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                 const dataVencimento = cobranca.dueDate.split('-').reverse().join('/');
-                const dataFatura = new Date(cobranca.dueDate + "T00:00:00"); dataFatura.setHours(0,0,0,0);
+                const isPrimeira = idx === 0;
 
-                const diferencaTempo = dataHoje.getTime() - dataFatura.getTime();
-                const diferencaDias = Math.floor(diferencaTempo / (1000 * 60 * 60 * 24));
-
-                let corFundo = "#064e3b"; let corBorda = "#10b981"; let corTextoTag = "#34d399"; let textoTag = "⏳ MENSALIDADE A VENCER";
-                
-                if (dataFatura.getTime() < dataHoje.getTime()) {
-                    corFundo = "#4c0519"; corBorda = "#f43f5e"; corTextoTag = "#f43f5e"; 
-                    // Se passou de 3 dias, destaca que o aplicativo bloqueou o check-in
+                let corFundo, corBorda, corTextoTag, textoTag;
+                if (diferencaDias > 0) {
+                    corFundo = "#4c0519"; corBorda = "#f43f5e"; corTextoTag = "#f43f5e";
                     if (diferencaDias > 3) {
                         textoTag = `⚠️ BLOQUEADO (VENCIDO HÁ ${diferencaDias} DIAS)`; algumBloqueioAtivo = true;
                     } else {
                         textoTag = `⚠️ MENSALIDADE VENCIDA (ATRASO: ${diferencaDias}D)`;
                     }
-                } else if (dataFatura.getTime() === dataHoje.getTime()) {
+                } else if (diferencaDias === 0) {
                     corFundo = "#451a03"; corBorda = "#f59e0b"; corTextoTag = "#fbbf24"; textoTag = "⚡ VENCE HOJE!";
+                } else {
+                    // A vencer (dentro de 10 dias)
+                    if (isPrimeira) {
+                        corFundo = "#064e3b"; corBorda = "#10b981"; corTextoTag = "#34d399"; textoTag = "⏳ MENSALIDADE A VENCER";
+                    } else {
+                        // Próxima fatura (não é a mais urgente) — visual apagado
+                        corFundo = "#0f1f2e"; corBorda = "#1e3a5f44"; corTextoTag = "#475569"; textoTag = "📅 PRÓXIMA FATURA";
+                    }
                 }
 
-                htmlFaturas += `
+                if (isPrimeira) {
+                    // Fatura principal — destaque total com PIX / CARTÃO
+                    htmlFaturas += `
                     <div style="background:${corFundo}; border:1px solid ${corBorda}; border-radius:20px; overflow:hidden; margin-bottom:14px; box-shadow:0 4px 16px rgba(0,0,0,0.4);">
                         <div style="padding:12px 16px 10px; border-bottom:1px solid ${corBorda}44; display:flex; align-items:center; justify-content:space-between;">
                             <span style="font-size:0.52rem; font-weight:800; color:${corTextoTag}; letter-spacing:0.8px;">${textoTag}</span>
@@ -666,7 +730,26 @@ const GaditasFiltros = {
                         </div>
                         <div style="padding:0 14px 14px;"><button onclick="GaditasFiltros.abrirLinkPagamento('${cobranca.id}', this)" style="display:block; width:100%; text-align:center; padding:10px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:12px; font-size:0.68rem; font-weight:700; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-external-link-alt" style="margin-right:5px;"></i>ABRIR LINK DE PAGAMENTO</button></div>
                     </div>`;
+                } else {
+                    // Fatura secundária (próxima, dentro de 10 dias) — sem destaque, sem botões de pagamento
+                    htmlFaturas += `
+                    <div style="background:${corFundo}; border:1px solid #1e3a5f55; border-radius:14px; overflow:hidden; margin-bottom:10px; opacity:0.7;">
+                        <div style="padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
+                            <div>
+                                <div style="font-size:0.5rem; font-weight:800; color:#475569; letter-spacing:0.8px; margin-bottom:2px;">${textoTag} · ${dataVencimento}</div>
+                                <div style="font-size:1rem; font-weight:800; color:#64748b;">${valorFormatado}</div>
+                            </div>
+                            <div style="font-size:0.55rem; color:#334155; text-align:right; max-width:110px; line-height:1.4;">Pague a fatura atual primeiro</div>
+                        </div>
+                    </div>`;
+                }
             });
+
+            // Faturas muito distantes (>10 dias): só aviso discreto
+            if (futuras.length > 0) {
+                const proximaData = futuras[0].c.dueDate.split('-').reverse().join('/');
+                htmlFaturas += `<div style="text-align:center; padding:8px; font-size:0.58rem; color:#334155; font-weight:600;">+${futuras.length} fatura(s) futura(s) — próx. ${proximaData}</div>`;
+            }
             
             this.statusBloqueado = algumBloqueioAtivo;
             htmlFaturas += `

@@ -4416,12 +4416,12 @@ Ele voltará a ser aluno normal.`)) return;
         const d = doc.data(); const email = d.email;
         if (!email) return alert("Aluno sem email cadastrado.");
         let modal = document.getElementById('modal-financeiro-admin');
-        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-financeiro-admin'; modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; display:flex; flex-direction:column; overflow-y:auto; padding:20px;'; document.body.appendChild(modal); }
+        if (!modal) { modal = document.createElement('div'); modal.id = 'modal-financeiro-admin'; modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; display:flex; flex-direction:column; overflow-y:auto; padding:10px;'; document.body.appendChild(modal); }
         modal.innerHTML = `
-            <div style="background:#1e293b; border-radius:16px; padding:20px; max-width:480px; margin:0 auto; width:100%;">
+            <div style="background:#1e293b; border-radius:16px; padding:16px; max-width:480px; margin:0 auto; width:100%; box-sizing:border-box;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                    <div data-email="${email}" data-nome="${nome.replace(/"/g,'&quot;')}"><div style="font-size:0.7rem; color:#64748b; font-weight:700;">FINANCEIRO DO ALUNO</div><div style="font-size:1rem; font-weight:800; color:white;">${nome.toUpperCase()}</div><div style="font-size:0.7rem; color:#64748b;">${email}</div></div>
-                    <button onclick="document.getElementById('modal-financeiro-admin').remove()" style="background:#334155; border:none; color:white; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700;">✕</button>
+                    <div data-email="${email}" data-nome="${nome.replace(/"/g,'&quot;')}" style="min-width:0;flex:1;margin-right:8px;"><div style="font-size:0.7rem; color:#64748b; font-weight:700;">FINANCEIRO DO ALUNO</div><div style="font-size:0.95rem; font-weight:800; color:white; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${nome.toUpperCase()}</div><div style="font-size:0.65rem; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${email}</div></div>
+                    <button onclick="document.getElementById('modal-financeiro-admin').remove()" style="background:#334155; border:none; color:white; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700; flex-shrink:0;">✕</button>
                 </div>
                 <div id="modal-fin-conteudo" style="color:#64748b; text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem; color:#3b82f6; display:block; margin-bottom:8px;"></i>Consultando Asaas...</div>
             </div>`;
@@ -4483,7 +4483,7 @@ Ele voltará a ser aluno normal.`)) return;
                             <div style="font-size:0.6rem; color:#64748b;">Próx: ${proxVenc} • ID: ${s.id.substring(0,12)}...</div></div>
                             <span style="font-size:0.6rem; font-weight:800; color:#8b5cf6; background:#8b5cf622; padding:3px 8px; border-radius:6px;">ATIVA</span>
                         </div>
-                        <button onclick="academia.cancelarAssinaturaAdmin('${s.id}','${nome.replace(/'/g,"\\'")}')" style="width:100%; padding:8px; background:#1a0a00; border:1px solid #92400e; color:#f59e0b; border-radius:7px; font-size:0.7rem; font-weight:800; cursor:pointer;">
+                        <button onclick="academia.cancelarAssinaturaAdmin('${s.id}','${nome.replace(/'/g,"\\'")}')" style="width:100%; padding:8px; background:#1a0a00; border:1px solid #92400e; color:#f59e0b; border-radius:7px; font-size:0.6rem; font-weight:800; cursor:pointer; white-space:nowrap;">
                             ⚠️ CANCELAR ASSINATURA RECORRENTE
                         </button>
                     </div>`;
@@ -7154,6 +7154,172 @@ Ele voltará a ser aluno normal.`)) return;
         await db.collection('alunos').doc(id).update({ status: 'ativo' });
         alert(`✅ ${nome} reativado com sucesso!`);
         this.renderAlunos();
+    },
+
+    // ── TRANCAMENTO DE MATRÍCULA ──
+
+    async _carregarSolicitacoesTrancamento() {
+        if (auth.role !== 'admin') return;
+        const container = document.getElementById('trancamentos-pendentes-admin');
+        if (!container) return;
+        try {
+            const snap = await db.collection('trancamentos_solicitacoes')
+                .where('status', '==', 'pendente').get();
+            if (snap.empty) { container.innerHTML = ''; return; }
+            const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => (b.data || 0) - (a.data || 0));
+            container.innerHTML = `
+                <div style="background:#0c1a2e; border:1px solid #1d4ed855; border-radius:12px; padding:14px; margin-bottom:14px;">
+                    <div style="font-size:0.65rem; font-weight:800; color:#60a5fa; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>🔒 SOLICITAÇÕES DE TRANCAMENTO (${docs.length})</span>
+                    </div>
+                    ${docs.map(s => {
+                        const data = s.data ? new Date(s.data).toLocaleDateString('pt-BR') : '—';
+                        return `<div style="background:#0f172a; border:1px solid #1e3a5f; border-radius:10px; padding:12px; margin-bottom:8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <div>
+                                    <div style="font-size:0.8rem; font-weight:800; color:white;">${s.alunoNome || '—'}</div>
+                                    <div style="font-size:0.6rem; color:#64748b;">${s.alunoEmail || ''} · ${data}</div>
+                                </div>
+                                <button onclick="academia._cancelarSolicitacaoTrancamento('${s.id}')" style="background:#1e293b; border:1px solid #334155; color:#64748b; padding:4px 10px; border-radius:6px; font-size:0.6rem; font-weight:700; cursor:pointer;">✕ Ignorar</button>
+                            </div>
+                            <button onclick="academia.processarTrancamento('${s.id}','${(s.alunoEmail||'').replace(/'/g,"\\'")}','${(s.alunoNome||'').replace(/'/g,"\\'")}','${s.alunoId||''}')" style="width:100%; padding:9px; background:#1d4ed8; border:none; color:white; border-radius:8px; font-size:0.68rem; font-weight:800; cursor:pointer;">
+                                🔒 PROCESSAR TRANCAMENTO
+                            </button>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+        } catch(_) { container.innerHTML = ''; }
+    },
+
+    async _cancelarSolicitacaoTrancamento(solId) {
+        if (!confirm('Ignorar esta solicitação de trancamento?')) return;
+        await db.collection('trancamentos_solicitacoes').doc(solId).update({ status: 'ignorado' });
+        this._carregarSolicitacoesTrancamento();
+    },
+
+    async processarTrancamento(solId, alunoEmail, alunoNome, alunoId) {
+        const modal = document.createElement('div');
+        modal.id = 'modal-trancamento';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;overflow-y:auto;padding:10px;';
+        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:16px;max-width:480px;margin:0 auto;width:100%;box-sizing:border-box;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <div><div style="font-size:0.65rem;color:#64748b;font-weight:700;">PROCESSAR TRANCAMENTO</div><div style="font-size:1rem;font-weight:800;color:white;">${alunoNome.toUpperCase()}</div></div>
+                <button onclick="document.getElementById('modal-trancamento').remove()" style="background:#334155;border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700;flex-shrink:0;">✕</button>
+            </div>
+            <div id="modal-tranc-conteudo" style="color:#64748b;text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;color:#3b82f6;display:block;margin-bottom:8px;"></i>Consultando plano no Asaas...</div>
+        </div>`;
+        document.body.appendChild(modal);
+
+        try {
+            const asaasUrl = '/api/asaas';
+            const rCli = await fetch(`${asaasUrl}?endpoint=customers&email=${encodeURIComponent(alunoEmail)}`);
+            const dCli = await rCli.json();
+            const conteudo = document.getElementById('modal-tranc-conteudo');
+            if (!dCli.data || dCli.data.length === 0) {
+                conteudo.innerHTML = `<p style="color:#f59e0b;">Aluno não localizado no Asaas.</p>`;
+                return;
+            }
+            const customerIds = dCli.data.map(c => c.id);
+            const subResps = await Promise.all(customerIds.map(cid =>
+                fetch(`${asaasUrl}?endpoint=subscriptions&customer=${cid}&status=ACTIVE&limit=5`).then(r => r.json())
+            ));
+            const subs = subResps.flatMap(r => r.data || []);
+            const customerId = dCli.data[0].id;
+
+            let html = '';
+            if (subs.length > 0) {
+                const sub = subs[0];
+                const valor = sub.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                const ciclo = sub.cycle;
+                const isMensal = ciclo === 'MONTHLY';
+                html += `<div style="background:#0f172a;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:10px;padding:12px;margin-bottom:14px;">
+                    <div style="font-size:0.6rem;color:#8b5cf6;font-weight:800;margin-bottom:4px;">ASSINATURA ATIVA</div>
+                    <div style="font-size:0.95rem;font-weight:800;color:white;margin-bottom:2px;">${valor} <span style="font-size:0.6rem;color:#94a3b8;">/ ${ciclo}</span></div>
+                    <div style="font-size:0.6rem;color:#64748b;">ID: ${sub.id}</div>
+                </div>`;
+                if (isMensal) {
+                    html += `<div style="background:#052e16;border:1px solid #10b981;border-radius:10px;padding:12px;margin-bottom:12px;font-size:0.72rem;color:#6ee7b7;">
+                        ✅ Plano <strong>mensal</strong> — pode trancar sem multa.<br>A assinatura será cancelada no Asaas.
+                    </div>
+                    <button onclick="academia._executarTrancamentoMensal('${sub.id}','${solId}','${alunoNome.replace(/'/g,"\\'")}')" style="width:100%;padding:11px;background:#10b981;border:none;color:white;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;margin-bottom:8px;">
+                        ✅ CANCELAR ASSINATURA E TRANCAR
+                    </button>`;
+                } else {
+                    html += `<div style="background:#2d1800;border:1px solid #f59e0b;border-radius:10px;padding:12px;margin-bottom:12px;font-size:0.72rem;color:#fbbf24;">
+                        ⚠️ Plano <strong>${ciclo}</strong> — sujeito a multa contratual.<br>Informe o valor da multa para gerar a cobrança.
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <small style="color:#94a3b8;font-size:0.6rem;font-weight:700;display:block;margin-bottom:5px;">VALOR DA MULTA (R$)</small>
+                        <input type="number" id="input-multa-valor" min="0" step="0.01" placeholder="Ex: 150.00" style="width:100%;padding:10px;background:#0f172a;border:1px solid #f59e0b;color:white;border-radius:8px;font-size:0.9rem;font-weight:700;outline:none;box-sizing:border-box;">
+                    </div>
+                    <button onclick="academia._gerarMultaTrancamento('${customerId}','${sub.id}','${solId}','${alunoNome.replace(/'/g,"\\'")}')" style="width:100%;padding:11px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;margin-bottom:8px;">
+                        💰 GERAR MULTA AVULSA E TRANCAR
+                    </button>`;
+                }
+            } else {
+                html += `<div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:14px;font-size:0.72rem;color:#94a3b8;">
+                    Nenhuma assinatura ativa encontrada. Assinatura pode já estar cancelada ou ser avulsa.
+                </div>
+                <button onclick="academia._concluirTrancamentoSemAssinatura('${solId}')" style="width:100%;padding:11px;background:#334155;border:none;color:white;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;margin-bottom:8px;">
+                    ✅ MARCAR COMO TRANCADO (sem assinatura ativa)
+                </button>`;
+            }
+            html += `<button onclick="document.getElementById('modal-trancamento').remove()" style="width:100%;padding:10px;background:#1e293b;border:1px solid #334155;color:#64748b;border-radius:10px;font-size:0.72rem;font-weight:700;cursor:pointer;">Cancelar</button>`;
+            conteudo.innerHTML = html;
+        } catch(e) {
+            const c = document.getElementById('modal-tranc-conteudo');
+            if (c) c.innerHTML = `<p style="color:#f43f5e;">Erro: ${e.message}</p>`;
+        }
+    },
+
+    async _executarTrancamentoMensal(subscriptionId, solId, nomeAluno) {
+        if (!confirm(`Cancelar assinatura mensal de ${nomeAluno} e marcar como trancado?`)) return;
+        try {
+            const r = await fetch(`/api/asaas?endpoint=subscriptions/${encodeURIComponent(subscriptionId)}`, { method: 'DELETE' });
+            const d = await r.json();
+            if (d.deleted === true || d.id) {
+                await db.collection('trancamentos_solicitacoes').doc(solId).update({ status: 'concluido', concluidoEm: Date.now() });
+                alert(`✅ Assinatura de ${nomeAluno} cancelada e matrícula trancada!`);
+                document.getElementById('modal-trancamento')?.remove();
+                this._carregarSolicitacoesTrancamento();
+            } else {
+                throw new Error(d.errors?.[0]?.description || JSON.stringify(d));
+            }
+        } catch(e) { alert('❌ Erro: ' + e.message); }
+    },
+
+    async _gerarMultaTrancamento(customerId, subscriptionId, solId, nomeAluno) {
+        const input = document.getElementById('input-multa-valor');
+        const valor = parseFloat(input?.value);
+        if (!valor || valor <= 0) { alert('Informe um valor válido para a multa.'); return; }
+        if (!confirm(`Gerar multa de R$ ${valor.toFixed(2)} para ${nomeAluno} e cancelar assinatura?`)) return;
+        try {
+            // Gera cobrança avulsa no Asaas
+            const vencimento = new Date(); vencimento.setDate(vencimento.getDate() + 5);
+            const dueDate = vencimento.toISOString().split('T')[0];
+            const rCharge = await fetch('/api/asaas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ endpoint: 'payments', customer: customerId, billingType: 'UNDEFINED', value: valor, dueDate, description: 'Multa por trancamento antecipado de matrícula' })
+            });
+            const dCharge = await rCharge.json();
+            if (!dCharge.id) throw new Error(dCharge.errors?.[0]?.description || JSON.stringify(dCharge));
+            // Cancela assinatura
+            await fetch(`/api/asaas?endpoint=subscriptions/${encodeURIComponent(subscriptionId)}`, { method: 'DELETE' });
+            await db.collection('trancamentos_solicitacoes').doc(solId).update({ status: 'concluido', multaId: dCharge.id, multaValor: valor, concluidoEm: Date.now() });
+            alert(`✅ Multa de R$ ${valor.toFixed(2)} gerada e assinatura cancelada!\nO aluno receberá a cobrança no Asaas.`);
+            document.getElementById('modal-trancamento')?.remove();
+            this._carregarSolicitacoesTrancamento();
+        } catch(e) { alert('❌ Erro: ' + e.message); }
+    },
+
+    async _concluirTrancamentoSemAssinatura(solId) {
+        if (!confirm('Marcar como trancado (sem assinatura ativa)?')) return;
+        await db.collection('trancamentos_solicitacoes').doc(solId).update({ status: 'concluido', concluidoEm: Date.now() });
+        alert('✅ Matrícula marcada como trancada.');
+        document.getElementById('modal-trancamento')?.remove();
+        this._carregarSolicitacoesTrancamento();
     },
 
     // ── CANCELAR ASSINATURA PELO ADMIN (modal financeiro do aluno) ──
@@ -9934,9 +10100,9 @@ const ui = {
         }
         if(id === 'tab-eventos') { academia.limparFormEvento(); academia.carregarEventosAbas(); if(auth.role === 'aluno') setTimeout(() => academia.verificarDisparoEvento(), 600); }
         if(id === 'tab-checkin') { if(auth.role === 'admin') academia.renderDashboardGrid(); else academia.renderDashboardAluno(); academia.renderStoriesBar(); academia.renderRanking(); this.atualizarTurmasDinamicas(); academia.renderCheckins(); this.renderPerfilAluno(); this.renderCardContrato(); academia.carregarConquistas(); academia.carregarBibliotecaTecnica(); academia.carregarMeusCheckinsPendentes(); if(auth.role === 'professor' || auth.role === 'admin') { academia.renderPlanoAulaProf(); academia.renderChamadaProf(); perguntas.renderPainelProfessor(); } if(auth.role === 'admin') { planoCal._planos = null; planoCal.render(); } if(auth.role === 'admin') { academia.renderPresencaAdmin(); academia.renderPainelExperimentais(); pesquisas.renderPainelAdmin(); } if(auth.role === 'aluno') { perguntas.renderCardAluno(); pesquisas.renderCardAluno(); } }
-        if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); academia.renderResumoFinanceiroMes(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); boletim.renderPainelAdmin(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
+        if(id === 'tab-relatorios') { if(auth.role === 'admin') { academia.renderDashboardAdmin(); academia.renderResumoFinanceiroMes(); avaliacaoFisica._garantirPainelSolicitacoes(); treinoPost.renderRadarSumidos(); treinoPost.renderAvaliacoesPainel(); boletim.renderPainelAdmin(); academia._carregarSolicitacoesTrancamento(); } academia.generarRelatorioGraduacao(); academia.calcularAnalyticsFrequencia(); }
         if(id === 'tab-horarios') { academia._modoEdicaoHorarios = false; academia.renderHorarios(); if(auth.role === 'professor') profComms.renderPainelDispensas(); }
-        if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); } }
+        if(id === 'tab-loja') { loja.renderVitrine(); if(auth.role === 'admin') { loja.mudarModoAdmin('vitrine'); loja.renderAdminLoja(); loja._carregarCardPedidosPendentesAdmin(); } }
     },
     getCorFaixa(f) {
         if(!f) return "#fff";
@@ -16162,20 +16328,34 @@ const loja = {
         if (auth.role !== 'aluno' && auth.role !== 'professor') { alert('Apenas alunos e professores podem fazer pedidos.'); return; }
         const btn = document.getElementById('btn-fazer-pedido');
         if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Processando...'; }
+        const variacaoNome = this._variacaoAtual ? this._variacaoAtual.nome : null;
         try {
             const ref = await db.collection('loja_pedidos').add({
                 alunoId: auth.currentUser.id, alunoNome: auth.currentUser.nome,
                 produtoId, produtoNome: p.nome,
-                variacao: this._variacaoAtual ? this._variacaoAtual.nome : null,
+                variacao: variacaoNome,
                 preco: p.preco, linkPagamento: p.linkPagamento || null,
                 status: 'pendente', data: new Date().getTime()
             });
+            // Reserva estoque imediatamente
+            if (produtoId && variacaoNome) await this._ajustarEstoque(produtoId, variacaoNome, -1);
+            // Notifica admin
+            this._notificarAdminNovoPedido(p.nome, auth.currentUser.nome, variacaoNome);
             this.fecharProduto();
             this._mostrarModalPagamento(p, this._variacaoAtual, ref.id);
         } catch(e) {
             if (btn) { btn.disabled = false; btn.innerHTML = '🛒 FAZER PEDIDO'; }
             alert('Erro ao registrar pedido: ' + e.message);
         }
+    },
+
+    async _notificarAdminNovoPedido(produto, aluno, variacao) {
+        try {
+            const cfg = await db.collection('configuracoes').doc('admin_config').get();
+            const token = cfg.exists ? cfg.data().fcmToken : null;
+            const label = variacao ? `${produto} (${variacao})` : produto;
+            auth._enviarPush(token, '🛍️ Novo Pedido na Loja', `${aluno} pediu: ${label}`);
+        } catch(_) {}
     },
 
     _mostrarModalPagamento(p, variacao, pedidoId) {
@@ -16470,9 +16650,9 @@ const loja = {
                         </div>`}
                         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                             ${!o.cancelado && !concluido ? `<button onclick="loja.cancelarPedido('${o.id}',${o.pago},'${pid}','${vari}')" style="background:#ef444411;border:1px solid #ef444444;color:#ef4444;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">✕ CANCELAR</button>` : ''}
-                            ${o.cancelado ? `<button onclick="loja.reativarPedido('${o.id}')" style="background:#3b82f622;border:1px solid #3b82f6;color:#93c5fd;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">↩ REATIVAR</button>` : ''}
+                            ${o.cancelado ? `<button onclick="loja.reativarPedido('${o.id}','${pid}','${vari}')" style="background:#3b82f622;border:1px solid #3b82f6;color:#93c5fd;padding:5px 10px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;">↩ REATIVAR</button>` : ''}
                             ${concluido ? `<span style="font-size:0.6rem;color:#10b981;font-weight:800;">✅ Concluído</span>` : ''}
-                            <button onclick="loja.excluirPedido('${o.id}',${o.pago},${o.entregue},'${pid}','${vari}')" style="background:none;border:1px solid #475569;color:#64748b;padding:5px 8px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;margin-left:auto;">🗑</button>
+                            <button onclick="loja.excluirPedido('${o.id}',${o.pago},${o.entregue},'${pid}','${vari}',${o.cancelado})" style="background:none;border:1px solid #475569;color:#64748b;padding:5px 8px;border-radius:6px;font-size:0.58rem;font-weight:800;cursor:pointer;margin-left:auto;">🗑</button>
                         </div>
                     </div>`;
             }).join('');
@@ -16483,11 +16663,10 @@ const loja = {
 
     async togglePagoPedido(pedidoId, pagoAtual, produtoId, variacaoNome) {
         try {
-            const novoPago = !pagoAtual;
-            await db.collection('loja_pedidos').doc(pedidoId).update({ pago: novoPago });
-            // Estoque: marcar pago = reservar (-1); desmarcar = devolver (+1)
-            if (produtoId && variacaoNome) await this._ajustarEstoque(produtoId, variacaoNome, novoPago ? -1 : +1);
+            await db.collection('loja_pedidos').doc(pedidoId).update({ pago: !pagoAtual });
+            // Estoque já foi reservado na criação do pedido — não ajusta aqui
             this.renderPedidosAdmin();
+            this._carregarCardPedidosPendentesAdmin();
         } catch(e) { alert('Erro: ' + e.message); }
     },
 
@@ -16502,32 +16681,86 @@ const loja = {
         if (!confirm('Cancelar este pedido?')) return;
         try {
             await db.collection('loja_pedidos').doc(pedidoId).update({ cancelado: true, pago: false, entregue: false });
-            if (pago && produtoId && variacaoNome) await this._ajustarEstoque(produtoId, variacaoNome, +1);
+            // Devolve estoque sempre — foi reservado na criação do pedido
+            if (produtoId && variacaoNome) await this._ajustarEstoque(produtoId, variacaoNome, +1);
             this.renderPedidosAdmin();
+            this._carregarCardPedidosPendentesAdmin();
         } catch(e) { alert('Erro: ' + e.message); }
     },
 
-    async reativarPedido(pedidoId) {
+    async reativarPedido(pedidoId, produtoId, variacaoNome) {
         try {
             await db.collection('loja_pedidos').doc(pedidoId).update({ cancelado: false });
+            // Re-reserva o estoque
+            if (produtoId && variacaoNome) await this._ajustarEstoque(produtoId, variacaoNome, -1);
             this.renderPedidosAdmin();
+            this._carregarCardPedidosPendentesAdmin();
         } catch(e) { alert('Erro: ' + e.message); }
     },
 
-    async excluirPedido(pedidoId, pago, entregue, produtoId, variacaoNome) {
+    async excluirPedido(pedidoId, pago, entregue, produtoId, variacaoNome, cancelado) {
         const concluido = pago && entregue;
         const msg = concluido
             ? 'Excluir pedido concluído? O estoque NÃO será devolvido.'
             : 'Excluir este pedido?';
         if (!confirm(msg)) return;
         try {
-            // Só devolve estoque se estava pago mas não entregue (reservado, não finalizado)
-            if (pago && !entregue && produtoId && variacaoNome) {
+            // Devolve estoque se pedido ativo (não cancelado, não entregue)
+            // Cancelado já devolveu o estoque ao cancelar
+            if (!cancelado && !entregue && produtoId && variacaoNome) {
                 await this._ajustarEstoque(produtoId, variacaoNome, +1);
             }
             await db.collection('loja_pedidos').doc(pedidoId).delete();
             this.renderPedidosAdmin();
+            this._carregarCardPedidosPendentesAdmin();
         } catch(e) { alert('Erro ao excluir: ' + e.message); }
+    },
+
+    async _carregarCardPedidosPendentesAdmin() {
+        if (auth.role !== 'admin') return;
+        const container = document.getElementById('loja-pendentes-admin');
+        if (!container) return;
+        try {
+            const snap = await db.collection('loja_pedidos').get();
+            const pendentes = snap.docs
+                .map(d => this._normalizarPedido(d))
+                .filter(o => !o.pago && !o.entregue && !o.cancelado)
+                .sort((a, b) => (b.data||0) - (a.data||0));
+            if (pendentes.length === 0) { container.innerHTML = ''; return; }
+            container.innerHTML = `
+                <div style="background:#451a0322; border:1px solid #f59e0b55; border-radius:12px; padding:14px; margin-bottom:14px;">
+                    <div style="font-size:0.65rem; font-weight:800; color:#f59e0b; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>🔔 PEDIDOS AGUARDANDO (${pendentes.length})</span>
+                        <button onclick="loja.mostrarTabAdmin('pedidos'); loja.mudarModoAdmin('gerenciar');" style="background:#f59e0b22;border:1px solid #f59e0b55;color:#f59e0b;padding:4px 10px;border-radius:6px;font-size:0.55rem;font-weight:800;cursor:pointer;">VER TODOS</button>
+                    </div>
+                    ${pendentes.slice(0, 3).map(o => {
+                        const pid  = o.produtoId || '';
+                        const vari = (o.variacao || '').replace(/'/g, "\\'");
+                        return `
+                        <div style="background:#0f172a; border:1px solid #f59e0b33; border-radius:10px; padding:10px; margin-bottom:8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                                <div style="flex:1; min-width:0; margin-right:8px;">
+                                    <div style="font-size:0.72rem; font-weight:800; color:white;">${o.alunoNome}</div>
+                                    <div style="font-size:0.6rem; color:#94a3b8; margin-top:1px;">${o.produtoNome}${o.variacao?' · '+o.variacao:''}</div>
+                                    <div style="font-size:0.55rem; color:#64748b; margin-top:1px;">#${o.id.slice(-6).toUpperCase()} · ${new Date(o.data).toLocaleDateString('pt-BR')}</div>
+                                </div>
+                                <div style="font-size:0.78rem; font-weight:800; color:#10b981; flex-shrink:0;">R$ ${(o.preco||0).toFixed(2).replace('.',',')}</div>
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <button onclick="loja.togglePagoPedido('${o.id}',false,'${pid}','${vari}');loja._carregarCardPedidosPendentesAdmin();"
+                                    style="flex:1;padding:7px;background:#10b98122;border:1px solid #10b98155;color:#10b981;border-radius:8px;font-size:0.6rem;font-weight:800;cursor:pointer;">
+                                    ✓ CONFIRMAR PAGAMENTO
+                                </button>
+                                <button onclick="loja.cancelarPedido('${o.id}',false,'${pid}','${vari}')"
+                                    style="padding:7px 12px;background:#ef444411;border:1px solid #ef444433;color:#ef4444;border-radius:8px;font-size:0.6rem;font-weight:800;cursor:pointer;">
+                                    ✕
+                                </button>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                    ${pendentes.length > 3 ? `<div style="text-align:center;font-size:0.6rem;color:#64748b;margin-top:4px;">+${pendentes.length-3} mais no painel de pedidos</div>` : ''}
+                </div>`;
+        } catch(_) { container.innerHTML = ''; }
     },
 
     async _ajustarEstoque(produtoId, variacaoNome, delta) {

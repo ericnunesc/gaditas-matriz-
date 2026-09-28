@@ -345,6 +345,12 @@
                         <button onclick="executarAlterarSenha()" style="width:100%; padding:13px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.85rem;"><i class="fas fa-save"></i> SALVAR NOVA SENHA</button>
                     </div>
 
+                    <!-- ── TRANCAMENTO DE MATRÍCULA (aluno) ── -->
+                    <button onclick="GaditasFiltros.solicitarTrancamento()" class="btn-save" style="background:#1e293b; border:1px solid #f59e0b44; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
+                        <span><i class="fas fa-pause-circle" style="color:#f59e0b; margin-right:8px; font-size:1.1rem;"></i> SOLICITAR TRANCAMENTO DE MATRÍCULA</span>
+                        <i class="fas fa-chevron-right" style="color:#64748b; font-size:0.8rem;"></i>
+                    </button>
+
                     <!-- ── RELATO DE SAÚDE (aluno) ── -->
                     <button id="btn-relato-saude-trigger" onclick="academia.toggleRelatoSaude()" class="btn-save" style="background:#1e293b; border:1px solid #f43f5e44; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
                         <span><i class="fas fa-heartbeat" style="color:#f43f5e; margin-right:8px; font-size:1.1rem;"></i> ESTOU MACHUCADO / DOENTE
@@ -922,6 +928,9 @@
 
             <div id="tab-relatorios" class="tab-content hidden" style="padding:15px 15px 80px;">
 
+                <!-- SOLICITAÇÕES DE TRANCAMENTO -->
+                <div id="trancamentos-pendentes-admin" style="margin-bottom:14px;"></div>
+
                 <!-- RESUMO FINANCEIRO DO MÊS -->
                 <div id="resumo-financeiro-mes" style="margin-bottom:14px;"></div>
 
@@ -1063,6 +1072,9 @@
                         <span id="badge-meus-pedidos" style="display:none; position:absolute; top:-5px; right:-5px; background:#f59e0b; color:#000; border-radius:10px; padding:0 5px; font-size:0.5rem; font-weight:800;"></span>
                     </button>
                 </div>
+
+                <!-- Card pedidos pendentes (só admin) -->
+                <div id="loja-pendentes-admin"></div>
 
                 <!-- Toggle VITRINE / GERENCIAR (só admin) -->
                 <div id="loja-admin-toggle" style="display:none; background:#0f172a; border:1px solid #334155; border-radius:10px; padding:4px; display:none; gap:4px; margin-bottom:14px;">
@@ -1252,8 +1264,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-    <script src="main.js?v=20260918a"></script>
-    <script src="filtros-academia.js?v=20260901d"></script>
+    <script src="main.js?v=20260928a"></script>
+    <script src="filtros-academia.js?v=20260928a"></script>
     <script src="gaditas-modal-financeiro.js?v=20260616b"></script>
     <script src="gaditas-painel-adm.js?v=20260901a"></script>
     <script src="gaditas-contrato.js"></script>

@@ -7162,16 +7162,27 @@ Ele voltará a ser aluno normal.`)) return;
         if (auth.role !== 'admin') return;
         const container = document.getElementById('trancamentos-pendentes-admin');
         if (!container) return;
+        container.innerHTML = '<div style="font-size:0.65rem;color:#64748b;padding:6px 0;">🔒 Carregando trancamentos...</div>';
         try {
             const snap = await db.collection('trancamentos_solicitacoes')
                 .where('status', '==', 'pendente').get();
-            if (snap.empty) { container.innerHTML = ''; return; }
             const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
                 .sort((a, b) => (b.data || 0) - (a.data || 0));
+            if (docs.length === 0) {
+                container.innerHTML = `
+                    <div style="background:#0c1a2e; border:1px solid #1d4ed833; border-radius:12px; padding:12px 14px; margin-bottom:14px; display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:1.2rem;">🔒</span>
+                        <div>
+                            <div style="font-size:0.65rem; font-weight:800; color:#60a5fa;">TRANCAMENTOS DE MATRÍCULA</div>
+                            <div style="font-size:0.6rem; color:#475569; margin-top:2px;">Nenhuma solicitação pendente</div>
+                        </div>
+                    </div>`;
+                return;
+            }
             container.innerHTML = `
                 <div style="background:#0c1a2e; border:1px solid #1d4ed855; border-radius:12px; padding:14px; margin-bottom:14px;">
                     <div style="font-size:0.65rem; font-weight:800; color:#60a5fa; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                        <span>🔒 SOLICITAÇÕES DE TRANCAMENTO (${docs.length})</span>
+                        <span>🔒 TRANCAMENTOS PENDENTES (${docs.length})</span>
                     </div>
                     ${docs.map(s => {
                         const data = s.data ? new Date(s.data).toLocaleDateString('pt-BR') : '—';

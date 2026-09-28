@@ -4478,7 +4478,10 @@ Ele voltará a ser aluno normal.`)) return;
                 html += `<small style="color:#8b5cf6; font-weight:800; font-size:0.6rem; display:block; margin-bottom:8px;">🔄 ASSINATURA RECORRENTE</small>`;
                 subs.data.forEach(s => {
                     const valor = s.value.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-                    const ciclo = s.cycle === 'MONTHLY' ? 'Mensal' : s.cycle;
+                    const cicloMap = { MONTHLY:'Mensal', WEEKLY:'Semanal', BIWEEKLY:'Quinzenal', MONTHLY:'Mensal', QUARTERLY:'Trimestral', SEMIANNUALLY:'Semestral', YEARLY:'Anual' };
+                    const planosConf = academiaConfig?.planosAssinatura || [];
+                    const planoMatch = planosConf.find(p => (p.tipo||'').toUpperCase() === (s.cycle||'').toUpperCase());
+                    const ciclo = planoMatch ? planoMatch.nome : (cicloMap[s.cycle] || s.cycle);
                     const proxVenc = s.nextDueDate ? s.nextDueDate.split('-').reverse().join('/') : '—';
                     html += `<div style="background:#0f172a; border:1px solid #8b5cf644; border-left:3px solid #8b5cf6; border-radius:8px; padding:10px; margin-bottom:8px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">

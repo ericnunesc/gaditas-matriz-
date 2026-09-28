@@ -4423,6 +4423,9 @@ Ele voltará a ser aluno normal.`)) return;
                     <div data-email="${email}" data-nome="${nome.replace(/"/g,'&quot;')}" style="min-width:0;flex:1;margin-right:8px;"><div style="font-size:0.7rem; color:#64748b; font-weight:700;">FINANCEIRO DO ALUNO</div><div style="font-size:0.95rem; font-weight:800; color:white; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${nome.toUpperCase()}</div><div style="font-size:0.65rem; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${email}</div></div>
                     <button onclick="document.getElementById('modal-financeiro-admin').remove()" style="background:#334155; border:none; color:white; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700; flex-shrink:0;">✕</button>
                 </div>
+                <button onclick="academia._abrirCriarPlanoModal('${id}','${nome.replace(/'/g,"\\'")}','${email}')" style="width:100%; padding:9px; background:#064e3b; border:1px solid #10b981; color:#34d399; border-radius:8px; font-size:0.68rem; font-weight:800; cursor:pointer; margin-bottom:12px; letter-spacing:0.3px;">
+                    <i class="fas fa-file-contract"></i> ➕ CRIAR PLANO / ASSINATURA RECORRENTE
+                </button>
                 <div id="modal-fin-conteudo" style="color:#64748b; text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem; color:#3b82f6; display:block; margin-bottom:8px;"></i>Consultando Asaas...</div>
             </div>`;
         modal.style.display = 'flex';
@@ -7331,6 +7334,159 @@ Ele voltará a ser aluno normal.`)) return;
         alert('✅ Matrícula marcada como trancada.');
         document.getElementById('modal-trancamento')?.remove();
         this._carregarSolicitacoesTrancamento();
+    },
+
+    // ── CRIAR PLANO A PARTIR DO MODAL FINANCEIRO DO ALUNO ──
+
+    _tipoPlanoModalAtual: 'mensal',
+
+    async _abrirCriarPlanoModal(alunoId, nome, email) {
+        // Busca CPF do aluno no Firestore
+        let cpf = '';
+        try {
+            const doc = await db.collection('alunos').doc(alunoId).get();
+            if (doc.exists) cpf = (doc.data().cpf || '').replace(/\D/g, '');
+        } catch(_) {}
+
+        const hoje = new Date(); hoje.setDate(hoje.getDate() + 1);
+        const dataVenc = hoje.toISOString().split('T')[0];
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-criar-plano';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;flex-direction:column;overflow-y:auto;padding:10px;';
+        modal.innerHTML = `
+        <div style="background:#1e293b;border-radius:16px;padding:16px;max-width:480px;margin:0 auto;width:100%;box-sizing:border-box;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <div>
+                    <div style="font-size:0.6rem;color:#10b981;font-weight:800;letter-spacing:0.5px;">CRIAR PLANO / ASSINATURA RECORRENTE</div>
+                    <div style="font-size:0.95rem;font-weight:800;color:white;">${nome.toUpperCase()}</div>
+                    <div style="font-size:0.62rem;color:#64748b;">${email}</div>
+                </div>
+                <button onclick="document.getElementById('modal-criar-plano').remove()" style="background:#334155;border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700;flex-shrink:0;">✕</button>
+            </div>
+
+            <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:6px;">TIPO DE PLANO:</small>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;">
+                <button id="mp-btn-mensal"      onclick="academia._selecionarTipoPlanoModal('mensal')"      style="padding:9px 4px;background:#10b981;border:none;color:white;border-radius:8px;font-size:0.62rem;font-weight:800;cursor:pointer;">📅 MENSAL</button>
+                <button id="mp-btn-trimestral"  onclick="academia._selecionarTipoPlanoModal('trimestral')"  style="padding:9px 4px;background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.62rem;font-weight:800;cursor:pointer;">📅 TRIMESTRAL</button>
+                <button id="mp-btn-semestral"   onclick="academia._selecionarTipoPlanoModal('semestral')"   style="padding:9px 4px;background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.62rem;font-weight:800;cursor:pointer;">📅 SEMESTRAL</button>
+                <button id="mp-btn-anual"       onclick="academia._selecionarTipoPlanoModal('anual')"       style="padding:9px 4px;background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.62rem;font-weight:800;cursor:pointer;">📅 ANUAL</button>
+                <button id="mp-btn-livre"       onclick="academia._selecionarTipoPlanoModal('livre')"       style="padding:9px 4px;background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.62rem;font-weight:800;cursor:pointer;">🔓 LIVRE</button>
+                <button id="mp-btn-familia"     onclick="academia._selecionarTipoPlanoModal('familia')"     style="padding:9px 4px;background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.62rem;font-weight:800;cursor:pointer;">👨‍👩‍👧 FAMÍLIA</button>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-bottom:10px;">
+                <div style="flex:1;">
+                    <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">VALOR MENSAL (R$):</small>
+                    <input type="number" id="mp-plano-valor" placeholder="0,00" step="0.01" min="0.01" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid #10b981;color:white;border-radius:8px;outline:none;font-size:0.9rem;font-weight:700;box-sizing:border-box;"/>
+                </div>
+                <div style="flex:1;">
+                    <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">1º VENCIMENTO:</small>
+                    <input type="date" id="mp-plano-vencimento" value="${dataVenc}" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;"/>
+                </div>
+            </div>
+
+            <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">FORMA DE PAGAMENTO:</small>
+            <select id="mp-plano-tipo" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:14px;box-sizing:border-box;">
+                <option value="PIX">⚡ Pix</option>
+                <option value="BOLETO">📄 Boleto</option>
+                <option value="CREDIT_CARD">💳 Cartão de Crédito</option>
+                <option value="UNDEFINED">🔀 Pix, Boleto ou Cartão (aluno escolhe)</option>
+            </select>
+
+            <button id="mp-btn-criar" onclick="academia._executarCriarPlanoModal('${alunoId}','${nome.replace(/'/g,"\\'")}','${email}','${cpf}')" style="width:100%;padding:13px;background:#10b981;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;letter-spacing:0.3px;">
+                <i class="fas fa-file-contract"></i> CRIAR PLANO E GERAR 1ª COBRANÇA
+            </button>
+            <div id="mp-plano-resultado" style="margin-top:12px;"></div>
+        </div>`;
+        this._tipoPlanoModalAtual = 'mensal';
+        document.body.appendChild(modal);
+    },
+
+    _selecionarTipoPlanoModal(tipo) {
+        this._tipoPlanoModalAtual = tipo;
+        ['mensal','trimestral','semestral','anual','livre','familia'].forEach(t => {
+            const btn = document.getElementById('mp-btn-' + t);
+            if (!btn) return;
+            if (t === tipo) { btn.style.background = '#10b981'; btn.style.border = 'none'; btn.style.color = 'white'; }
+            else { btn.style.background = '#0f172a'; btn.style.border = '1px solid #334155'; btn.style.color = '#94a3b8'; }
+        });
+    },
+
+    async _executarCriarPlanoModal(alunoId, nome, email, cpf) {
+        const resultado = document.getElementById('mp-plano-resultado');
+        const valor      = parseFloat(document.getElementById('mp-plano-valor')?.value);
+        const vencimento = document.getElementById('mp-plano-vencimento')?.value;
+        const tipo       = document.getElementById('mp-plano-tipo')?.value;
+        const planoKey   = this._tipoPlanoModalAtual || 'mensal';
+
+        if (isNaN(valor) || valor <= 0) return alert('Informe o valor do plano.');
+        if (!vencimento) return alert('Informe a data do 1º vencimento.');
+        const cpfLimpo = cpf.replace(/\D/g, '');
+        if (!cpfLimpo || cpfLimpo.length !== 11) {
+            if (resultado) resultado.innerHTML = '<div style="background:#1c0a00;border:1px solid #f43f5e;border-radius:8px;padding:10px;font-size:0.75rem;color:#f43f5e;font-weight:700;">❌ Preencha e salve o CPF do aluno primeiro (aba do aluno).</div>';
+            return;
+        }
+
+        const cicloMap = { mensal:'MONTHLY', trimestral:'QUARTERLY', semestral:'SEMIANNUALLY', anual:'YEARLY', livre:'MONTHLY', familia:'MONTHLY' };
+        const labelMap = { mensal:'Plano Mensal', trimestral:'Plano Trimestral', semestral:'Plano Semestral', anual:'Plano Anual', livre:'Plano Livre', familia:'Plano Família' };
+        const ciclo = cicloMap[planoKey] || 'MONTHLY';
+        const label = labelMap[planoKey] || 'Plano Mensal';
+
+        const btn = document.getElementById('mp-btn-criar');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Criando...'; }
+        if (resultado) resultado.innerHTML = '';
+
+        try {
+            // 1. Garante cliente no Asaas
+            let asaasId;
+            const resBusca = await fetch('/api/asaas?endpoint=customers&email=' + encodeURIComponent(email));
+            const dadosBusca = await resBusca.json();
+            if (dadosBusca.data?.length > 0) {
+                asaasId = dadosBusca.data[0].id;
+                if (!(dadosBusca.data[0].cpfCnpj || '').replace(/\D/g,'')) {
+                    await fetch('/api/asaas?endpoint=customers/' + asaasId, {
+                        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: nome, email, cpfCnpj: cpfLimpo })
+                    });
+                }
+            } else {
+                const resCriar = await fetch('/api/asaas?endpoint=customers', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: nome, email, cpfCnpj: cpfLimpo })
+                });
+                const criado = await resCriar.json();
+                if (!criado.id) throw new Error(criado.errors?.[0]?.description || 'Erro ao criar cliente.');
+                asaasId = criado.id;
+            }
+            await db.collection('alunos').doc(alunoId).update({ asaasId });
+
+            // 2. Cria assinatura no Asaas
+            const resAssin = await fetch('/api/asaas?endpoint=subscriptions', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customer: asaasId, billingType: tipo, value: valor, nextDueDate: vencimento, cycle: ciclo, description: label + ' — Gaditas Academy' })
+            });
+            const assin = await resAssin.json();
+            if (!assin.id) throw new Error(assin.errors?.[0]?.description || 'Erro ao criar assinatura.');
+
+            // 3. Salva no Firestore
+            await db.collection('alunos').doc(alunoId).update({ plano: planoKey, planoLabel: label, planoValor: valor, asaasId, subscriptionId: assin.id });
+
+            const valorFmt = valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const vencFmt  = vencimento.split('-').reverse().join('/');
+            if (resultado) resultado.innerHTML = `
+                <div style="background:#064e3b;border:1px solid #10b981;border-radius:12px;padding:14px;">
+                    <div style="font-size:0.7rem;font-weight:800;color:#10b981;margin-bottom:8px;">✅ PLANO CRIADO COM SUCESSO!</div>
+                    <div style="font-size:0.78rem;color:#e2e8f0;margin-bottom:3px;"><span style="color:#64748b;">Plano:</span> <strong>${label}</strong></div>
+                    <div style="font-size:0.78rem;color:#e2e8f0;margin-bottom:3px;"><span style="color:#64748b;">Valor:</span> <strong style="color:#10b981;">${valorFmt}</strong></div>
+                    <div style="font-size:0.78rem;color:#e2e8f0;margin-bottom:3px;"><span style="color:#64748b;">1º vencimento:</span> ${vencFmt}</div>
+                    <div style="font-size:0.78rem;color:#e2e8f0;"><span style="color:#64748b;">Recorrência:</span> ${ciclo}</div>
+                </div>`;
+            if (btn) { btn.disabled = false; btn.textContent = '✅ Plano criado!'; btn.style.background = '#064e3b'; }
+        } catch(e) {
+            if (resultado) resultado.innerHTML = `<div style="background:#1c0a00;border:1px solid #f43f5e;border-radius:8px;padding:10px;font-size:0.75rem;color:#f43f5e;font-weight:700;">❌ ${e.message}</div>`;
+            if (btn) { btn.disabled = false; btn.textContent = '🔄 Tentar novamente'; }
+        }
     },
 
     // ── CANCELAR ASSINATURA PELO ADMIN (modal financeiro do aluno) ──

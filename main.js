@@ -102,6 +102,8 @@ const auth = {
                 if (d.permitirKidsComAdultos != null) this.adminCreds.permitirKidsComAdultos = d.permitirKidsComAdultos;
                 if (d.nascimentoMestre) this.adminCreds.nascimentoMestre = d.nascimentoMestre;
                 if (d.fotoPerfil) this.adminCreds.fotoPerfil = d.fotoPerfil;
+                if (d.lutoAtivo != null) this.adminCreds.lutoAtivo = d.lutoAtivo;
+                if (d.lutoNome)  this.adminCreds.lutoNome  = d.lutoNome;
             }
         } catch(e) { console.warn('carregarCredenciaisAdmin:', e.message); }
         try {
@@ -238,6 +240,8 @@ const auth = {
         }
         // Exibe faixa/grau no cabeçalho (só para alunos)
         this._renderFaixaHeader();
+        // Banner de luto (visível para todos)
+        setTimeout(() => academia._renderBannerLuto(), 200);
         ui.configurarVisao();
         if (auth.role === 'financeiro') {
             ui.showTab('tab-financeiro');
@@ -6933,6 +6937,25 @@ Ele voltará a ser aluno normal.`)) return;
                         </label>
                     </div>
                 </div>
+                <!-- LUTO -->
+                <div style="background:#0f172a;border:1px solid #33415588;border-radius:10px;padding:14px;margin-top:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <div>
+                            <div style="font-size:0.75rem;font-weight:800;color:#e2e8f0;">🎀 MODO LUTO</div>
+                            <div style="font-size:0.62rem;color:#64748b;margin-top:2px;">Exibe fita de luto e homenagem para todos os alunos</div>
+                        </div>
+                        <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
+                            <span id="cfg-luto-toggle" data-on="${auth.adminCreds?.lutoAtivo ? 'true' : 'false'}"
+                                onclick="const on=this.dataset.on==='true';this.dataset.on=on?'false':'true';this.style.background=(!on)?'#64748b':'#334155';this.querySelector('span').style.left=(!on)?'23px':'3px';"
+                                style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:${auth.adminCreds?.lutoAtivo ? '#64748b' : '#334155'};border-radius:24px;transition:background 0.3s;">
+                                <span style="position:absolute;height:18px;width:18px;left:${auth.adminCreds?.lutoAtivo ? '23px' : '3px'};bottom:3px;background:white;border-radius:50%;transition:left 0.3s;"></span>
+                            </span>
+                        </label>
+                    </div>
+                    <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">NOME DA PESSOA HOMENAGEADA</small>
+                    <input type="text" id="cfg-luto-nome" value="${auth.adminCreds?.lutoNome || ''}" placeholder="Ex: Mestre João da Silva"
+                        style="${inp} margin-bottom:0;"/>
+                </div>
                 <div style="height:10px;"></div>
                 <button onclick="academia.salvarConfigAdmin()" style="width:100%;padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">💾 SALVAR CONFIGURAÇÕES</button>
                 <div style="height:1px;background:#334155;margin:16px 0;"></div>
@@ -7079,7 +7102,9 @@ Ele voltará a ser aluno normal.`)) return;
         const grau  = parseInt(document.getElementById('cfg-admin-grau')?.value ?? 3);
         const permitirKids = document.getElementById('cfg-kids-toggle')?.dataset.on === 'true';
         const nascimentoMestre = document.getElementById('cfg-admin-nascimento')?.value || '';
-        const dados = { nome, user, faixa, grau, permitirKidsComAdultos: permitirKids, nascimentoMestre };
+        const lutoAtivo = document.getElementById('cfg-luto-toggle')?.dataset.on === 'true';
+        const lutoNome  = document.getElementById('cfg-luto-nome')?.value.trim() || '';
+        const dados = { nome, user, faixa, grau, permitirKidsComAdultos: permitirKids, nascimentoMestre, lutoAtivo, lutoNome };
         if (pass1) dados.pass = pass1;
         try {
             await db.collection('configuracoes').doc('admin_config').set(dados, { merge: true });
@@ -7091,6 +7116,9 @@ Ele voltará a ser aluno normal.`)) return;
             if (pass1) auth.adminCreds.pass = pass1;
             auth.adminCreds.permitirKidsComAdultos = permitirKids;
             auth.adminCreds.nascimentoMestre = nascimentoMestre;
+            auth.adminCreds.lutoAtivo = lutoAtivo;
+            auth.adminCreds.lutoNome  = lutoNome;
+            academia._renderBannerLuto();
             if (auth.currentUser?.id === 'admin') {
                 auth.currentUser.nome  = nome;
                 auth.currentUser.faixa = faixa;
@@ -7102,6 +7130,79 @@ Ele voltará a ser aluno normal.`)) return;
             document.getElementById('modal-config-admin')?.remove();
             alert('✅ Configurações salvas!');
         } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    _renderBannerLuto() {
+        // Remove banner anterior se existir
+        document.getElementById('banner-luto-gaditas')?.remove();
+        document.getElementById('luto-ribbon-gaditas')?.remove();
+
+        const ativo = auth.adminCreds?.lutoAtivo;
+        const nome  = auth.adminCreds?.lutoNome || '';
+        if (!ativo || !nome) return;
+
+        // Fita de luto no logo (ribbon diagonal preto no canto do header-logo)
+        const logo = document.querySelector('.header-logo');
+        if (logo && logo.parentElement) {
+            const wrapper = logo.parentElement;
+            if (getComputedStyle(wrapper).position === 'static') wrapper.style.position = 'relative';
+            const ribbon = document.createElement('div');
+            ribbon.id = 'luto-ribbon-gaditas';
+            ribbon.style.cssText = `
+                position:absolute;
+                top:0; right:0;
+                width:60px; height:60px;
+                overflow:hidden;
+                pointer-events:none;
+                z-index:10;
+            `;
+            ribbon.innerHTML = `
+                <div style="
+                    position:absolute;
+                    top:10px; right:-18px;
+                    width:72px;
+                    background:#111;
+                    color:#bbb;
+                    font-size:0.45rem;
+                    font-weight:800;
+                    text-align:center;
+                    padding:3px 0;
+                    letter-spacing:0.5px;
+                    transform:rotate(45deg);
+                    box-shadow:0 2px 6px rgba(0,0,0,0.5);
+                ">LUTO</div>`;
+            wrapper.appendChild(ribbon);
+        }
+
+        // Banner de homenagem abaixo do header
+        const banner = document.createElement('div');
+        banner.id = 'banner-luto-gaditas';
+        banner.style.cssText = `
+            background:#0a0a0a;
+            border-bottom:1px solid #27272a;
+            padding:8px 16px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:10px;
+            font-size:0.72rem;
+            color:#a1a1aa;
+            font-weight:700;
+            letter-spacing:0.5px;
+            text-align:center;
+        `;
+        banner.innerHTML = `
+            <span style="font-size:1rem;">🎀</span>
+            <span>Em memória de <span style="color:#e4e4e7;font-weight:900;">${nome.toUpperCase()}</span></span>
+            <span style="font-size:1rem;">🕊️</span>`;
+
+        // Insere logo após o header
+        const header = document.querySelector('.app-header');
+        if (header?.nextSibling) {
+            header.parentNode.insertBefore(banner, header.nextSibling);
+        } else if (header?.parentNode) {
+            header.parentNode.appendChild(banner);
+        }
     },
 
     async salvarCredGraduacao() {

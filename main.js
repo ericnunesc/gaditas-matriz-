@@ -7198,8 +7198,12 @@ Ele voltará a ser aluno normal.`)) return;
             letter-spacing:0.5px;
             text-align:center;
         `;
+        const ribbonSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 160" width="22" height="35" style="flex-shrink:0;">
+            <path d="M50 80 C30 65 10 50 10 30 C10 15 20 5 35 5 C44 5 50 12 50 20 C50 12 56 5 65 5 C80 5 90 15 90 30 C90 50 70 65 50 80Z" fill="#e4e4e7"/>
+            <path d="M50 80 L38 100 L30 155 L50 140 L70 155 L62 100 Z" fill="#e4e4e7"/>
+        </svg>`;
         banner.innerHTML = `
-            <span style="font-size:1rem;">🎀</span>
+            ${ribbonSvg}
             <span style="display:flex;flex-direction:column;align-items:center;gap:1px;">
                 <span>Em memória de <span style="color:#e4e4e7;font-weight:900;">${nome.toUpperCase()}</span></span>
                 ${adicional ? `<span style="font-size:0.62rem;color:#71717a;font-weight:600;">${adicional}</span>` : ''}

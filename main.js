@@ -103,7 +103,8 @@ const auth = {
                 if (d.nascimentoMestre) this.adminCreds.nascimentoMestre = d.nascimentoMestre;
                 if (d.fotoPerfil) this.adminCreds.fotoPerfil = d.fotoPerfil;
                 if (d.lutoAtivo != null) this.adminCreds.lutoAtivo = d.lutoAtivo;
-                if (d.lutoNome)  this.adminCreds.lutoNome  = d.lutoNome;
+                if (d.lutoNome)      this.adminCreds.lutoNome      = d.lutoNome;
+                if (d.lutoAdicional) this.adminCreds.lutoAdicional = d.lutoAdicional;
             }
         } catch(e) { console.warn('carregarCredenciaisAdmin:', e.message); }
         try {
@@ -6953,7 +6954,10 @@ Ele voltará a ser aluno normal.`)) return;
                         </label>
                     </div>
                     <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">NOME DA PESSOA HOMENAGEADA</small>
-                    <input type="text" id="cfg-luto-nome" value="${auth.adminCreds?.lutoNome || ''}" placeholder="Ex: Mestre João da Silva"
+                    <input type="text" id="cfg-luto-nome" value="${auth.adminCreds?.lutoNome || ''}" placeholder="Ex: Sr. Antônio Francisco da Costa"
+                        style="${inp}"/>
+                    <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">ADICIONAL (opcional)</small>
+                    <input type="text" id="cfg-luto-adicional" value="${auth.adminCreds?.lutoAdicional || ''}" placeholder="Ex: Pai do aluno Fulano de Tal"
                         style="${inp} margin-bottom:0;"/>
                 </div>
                 <div style="height:10px;"></div>
@@ -7102,9 +7106,10 @@ Ele voltará a ser aluno normal.`)) return;
         const grau  = parseInt(document.getElementById('cfg-admin-grau')?.value ?? 3);
         const permitirKids = document.getElementById('cfg-kids-toggle')?.dataset.on === 'true';
         const nascimentoMestre = document.getElementById('cfg-admin-nascimento')?.value || '';
-        const lutoAtivo = document.getElementById('cfg-luto-toggle')?.dataset.on === 'true';
-        const lutoNome  = document.getElementById('cfg-luto-nome')?.value.trim() || '';
-        const dados = { nome, user, faixa, grau, permitirKidsComAdultos: permitirKids, nascimentoMestre, lutoAtivo, lutoNome };
+        const lutoAtivo    = document.getElementById('cfg-luto-toggle')?.dataset.on === 'true';
+        const lutoNome     = document.getElementById('cfg-luto-nome')?.value.trim() || '';
+        const lutoAdicional = document.getElementById('cfg-luto-adicional')?.value.trim() || '';
+        const dados = { nome, user, faixa, grau, permitirKidsComAdultos: permitirKids, nascimentoMestre, lutoAtivo, lutoNome, lutoAdicional };
         if (pass1) dados.pass = pass1;
         try {
             await db.collection('configuracoes').doc('admin_config').set(dados, { merge: true });
@@ -7117,7 +7122,8 @@ Ele voltará a ser aluno normal.`)) return;
             auth.adminCreds.permitirKidsComAdultos = permitirKids;
             auth.adminCreds.nascimentoMestre = nascimentoMestre;
             auth.adminCreds.lutoAtivo = lutoAtivo;
-            auth.adminCreds.lutoNome  = lutoNome;
+            auth.adminCreds.lutoNome      = lutoNome;
+            auth.adminCreds.lutoAdicional = lutoAdicional;
             academia._renderBannerLuto();
             if (auth.currentUser?.id === 'admin') {
                 auth.currentUser.nome  = nome;
@@ -7137,8 +7143,9 @@ Ele voltará a ser aluno normal.`)) return;
         document.getElementById('banner-luto-gaditas')?.remove();
         document.getElementById('luto-ribbon-gaditas')?.remove();
 
-        const ativo = auth.adminCreds?.lutoAtivo;
-        const nome  = auth.adminCreds?.lutoNome || '';
+        const ativo     = auth.adminCreds?.lutoAtivo;
+        const nome      = auth.adminCreds?.lutoNome || '';
+        const adicional = auth.adminCreds?.lutoAdicional || '';
         if (!ativo || !nome) return;
 
         // Fita de luto no logo (ribbon diagonal preto no canto do header-logo)
@@ -7193,7 +7200,10 @@ Ele voltará a ser aluno normal.`)) return;
         `;
         banner.innerHTML = `
             <span style="font-size:1rem;">🎀</span>
-            <span>Em memória de <span style="color:#e4e4e7;font-weight:900;">${nome.toUpperCase()}</span></span>
+            <span style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+                <span>Em memória de <span style="color:#e4e4e7;font-weight:900;">${nome.toUpperCase()}</span></span>
+                ${adicional ? `<span style="font-size:0.62rem;color:#71717a;font-weight:600;">${adicional}</span>` : ''}
+            </span>
             <span style="font-size:1rem;">🕊️</span>`;
 
         // Insere logo após o header

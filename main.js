@@ -7372,7 +7372,7 @@ Ele voltará a ser aluno normal.`)) return;
                     html += `<div style="background:#052e16;border:1px solid #10b981;border-radius:10px;padding:12px;margin-bottom:12px;font-size:0.72rem;color:#6ee7b7;">
                         ✅ Plano <strong>mensal</strong> — pode trancar sem multa.<br>A assinatura será cancelada no Asaas.
                     </div>
-                    <button onclick="academia._executarTrancamentoMensal('${sub.id}','${solId}','${alunoNome.replace(/'/g,"\\'")}')" style="width:100%;padding:11px;background:#10b981;border:none;color:white;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;margin-bottom:8px;">
+                    <button onclick="academia._executarTrancamentoMensal('${sub.id}','${solId}','${alunoNome.replace(/'/g,"\\'")}','${alunoId}')" style="width:100%;padding:11px;background:#10b981;border:none;color:white;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;margin-bottom:8px;">
                         ✅ CANCELAR ASSINATURA E TRANCAR
                     </button>`;
                 } else {
@@ -7383,7 +7383,7 @@ Ele voltará a ser aluno normal.`)) return;
                         <small style="color:#94a3b8;font-size:0.6rem;font-weight:700;display:block;margin-bottom:5px;">VALOR DA MULTA (R$)</small>
                         <input type="number" id="input-multa-valor" min="0" step="0.01" placeholder="Ex: 150.00" style="width:100%;padding:10px;background:#0f172a;border:1px solid #f59e0b;color:white;border-radius:8px;font-size:0.9rem;font-weight:700;outline:none;box-sizing:border-box;">
                     </div>
-                    <button onclick="academia._gerarMultaTrancamento('${customerId}','${sub.id}','${solId}','${alunoNome.replace(/'/g,"\\'")}')" style="width:100%;padding:11px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;margin-bottom:8px;">
+                    <button onclick="academia._gerarMultaTrancamento('${customerId}','${sub.id}','${solId}','${alunoNome.replace(/'/g,"\\'")}','${alunoId}')" style="width:100%;padding:11px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;margin-bottom:8px;">
                         💰 GERAR MULTA AVULSA E TRANCAR
                     </button>`;
                 }
@@ -7391,7 +7391,7 @@ Ele voltará a ser aluno normal.`)) return;
                 html += `<div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:14px;font-size:0.72rem;color:#94a3b8;">
                     Nenhuma assinatura ativa encontrada. Assinatura pode já estar cancelada ou ser avulsa.
                 </div>
-                <button onclick="academia._concluirTrancamentoSemAssinatura('${solId}')" style="width:100%;padding:11px;background:#334155;border:none;color:white;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;margin-bottom:8px;">
+                <button onclick="academia._concluirTrancamentoSemAssinatura('${solId}','${alunoId}','${alunoNome.replace(/'/g,"\\'")}')" style="width:100%;padding:11px;background:#334155;border:none;color:white;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;margin-bottom:8px;">
                     ✅ MARCAR COMO TRANCADO (sem assinatura ativa)
                 </button>`;
             }
@@ -7403,7 +7403,7 @@ Ele voltará a ser aluno normal.`)) return;
         }
     },
 
-    async _executarTrancamentoMensal(subscriptionId, solId, nomeAluno) {
+    async _executarTrancamentoMensal(subscriptionId, solId, nomeAluno, alunoId) {
         if (!confirm(`Cancelar assinatura mensal de ${nomeAluno} e marcar como trancado?`)) return;
         try {
             const r = await fetch(`/api/asaas?endpoint=subscriptions/${encodeURIComponent(subscriptionId)}`, { method: 'DELETE' });
@@ -7413,13 +7413,14 @@ Ele voltará a ser aluno normal.`)) return;
                 alert(`✅ Assinatura de ${nomeAluno} cancelada e matrícula trancada!`);
                 document.getElementById('modal-trancamento')?.remove();
                 this._carregarSolicitacoesTrancamento();
+                if (alunoId) this._enviarRelatorioTrancamentoWhatsapp(alunoId, nomeAluno, {});
             } else {
                 throw new Error(d.errors?.[0]?.description || JSON.stringify(d));
             }
         } catch(e) { alert('❌ Erro: ' + e.message); }
     },
 
-    async _gerarMultaTrancamento(customerId, subscriptionId, solId, nomeAluno) {
+    async _gerarMultaTrancamento(customerId, subscriptionId, solId, nomeAluno, alunoId) {
         const input = document.getElementById('input-multa-valor');
         const valor = parseFloat(input?.value);
         if (!valor || valor <= 0) { alert('Informe um valor válido para a multa.'); return; }
@@ -7441,15 +7442,17 @@ Ele voltará a ser aluno normal.`)) return;
             alert(`✅ Multa de R$ ${valor.toFixed(2)} gerada e assinatura cancelada!\nO aluno receberá a cobrança no Asaas.`);
             document.getElementById('modal-trancamento')?.remove();
             this._carregarSolicitacoesTrancamento();
+            if (alunoId) this._enviarRelatorioTrancamentoWhatsapp(alunoId, nomeAluno, { multa: valor });
         } catch(e) { alert('❌ Erro: ' + e.message); }
     },
 
-    async _concluirTrancamentoSemAssinatura(solId) {
+    async _concluirTrancamentoSemAssinatura(solId, alunoId, nomeAluno) {
         if (!confirm('Marcar como trancado (sem assinatura ativa)?')) return;
         await db.collection('trancamentos_solicitacoes').doc(solId).update({ status: 'concluido', concluidoEm: Date.now() });
         alert('✅ Matrícula marcada como trancada.');
         document.getElementById('modal-trancamento')?.remove();
         this._carregarSolicitacoesTrancamento();
+        if (alunoId) this._enviarRelatorioTrancamentoWhatsapp(alunoId, nomeAluno || '', { semAssinatura: true });
     },
 
     // ── CRIAR PLANO A PARTIR DO MODAL FINANCEIRO DO ALUNO ──
@@ -7753,6 +7756,74 @@ Ele voltará a ser aluno normal.`)) return;
         await db.collection('alunos').doc(alunoId).update({ fotoPerfil: firebase.firestore.FieldValue.delete() });
         document.getElementById('modal-foto-aluno')?.remove();
         academia.buscarAlunos();
+    },
+
+    // ── RELATÓRIO DE TRANCAMENTO VIA WHATSAPP ─────────────────
+    async _enviarRelatorioTrancamentoWhatsapp(alunoId, alunoNome, extras) {
+        // extras: { multa?: number, semAssinatura?: boolean }
+        try {
+            const [alunoDoc, pagsSnap] = await Promise.all([
+                db.collection('alunos').doc(alunoId).get(),
+                db.collection('pagamentos').where('alunoId', '==', alunoId).where('pago', '==', true).get()
+            ]);
+            const aluno = alunoDoc.exists ? alunoDoc.data() : {};
+            const tel = (aluno.telefone || '').replace(/\D/g, '');
+
+            const hoje = new Date().toLocaleDateString('pt-BR');
+
+            // Monta linhas de faturas quitadas
+            const pags = pagsSnap.docs.map(d => d.data()).sort((a, b) => {
+                const ka = `${a.ano}${a.mes}`, kb = `${b.ano}${b.mes}`;
+                return kb.localeCompare(ka); // mais recentes primeiro
+            });
+            const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            const linhasPag = pags.slice(0, 12).map(p => {
+                const nomeMes = meses[parseInt(p.mes, 10) - 1] || p.mes;
+                const dataPag = p.dataPagamento ? new Date(p.dataPagamento).toLocaleDateString('pt-BR') : '—';
+                return `✅ ${nomeMes}/${p.ano} — pago em ${dataPag}`;
+            }).join('\n');
+
+            let statusLinha = '';
+            if (extras?.multa) {
+                statusLinha = `⚠️ Multa gerada: R$ ${extras.multa.toFixed(2)} (vence em 5 dias)`;
+            } else if (extras?.semAssinatura) {
+                statusLinha = `📋 Trancado sem assinatura ativa`;
+            } else {
+                statusLinha = `✅ Assinatura cancelada sem multa`;
+            }
+
+            const msg =
+`🔒 *TRANCAMENTO DE MATRÍCULA*
+📅 Data: ${hoje}
+👤 Aluno: ${alunoNome}
+
+${statusLinha}
+
+━━━━━━━━━━━━━━━━━━━━
+📄 *FATURAS QUITADAS*
+${linhasPag || 'Nenhuma fatura registrada.'}
+━━━━━━━━━━━━━━━━━━━━
+
+Qualquer dúvida, entre em contato conosco. 🙏`;
+
+            if (!tel) {
+                // Se não tiver telefone, mostra o relatório para copiar
+                const pre = document.createElement('div');
+                pre.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+                pre.innerHTML = `<div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;max-width:420px;width:100%;">
+                    <div style="font-size:0.75rem;font-weight:800;color:#f59e0b;margin-bottom:10px;">⚠️ Telefone não cadastrado — copie o relatório:</div>
+                    <textarea readonly style="width:100%;height:200px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:10px;font-size:0.72rem;font-family:monospace;resize:none;box-sizing:border-box;">${msg}</textarea>
+                    <button onclick="this.closest('div').parentElement.remove()" style="width:100%;margin-top:10px;padding:10px;background:#334155;border:none;color:white;border-radius:8px;cursor:pointer;font-weight:700;">Fechar</button>
+                </div>`;
+                document.body.appendChild(pre);
+                return;
+            }
+
+            const numFinal = tel.startsWith('55') ? tel : '55' + tel;
+            window.open(`https://wa.me/${numFinal}?text=${encodeURIComponent(msg)}`, '_blank');
+        } catch(e) {
+            console.warn('Erro ao gerar relatório WhatsApp:', e.message);
+        }
     },
 
     // ── WHATSAPP BUSINESS ─────────────────────────────────────

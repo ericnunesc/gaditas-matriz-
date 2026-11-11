@@ -10867,15 +10867,20 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
 
     _mostrarBannerDependente(nome) {
         this._removerBannerDependente();
+        const nav = document.querySelector('.bottom-nav');
+        const navH = nav ? nav.offsetHeight : 65;
         const bar = document.createElement('div');
         bar.id = 'banner-dependente';
-        bar.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;background:#f59e0b;color:#000;z-index:99998;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;box-sizing:border-box;font-size:0.78rem;font-weight:800;box-shadow:0 -2px 12px rgba(0,0,0,0.4);';
+        bar.style.cssText = `position:fixed;bottom:${navH}px;left:0;width:100%;background:#f59e0b;color:#000;z-index:99998;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;box-sizing:border-box;font-size:0.78rem;font-weight:800;box-shadow:0 -2px 12px rgba(0,0,0,0.4);`;
         bar.innerHTML = `<span>🔄 Acessando como <strong>${nome}</strong></span><button onclick="auth.voltarParaTitular()" style="background:#000;color:#f59e0b;border:none;border-radius:8px;padding:6px 14px;font-weight:800;font-size:0.72rem;cursor:pointer;">← VOLTAR</button>`;
         document.body.appendChild(bar);
+        // Empurra o conteúdo para não ficar atrás do banner (banner ~48px)
+        document.getElementById('app-content')?.style.setProperty('padding-bottom', (navH + 56) + 'px');
     },
 
     _removerBannerDependente() {
         document.getElementById('banner-dependente')?.remove();
+        document.getElementById('app-content')?.style.removeProperty('padding-bottom');
     },
 
     _unsubVagasCheckin: null,

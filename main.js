@@ -22005,13 +22005,26 @@ const substituicaoProf = {
 
         const anoMes = `${mesRef.getFullYear()}-${String(mesRef.getMonth()+1).padStart(2,'0')}`;
         try {
-            const snap = await db.collection('substituicoes').where('mes', '==', anoMes).get({ source: 'server' });
-            if (snap.empty) { corpo.innerHTML = '<p style="color:#64748b;text-align:center;font-size:0.75rem;">Nenhuma substituição neste mês.</p>'; return; }
+            const inicioMes = `${anoMes}-01`;
+            const fimMes = `${anoMes}-31`;
+            const snap = await db.collection('substituicoes')
+                .where('dataInicio', '>=', inicioMes)
+                .where('dataInicio', '<=', fimMes)
+                .get();
+            // Inclui também docs com campo 'data' (formato legado)
+            const snapLegado = await db.collection('substituicoes')
+                .where('mes', '==', anoMes)
+                .get();
+            const docsMap = {};
+            snap.docs.forEach(d => { docsMap[d.id] = d; });
+            snapLegado.docs.forEach(d => { docsMap[d.id] = d; });
+            const todosDocs = Object.values(docsMap);
+            if (!todosDocs.length) { corpo.innerHTML = '<p style="color:#64748b;text-align:center;font-size:0.75rem;">Nenhuma substituição neste mês.</p>'; return; }
 
             const statusLabel = { aguardando: '⏳ Aguardando', aceito: '✅ Aceito', cancelado: '❌ Cancelado', encerrado: '🏁 Encerrado' };
             const statusColor = { aguardando: '#f59e0b', aceito: '#10b981', cancelado: '#f43f5e', encerrado: '#6366f1' };
             let html = '';
-            const docs = snap.docs.slice().sort((a, b) => (b.data().dataInicio || '').localeCompare(a.data().dataInicio || ''));
+            const docs = todosDocs.slice().sort((a, b) => (b.data().dataInicio || b.data().data || '').localeCompare(a.data().dataInicio || a.data().data || ''));
             docs.forEach(doc => {
                 const s = doc.data();
                 const cor = statusColor[s.status] || '#94a3b8';
@@ -22026,7 +22039,7 @@ const substituicaoProf = {
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
                         <div>
                             <div style="font-size:0.72rem;font-weight:800;color:#e2e8f0;">${s.turmaLabel}</div>
-                            <div style="font-size:0.6rem;color:#64748b;">${s.dataInicio === s.dataFim ? s.dataInicio : (s.dataInicio + ' → ' + s.dataFim)} · ${s.professorOriginalNome}</div>
+                            <div style="font-size:0.6rem;color:#64748b;">${s.dataInicio ? (s.dataInicio === s.dataFim ? s.dataInicio : s.dataInicio + ' → ' + s.dataFim) : (s.data||'')} · ${s.professorOriginalNome}</div>
                         </div>
                         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
                             <span style="font-size:0.55rem;font-weight:800;color:${cor};white-space:nowrap;">${lbl}${pontoBadge}</span>

@@ -22087,7 +22087,10 @@ const substituicaoProf = {
             <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;">
                 <div style="font-size:0.85rem;font-weight:800;color:#818cf8;margin-bottom:14px;">🔄 Nova Substituição</div>
                 <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">TURMA / HORÁRIO</div>
-                <input id="ns-turma" type="text" placeholder="Ex: Jiu-Jitsu Segunda 19h" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.78rem;margin-bottom:10px;box-sizing:border-box;" />
+                <select id="ns-turma" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.78rem;margin-bottom:10px;box-sizing:border-box;">
+                    <option value="">— Selecione a turma —</option>
+                    ${[...new Set(Object.values(academia.getGrade()).filter(Array.isArray).flat())].filter(t => t && !t.includes('Sem treinos')).sort().map(t => `<option value="${t.replace(/"/g,'&quot;')}">${t}</option>`).join('')}
+                </select>
                 <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">PERÍODO</div>
                 <div style="display:flex;gap:8px;margin-bottom:12px;">
                     <div style="flex:1;">

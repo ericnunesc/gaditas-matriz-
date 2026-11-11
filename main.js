@@ -22208,14 +22208,14 @@ const substituicaoProf = {
         try {
             const snap = await db.collection('notificacoes_substituicao')
                 .where('profId', '==', profId)
-                .where('status', '==', 'pendente')
-                .get();
-            if (snap.empty) {
+                .get({ source: 'server' });
+            const pendentes = snap.docs.filter(d => d.data().status === 'pendente');
+            if (!pendentes.length) {
                 // Verifica também se tem substituição aceita hoje para mostrar botão Validar Ponto
                 await this._verificarSubstituicaoHoje(profId);
                 return;
             }
-            const doc = snap.docs[0];
+            const doc = pendentes[0];
             const n = doc.data();
             // Busca o doc da substituição para confirmar se ainda está aguardando
             if (n.subId) {

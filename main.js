@@ -7022,6 +7022,13 @@ Ele voltará a ser aluno normal.`)) return;
                 </button>
                 <div style="font-size:0.58rem;color:#475569;margin-bottom:4px;line-height:1.4;">Upload dos templates, posição dos textos e assinaturas dos professores.</div>
                 <div style="height:1px;background:#334155;margin:16px 0;"></div>
+                <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:6px;">🗂️ MIGRAÇÃO DE FOTOS</div>
+                <div style="font-size:0.6rem;color:#475569;margin-bottom:10px;line-height:1.5;">Move fotos antigas (salvas como base64 no banco) para o Firebase Storage, reduzindo o custo de leitura.</div>
+                <button onclick="academia._migrarFotosStorage(this)" style="width:100%;padding:11px;background:#0f2027;border:1px solid #0ea5e9;color:#38bdf8;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.78rem;margin-bottom:8px;">
+                    ☁️ MIGRAR FOTOS PARA STORAGE
+                </button>
+                <div id="cfg-migracao-progresso" style="font-size:0.7rem;line-height:1.8;color:#94a3b8;"></div>
+                <div style="height:1px;background:#334155;margin:16px 0;"></div>
                 <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">🔔 DIAGNÓSTICO DE PUSH</div>
                 <input type="text" id="cfg-diag-email" placeholder="E-mail do aluno para testar..." style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:8px;box-sizing:border-box;"/>
                 <button onclick="academia._diagnosticarPush()" style="width:100%;padding:11px;background:#8b5cf6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.78rem;margin-bottom:8px;">🔍 DIAGNÓSTICO PUSH</button>
@@ -7761,6 +7768,59 @@ Ele voltará a ser aluno normal.`)) return;
                 btn.innerText = '❌ Erro. Tente novamente.'; btn.disabled = false;
             }
         });
+    },
+
+    async _migrarFotosStorage(btn) {
+        const prog = document.getElementById('cfg-migracao-progresso');
+        if (!prog) return;
+        if (!confirm('Isso irá migrar todas as fotos em base64 para o Firebase Storage.\nO processo pode levar alguns minutos. Continuar?')) return;
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Migrando...';
+        prog.innerHTML = '🔍 Buscando alunos com fotos em base64...';
+
+        try {
+            const snap = await db.collection('alunos').get();
+            const comBase64 = snap.docs.filter(d => {
+                const f = d.data().fotoPerfil || '';
+                return f.startsWith('data:image');
+            });
+
+            if (comBase64.length === 0) {
+                prog.innerHTML = '✅ Nenhuma foto em base64 encontrada. Tudo já está no Storage!';
+                btn.textContent = '✅ Já migrado';
+                return;
+            }
+
+            prog.innerHTML = `📊 ${comBase64.length} foto(s) para migrar...<br>`;
+            let ok = 0, erros = 0;
+
+            for (const doc of comBase64) {
+                const { fotoPerfil, nome } = doc.data();
+                prog.innerHTML += `⏳ ${nome || doc.id}...`;
+                try {
+                    const res = await fetch(fotoPerfil);
+                    const blob = await res.blob();
+                    const ref = firebase.storage().ref().child(`fotos_perfil/${doc.id}.jpg`);
+                    const upload = await ref.put(blob, { contentType: 'image/jpeg' });
+                    const url = await upload.ref.getDownloadURL();
+                    await db.collection('alunos').doc(doc.id).update({ fotoPerfil: url });
+                    ok++;
+                    // Substitui a linha "⏳ nome..." por "✅ nome"
+                    prog.innerHTML = prog.innerHTML.replace(`⏳ ${nome || doc.id}...`, `✅ ${nome || doc.id}<br>`);
+                } catch(e) {
+                    erros++;
+                    prog.innerHTML = prog.innerHTML.replace(`⏳ ${nome || doc.id}...`, `❌ ${nome || doc.id} (${e.message})<br>`);
+                }
+            }
+
+            prog.innerHTML += `<br><strong style="color:#10b981;">Concluído: ${ok} migrado(s)${erros ? `, ${erros} erro(s)` : ''}.</strong>`;
+            btn.textContent = ok > 0 ? '✅ Migração concluída' : '⚠️ Verificar erros';
+        } catch(e) {
+            prog.innerHTML = `❌ Erro: ${e.message}`;
+            btn.disabled = false;
+            btn.textContent = '☁️ MIGRAR FOTOS PARA STORAGE';
+        }
     },
 
     async _removerFotoAluno(alunoId) {

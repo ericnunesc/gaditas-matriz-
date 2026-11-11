@@ -728,7 +728,13 @@ const GaditasFiltros = {
                             <button onclick="GaditasFiltros.gerarPixReal('${cobranca.id}')" style="flex:1; background:#10b981; border:none; padding:12px; color:white; font-weight:800; border-radius:12px; font-size:0.72rem; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-qrcode" style="margin-right:5px;"></i>PIX</button>
                             <button onclick="GaditasFiltros.abrirFormularioCartaoReal('${cobranca.id}')" style="flex:1; background:#3b82f6; border:none; padding:12px; color:white; font-weight:800; border-radius:12px; font-size:0.72rem; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-credit-card" style="margin-right:5px;"></i>CARTÃO</button>
                         </div>
-                        <div style="padding:0 14px 14px;"><button onclick="GaditasFiltros.abrirLinkPagamento('${cobranca.id}', this)" style="display:block; width:100%; text-align:center; padding:10px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:12px; font-size:0.68rem; font-weight:700; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-external-link-alt" style="margin-right:5px;"></i>ABRIR LINK DE PAGAMENTO</button></div>
+                        ${(() => {
+                            const cfg = auth.adminCreds?.linkExtraFin;
+                            if (!cfg?.ativo || !cfg?.texto || !cfg?.url) return '';
+                            const emailAluno = (auth.currentUser?.email || '').toLowerCase();
+                            if (cfg.alvo === 'individual' && cfg.email && cfg.email !== emailAluno) return '';
+                            return `<div style="padding:0 14px 14px;"><a href="${cfg.url}" target="_blank" rel="noopener" style="display:block; width:100%; text-align:center; padding:10px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:12px; font-size:0.68rem; font-weight:700; cursor:pointer; letter-spacing:0.3px; text-decoration:none; box-sizing:border-box;"><i class="fas fa-external-link-alt" style="margin-right:5px;"></i>${cfg.texto}</a></div>`;
+                        })()}
                     </div>`;
                 } else {
                     // Fatura secundária (próxima, dentro de 10 dias) — sem destaque, sem botões de pagamento

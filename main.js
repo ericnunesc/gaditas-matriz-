@@ -105,6 +105,7 @@ const auth = {
                 if (d.lutoAtivo != null) this.adminCreds.lutoAtivo = d.lutoAtivo;
                 if (d.lutoNome)      this.adminCreds.lutoNome      = d.lutoNome;
                 if (d.lutoAdicional) this.adminCreds.lutoAdicional = d.lutoAdicional;
+                if (d.linkExtraFin)  this.adminCreds.linkExtraFin  = d.linkExtraFin;
             }
         } catch(e) { console.warn('carregarCredenciaisAdmin:', e.message); }
         try {
@@ -7029,11 +7030,53 @@ Ele voltará a ser aluno normal.`)) return;
                 </button>
                 <div id="cfg-migracao-progresso" style="font-size:0.7rem;line-height:1.8;color:#94a3b8;"></div>
                 <div style="height:1px;background:#334155;margin:16px 0;"></div>
+                <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:6px;">🔗 BOTÃO EXTRA NO FINANCEIRO</div>
+                <div style="font-size:0.6rem;color:#475569;margin-bottom:10px;line-height:1.5;">Aparece na tela financeira do aluno. Pode ser usado para doações, negociação, link de contato, etc.</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;">
+                    <div style="font-size:0.72rem;color:#e2e8f0;font-weight:700;">Ativar botão</div>
+                    <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
+                        <span id="cfg-linkfin-toggle" data-on="${auth.adminCreds?.linkExtraFin?.ativo ? 'true' : 'false'}" onclick="const on=this.dataset.on==='true'; this.dataset.on=on?'false':'true'; this.style.background=(!on)?'#3b82f6':'#334155'; this.querySelector('span').style.left=(!on)?'23px':'3px';" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:${auth.adminCreds?.linkExtraFin?.ativo ? '#3b82f6' : '#334155'};border-radius:24px;transition:background 0.3s;">
+                            <span style="position:absolute;height:18px;width:18px;left:${auth.adminCreds?.linkExtraFin?.ativo ? '23px' : '3px'};bottom:3px;background:white;border-radius:50%;transition:left 0.3s;"></span>
+                        </span>
+                    </label>
+                </div>
+                <div style="margin-bottom:8px;">
+                    <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">TEXTO DO BOTÃO</small>
+                    <input id="cfg-linkfin-texto" type="text" value="${auth.adminCreds?.linkExtraFin?.texto || ''}" placeholder="Ex: Renegociar mensalidade"
+                        style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:8px;">
+                    <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">URL / LINK</small>
+                    <input id="cfg-linkfin-url" type="url" value="${auth.adminCreds?.linkExtraFin?.url || ''}" placeholder="https://wa.me/... ou qualquer link"
+                        style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">MOSTRAR PARA</small>
+                    <select id="cfg-linkfin-alvo" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;">
+                        <option value="todos" ${(auth.adminCreds?.linkExtraFin?.alvo||'todos')==='todos'?'selected':''}>Todos os alunos</option>
+                        <option value="individual" ${(auth.adminCreds?.linkExtraFin?.alvo||'')==='individual'?'selected':''}>Aluno específico (por e-mail)</option>
+                    </select>
+                </div>
+                <div id="cfg-linkfin-email-wrap" style="margin-bottom:12px;display:${(auth.adminCreds?.linkExtraFin?.alvo||'todos')==='individual'?'block':'none'};">
+                    <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">E-MAIL DO ALUNO</small>
+                    <input id="cfg-linkfin-email" type="email" value="${auth.adminCreds?.linkExtraFin?.email || ''}" placeholder="email@do.aluno"
+                        style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;box-sizing:border-box;">
+                </div>
+                <button onclick="academia._salvarLinkExtraFin()" style="width:100%;padding:11px;background:#1e3a5f;border:1px solid #3b82f6;color:#93c5fd;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.78rem;margin-bottom:8px;">
+                    💾 SALVAR BOTÃO EXTRA
+                </button>
+                <div style="height:1px;background:#334155;margin:16px 0;"></div>
                 <div style="font-size:0.6rem;color:#64748b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">🔔 DIAGNÓSTICO DE PUSH</div>
                 <input type="text" id="cfg-diag-email" placeholder="E-mail do aluno para testar..." style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.8rem;margin-bottom:8px;box-sizing:border-box;"/>
                 <button onclick="academia._diagnosticarPush()" style="width:100%;padding:11px;background:#8b5cf6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.78rem;margin-bottom:8px;">🔍 DIAGNÓSTICO PUSH</button>
                 <div id="cfg-diag-resultado" style="font-size:0.72rem;line-height:1.6;"></div>
             </div>`;
+
+        // Toggle e-mail field for linkExtraFin
+        document.getElementById('cfg-linkfin-alvo')?.addEventListener('change', function() {
+            const wrap = document.getElementById('cfg-linkfin-email-wrap');
+            if (wrap) wrap.style.display = this.value === 'individual' ? 'block' : 'none';
+        });
 
         // Event: foto do admin
         document.getElementById('cfg-admin-foto-input').addEventListener('change', e => {
@@ -7821,6 +7864,23 @@ Ele voltará a ser aluno normal.`)) return;
             btn.disabled = false;
             btn.textContent = '☁️ MIGRAR FOTOS PARA STORAGE';
         }
+    },
+
+    async _salvarLinkExtraFin() {
+        const ativo  = document.getElementById('cfg-linkfin-toggle')?.dataset.on === 'true';
+        const texto  = document.getElementById('cfg-linkfin-texto')?.value.trim() || '';
+        const url    = document.getElementById('cfg-linkfin-url')?.value.trim() || '';
+        const alvo   = document.getElementById('cfg-linkfin-alvo')?.value || 'todos';
+        const email  = document.getElementById('cfg-linkfin-email')?.value.trim().toLowerCase() || '';
+        if (ativo && !texto) return alert('Informe o texto do botão.');
+        if (ativo && !url)   return alert('Informe o link (URL).');
+        if (ativo && alvo === 'individual' && !email) return alert('Informe o e-mail do aluno.');
+        const dados = { ativo, texto, url, alvo, email };
+        try {
+            await db.collection('configuracoes').doc('admin_config').set({ linkExtraFin: dados }, { merge: true });
+            auth.adminCreds.linkExtraFin = dados;
+            alert('✅ Botão extra salvo!');
+        } catch(e) { alert('Erro: ' + e.message); }
     },
 
     async _removerFotoAluno(alunoId) {

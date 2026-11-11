@@ -22182,16 +22182,25 @@ const substituicaoProf = {
         await this._carregarLista();
     },
 
-    async _notificarProximo(subId, lista, idx, turma, data) {
+    async _notificarProximo(subId, lista, idx, turma, periodo) {
         if (idx >= lista.length) return;
         const prof = lista[idx];
-        // Salva notificação na coleção notificacoes_prof para o professor ver no login
         await db.collection('notificacoes_substituicao').add({
             profId: prof.profId, profNome: prof.profNome,
-            subId, turmaLabel: turma, periodo: data,
+            subId, turmaLabel: turma, periodo,
             status: 'pendente',
             criadoEm: firebase.firestore.FieldValue.serverTimestamp()
         });
+        // Busca token FCM do professor (pode estar em 'professores' ou 'alunos')
+        let token = null;
+        try {
+            const [snapP, snapA] = await Promise.all([
+                db.collection('professores').doc(prof.profId).get(),
+                db.collection('alunos').doc(prof.profId).get()
+            ]);
+            token = (snapP.exists ? snapP.data().fcmToken : null) || (snapA.exists ? snapA.data().fcmToken : null);
+        } catch(_) {}
+        auth._enviarPush(token, '🔄 Convite de Substituição', `${turma} · ${periodo}`);
     },
 
     // ── Admin: cancelar substituição ───────────────────────

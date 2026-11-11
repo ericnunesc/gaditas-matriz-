@@ -22025,7 +22025,7 @@ const substituicaoProf = {
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
                         <div>
                             <div style="font-size:0.72rem;font-weight:800;color:#e2e8f0;">${s.turmaLabel}</div>
-                            <div style="font-size:0.6rem;color:#64748b;">${s.data} · ${s.professorOriginalNome}</div>
+                            <div style="font-size:0.6rem;color:#64748b;">${s.dataInicio === s.dataFim ? s.dataInicio : (s.dataInicio + ' → ' + s.dataFim)} · ${s.professorOriginalNome}</div>
                         </div>
                         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
                             <span style="font-size:0.55rem;font-weight:800;color:${cor};white-space:nowrap;">${lbl}${pontoBadge}</span>
@@ -22069,8 +22069,17 @@ const substituicaoProf = {
                 </select>
                 <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">TURMA / DESCRIÇÃO</div>
                 <input id="ns-turma" type="text" placeholder="Ex: Jiu-Jitsu Segunda 19h" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.78rem;margin-bottom:10px;box-sizing:border-box;" />
-                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">DATA DA AULA</div>
-                <input id="ns-data" type="date" value="${hoje}" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.78rem;margin-bottom:12px;box-sizing:border-box;" />
+                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">PERÍODO DA SUBSTITUIÇÃO</div>
+                <div style="display:flex;gap:8px;margin-bottom:12px;">
+                    <div style="flex:1;">
+                        <div style="font-size:0.55rem;color:#64748b;margin-bottom:3px;">INÍCIO</div>
+                        <input id="ns-data-inicio" type="date" value="${hoje}" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.75rem;box-sizing:border-box;" />
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:0.55rem;color:#64748b;margin-bottom:3px;">FIM</div>
+                        <input id="ns-data-fim" type="date" value="${hoje}" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.75rem;box-sizing:border-box;" />
+                    </div>
+                </div>
                 <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">LISTA DE SUBSTITUTOS (em ordem de prioridade)</div>
                 <div id="ns-lista" style="margin-bottom:8px;"></div>
                 <select id="ns-sel-prof" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.78rem;margin-bottom:6px;">
@@ -22143,17 +22152,19 @@ const substituicaoProf = {
     async _salvarNovaSubstituicao() {
         const profOrigSel = document.getElementById('ns-prof-orig')?.value;
         const turma = document.getElementById('ns-turma')?.value.trim();
-        const data = document.getElementById('ns-data')?.value;
+        const dataInicio = document.getElementById('ns-data-inicio')?.value;
+        const dataFim = document.getElementById('ns-data-fim')?.value;
         if (!profOrigSel) return alert('Selecione o professor que não pode ir.');
         if (!turma) return alert('Informe a turma/descrição.');
-        if (!data) return alert('Informe a data.');
+        if (!dataInicio || !dataFim) return alert('Informe o período.');
+        if (dataFim < dataInicio) return alert('A data de fim não pode ser antes do início.');
         if (!this._listaNova.length) return alert('Adicione ao menos um substituto.');
         const [profOrigId, profOrigNome] = profOrigSel.split('|');
         const snap = await db.collection('configuracoes').doc('substituicao_config').get();
         const valorPorAula = snap.exists ? (snap.data().valorPorAula || 0) : 0;
-        const mes = data.substring(0, 7); // "2026-11"
+        const mes = dataInicio.substring(0, 7); // "2026-11" (mês de início)
         const docRef = await db.collection('substituicoes').add({
-            turmaLabel: turma, data,
+            turmaLabel: turma, dataInicio, dataFim,
             professorOriginalId: profOrigId, professorOriginalNome: profOrigNome,
             lista: this._listaNova,
             indexAtual: 0,
@@ -22165,7 +22176,8 @@ const substituicaoProf = {
         document.getElementById('modal-nova-sub')?.remove();
         await this._carregarLista();
         // Notifica o 1º professor da lista
-        await this._notificarProximo(docRef.id, this._listaNova, 0, turma, data);
+        const periodoLabel = dataInicio === dataFim ? dataInicio : `${dataInicio} → ${dataFim}`;
+        await this._notificarProximo(docRef.id, this._listaNova, 0, turma, periodoLabel);
         alert('✅ Substituição criada! O 1º professor da lista foi notificado.');
     },
 
@@ -22175,7 +22187,7 @@ const substituicaoProf = {
         // Salva notificação na coleção notificacoes_prof para o professor ver no login
         await db.collection('notificacoes_substituicao').add({
             profId: prof.profId, profNome: prof.profNome,
-            subId, turmaLabel: turma, data,
+            subId, turmaLabel: turma, periodo: data,
             status: 'pendente',
             criadoEm: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -22229,7 +22241,7 @@ const substituicaoProf = {
                 </div>
                 <div style="background:#1e1b4b;border:1px solid #6366f1;border-radius:10px;padding:14px;margin-bottom:16px;">
                     <div style="font-size:0.75rem;font-weight:800;color:#818cf8;margin-bottom:4px;">${n.turmaLabel}</div>
-                    <div style="font-size:0.65rem;color:#94a3b8;">📅 ${n.data}</div>
+                    <div style="font-size:0.65rem;color:#94a3b8;">📅 ${n.periodo || n.data || ''}</div>
                 </div>
                 <p style="font-size:0.72rem;color:#94a3b8;text-align:center;margin-bottom:16px;">Você pode substituir esta aula?</p>
                 <div style="display:flex;gap:8px;">
@@ -22282,7 +22294,8 @@ const substituicaoProf = {
                         // Passa para o próximo
                         await db.collection('substituicoes').doc(subId).update({ lista, indexAtual: novoIdx });
                         const prox = lista[novoIdx];
-                        await this._notificarProximo(subId, lista, novoIdx, sub.turmaLabel, sub.data);
+                        const periodoSub = sub.dataInicio === sub.dataFim ? sub.dataInicio : (sub.dataInicio + ' → ' + sub.dataFim);
+                        await this._notificarProximo(subId, lista, novoIdx, sub.turmaLabel, periodoSub);
                     } else {
                         // Nenhum disponível
                         await db.collection('substituicoes').doc(subId).update({ lista, status: 'cancelado' });
@@ -22300,13 +22313,15 @@ const substituicaoProf = {
         try {
             const snap = await db.collection('substituicoes')
                 .where('professorSubstituindoId', '==', profId)
-                .where('data', '==', hoje)
+                .where('dataInicio', '<=', hoje)
                 .where('status', '==', 'aceito')
                 .get();
             if (snap.empty) return;
-            const doc = snap.docs[0];
+            // Filtra os que ainda estão no período (dataFim >= hoje)
+            const validos = snap.docs.filter(d => { const s = d.data(); return !s.pontoValidado && (s.dataFim || s.dataInicio) >= hoje; });
+            if (!validos.length) return;
+            const doc = validos[0];
             const sub = doc.data();
-            if (sub.pontoValidado) return; // já validou
             this._mostrarBannerValidarPonto(doc.id, sub);
         } catch(e) { console.warn('Erro verificar sub hoje:', e); }
     },
@@ -22324,8 +22339,8 @@ const substituicaoProf = {
         bar.style.cssText = `position:fixed;bottom:${bottomPos}px;left:0;width:100%;background:#1e1b4b;border-top:2px solid #6366f1;color:#e2e8f0;z-index:99997;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;box-sizing:border-box;font-size:0.72rem;font-weight:700;box-shadow:0 -2px 12px rgba(99,102,241,0.3);`;
         bar.innerHTML = `
             <div>
-                <div style="color:#818cf8;font-size:0.65rem;font-weight:800;">🔄 SUBSTITUIÇÃO HOJE</div>
-                <div style="font-size:0.6rem;color:#94a3b8;">${sub.turmaLabel}</div>
+                <div style="color:#818cf8;font-size:0.65rem;font-weight:800;">🔄 SUBSTITUIÇÃO ATIVA</div>
+                <div style="font-size:0.6rem;color:#94a3b8;">${sub.turmaLabel} · ${sub.dataInicio === sub.dataFim ? sub.dataInicio : (sub.dataInicio + ' → ' + sub.dataFim)}</div>
             </div>
             <button onclick="substituicaoProf.validarPonto('${subId}')" style="background:#4f46e5;border:none;color:white;border-radius:8px;padding:7px 12px;font-weight:800;font-size:0.65rem;cursor:pointer;white-space:nowrap;">✅ VALIDAR PONTO</button>`;
         document.body.appendChild(bar);

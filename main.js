@@ -3023,10 +3023,19 @@ const academia = {
         l.innerHTML = contadorHtml + (cardsHtml || `<p style='color:var(--text-muted); text-align:center; font-size:0.8rem; padding:15px;'>Nenhum atleta.</p>`);
     },
 
-    async renderCheckins() {
+    async renderCheckins(snap) {
         const l = document.getElementById('list-checkins'); if(!l) return;
-        const [snap, aSnap] = await Promise.all([db.collection("checkins").get(), db.collection("alunos").get()]);
-        const info = {}; aSnap.forEach(d => info[d.id] = d.data());
+        // snap vem do listener (evita re-fetch); chamadas diretas fazem o get normalmente
+        if (!snap) snap = await db.collection("checkins").get();
+        // Busca apenas os alunos dos check-ins presentes, não a coleção inteira
+        const alunoIds = [...new Set(snap.docs.map(d => d.data().alunoId).filter(Boolean))];
+        const info = {};
+        if (alunoIds.length > 0) {
+            const batches = [];
+            for (let i = 0; i < alunoIds.length; i += 10)
+                batches.push(db.collection('alunos').where(firebase.firestore.FieldPath.documentId(), 'in', alunoIds.slice(i, i + 10)).get());
+            (await Promise.all(batches)).forEach(r => r.forEach(d => { info[d.id] = d.data(); }));
+        }
         const hoje = new Date().toLocaleDateString('pt-BR');
         const g = {};
         const toDelete = []; // docs órfãos/duplicados para limpar
@@ -5220,8 +5229,8 @@ Ele voltará a ser aluno normal.`)) return;
 
     iniciarListenerCheckins() {
         if (this._checkinsListener) { this._checkinsListener(); this._checkinsListener = null; }
-        this._checkinsListener = db.collection('checkins').onSnapshot(() => {
-            this.renderCheckins();
+        this._checkinsListener = db.collection('checkins').onSnapshot(snap => {
+            this.renderCheckins(snap);
         }, () => {});
     },
 

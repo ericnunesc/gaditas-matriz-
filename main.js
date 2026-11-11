@@ -22005,7 +22005,7 @@ const substituicaoProf = {
 
         const anoMes = `${mesRef.getFullYear()}-${String(mesRef.getMonth()+1).padStart(2,'0')}`;
         try {
-            const snap = await db.collection('substituicoes').where('mes', '==', anoMes).get();
+            const snap = await db.collection('substituicoes').where('mes', '==', anoMes).get({ source: 'server' });
             if (snap.empty) { corpo.innerHTML = '<p style="color:#64748b;text-align:center;font-size:0.75rem;">Nenhuma substituição neste mês.</p>'; return; }
 
             const statusLabel = { aguardando: '⏳ Aguardando', aceito: '✅ Aceito', cancelado: '❌ Cancelado', encerrado: '🏁 Encerrado' };
@@ -22175,11 +22175,11 @@ const substituicaoProf = {
             criadoEm: firebase.firestore.FieldValue.serverTimestamp()
         });
         document.getElementById('modal-nova-sub')?.remove();
-        await this._carregarLista();
         // Notifica o 1º professor da lista
         const periodoLabel = dataInicio === dataFim ? dataInicio : `${dataInicio} → ${dataFim}`;
         await this._notificarProximo(docRef.id, this._listaNova, 0, turma, periodoLabel);
         alert('✅ Substituição criada! O 1º professor da lista foi notificado.');
+        await this._carregarLista();
     },
 
     async _notificarProximo(subId, lista, idx, turma, data) {

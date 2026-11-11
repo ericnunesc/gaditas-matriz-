@@ -22005,13 +22005,14 @@ const substituicaoProf = {
 
         const anoMes = `${mesRef.getFullYear()}-${String(mesRef.getMonth()+1).padStart(2,'0')}`;
         try {
-            const snap = await db.collection('substituicoes').where('mes', '==', anoMes).orderBy('data', 'desc').get();
+            const snap = await db.collection('substituicoes').where('mes', '==', anoMes).get();
             if (snap.empty) { corpo.innerHTML = '<p style="color:#64748b;text-align:center;font-size:0.75rem;">Nenhuma substituição neste mês.</p>'; return; }
 
             const statusLabel = { aguardando: '⏳ Aguardando', aceito: '✅ Aceito', cancelado: '❌ Cancelado', encerrado: '🏁 Encerrado' };
             const statusColor = { aguardando: '#f59e0b', aceito: '#10b981', cancelado: '#f43f5e', encerrado: '#6366f1' };
             let html = '';
-            snap.forEach(doc => {
+            const docs = snap.docs.slice().sort((a, b) => (b.data().dataInicio || '').localeCompare(a.data().dataInicio || ''));
+            docs.forEach(doc => {
                 const s = doc.data();
                 const cor = statusColor[s.status] || '#94a3b8';
                 const lbl = statusLabel[s.status] || s.status;

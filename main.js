@@ -21955,6 +21955,7 @@ _Gaditas Academy_`);
 
 // ══════════════════════════════════════════════════════════
 // GESTÃO DE SUBSTITUIÇÕES DE PROFESSORES
+// Lógica diária: cada dia dentro do período reinicia a cascata
 // ══════════════════════════════════════════════════════════
 const substituicaoProf = {
 
@@ -21979,6 +21980,8 @@ const substituicaoProf = {
             </div>`;
         document.body.appendChild(modal);
         this._mesOffset = 0;
+        // Verifica e dispara convites do dia ao abrir o painel
+        this._verificarEDisparar().catch(() => {});
         await this._carregarLista();
     },
 
@@ -22002,52 +22005,60 @@ const substituicaoProf = {
         if (labelEl) labelEl.textContent = mesRef.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
         const btn = document.getElementById('sub-btn-prox');
         if (btn) btn.style.visibility = offset < 0 ? 'visible' : 'hidden';
-
         const anoMes = `${mesRef.getFullYear()}-${String(mesRef.getMonth()+1).padStart(2,'0')}`;
         try {
             const inicioMes = `${anoMes}-01`;
             const fimMes = `${anoMes}-31`;
-            const snap = await db.collection('substituicoes')
-                .where('dataInicio', '>=', inicioMes)
-                .where('dataInicio', '<=', fimMes)
-                .get();
-            // Inclui também docs com campo 'data' (formato legado)
-            const snapLegado = await db.collection('substituicoes')
-                .where('mes', '==', anoMes)
-                .get();
+            const [snap1, snap2] = await Promise.all([
+                db.collection('substituicoes').where('dataInicio', '>=', inicioMes).where('dataInicio', '<=', fimMes).get(),
+                db.collection('substituicoes').where('mes', '==', anoMes).get()
+            ]);
             const docsMap = {};
-            snap.docs.forEach(d => { docsMap[d.id] = d; });
-            snapLegado.docs.forEach(d => { docsMap[d.id] = d; });
+            snap1.docs.forEach(d => { docsMap[d.id] = d; });
+            snap2.docs.forEach(d => { docsMap[d.id] = d; });
             const todosDocs = Object.values(docsMap);
             if (!todosDocs.length) { corpo.innerHTML = '<p style="color:#64748b;text-align:center;font-size:0.75rem;">Nenhuma substituição neste mês.</p>'; return; }
 
-            const statusLabel = { aguardando: '⏳ Aguardando', aceito: '✅ Aceito', cancelado: '❌ Cancelado', encerrado: '🏁 Encerrado' };
-            const statusColor = { aguardando: '#f59e0b', aceito: '#10b981', cancelado: '#f43f5e', encerrado: '#6366f1' };
+            const hoje = new Date().toISOString().split('T')[0];
             let html = '';
             const docs = todosDocs.slice().sort((a, b) => (b.data().dataInicio || b.data().data || '').localeCompare(a.data().dataInicio || a.data().data || ''));
             docs.forEach(doc => {
                 const s = doc.data();
-                const cor = statusColor[s.status] || '#94a3b8';
-                const lbl = statusLabel[s.status] || s.status;
-                const listaHtml = (s.lista || []).map((p, i) => {
-                    const icon = p.status === 'aceito' ? '✅' : p.status === 'rejeitado' ? '❌' : (i === (s.indexAtual||0) ? '⏳' : '•');
-                    return `<div style="font-size:0.6rem;color:#94a3b8;">${icon} ${p.profNome}</div>`;
-                }).join('');
-                const pontoBadge = s.pontoValidado ? `<span style="font-size:0.55rem;background:#1b4332;border:1px solid #10b981;color:#10b981;border-radius:4px;padding:1px 5px;margin-left:4px;">PONTO ✓</span>` : '';
+                if (s.status === 'cancelado') {
+                    html += `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:10px;margin-bottom:8px;opacity:0.5;">
+                        <div style="font-size:0.65rem;font-weight:800;color:#e2e8f0;">${s.turmaLabel}</div>
+                        <div style="font-size:0.55rem;color:#f43f5e;">❌ Cancelado · ${s.dataInicio||''} → ${s.dataFim||''}</div>
+                    </div>`;
+                    return;
+                }
+                const periodo = s.dataInicio === s.dataFim ? s.dataInicio : `${s.dataInicio} → ${s.dataFim}`;
+                const listaHtml = (s.lista || []).map((p, i) => `<span style="font-size:0.58rem;color:#64748b;">${i+1}º ${p.profNome}</span>`).join(' · ');
+                // Status de hoje
+                const cobHoje = (s.coberturaDiaria || {})[hoje];
+                const convHoje = (s.convitesDiarios || {})[hoje];
+                let statusHojeHtml = '';
+                if (cobHoje) {
+                    const ponto = cobHoje.pontoValidado ? ' <span style="color:#10b981">✓ ponto</span>' : '';
+                    statusHojeHtml = `<div style="background:#0d2a1a;border:1px solid #10b981;border-radius:6px;padding:5px 8px;font-size:0.6rem;color:#10b981;margin-bottom:6px;">✅ Hoje: <strong>${cobHoje.profNome}</strong>${ponto}</div>`;
+                } else if (convHoje?.status === 'aguardando') {
+                    statusHojeHtml = `<div style="background:#1c1000;border:1px solid #f59e0b;border-radius:6px;padding:5px 8px;font-size:0.6rem;color:#f59e0b;margin-bottom:6px;">⏳ Hoje: aguardando resposta do ${(s.lista||[])[convHoje.indexAtual||0]?.profNome||'—'}</div>`;
+                } else if (convHoje?.status === 'esgotado') {
+                    statusHojeHtml = `<div style="background:#1e0a0a;border:1px solid #f43f5e;border-radius:6px;padding:5px 8px;font-size:0.6rem;color:#f43f5e;margin-bottom:6px;">❌ Hoje: sem substituto disponível</div>`;
+                } else if (hoje >= s.dataInicio && hoje <= s.dataFim) {
+                    statusHojeHtml = `<div style="background:#1e1b4b;border:1px solid #6366f1;border-radius:6px;padding:5px 8px;font-size:0.6rem;color:#818cf8;margin-bottom:6px;">🔄 Hoje: aguardando disparar convite</div>`;
+                }
                 html += `
                 <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px;margin-bottom:10px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
                         <div>
                             <div style="font-size:0.72rem;font-weight:800;color:#e2e8f0;">${s.turmaLabel}</div>
-                            <div style="font-size:0.6rem;color:#64748b;">${s.dataInicio ? (s.dataInicio === s.dataFim ? s.dataInicio : s.dataInicio + ' → ' + s.dataFim) : (s.data||'')} · ${s.professorOriginalNome}</div>
+                            <div style="font-size:0.58rem;color:#64748b;">${periodo}</div>
                         </div>
-                        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
-                            <span style="font-size:0.55rem;font-weight:800;color:${cor};white-space:nowrap;">${lbl}${pontoBadge}</span>
-                            ${s.professorSubstituindoNome ? `<span style="font-size:0.55rem;color:#818cf8;">Sub: ${s.professorSubstituindoNome}</span>` : ''}
-                        </div>
+                        <span style="font-size:0.55rem;font-weight:800;color:#818cf8;white-space:nowrap;">🔄 Ativo</span>
                     </div>
-                    <div style="margin-bottom:8px;">${listaHtml}</div>
-                    ${s.status === 'aguardando' || s.status === 'aceito' ? `<button onclick="substituicaoProf.cancelar('${doc.id}')" style="width:100%;padding:5px;background:#1e0a0a;border:1px solid #f43f5e;color:#f43f5e;border-radius:7px;font-size:0.6rem;font-weight:700;cursor:pointer;">❌ Cancelar Substituição</button>` : ''}
+                    ${statusHojeHtml}
+                    <div style="font-size:0.58rem;color:#475569;margin-bottom:8px;">Lista: ${listaHtml || '—'}</div>
+                    <button onclick="substituicaoProf.cancelar('${doc.id}')" style="width:100%;padding:5px;background:#1e0a0a;border:1px solid #f43f5e;color:#f43f5e;border-radius:7px;font-size:0.6rem;font-weight:700;cursor:pointer;">❌ Cancelar Substituição</button>
                 </div>`;
             });
             corpo.innerHTML = html;
@@ -22058,16 +22069,14 @@ const substituicaoProf = {
 
     // ── Admin: criar nova substituição ─────────────────────
     async _novaSubstituicao() {
-        // Carrega lista de professores
         const [snapProfs, snapPromovidos] = await Promise.all([
             db.collection('professores').get(),
             db.collection('alunos').where('role','==','professor').get()
         ]);
         const profs = [];
-        snapProfs.docs.forEach(d => { if (d.data().role !== 'financeiro') profs.push({ id: d.id, nome: d.data().nome, tel: d.data().telefone||'' }); });
-        snapPromovidos.docs.forEach(d => profs.push({ id: d.id, nome: d.data().nome, tel: d.data().telefone||'' }));
+        snapProfs.docs.forEach(d => { if (d.data().role !== 'financeiro') profs.push({ id: d.id, nome: d.data().nome }); });
+        snapPromovidos.docs.forEach(d => profs.push({ id: d.id, nome: d.data().nome }));
         profs.sort((a,b) => a.nome.localeCompare(b.nome));
-
         const hoje = new Date().toISOString().split('T')[0];
         const opcoes = profs.map(p => `<option value="${p.id}|${p.nome.replace(/"/g,'')}">${p.nome}</option>`).join('');
 
@@ -22077,13 +22086,9 @@ const substituicaoProf = {
         modal.innerHTML = `
             <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;">
                 <div style="font-size:0.85rem;font-weight:800;color:#818cf8;margin-bottom:14px;">🔄 Nova Substituição</div>
-                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">PROFESSOR QUE NÃO PODE IR</div>
-                <select id="ns-prof-orig" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.78rem;margin-bottom:10px;">
-                    <option value="">— Selecione —</option>${opcoes}
-                </select>
-                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">TURMA / DESCRIÇÃO</div>
+                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">TURMA / HORÁRIO</div>
                 <input id="ns-turma" type="text" placeholder="Ex: Jiu-Jitsu Segunda 19h" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.78rem;margin-bottom:10px;box-sizing:border-box;" />
-                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">PERÍODO DA SUBSTITUIÇÃO</div>
+                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">PERÍODO</div>
                 <div style="display:flex;gap:8px;margin-bottom:12px;">
                     <div style="flex:1;">
                         <div style="font-size:0.55rem;color:#64748b;margin-bottom:3px;">INÍCIO</div>
@@ -22094,7 +22099,7 @@ const substituicaoProf = {
                         <input id="ns-data-fim" type="date" value="${hoje}" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.75rem;box-sizing:border-box;" />
                     </div>
                 </div>
-                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">LISTA DE SUBSTITUTOS (em ordem de prioridade)</div>
+                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">LISTA DE SUBSTITUTOS (ordem de prioridade — reinicia todo dia)</div>
                 <div id="ns-lista" style="margin-bottom:8px;"></div>
                 <select id="ns-sel-prof" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.78rem;margin-bottom:6px;">
                     <option value="">— Adicionar professor —</option>${opcoes}
@@ -22116,7 +22121,7 @@ const substituicaoProf = {
         const val = snap.exists ? (snap.data().valorPorAula || 0) : 0;
         const el = document.getElementById('ns-valor-cfg');
         if (el) el.innerHTML = `<div style="background:#1c1000;border:1px solid #f59e0b;border-radius:8px;padding:8px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:0.6rem;color:#f59e0b;font-weight:700;">💵 Valor por substituição:</span>
+            <span style="font-size:0.6rem;color:#f59e0b;font-weight:700;">💵 Valor por aula substituída:</span>
             <div style="display:flex;align-items:center;gap:8px;">
                 <span style="font-size:0.75rem;font-weight:900;color:#f59e0b;">R$ ${parseFloat(val).toFixed(2)}</span>
                 <button onclick="substituicaoProf._editarValorAula()" style="background:#0f172a;border:1px solid #f59e0b;color:#f59e0b;padding:3px 8px;border-radius:5px;font-size:0.55rem;font-weight:700;cursor:pointer;">✏️</button>
@@ -22141,7 +22146,7 @@ const substituicaoProf = {
         if (!val) return;
         const [id, nome] = val.split('|');
         if (this._listaNova.some(p => p.profId === id)) { alert('Professor já está na lista.'); return; }
-        this._listaNova.push({ profId: id, profNome: nome, status: 'pendente' });
+        this._listaNova.push({ profId: id, profNome: nome });
         this._renderListaNova();
         sel.value = '';
     },
@@ -22158,53 +22163,69 @@ const substituicaoProf = {
             </div>`).join('');
     },
 
-    _removerDaLista(i) {
-        this._listaNova.splice(i, 1);
-        this._renderListaNova();
-    },
+    _removerDaLista(i) { this._listaNova.splice(i, 1); this._renderListaNova(); },
 
     async _salvarNovaSubstituicao() {
-        const profOrigSel = document.getElementById('ns-prof-orig')?.value;
         const turma = document.getElementById('ns-turma')?.value.trim();
         const dataInicio = document.getElementById('ns-data-inicio')?.value;
         const dataFim = document.getElementById('ns-data-fim')?.value;
-        if (!profOrigSel) return alert('Selecione o professor que não pode ir.');
-        if (!turma) return alert('Informe a turma/descrição.');
+        if (!turma) return alert('Informe a turma/horário.');
         if (!dataInicio || !dataFim) return alert('Informe o período.');
         if (dataFim < dataInicio) return alert('A data de fim não pode ser antes do início.');
         if (!this._listaNova.length) return alert('Adicione ao menos um substituto.');
-        const [profOrigId, profOrigNome] = profOrigSel.split('|');
         const snap = await db.collection('configuracoes').doc('substituicao_config').get();
         const valorPorAula = snap.exists ? (snap.data().valorPorAula || 0) : 0;
-        const mes = dataInicio.substring(0, 7); // "2026-11" (mês de início)
+        const mes = dataInicio.substring(0, 7);
         const docRef = await db.collection('substituicoes').add({
             turmaLabel: turma, dataInicio, dataFim,
-            professorOriginalId: profOrigId, professorOriginalNome: profOrigNome,
             lista: this._listaNova,
-            indexAtual: 0,
-            status: 'aguardando',
-            professorSubstituindoId: null, professorSubstituindoNome: null,
-            pontoValidado: false, valorPorAula, mes,
+            coberturaDiaria: {},   // { "YYYY-MM-DD": { profId, profNome, pontoValidado } }
+            convitesDiarios: {},   // { "YYYY-MM-DD": { indexAtual, status } }
+            status: 'ativo',
+            valorPorAula, mes,
             criadoEm: firebase.firestore.FieldValue.serverTimestamp()
         });
         document.getElementById('modal-nova-sub')?.remove();
-        // Notifica o 1º professor da lista
-        const periodoLabel = dataInicio === dataFim ? dataInicio : `${dataInicio} → ${dataFim}`;
-        await this._notificarProximo(docRef.id, this._listaNova, 0, turma, periodoLabel);
+        // Dispara convite do dia atual
+        const hoje = new Date().toISOString().split('T')[0];
+        await this._dispararConviteDia(docRef.id, { turmaLabel: turma, lista: this._listaNova, valorPorAula }, hoje);
         alert('✅ Substituição criada! O 1º professor da lista foi notificado.');
         await this._carregarLista();
     },
 
-    async _notificarProximo(subId, lista, idx, turma, periodo) {
+    // ── Verifica todas as substituições ativas e dispara convite do dia se necessário ──
+    async _verificarEDisparar() {
+        const hoje = new Date().toISOString().split('T')[0];
+        try {
+            const snap = await db.collection('substituicoes').where('dataInicio', '<=', hoje).where('status', '==', 'ativo').get();
+            const ativas = snap.docs.filter(d => { const s = d.data(); return s.dataFim >= hoje; });
+            for (const doc of ativas) {
+                const s = doc.data();
+                if (!(s.convitesDiarios || {})[hoje]) {
+                    await this._dispararConviteDia(doc.id, s, hoje);
+                }
+            }
+        } catch(e) { console.warn('verificarEDisparar:', e); }
+    },
+
+    // ── Dispara o convite do dia para o professor na posição 0 da lista ──
+    async _dispararConviteDia(subId, sub, dataDaAula) {
+        if (!sub.lista?.length) return;
+        const update = {};
+        update[`convitesDiarios.${dataDaAula}`] = { indexAtual: 0, status: 'aguardando' };
+        await db.collection('substituicoes').doc(subId).update(update);
+        await this._notificarProximo(subId, sub.lista, 0, sub.turmaLabel, dataDaAula);
+    },
+
+    async _notificarProximo(subId, lista, idx, turma, dataDaAula) {
         if (idx >= lista.length) return;
         const prof = lista[idx];
         await db.collection('notificacoes_substituicao').add({
             profId: prof.profId, profNome: prof.profNome,
-            subId, turmaLabel: turma, periodo,
+            subId, turmaLabel: turma, dataDaAula,
             status: 'pendente',
             criadoEm: firebase.firestore.FieldValue.serverTimestamp()
         });
-        // Busca token FCM do professor (pode estar em 'professores' ou 'alunos')
         let token = null;
         try {
             const [snapP, snapA] = await Promise.all([
@@ -22213,7 +22234,7 @@ const substituicaoProf = {
             ]);
             token = (snapP.exists ? snapP.data().fcmToken : null) || (snapA.exists ? snapA.data().fcmToken : null);
         } catch(_) {}
-        auth._enviarPush(token, '🔄 Convite de Substituição', `${turma} · ${periodo}`);
+        auth._enviarPush(token, '🔄 Convite de Substituição', `${turma} · ${dataDaAula}`);
     },
 
     // ── Admin: cancelar substituição ───────────────────────
@@ -22223,32 +22244,36 @@ const substituicaoProf = {
         await this._carregarLista();
     },
 
-    // ── Professor: verificar convites pendentes ao logar ───
+    // ── Professor: verificar convites ao logar ─────────────
     async verificarConvites() {
         if (auth.role !== 'professor' || !auth.currentUser?.id) return;
         const profId = auth.currentUser.id;
+        const hoje = new Date().toISOString().split('T')[0];
         try {
-            const snap = await db.collection('notificacoes_substituicao')
-                .where('profId', '==', profId)
-                .get({ source: 'server' });
-            const pendentes = snap.docs.filter(d => d.data().status === 'pendente');
-            if (!pendentes.length) {
-                // Verifica também se tem substituição aceita hoje para mostrar botão Validar Ponto
-                await this._verificarSubstituicaoHoje(profId);
-                return;
-            }
-            const doc = pendentes[0];
-            const n = doc.data();
-            // Busca o doc da substituição para confirmar se ainda está aguardando
-            if (n.subId) {
-                const subDoc = await db.collection('substituicoes').doc(n.subId).get();
-                if (!subDoc.exists || subDoc.data().status !== 'aguardando') {
-                    await doc.ref.update({ status: 'expirado' });
-                    await this._verificarSubstituicaoHoje(profId);
-                    return;
+            // Verifica se há substituições ativas que ainda não dispararam convite hoje
+            await this._verificarEDisparar();
+            // Busca convites pendentes para este professor
+            const snap = await db.collection('notificacoes_substituicao').where('profId', '==', profId).get();
+            const pendentes = snap.docs.filter(d => {
+                const n = d.data();
+                return n.status === 'pendente' && n.dataDaAula === hoje;
+            });
+            if (pendentes.length) {
+                const doc = pendentes[0];
+                const n = doc.data();
+                // Confirma que a substituição ainda está ativa
+                if (n.subId) {
+                    const subDoc = await db.collection('substituicoes').doc(n.subId).get();
+                    if (!subDoc.exists || subDoc.data().status !== 'ativo') {
+                        await doc.ref.update({ status: 'expirado' });
+                    } else {
+                        this._mostrarConvite(doc.id, n);
+                        return;
+                    }
                 }
             }
-            this._mostrarConvite(doc.id, n);
+            // Verifica se tem cobertura aceita hoje para mostrar banner
+            await this._verificarSubstituicaoHoje(profId);
         } catch(e) { console.warn('Erro verificar convites sub:', e); }
     },
 
@@ -22264,44 +22289,35 @@ const substituicaoProf = {
                 </div>
                 <div style="background:#1e1b4b;border:1px solid #6366f1;border-radius:10px;padding:14px;margin-bottom:16px;">
                     <div style="font-size:0.75rem;font-weight:800;color:#818cf8;margin-bottom:4px;">${n.turmaLabel}</div>
-                    <div style="font-size:0.65rem;color:#94a3b8;">📅 ${n.periodo || n.data || ''}</div>
+                    <div style="font-size:0.65rem;color:#94a3b8;">📅 ${n.dataDaAula || ''}</div>
                 </div>
-                <p style="font-size:0.72rem;color:#94a3b8;text-align:center;margin-bottom:16px;">Você pode substituir esta aula?</p>
+                <p style="font-size:0.72rem;color:#94a3b8;text-align:center;margin-bottom:16px;">Você pode substituir esta aula hoje?</p>
                 <div style="display:flex;gap:8px;">
-                    <button onclick="substituicaoProf.aceitarConvite('${notifId}','${n.subId||''}')" style="flex:1;padding:12px;background:#1b4332;border:1px solid #10b981;color:#10b981;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.72rem;">✅ ACEITAR</button>
-                    <button onclick="substituicaoProf.rejeitarConvite('${notifId}','${n.subId||''}')" style="flex:1;padding:12px;background:#1e0a0a;border:1px solid #f43f5e;color:#f43f5e;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.72rem;">❌ NÃO POSSO</button>
+                    <button onclick="substituicaoProf.aceitarConvite('${notifId}','${n.subId||''}','${n.dataDaAula||''}')" style="flex:1;padding:12px;background:#1b4332;border:1px solid #10b981;color:#10b981;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.72rem;">✅ ACEITAR</button>
+                    <button onclick="substituicaoProf.rejeitarConvite('${notifId}','${n.subId||''}','${n.dataDaAula||''}')" style="flex:1;padding:12px;background:#1e0a0a;border:1px solid #f43f5e;color:#f43f5e;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.72rem;">❌ NÃO POSSO</button>
                 </div>
             </div>`;
         document.body.appendChild(modal);
     },
 
-    async aceitarConvite(notifId, subId) {
+    async aceitarConvite(notifId, subId, dataDaAula) {
         try {
             const profId = auth.currentUser.id;
             const profNome = auth.currentUser.nome;
+            const update = {};
+            update[`coberturaDiaria.${dataDaAula}`] = { profId, profNome, pontoValidado: false };
+            update[`convitesDiarios.${dataDaAula}.status`] = 'aceito';
             const batch = db.batch();
             batch.update(db.collection('notificacoes_substituicao').doc(notifId), { status: 'aceito' });
-            if (subId) {
-                // Marca o professor na lista como aceito
-                const subDoc = await db.collection('substituicoes').doc(subId).get();
-                const lista = subDoc.data()?.lista || [];
-                const idx = lista.findIndex(p => p.profId === profId);
-                if (idx >= 0) lista[idx].status = 'aceito';
-                batch.update(db.collection('substituicoes').doc(subId), {
-                    status: 'aceito',
-                    lista,
-                    professorSubstituindoId: profId,
-                    professorSubstituindoNome: profNome
-                });
-            }
+            if (subId) batch.update(db.collection('substituicoes').doc(subId), update);
             await batch.commit();
             document.getElementById('modal-convite-sub')?.remove();
-            alert(`✅ Convite aceito! Você é o substituto desta aula.\n\nNo dia da aula, faça o check-in dos alunos e clique em "Validar Ponto" para registrar sua presença.`);
+            alert(`✅ Convite aceito!\n\nFaça o check-in dos alunos e clique em "Validar Ponto" para registrar sua presença.`);
             await this._verificarSubstituicaoHoje(profId);
         } catch(e) { alert('Erro: ' + e.message); }
     },
 
-    async rejeitarConvite(notifId, subId) {
+    async rejeitarConvite(notifId, subId, dataDaAula) {
         try {
             const profId = auth.currentUser.id;
             await db.collection('notificacoes_substituicao').doc(notifId).update({ status: 'rejeitado' });
@@ -22310,18 +22326,16 @@ const substituicaoProf = {
                 if (subDoc.exists) {
                     const sub = subDoc.data();
                     const lista = sub.lista || [];
-                    const idx = lista.findIndex(p => p.profId === profId);
-                    const novoIdx = (sub.indexAtual || 0) + 1;
-                    if (idx >= 0) lista[idx].status = 'rejeitado';
+                    const idxAtual = (sub.convitesDiarios?.[dataDaAula]?.indexAtual || 0);
+                    const novoIdx = idxAtual + 1;
+                    const updateSub = {};
+                    updateSub[`convitesDiarios.${dataDaAula}.indexAtual`] = novoIdx;
                     if (novoIdx < lista.length) {
-                        // Passa para o próximo
-                        await db.collection('substituicoes').doc(subId).update({ lista, indexAtual: novoIdx });
-                        const prox = lista[novoIdx];
-                        const periodoSub = sub.dataInicio === sub.dataFim ? sub.dataInicio : (sub.dataInicio + ' → ' + sub.dataFim);
-                        await this._notificarProximo(subId, lista, novoIdx, sub.turmaLabel, periodoSub);
+                        await db.collection('substituicoes').doc(subId).update(updateSub);
+                        await this._notificarProximo(subId, lista, novoIdx, sub.turmaLabel, dataDaAula);
                     } else {
-                        // Nenhum disponível
-                        await db.collection('substituicoes').doc(subId).update({ lista, status: 'cancelado' });
+                        updateSub[`convitesDiarios.${dataDaAula}.status`] = 'esgotado';
+                        await db.collection('substituicoes').doc(subId).update(updateSub);
                     }
                 }
             }
@@ -22330,60 +22344,54 @@ const substituicaoProf = {
         } catch(e) { alert('Erro: ' + e.message); }
     },
 
-    // ── Professor: verificar se tem substituição hoje ──────
+    // ── Professor: verificar cobertura aceita hoje ─────────
     async _verificarSubstituicaoHoje(profId) {
         const hoje = new Date().toISOString().split('T')[0];
         try {
             const snap = await db.collection('substituicoes')
-                .where('professorSubstituindoId', '==', profId)
+                .where('status', '==', 'ativo')
                 .where('dataInicio', '<=', hoje)
-                .where('status', '==', 'aceito')
                 .get();
-            if (snap.empty) return;
-            // Filtra os que ainda estão no período (dataFim >= hoje)
-            const validos = snap.docs.filter(d => { const s = d.data(); return !s.pontoValidado && (s.dataFim || s.dataInicio) >= hoje; });
-            if (!validos.length) return;
-            const doc = validos[0];
-            const sub = doc.data();
-            this._mostrarBannerValidarPonto(doc.id, sub);
+            const ativas = snap.docs.filter(d => {
+                const s = d.data();
+                const cob = (s.coberturaDiaria || {})[hoje];
+                return s.dataFim >= hoje && cob?.profId === profId && !cob.pontoValidado;
+            });
+            if (!ativas.length) return;
+            this._mostrarBannerValidarPonto(ativas[0].id, ativas[0].data(), hoje);
         } catch(e) { console.warn('Erro verificar sub hoje:', e); }
     },
 
-    _mostrarBannerValidarPonto(subId, sub) {
+    _mostrarBannerValidarPonto(subId, sub, dataDaAula) {
         const existing = document.getElementById('banner-validar-ponto');
         if (existing) existing.remove();
         const nav = document.querySelector('.bottom-nav');
         const bannerDep = document.getElementById('banner-dependente');
         const navH = nav ? nav.offsetHeight : 65;
         const depH = bannerDep ? bannerDep.offsetHeight : 0;
-        const bottomPos = navH + depH;
         const bar = document.createElement('div');
         bar.id = 'banner-validar-ponto';
-        bar.style.cssText = `position:fixed;bottom:${bottomPos}px;left:0;width:100%;background:#1e1b4b;border-top:2px solid #6366f1;color:#e2e8f0;z-index:99997;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;box-sizing:border-box;font-size:0.72rem;font-weight:700;box-shadow:0 -2px 12px rgba(99,102,241,0.3);`;
+        bar.style.cssText = `position:fixed;bottom:${navH + depH}px;left:0;width:100%;background:#1e1b4b;border-top:2px solid #6366f1;color:#e2e8f0;z-index:99997;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;box-sizing:border-box;font-size:0.72rem;font-weight:700;box-shadow:0 -2px 12px rgba(99,102,241,0.3);`;
         bar.innerHTML = `
             <div>
-                <div style="color:#818cf8;font-size:0.65rem;font-weight:800;">🔄 SUBSTITUIÇÃO ATIVA</div>
-                <div style="font-size:0.6rem;color:#94a3b8;">${sub.turmaLabel} · ${sub.dataInicio === sub.dataFim ? sub.dataInicio : (sub.dataInicio + ' → ' + sub.dataFim)}</div>
+                <div style="color:#818cf8;font-size:0.65rem;font-weight:800;">🔄 SUBSTITUIÇÃO HOJE</div>
+                <div style="font-size:0.6rem;color:#94a3b8;">${sub.turmaLabel}</div>
             </div>
-            <button onclick="substituicaoProf.validarPonto('${subId}')" style="background:#4f46e5;border:none;color:white;border-radius:8px;padding:7px 12px;font-weight:800;font-size:0.65rem;cursor:pointer;white-space:nowrap;">✅ VALIDAR PONTO</button>`;
+            <button onclick="substituicaoProf.validarPonto('${subId}','${dataDaAula}')" style="background:#4f46e5;border:none;color:white;border-radius:8px;padding:7px 12px;font-weight:800;font-size:0.65rem;cursor:pointer;white-space:nowrap;">✅ VALIDAR PONTO</button>`;
         document.body.appendChild(bar);
-        // Ajusta padding do conteúdo
         const appContent = document.getElementById('app-content');
-        if (appContent) {
-            const atual = parseInt(appContent.style.paddingBottom || '0') || navH;
-            appContent.style.paddingBottom = (atual + bar.offsetHeight) + 'px';
-        }
+        if (appContent) appContent.style.paddingBottom = (navH + depH + bar.offsetHeight) + 'px';
     },
 
-    async validarPonto(subId) {
-        if (!confirm('Confirmar que você realizou o check-in dos alunos desta aula e quer validar seu ponto?')) return;
+    async validarPonto(subId, dataDaAula) {
+        if (!confirm('Confirmar que você realizou o check-in dos alunos desta aula?')) return;
         try {
-            await db.collection('substituicoes').doc(subId).update({
-                pontoValidado: true,
-                pontoValidadoEm: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            const update = {};
+            update[`coberturaDiaria.${dataDaAula}.pontoValidado`] = true;
+            update[`coberturaDiaria.${dataDaAula}.pontoValidadoEm`] = firebase.firestore.FieldValue.serverTimestamp();
+            await db.collection('substituicoes').doc(subId).update(update);
             document.getElementById('banner-validar-ponto')?.remove();
-            alert('✅ Ponto validado! O valor da substituição será incluído no seu relatório de comissão deste mês.');
+            alert('✅ Ponto validado! Registrado no relatório de comissão do mês.');
         } catch(e) { alert('Erro: ' + e.message); }
     },
 
@@ -22391,26 +22399,28 @@ const substituicaoProf = {
     async carregarComissaoSubstituicoes(anoMes) {
         try {
             const [snapSubs, snapCfg] = await Promise.all([
-                db.collection('substituicoes').where('mes', '==', anoMes).where('pontoValidado', '==', true).get(),
+                db.collection('substituicoes').where('mes', '==', anoMes).get(),
                 db.collection('configuracoes').doc('substituicao_config').get()
             ]);
-            if (snapSubs.empty) return '';
             const valorPadrao = snapCfg.exists ? (snapCfg.data().valorPorAula || 0) : 0;
-            // Agrupa por professor substituto
             const porProf = {};
             snapSubs.forEach(doc => {
                 const s = doc.data();
-                const pid = s.professorSubstituindoId;
-                if (!pid) return;
-                if (!porProf[pid]) porProf[pid] = { nome: s.professorSubstituindoNome, aulas: [] };
-                porProf[pid].aulas.push({ turmaLabel: s.turmaLabel, data: s.data, valor: s.valorPorAula || valorPadrao });
+                const cob = s.coberturaDiaria || {};
+                Object.entries(cob).forEach(([data, entry]) => {
+                    if (!entry.pontoValidado || !data.startsWith(anoMes)) return;
+                    const pid = entry.profId;
+                    if (!pid) return;
+                    if (!porProf[pid]) porProf[pid] = { nome: entry.profNome, aulas: [] };
+                    porProf[pid].aulas.push({ turmaLabel: s.turmaLabel, data, valor: s.valorPorAula || valorPadrao });
+                });
             });
             if (!Object.keys(porProf).length) return '';
             let html = `<div style="background:#1e1b4b;border:1px solid #4f46e5;border-radius:10px;padding:12px;margin-top:12px;">
                 <div style="font-size:0.65rem;font-weight:800;color:#818cf8;letter-spacing:1px;margin-bottom:10px;">🔄 SUBSTITUIÇÕES DO MÊS</div>`;
             let totalSubs = 0;
             Object.values(porProf).forEach(p => {
-                const totalProf = p.aulas.reduce((s, a) => s + a.valor, 0);
+                const totalProf = p.aulas.reduce((acc, a) => acc + a.valor, 0);
                 totalSubs += totalProf;
                 html += `<div style="background:#0f0f2a;border-radius:8px;padding:10px;margin-bottom:8px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">

@@ -2503,7 +2503,7 @@ const academia = {
     },
 
     async carregarEventosAbas() {
-        db.collection("eventos_oficiais").orderBy("dataCriacao", "desc").onSnapshot((snap) => {
+        db.collection("eventos_oficiais").orderBy("dataCriacao", "desc").limit(30).onSnapshot((snap) => {
             const containerAluno = document.getElementById('lista-eventos-alunos'); 
             const containerAdmin = document.getElementById('lista-eventos-gerenciamento');
             if (snap.empty) {
@@ -4693,7 +4693,7 @@ Ele voltará a ser aluno normal.`)) return;
     async carregarMural() {
         // Cancela listener anterior para não acumular múltiplos
         if (this._muralListener) { this._muralListener(); this._muralListener = null; }
-        this._muralListener = db.collection("mural_avisos").onSnapshot((snap) => {
+        this._muralListener = db.collection("mural_avisos").orderBy("data", "desc").limit(30).onSnapshot((snap) => {
             const muralCard = document.getElementById('mural-avisos'); 
             const tC = document.getElementById('texto-aviso');
             const lH = document.getElementById('lista-historico-avisos'); 
@@ -11043,7 +11043,7 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             if (this._calMes == null) this._calMes = new Date().getMonth();
             if (this._calAno == null) this._calAno = new Date().getFullYear();
             // Carrega eventos oficiais para o calendário
-            db.collection('eventos_oficiais').get().then(snap => {
+            db.collection('eventos_oficiais').orderBy("dataCriacao", "desc").limit(50).get().then(snap => {
                 this._calEventos = [];
                 snap.forEach(doc => {
                     const ev = doc.data();

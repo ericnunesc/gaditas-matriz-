@@ -7746,9 +7746,15 @@ Ele voltará a ser aluno normal.`)) return;
         document.getElementById('mfa-btn-salvar').addEventListener('click', async () => {
             if (!_novaFoto) return;
             const btn = document.getElementById('mfa-btn-salvar');
-            btn.innerText = '⏳ Salvando...'; btn.disabled = true;
+            btn.innerText = '⏳ Enviando...'; btn.disabled = true;
             try {
-                await db.collection('alunos').doc(alunoId).update({ fotoPerfil: _novaFoto });
+                // Converte base64 → blob e sobe para Storage
+                const res = await fetch(_novaFoto);
+                const blob = await res.blob();
+                const ref = firebase.storage().ref().child(`fotos_perfil/${alunoId}.jpg`);
+                const snap = await ref.put(blob, { contentType: 'image/jpeg' });
+                const url = await snap.ref.getDownloadURL();
+                await db.collection('alunos').doc(alunoId).update({ fotoPerfil: url });
                 document.getElementById('modal-foto-aluno').remove();
                 academia.buscarAlunos();
             } catch(e) {

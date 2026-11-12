@@ -192,6 +192,45 @@ const i18n = {
             'graduation_history': '🎖️ HISTÓRICO DE GRADUAÇÕES',
             'training_diary': '📓 MEU DIÁRIO DE TREINO',
             'hist_old_belt': 'Histórico Faixa Antiga',
+            // Exame
+            'exam_official_call': 'CONVOCAÇÃO OFICIAL', 'exam_belt_title': 'EXAME DE FAIXA',
+            'exam_called': 'Você foi convocado.', 'exam_date_label': '📋 DATA DO EXAME',
+            'grad_date_label': '🏆 DATA DA GRADUAÇÃO (CERIMÔNIA)',
+            'exam_location': 'LOCAL DO EXAME', 'grad_location': 'LOCAL DA GRADUAÇÃO',
+            'open_maps': 'ABRIR NO GOOGLE MAPS 🗺️',
+            'exam_fee': 'TAXA DE EXAME', 'exam_fee_paid': '✅ TAXA PAGA',
+            'your_journey': '⚔️ SUA JORNADA',
+            'classes_completed': 'Aulas completadas', 'required_goal': 'Meta exigida',
+            'instructor_notes': '📌 INSTRUÇÕES DO PROFESSOR',
+            'what_to_bring': '✅ O QUE LEVAR',
+            'belt_size_label': '📏 TAMANHO DA SUA FAIXA',
+            'belt_size_hint': 'Informe o tamanho para confecção da nova faixa.',
+            'belt_name_label': '🏷️ NOME NA ETIQUETA DA FAIXA',
+            'belt_name_placeholder': 'Nome que aparecerá na etiqueta',
+            'belt_size_missing': '⚠️ Tamanho não informado ainda.',
+            'confirm_my_presence': '🙋 CONFIRMAR MINHA PRESENÇA',
+            'presence_confirmed_btn': '✅ PRESENÇA CONFIRMADA',
+            'checklist_kimono': '👕 Kimono limpo e passado',
+            'checklist_belt': '🥋 Faixa atual',
+            'checklist_water': '💧 Garrafa d\'água',
+            'checklist_id': '🪪 Documento com foto',
+            // Loja
+            'no_products': 'Nenhum produto encontrado.',
+            'place_order': '🛒 FAZER PEDIDO',
+            'out_of_stock': 'ESGOTADO',
+            'out_of_stock_btn': '❌ ESGOTADO',
+            'my_cart': 'Meu Carrinho',
+            'checkout': 'Finalizar Pedido',
+            'shipping': 'Frete', 'total': 'Total',
+            // Eventos
+            'no_events': 'Nenhum evento agendado.',
+            'event_enrolled': 'Inscrito com Sucesso! ✅ (Sair)',
+            'event_full': 'Vagas Esgotadas ❌',
+            'event_reserve': 'Garantir Minha Vaga',
+            'event_pay_now': 'PAGAR INSCRIÇÃO AGORA 💳',
+            'spots': 'VAGAS',
+            // Horários
+            'no_training_today': 'Sem treinos hoje',
         },
         en: {
             'oss_welcome': 'WELCOME!', 'oss': 'OSS!',
@@ -283,6 +322,45 @@ const i18n = {
             'graduation_history': '🎖️ GRADUATION HISTORY',
             'training_diary': '📓 MY TRAINING DIARY',
             'hist_old_belt': 'Old Belt History',
+            // Exam
+            'exam_official_call': 'OFFICIAL SUMMONS', 'exam_belt_title': 'BELT EXAM',
+            'exam_called': 'You have been summoned.', 'exam_date_label': '📋 EXAM DATE',
+            'grad_date_label': '🏆 GRADUATION DATE (CEREMONY)',
+            'exam_location': 'EXAM LOCATION', 'grad_location': 'GRADUATION LOCATION',
+            'open_maps': 'OPEN IN GOOGLE MAPS 🗺️',
+            'exam_fee': 'EXAM FEE', 'exam_fee_paid': '✅ FEE PAID',
+            'your_journey': '⚔️ YOUR JOURNEY',
+            'classes_completed': 'Classes completed', 'required_goal': 'Required goal',
+            'instructor_notes': '📌 INSTRUCTOR NOTES',
+            'what_to_bring': '✅ WHAT TO BRING',
+            'belt_size_label': '📏 YOUR BELT SIZE',
+            'belt_size_hint': 'Enter the size for your new belt.',
+            'belt_name_label': '🏷️ NAME ON BELT TAG',
+            'belt_name_placeholder': 'Name that will appear on the tag',
+            'belt_size_missing': '⚠️ Size not entered yet.',
+            'confirm_my_presence': '🙋 CONFIRM MY ATTENDANCE',
+            'presence_confirmed_btn': '✅ ATTENDANCE CONFIRMED',
+            'checklist_kimono': '👕 Clean and ironed gi',
+            'checklist_belt': '🥋 Current belt',
+            'checklist_water': '💧 Water bottle',
+            'checklist_id': '🪪 Photo ID',
+            // Store
+            'no_products': 'No products found.',
+            'place_order': '🛒 PLACE ORDER',
+            'out_of_stock': 'OUT OF STOCK',
+            'out_of_stock_btn': '❌ OUT OF STOCK',
+            'my_cart': 'My Cart',
+            'checkout': 'Checkout',
+            'shipping': 'Shipping', 'total': 'Total',
+            // Events
+            'no_events': 'No events scheduled.',
+            'event_enrolled': 'Enrolled Successfully! ✅ (Leave)',
+            'event_full': 'Spots Taken ❌',
+            'event_reserve': 'Reserve My Spot',
+            'event_pay_now': 'PAY ENROLLMENT NOW 💳',
+            'spots': 'SPOTS',
+            // Schedule
+            'no_training_today': 'No training today',
         },
         es: {
             'oss_welcome': '¡BIENVENIDO(A)!', 'oss': '¡OSS!',
@@ -374,6 +452,45 @@ const i18n = {
             'graduation_history': '🎖️ HISTORIAL DE GRADUACIONES',
             'training_diary': '📓 MI DIARIO DE ENTRENAMIENTO',
             'hist_old_belt': 'Historial Cinturón Anterior',
+            // Examen
+            'exam_official_call': 'CONVOCATORIA OFICIAL', 'exam_belt_title': 'EXAMEN DE CINTURÓN',
+            'exam_called': 'Has sido convocado(a).', 'exam_date_label': '📋 FECHA DEL EXAMEN',
+            'grad_date_label': '🏆 FECHA DE GRADUACIÓN (CEREMONIA)',
+            'exam_location': 'LUGAR DEL EXAMEN', 'grad_location': 'LUGAR DE GRADUACIÓN',
+            'open_maps': 'ABRIR EN GOOGLE MAPS 🗺️',
+            'exam_fee': 'TASA DE EXAMEN', 'exam_fee_paid': '✅ TASA PAGADA',
+            'your_journey': '⚔️ TU JORNADA',
+            'classes_completed': 'Clases completadas', 'required_goal': 'Meta requerida',
+            'instructor_notes': '📌 NOTAS DEL INSTRUCTOR',
+            'what_to_bring': '✅ QUÉ LLEVAR',
+            'belt_size_label': '📏 TALLA DE TU CINTURÓN',
+            'belt_size_hint': 'Indica la talla para confeccionar el nuevo cinturón.',
+            'belt_name_label': '🏷️ NOMBRE EN LA ETIQUETA DEL CINTURÓN',
+            'belt_name_placeholder': 'Nombre que aparecerá en la etiqueta',
+            'belt_size_missing': '⚠️ Talla no informada todavía.',
+            'confirm_my_presence': '🙋 CONFIRMAR MI ASISTENCIA',
+            'presence_confirmed_btn': '✅ ASISTENCIA CONFIRMADA',
+            'checklist_kimono': '👕 Kimono limpio y planchado',
+            'checklist_belt': '🥋 Cinturón actual',
+            'checklist_water': '💧 Botella de agua',
+            'checklist_id': '🪪 Documento con foto',
+            // Tienda
+            'no_products': 'Ningún producto encontrado.',
+            'place_order': '🛒 HACER PEDIDO',
+            'out_of_stock': 'AGOTADO',
+            'out_of_stock_btn': '❌ AGOTADO',
+            'my_cart': 'Mi Carrito',
+            'checkout': 'Finalizar Pedido',
+            'shipping': 'Envío', 'total': 'Total',
+            // Eventos
+            'no_events': 'Ningún evento programado.',
+            'event_enrolled': '¡Inscrito con Éxito! ✅ (Salir)',
+            'event_full': 'Plazas Agotadas ❌',
+            'event_reserve': 'Reservar Mi Plaza',
+            'event_pay_now': 'PAGAR INSCRIPCIÓN AHORA 💳',
+            'spots': 'PLAZAS',
+            // Horarios
+            'no_training_today': 'Sin entrenamientos hoy',
         }
     }
 };
@@ -2890,15 +3007,15 @@ const academia = {
             const containerAluno = document.getElementById('lista-eventos-alunos'); 
             const containerAdmin = document.getElementById('lista-eventos-gerenciamento');
             if (snap.empty) {
-                if (containerAluno) containerAluno.innerHTML = "<p style='color:var(--text-muted); text-align:center; font-size:0.85rem; padding:15px;'>Nenhum evento agendado.</p>";
+                if (containerAluno) containerAluno.innerHTML = `<p style='color:var(--text-muted); text-align:center; font-size:0.85rem; padding:15px;'>${i18n.t('no_events')}</p>`;
                 if (containerAdmin) containerAdmin.innerHTML = "<p style='color:var(--text-muted); font-size:0.8rem;'>Nenhum evento ativo.</p>"; return;
             }
             let htmlAluno = ""; let htmlAdmin = "";
             snap.forEach(doc => {
                 const ev = doc.data(); const evId = doc.id; const listaInscritos = ev.inscritos || []; const totalInscritos = listaInscritos.length;
                 const jaInscrito = auth.currentUser ? listaInscritos.some(i => i.id === auth.currentUser.id) : false;
-                let botaoAcao = jaInscrito ? `<button onclick="academia.cancelarInscricaoEvento('${evId}')" class="btn-save" style="background: linear-gradient(135deg, #059669, #047857); color: white; border: 1px solid #10b981;">Inscrito com Sucesso! ✅ (Sair)</button>` : (totalInscritos >= ev.vagasMax ? `<button class="btn-save btn-dark" style='cursor:not-allowed; background:#334155;' disabled>Vagas Esgotadas ❌</button>` : `<button onclick="academia.inscreverEmEvento('${evId}')" class="btn-save btn-tecnica">Garantir Minha Vaga</button>`);
-                let botaoPagamentoAluno = (jaInscrito && ev.linkPay) ? `<button onclick="window.open('${ev.linkPay}', '_blank')" class="btn-infinitepay"><i class="fas fa-credit-card"></i> PAGAR INSCRIÇÃO AGORA 💳</button>` : '';
+                let botaoAcao = jaInscrito ? `<button onclick="academia.cancelarInscricaoEvento('${evId}')" class="btn-save" style="background: linear-gradient(135deg, #059669, #047857); color: white; border: 1px solid #10b981;">${i18n.t('event_enrolled')}</button>` : (totalInscritos >= ev.vagasMax ? `<button class="btn-save btn-dark" style='cursor:not-allowed; background:#334155;' disabled>${i18n.t('event_full')}</button>` : `<button onclick="academia.inscreverEmEvento('${evId}')" class="btn-save btn-tecnica">${i18n.t('event_reserve')}</button>`);
+                let botaoPagamentoAluno = (jaInscrito && ev.linkPay) ? `<button onclick="window.open('${ev.linkPay}', '_blank')" class="btn-infinitepay"><i class="fas fa-credit-card"></i> ${i18n.t('event_pay_now')}</button>` : '';
                 const cartaz = ev.imagemUrl ? `<img src="${ev.imagemUrl}" style="width:100%; border-radius:10px; margin-bottom:10px; max-height:220px; object-fit:cover;" loading="lazy"/>` : '';
                 const descHtml = (ev.descricao || "Sem descrição.").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
                 const localHtml = ev.local ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:0.72rem;color:#94a3b8;">
@@ -2906,7 +3023,7 @@ const academia = {
                     <span>${ev.local}</span>
                     ${ev.linkMapa ? `<a href="${ev.linkMapa}" target="_blank" rel="noopener" style="margin-left:auto;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;padding:3px 8px;border-radius:6px;font-size:0.62rem;font-weight:700;text-decoration:none;white-space:nowrap;"><i class="fas fa-directions"></i> VER MAPA</a>` : ''}
                 </div>` : '';
-                htmlAluno += `<div class="card-evento">${cartaz}<div class="evento-header"><h4 class="evento-titulo">${ev.titulo.toUpperCase()}</h4><span class="evento-vagas-badge">${totalInscritos} / ${ev.vagasMax} VAGAS</span></div><div class="evento-data"><i class="fas fa-clock"></i> ${ev.dataEvento}</div>${localHtml}<div class="evento-desc">${descHtml}</div>${botaoAcao}${botaoPagamentoAluno}</div>`;
+                htmlAluno += `<div class="card-evento">${cartaz}<div class="evento-header"><h4 class="evento-titulo">${ev.titulo.toUpperCase()}</h4><span class="evento-vagas-badge">${totalInscritos} / ${ev.vagasMax} ${i18n.t('spots')}</span></div><div class="evento-data"><i class="fas fa-clock"></i> ${ev.dataEvento}</div>${localHtml}<div class="evento-desc">${descHtml}</div>${botaoAcao}${botaoPagamentoAluno}</div>`;
                 const nomesInscritos = listaInscritos.map((n, idx) => `<div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #ccc; padding: 6px 0; border-bottom: 1px solid #1e293b;"><span>${idx+1}. ${n.nome.toUpperCase()}</span><button onclick="academia.removerAlunoDeEventoAdmin('${evId}', '${n.id}', '${n.nome.replace(/'/g, "\\'")}')" style="background: none; border: none; color: #f43f5e; cursor: pointer; padding: 2px 6px;"><i class="fas fa-user-minus"></i></button></div>`).join('') || "<small style='color:var(--text-muted);'>Ninguém inscrito ainda.</small>";
                 htmlAdmin += `<div style="background:#0f172a; border:1px solid var(--border-light); padding:12px; border-radius:10px; margin-bottom:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid var(--border-light); padding-bottom:5px;">
@@ -8796,7 +8913,7 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
                 slots.forEach(slot => {
                     if (slot === 'Sem treinos hoje') {
                         html += '<div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:11px 14px; margin-bottom:6px;">' +
-                            '<span style="color:#64748b; font-size:0.8rem; font-style:italic;">Sem treinos hoje</span></div>';
+                            '<span style="color:#64748b; font-size:0.8rem; font-style:italic;">' + i18n.t('no_training_today') + '</span></div>';
                         return;
                     }
                     const desativ = this._aulaDesativada(d, slot);
@@ -8854,7 +8971,7 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
                     </div>`;
                 slots.forEach(slot => {
                     if (slot === 'Sem treinos hoje') {
-                        html += `<div style="background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:11px 14px; margin-bottom:6px; color:#475569; font-size:0.75rem; font-style:italic; text-align:center;">Sem treinos</div>`;
+                        html += `<div style="background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:11px 14px; margin-bottom:6px; color:#475569; font-size:0.75rem; font-style:italic; text-align:center;">${i18n.t('no_training_today')}</div>`;
                         return;
                     }
                     if (this._aulaDesativada(d, slot)) return;
@@ -13353,25 +13470,25 @@ const exame = {
                 <div style="${cor.gradient}; border:2px solid ${cor.border}; border-radius:18px; padding:22px 18px; margin-bottom:14px; text-align:center; box-shadow:0 0 30px ${cor.border}22;">
                     <div style="display:inline-block; background:#ffffff18; border-radius:20px; padding:3px 12px; font-size:0.55rem; font-weight:800; color:${cor.text}; letter-spacing:1.5px; margin-bottom:8px;">${labelCat}</div>
                     <div style="font-size:2.2rem; margin-bottom:4px;">🥋</div>
-                    <div style="font-size:0.55rem; font-weight:800; color:${cor.text}; letter-spacing:2px; opacity:0.7; margin-bottom:4px;">CONVOCAÇÃO OFICIAL</div>
-                    <div style="font-size:1.25rem; font-weight:900; color:white; line-height:1.2; margin-bottom:8px;">EXAME DE FAIXA</div>
+                    <div style="font-size:0.55rem; font-weight:800; color:${cor.text}; letter-spacing:2px; opacity:0.7; margin-bottom:4px;">${i18n.t('exam_official_call')}</div>
+                    <div style="font-size:1.25rem; font-weight:900; color:white; line-height:1.2; margin-bottom:8px;">${i18n.t('exam_belt_title')}</div>
                     <div style="display:inline-block; background:${cor.border}22; border:1px solid ${cor.border}; border-radius:20px; padding:4px 16px; font-size:0.75rem; font-weight:800; color:${cor.text};">
                         ${faixa.toUpperCase()} → ${proxFaixa.toUpperCase()}
                     </div>
-                    <div style="margin-top:10px; font-size:0.88rem; color:white; opacity:0.85;">OSS, <strong>${nome}</strong>! Você foi convocado.</div>
+                    <div style="margin-top:10px; font-size:0.88rem; color:white; opacity:0.85;">OSS, <strong>${nome}</strong>! ${i18n.t('exam_called')}</div>
                 </div>
 
                 <!-- COUNTDOWNS -->
                 ${cfg.dataExame ? `
                 <div style="background:#0f172a; border:1px solid #1e3a8a; border-radius:12px; padding:12px 14px; margin-bottom:10px;">
-                    <div style="font-size:0.6rem; font-weight:800; color:#3b82f6; letter-spacing:0.5px; margin-bottom:4px;">📋 DATA DO EXAME</div>
+                    <div style="font-size:0.6rem; font-weight:800; color:#3b82f6; letter-spacing:0.5px; margin-bottom:4px;">${i18n.t('exam_date_label')}</div>
                     <div style="font-size:0.82rem; font-weight:700; color:white; margin-bottom:4px;">${dataExameFmt}${cfg.horario ? ' às ' + cfg.horario + 'h' : ''}</div>
                     ${this._countdownHtml(cfg.dataExame, cfg.horario, 'EXAME', cor)}
                 </div>` : ''}
 
                 ${cfg.dataGraduacao ? `
                 <div style="background:#0f172a; border:1px solid #f59e0b44; border-radius:12px; padding:12px 14px; margin-bottom:10px;">
-                    <div style="font-size:0.6rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px; margin-bottom:4px;">🏆 DATA DA GRADUAÇÃO (CERIMÔNIA)</div>
+                    <div style="font-size:0.6rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px; margin-bottom:4px;">${i18n.t('grad_date_label')}</div>
                     <div style="font-size:0.82rem; font-weight:700; color:white; margin-bottom:4px;">${dataGradFmt}${cfg.horarioGraduacao ? ' às ' + cfg.horarioGraduacao + 'h' : ''}</div>
                     ${this._countdownHtml(cfg.dataGraduacao, cfg.horarioGraduacao, 'GRADUAÇÃO', { border: '#f59e0b', text: '#fcd34d' })}
                 </div>` : ''}
@@ -13381,7 +13498,7 @@ const exame = {
                 <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px;">
                     <i class="fas fa-map-marker-alt" style="color:#f43f5e; font-size:1rem; flex-shrink:0;"></i>
                     <div>
-                        <div style="font-size:0.6rem; color:#64748b; font-weight:700;">LOCAL DO EXAME</div>
+                        <div style="font-size:0.6rem; color:#64748b; font-weight:700;">${i18n.t('exam_location')}</div>
                         <div style="font-size:0.85rem; font-weight:700; color:white;">${cfg.local}</div>
                     </div>
                 </div>` : ''}
@@ -13392,13 +13509,13 @@ const exame = {
                     <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                         <i class="fas fa-map-marker-alt" style="color:#f59e0b; font-size:1rem; flex-shrink:0;"></i>
                         <div style="flex:1;">
-                            <div style="font-size:0.6rem; color:#f59e0b; font-weight:700;">LOCAL DA GRADUAÇÃO</div>
+                            <div style="font-size:0.6rem; color:#f59e0b; font-weight:700;">${i18n.t('grad_location')}</div>
                             <div style="font-size:0.85rem; font-weight:700; color:white;">${cfg.localGraduacao}</div>
                         </div>
                     </div>
                     <button onclick="window.open('${cfg.mapaGraduacao || `https://maps.google.com/?q=${encodeURIComponent(cfg.localGraduacao || '')}`}','_blank')"
                         style="width:100%; padding:10px; background:#1e3a8a; border:1px solid #3b82f6; color:#93c5fd; border-radius:8px; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-                        <i class="fas fa-map-marked-alt"></i> ABRIR NO GOOGLE MAPS 🗺️
+                        <i class="fas fa-map-marked-alt"></i> ${i18n.t('open_maps')}
                     </button>
                 </div>` : ''}
 
@@ -13412,7 +13529,7 @@ const exame = {
                     <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px;">
                         <i class="fas fa-tag" style="color:#f59e0b; font-size:1rem; flex-shrink:0;"></i>
                         <div>
-                            <div style="font-size:0.6rem; color:#64748b; font-weight:700;">TAXA DE EXAME</div>
+                            <div style="font-size:0.6rem; color:#64748b; font-weight:700;">${i18n.t('exam_fee')}</div>
                             <div style="font-size:0.85rem; font-weight:700; color:white;">R$ ${parseFloat(v).toFixed(2).replace('.', ',')}</div>
                         </div>
                     </div>` : '';
@@ -13420,13 +13537,13 @@ const exame = {
 
                 <!-- SUA JORNADA -->
                 <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:14px; margin-bottom:10px;">
-                    <div style="font-size:0.6rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:10px;">⚔️ SUA JORNADA</div>
+                    <div style="font-size:0.6rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:10px;">${i18n.t('your_journey')}</div>
                     <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                        <span style="font-size:0.8rem; color:#94a3b8;">Aulas completadas</span>
+                        <span style="font-size:0.8rem; color:#94a3b8;">${i18n.t('classes_completed')}</span>
                         <span style="font-size:0.85rem; font-weight:800; color:#10b981;">${aulas} ✅</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <span style="font-size:0.8rem; color:#94a3b8;">Meta exigida</span>
+                        <span style="font-size:0.8rem; color:#94a3b8;">${i18n.t('required_goal')}</span>
                         <span style="font-size:0.85rem; font-weight:800; color:white;">${meta}</span>
                     </div>
                     <div style="background:#1e293b; border-radius:8px; overflow:hidden; height:7px;">
@@ -13437,22 +13554,22 @@ const exame = {
                 <!-- INSTRUÇÕES -->
                 ${cfg.instrucoes ? `
                 <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:14px; margin-bottom:10px;">
-                    <div style="font-size:0.6rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:8px;">📌 INSTRUÇÕES DO PROFESSOR</div>
+                    <div style="font-size:0.6rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:8px;">${i18n.t('instructor_notes')}</div>
                     <div style="font-size:0.82rem; color:#e2e8f0; line-height:1.6; white-space:pre-line;">${cfg.instrucoes}</div>
                 </div>` : ''}
 
                 <!-- CHECKLIST -->
                 <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:14px; margin-bottom:14px;">
-                    <div style="font-size:0.6rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:8px;">✅ O QUE LEVAR</div>
-                    ${['👕 Kimono limpo e passado','🥋 Faixa atual','💧 Garrafa d\'água','🪪 Documento com foto'].map(i =>
+                    <div style="font-size:0.6rem; font-weight:800; color:#64748b; letter-spacing:0.5px; margin-bottom:8px;">${i18n.t('what_to_bring')}</div>
+                    ${[i18n.t('checklist_kimono'),i18n.t('checklist_belt'),i18n.t('checklist_water'),i18n.t('checklist_id')].map(i =>
                         `<div style="padding:7px 0; border-bottom:1px solid #1e293b; font-size:0.82rem; color:#e2e8f0;">${i}</div>`
                     ).join('')}
                 </div>
 
                 <!-- TAMANHO DA FAIXA -->
                 <div style="background:#0f172a; border:1px solid #f59e0b44; border-radius:12px; padding:14px; margin-bottom:14px;">
-                    <div style="font-size:0.6rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px; margin-bottom:8px;">📏 TAMANHO DA SUA FAIXA</div>
-                    <div style="font-size:0.7rem; color:#94a3b8; margin-bottom:8px;">Informe o tamanho para confecção da nova faixa.</div>
+                    <div style="font-size:0.6rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px; margin-bottom:8px;">${i18n.t('belt_size_label')}</div>
+                    <div style="font-size:0.7rem; color:#94a3b8; margin-bottom:8px;">${i18n.t('belt_size_hint')}</div>
                     <select id="select-tamanho-faixa" style="width:100%;padding:10px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.82rem;margin-bottom:10px;">
                         <option value="">— Selecione —</option>
                         ${isKids
@@ -13460,13 +13577,13 @@ const exame = {
                             : ['A0','A1','A2','A3','A4','A5'].map(t => `<option value="${t}" ${aluno.tamanhoFaixa===t?'selected':''}>${t}</option>`).join('')
                         }
                     </select>
-                    <div style="font-size:0.6rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px; margin-bottom:6px;">🏷️ NOME NA ETIQUETA DA FAIXA</div>
+                    <div style="font-size:0.6rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px; margin-bottom:6px;">${i18n.t('belt_name_label')}</div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <input id="input-nome-etiqueta" type="text" value="${aluno.nomeEtiqueta||''}" placeholder="Nome que aparecerá na etiqueta"
+                        <input id="input-nome-etiqueta" type="text" value="${aluno.nomeEtiqueta||''}" placeholder="${i18n.t('belt_name_placeholder')}"
                             style="flex:1;padding:10px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.82rem;">
                         <button onclick="exame.salvarTamanhoFaixa('${alunoId}')" style="padding:10px 16px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.78rem;white-space:nowrap;">💾 Salvar</button>
                     </div>
-                    ${aluno.tamanhoFaixa ? `<div style="margin-top:6px;font-size:0.65rem;color:#10b981;">✅ Tamanho: <strong>${aluno.tamanhoFaixa}</strong>${aluno.nomeEtiqueta ? ` · Etiqueta: <strong>${aluno.nomeEtiqueta}</strong>` : ''}</div>` : `<div style="margin-top:6px;font-size:0.65rem;color:#f59e0b;">⚠️ Tamanho não informado ainda.</div>`}
+                    ${aluno.tamanhoFaixa ? `<div style="margin-top:6px;font-size:0.65rem;color:#10b981;">✅ ${aluno.tamanhoFaixa}${aluno.nomeEtiqueta ? ` · ${aluno.nomeEtiqueta}` : ''}</div>` : `<div style="margin-top:6px;font-size:0.65rem;color:#f59e0b;">${i18n.t('belt_size_missing')}</div>`}
                 </div>
 
                 <!-- BOTÕES PAGAMENTO -->
@@ -13477,7 +13594,7 @@ const exame = {
                         if (!v2) return '';
                         if (aluno.taxaExamePaga) return `
                         <div style="width:100%;padding:14px;background:#052e16;border:2px solid #10b981;color:#10b981;border-radius:12px;font-weight:900;font-size:0.88rem;text-align:center;">
-                            ✅ TAXA PAGA
+                            ${i18n.t('exam_fee_paid')}
                         </div>`;
                         const mostrarPix    = efiCfg.ativarPix    !== false;
                         const mostrarCartao = efiCfg.ativarCartao !== false;
@@ -13496,7 +13613,7 @@ const exame = {
                     })()}
                     <button id="btn-confirmar-exame" onclick="exame.confirmarPresenca('${alunoId}')"
                         style="width:100%; padding:13px; background:${jaConfirmou ? '#064e3b' : '#1e3a8a'}; border:2px solid ${jaConfirmou ? '#10b981' : '#3b82f6'}; color:${jaConfirmou ? '#10b981' : '#93c5fd'}; border-radius:12px; font-weight:800; font-size:0.85rem; cursor:pointer;">
-                        ${jaConfirmou ? '✅ PRESENÇA CONFIRMADA' : '🙋 CONFIRMAR MINHA PRESENÇA'}
+                        ${jaConfirmou ? i18n.t('presence_confirmed_btn') : i18n.t('confirm_my_presence')}
                     </button>
                 </div>
                 <div id="prova-aluno-section"></div>
@@ -17196,7 +17313,7 @@ const loja = {
             ? this._produtos
             : this._produtos.filter(p => p.categoria === this._categoriaAtual);
         if (prods.length === 0) {
-            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#475569; font-size:0.75rem;">Nenhum produto encontrado.</div>';
+            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:#475569; font-size:0.75rem;">${i18n.t('no_products')}</div>`;
             return;
         }
         grid.innerHTML = prods.map(p => {
@@ -17206,7 +17323,7 @@ const loja = {
             return `
                 <div onclick="loja.abrirProduto('${p.id}')" style="background:#1e293b; border:1px solid ${borderColor}; border-radius:18px; overflow:hidden; cursor:pointer; position:relative; box-shadow:0 4px 16px rgba(0,0,0,0.35); transition:transform 0.15s; ${esgotado ? 'opacity:0.6;' : ''}">
                     ${p.destaque ? '<div style="position:absolute; top:8px; left:8px; z-index:2; background:#f59e0b; color:#000; border-radius:8px; padding:3px 8px; font-size:0.48rem; font-weight:800; letter-spacing:0.5px;">⭐ DESTAQUE</div>' : ''}
-                    ${esgotado ? '<div style="position:absolute; top:8px; right:8px; z-index:2; background:#ef4444; color:white; border-radius:8px; padding:3px 8px; font-size:0.48rem; font-weight:800;">ESGOTADO</div>' : ''}
+                    ${esgotado ? `<div style="position:absolute; top:8px; right:8px; z-index:2; background:#ef4444; color:white; border-radius:8px; padding:3px 8px; font-size:0.48rem; font-weight:800;">${i18n.t('out_of_stock')}</div>` : ''}
                     <div style="aspect-ratio:1; background:#0f172a; overflow:hidden; display:flex; align-items:center; justify-content:center;">
                         ${p.foto ? `<img src="${p.foto}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=font-size:3rem>🛒</span>'">` : '<span style="font-size:3rem;">🛒</span>'}
                     </div>
@@ -17293,7 +17410,7 @@ const loja = {
                 <button id="btn-fazer-pedido" onclick="loja._confirmarPedido('${id}')"
                     style="width:100%; padding:16px; background:${btnComprarOk ? '#10b981' : '#334155'}; color:white; border:none; border-radius:12px; font-weight:800; font-size:0.9rem; cursor:pointer; margin-top:8px;"
                     ${!btnComprarOk ? 'disabled' : ''}>
-                    ${btnComprarOk ? '🛒 FAZER PEDIDO' : '❌ ESGOTADO'}
+                    ${btnComprarOk ? i18n.t('place_order') : i18n.t('out_of_stock_btn')}
                 </button>
                 <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px; margin-top:10px; font-size:0.62rem; color:#64748b; text-align:center; line-height:1.6;">
                     📍 Retirada na academia · Pagamento via link externo
@@ -17352,7 +17469,7 @@ const loja = {
             const sem = (v.estoque || 0) === 0;
             btn.disabled = sem;
             btn.style.background = sem ? '#334155' : '#10b981';
-            btn.innerHTML = sem ? '❌ ESGOTADO' : '🛒 FAZER PEDIDO';
+            btn.innerHTML = sem ? i18n.t('out_of_stock_btn') : i18n.t('place_order');
         }
     },
 
@@ -17383,7 +17500,7 @@ const loja = {
             this.fecharProduto();
             this._mostrarModalPagamento(p, this._variacaoAtual, ref.id);
         } catch(e) {
-            if (btn) { btn.disabled = false; btn.innerHTML = '🛒 FAZER PEDIDO'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = i18n.t('place_order'); }
             alert('Erro ao registrar pedido: ' + e.message);
         }
     },

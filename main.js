@@ -44,25 +44,36 @@ const i18n = {
     },
 
     setLang(lang) {
-        // Aluno muda só a própria preferência
         this._lang = lang;
         try { localStorage.setItem('app_lang', lang); } catch(_) {}
         this._applyStatic();
-        if (typeof auth !== 'undefined' && auth.role === 'aluno') {
-            if (typeof academia !== 'undefined') {
-                academia.renderHome?.();
-                academia.renderRanking?.();
-            }
+        if (typeof academia !== 'undefined') {
+            academia.renderDashboardAluno?.();
+            academia.renderRanking?.();
         }
     },
 
     _applyStatic() {
         const set = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = this.t(key); };
+        // Check-in area
         const cp = document.getElementById('txt-confirm-presence');
         if (cp) cp.innerHTML = `<i class="fas fa-qrcode"></i> ${this.t('confirm_presence')}`;
         set('txt-select-class', 'select_class_today');
         set('txt-scan-qr', 'scan_qr');
+        set('txt-who-trains', 'who_trains');
+        set('txt-who-confirmed', 'who_confirmed');
+        // Perfil do aluno
+        set('txt-my-data', 'my_data');
+        set('txt-change-password', 'change_password');
+        set('txt-injured', 'injured');
+        set('txt-lock-enrollment', 'lock_enrollment');
+        set('txt-lang-setting', 'lang_setting');
         set('txt-lang-label', 'lang_label');
+        // Técnica da semana
+        set('txt-technique-week', 'technique_week');
+        set('txt-watch-video', 'watch_video');
+        set('txt-history-btn', 'history');
+        set('txt-video-archive', 'video_archive');
     },
 
     t(key) {
@@ -71,11 +82,7 @@ const i18n = {
 
     _strings: {
         pt: {
-            // Saudação
-            'oss_welcome': 'OSS, BEM-VINDO(A)!',
-            'oss': 'OSS!',
-
-            // Home / Presença
+            'oss_welcome': 'OSS, BEM-VINDO(A)!', 'oss': 'OSS!',
             'confirm_presence': 'Confirmar Presença no Treino',
             'select_class_today': 'SELECIONE SUA TURMA DE HOJE:',
             'no_class_today': 'Sem treinos hoje',
@@ -88,54 +95,65 @@ const i18n = {
             'checkin_pending': 'Check-in pendente',
             'presence_confirmed': '✅ Presença confirmada!',
             'presence_already': 'Presença já registrada hoje',
-
-            // Ranking
-            'ranking': 'Ranking',
-            'ranking_month': 'Ranking do Mês',
+            'who_trains': 'Ver quem vai treinar',
+            'who_confirmed': 'QUEM JÁ CONFIRMOU NESSA TURMA:',
+            'ranking': 'Ranking', 'ranking_month': 'Ranking do Mês',
             'no_training_month': 'Nenhum treino registrado este mês.',
-
-            // Histórico
-            'history': 'Histórico',
-            'my_history': 'Meu Histórico',
+            'class': 'aula', 'classes': 'aulas',
+            'history': 'Histórico', 'my_history': 'Meu Histórico',
             'no_history': 'Nenhum treino registrado.',
-            'trainings': 'treinos',
-            'this_month': 'este mês',
-
-            // Conquistas
+            'trainings': 'treinos', 'this_month': 'este mês',
+            'attendance_goal': 'Meta de aulas',
             'achievements': 'Conquistas',
             'no_achievements': 'Nenhuma conquista ainda. Continue treinando!',
-
-            // Notificações / Recados
-            'notifications': 'Recados',
-            'no_notifications': 'Nenhum recado.',
-
-            // Faixa / Exame
-            'belt': 'Faixa',
-            'exam': 'Exame',
+            'notifications': 'Recados', 'no_notifications': 'Nenhum recado.',
+            'belt': 'Faixa', 'degree': 'Grau', 'exam': 'Exame',
             'exam_invite': 'Você foi convocado(a) para o exame de faixa!',
-
-            // Geral
-            'loading': 'Carregando...',
-            'close': 'Fechar',
-            'cancel': 'Cancelar',
-            'confirm': 'Confirmar',
-            'save': 'Salvar',
-            'back': 'Voltar',
-            'attendance': 'Presenças',
-            'active': 'Ativo',
-            'inactive': 'Inativo',
-            'month': 'mês',
-            'lang_label': '🇧🇷 Português',
+            'loading': 'Carregando...', 'close': 'Fechar', 'cancel': 'Cancelar',
+            'confirm': 'Confirmar', 'save': 'Salvar', 'back': 'Voltar',
+            'attendance': 'Presenças', 'active': 'Ativo', 'inactive': 'Inativo',
+            'month': 'mês', 'lang_label': '🇧🇷 Português',
+            // Grid de atalhos do aluno
+            'nav_checkin': 'Check-in', 'nav_qr': 'QR Code',
+            'nav_schedule': 'Horários', 'nav_financial': 'Financeiro',
+            'nav_store': 'Loja', 'nav_events': 'Eventos',
+            'nav_technique': 'Técnica', 'nav_diary': 'Diário',
+            'nav_report_card': 'Boletim', 'nav_achievements': 'Conquistas',
+            'nav_exam': 'Exame', 'nav_timer': 'Cronômetro',
+            // Dashboard
+            'know_the_blacks': '🥋 CONHEÇA OS PRETAS',
+            'see_all': 'VER TODOS →',
+            'my_dependents': '👨‍👧‍👦 MEUS DEPENDENTES',
+            'access': 'ACESSAR',
+            'you': 'você',
+            'students': 'alunos',
+            // Notif push aluno
+            'push_presence_title': '✅ Presença confirmada!',
+            'push_presence_body': 'Sua presença foi registrada. OSS! 🥋',
+            // Perfil / dados
+            'my_data': 'MEUS DADOS CADASTRAIS',
+            'change_password': 'ALTERAR MINHA SENHA',
+            'injured': 'ESTOU MACHUCADO / DOENTE',
+            'lang_setting': 'IDIOMA DO APP',
+            'lang_hint': 'Define o idioma que você vê no app.',
+            'lock_enrollment': 'SOLICITAR TRANCAMENTO DE MATRÍCULA',
+            // Plano de aula / técnica
+            'technique_week': 'Posição da Semana',
+            'watch_video': 'ASSISTIR VÍDEO COMPLETO',
+            'video_archive': 'ARQUIVO DE VÍDEOS DE TREINAMENTO:',
+            // Contrato
+            'contract_unsigned': 'Você ainda não assinou o contrato.',
+            // Faixa colors (exibidas ao aluno)
+            'belt_white': 'Branca', 'belt_blue': 'Azul', 'belt_purple': 'Roxa',
+            'belt_brown': 'Marrom', 'belt_black': 'Preta',
         },
         en: {
-            'oss_welcome': 'WELCOME!',
-            'oss': 'OSS!',
-
+            'oss_welcome': 'WELCOME!', 'oss': 'OSS!',
             'confirm_presence': 'Confirm Training Attendance',
             'select_class_today': 'SELECT YOUR CLASS TODAY:',
             'no_class_today': 'No training today',
             'scan_qr': 'SCAN CLASS QR CODE',
-            'checkin_sent': 'Check-in sent! Wait for the instructor\'s approval.',
+            'checkin_sent': 'Check-in sent! Waiting for instructor approval.',
             'checkin_already_sent': 'You already checked in for this class today! OSS!',
             'checkin_cancel_confirm': 'Cancel your check-in?',
             'checkin_cancel_error': 'Error cancelling check-in.',
@@ -143,43 +161,53 @@ const i18n = {
             'checkin_pending': 'Check-in pending',
             'presence_confirmed': '✅ Attendance confirmed!',
             'presence_already': 'Attendance already recorded today',
-
-            'ranking': 'Ranking',
-            'ranking_month': 'Monthly Ranking',
+            'who_trains': 'See who\'s training today',
+            'who_confirmed': 'WHO ALREADY CONFIRMED IN THIS CLASS:',
+            'ranking': 'Ranking', 'ranking_month': 'Monthly Ranking',
             'no_training_month': 'No training recorded this month.',
-
-            'history': 'History',
-            'my_history': 'My History',
+            'class': 'class', 'classes': 'classes',
+            'history': 'History', 'my_history': 'My History',
             'no_history': 'No training recorded.',
-            'trainings': 'classes',
-            'this_month': 'this month',
-
+            'trainings': 'classes', 'this_month': 'this month',
+            'attendance_goal': 'Attendance goal',
             'achievements': 'Achievements',
             'no_achievements': 'No achievements yet. Keep training!',
-
-            'notifications': 'Messages',
-            'no_notifications': 'No messages.',
-
-            'belt': 'Belt',
-            'exam': 'Exam',
+            'notifications': 'Messages', 'no_notifications': 'No messages.',
+            'belt': 'Belt', 'degree': 'Degree', 'exam': 'Exam',
             'exam_invite': 'You have been invited to the belt exam!',
-
-            'loading': 'Loading...',
-            'close': 'Close',
-            'cancel': 'Cancel',
-            'confirm': 'Confirm',
-            'save': 'Save',
-            'back': 'Back',
-            'attendance': 'Attendance',
-            'active': 'Active',
-            'inactive': 'Inactive',
-            'month': 'month',
-            'lang_label': '🇺🇸 English',
+            'loading': 'Loading...', 'close': 'Close', 'cancel': 'Cancel',
+            'confirm': 'Confirm', 'save': 'Save', 'back': 'Back',
+            'attendance': 'Attendance', 'active': 'Active', 'inactive': 'Inactive',
+            'month': 'month', 'lang_label': '🇺🇸 English',
+            'nav_checkin': 'Check-in', 'nav_qr': 'QR Code',
+            'nav_schedule': 'Schedule', 'nav_financial': 'Financial',
+            'nav_store': 'Store', 'nav_events': 'Events',
+            'nav_technique': 'Technique', 'nav_diary': 'Diary',
+            'nav_report_card': 'Report Card', 'nav_achievements': 'Achievements',
+            'nav_exam': 'Exam', 'nav_timer': 'Timer',
+            'know_the_blacks': '🥋 MEET THE BLACK BELTS',
+            'see_all': 'SEE ALL →',
+            'my_dependents': '👨‍👧‍👦 MY DEPENDENTS',
+            'access': 'ACCESS',
+            'you': 'you',
+            'students': 'students',
+            'push_presence_title': '✅ Attendance confirmed!',
+            'push_presence_body': 'Your attendance has been recorded. OSS! 🥋',
+            'my_data': 'MY REGISTRATION DATA',
+            'change_password': 'CHANGE MY PASSWORD',
+            'injured': 'I\'M INJURED / SICK',
+            'lang_setting': 'APP LANGUAGE',
+            'lang_hint': 'Set the language you see in the app.',
+            'lock_enrollment': 'REQUEST ENROLLMENT FREEZE',
+            'technique_week': 'Position of the Week',
+            'watch_video': 'WATCH FULL VIDEO',
+            'video_archive': 'TRAINING VIDEO ARCHIVE:',
+            'contract_unsigned': 'You have not signed the contract yet.',
+            'belt_white': 'White', 'belt_blue': 'Blue', 'belt_purple': 'Purple',
+            'belt_brown': 'Brown', 'belt_black': 'Black',
         },
         es: {
-            'oss_welcome': '¡BIENVENIDO(A)!',
-            'oss': '¡OSS!',
-
+            'oss_welcome': '¡BIENVENIDO(A)!', 'oss': '¡OSS!',
             'confirm_presence': 'Confirmar Asistencia al Entrenamiento',
             'select_class_today': 'SELECCIONA TU CLASE DE HOY:',
             'no_class_today': 'Sin entrenamientos hoy',
@@ -192,38 +220,50 @@ const i18n = {
             'checkin_pending': 'Check-in pendiente',
             'presence_confirmed': '✅ ¡Asistencia confirmada!',
             'presence_already': 'Asistencia ya registrada hoy',
-
-            'ranking': 'Ranking',
-            'ranking_month': 'Ranking del Mes',
+            'who_trains': 'Ver quién va a entrenar',
+            'who_confirmed': '¿QUIÉN YA CONFIRMÓ EN ESTA CLASE?:',
+            'ranking': 'Ranking', 'ranking_month': 'Ranking del Mes',
             'no_training_month': 'Sin entrenamientos registrados este mes.',
-
-            'history': 'Historial',
-            'my_history': 'Mi Historial',
+            'class': 'clase', 'classes': 'clases',
+            'history': 'Historial', 'my_history': 'Mi Historial',
             'no_history': 'Sin entrenamientos registrados.',
-            'trainings': 'clases',
-            'this_month': 'este mes',
-
+            'trainings': 'clases', 'this_month': 'este mes',
+            'attendance_goal': 'Meta de clases',
             'achievements': 'Logros',
             'no_achievements': 'Sin logros aún. ¡Sigue entrenando!',
-
-            'notifications': 'Mensajes',
-            'no_notifications': 'Sin mensajes.',
-
-            'belt': 'Cinturón',
-            'exam': 'Examen',
+            'notifications': 'Mensajes', 'no_notifications': 'Sin mensajes.',
+            'belt': 'Cinturón', 'degree': 'Grado', 'exam': 'Examen',
             'exam_invite': '¡Fuiste convocado(a) al examen de cinturón!',
-
-            'loading': 'Cargando...',
-            'close': 'Cerrar',
-            'cancel': 'Cancelar',
-            'confirm': 'Confirmar',
-            'save': 'Guardar',
-            'back': 'Volver',
-            'attendance': 'Asistencias',
-            'active': 'Activo',
-            'inactive': 'Inactivo',
-            'month': 'mes',
-            'lang_label': '🇪🇸 Español',
+            'loading': 'Cargando...', 'close': 'Cerrar', 'cancel': 'Cancelar',
+            'confirm': 'Confirmar', 'save': 'Guardar', 'back': 'Volver',
+            'attendance': 'Asistencias', 'active': 'Activo', 'inactive': 'Inactivo',
+            'month': 'mes', 'lang_label': '🇪🇸 Español',
+            'nav_checkin': 'Check-in', 'nav_qr': 'QR Code',
+            'nav_schedule': 'Horarios', 'nav_financial': 'Financiero',
+            'nav_store': 'Tienda', 'nav_events': 'Eventos',
+            'nav_technique': 'Técnica', 'nav_diary': 'Diario',
+            'nav_report_card': 'Boletín', 'nav_achievements': 'Logros',
+            'nav_exam': 'Examen', 'nav_timer': 'Cronómetro',
+            'know_the_blacks': '🥋 CONOCE LOS CINTURONES NEGROS',
+            'see_all': 'VER TODOS →',
+            'my_dependents': '👨‍👧‍👦 MIS DEPENDIENTES',
+            'access': 'ACCEDER',
+            'you': 'tú',
+            'students': 'alumnos',
+            'push_presence_title': '✅ ¡Asistencia confirmada!',
+            'push_presence_body': 'Tu asistencia fue registrada. ¡OSS! 🥋',
+            'my_data': 'MIS DATOS DE REGISTRO',
+            'change_password': 'CAMBIAR MI CONTRASEÑA',
+            'injured': 'ESTOY LESIONADO / ENFERMO',
+            'lang_setting': 'IDIOMA DE LA APP',
+            'lang_hint': 'Elige el idioma que ves en la app.',
+            'lock_enrollment': 'SOLICITAR CONGELAMIENTO DE MATRÍCULA',
+            'technique_week': 'Posición de la Semana',
+            'watch_video': 'VER VIDEO COMPLETO',
+            'video_archive': 'ARCHIVO DE VIDEOS DE ENTRENAMIENTO:',
+            'contract_unsigned': 'Aún no has firmado el contrato.',
+            'belt_white': 'Blanca', 'belt_blue': 'Azul', 'belt_purple': 'Morada',
+            'belt_brown': 'Café', 'belt_black': 'Negra',
         }
     }
 };
@@ -6289,19 +6329,19 @@ Ele voltará a ser aluno normal.`)) return;
 
             const _isKidsGrid = /kids/i.test(nome) || (auth.currentUser?.turmas || []).some(t => /kids/i.test(t));
             const cards = [
-                { icon:'fa-qrcode',       label:'Check-in',   cor:'#10b981', fn:`academia._irParaCheckin()` },
-                { icon:'fa-camera',       label:'QR Code',    cor:'#3b82f6', fn:`academia.abrirScannerQR()` },
-                { icon:'fa-clock',        label:'Horários',   cor:'#8b5cf6', fn:`ui.showTab('tab-horarios')` },
-                { icon:'fa-dollar-sign',  label:'Financeiro', cor:'#22c55e', fn:`ui.showTab('tab-financeiro')` },
-                { icon:'fa-shopping-bag', label:'Loja',       cor:'#ec4899', fn:`ui.showTab('tab-loja')` },
-                { icon:'fa-calendar-alt', label:'Eventos',    cor:'#f97316', fn:`ui.showTab('tab-eventos')` },
-                { icon:'fa-video',        label:'Técnica',    cor:'#f43f5e', fn:`document.getElementById('card-tecnica-semana').scrollIntoView({behavior:'smooth'})` },
+                { icon:'fa-qrcode',       label:i18n.t('nav_checkin'),    cor:'#10b981', fn:`academia._irParaCheckin()` },
+                { icon:'fa-camera',       label:i18n.t('nav_qr'),         cor:'#3b82f6', fn:`academia.abrirScannerQR()` },
+                { icon:'fa-clock',        label:i18n.t('nav_schedule'),   cor:'#8b5cf6', fn:`ui.showTab('tab-horarios')` },
+                { icon:'fa-dollar-sign',  label:i18n.t('nav_financial'),  cor:'#22c55e', fn:`ui.showTab('tab-financeiro')` },
+                { icon:'fa-shopping-bag', label:i18n.t('nav_store'),      cor:'#ec4899', fn:`ui.showTab('tab-loja')` },
+                { icon:'fa-calendar-alt', label:i18n.t('nav_events'),     cor:'#f97316', fn:`ui.showTab('tab-eventos')` },
+                { icon:'fa-video',        label:i18n.t('nav_technique'),  cor:'#f43f5e', fn:`document.getElementById('card-tecnica-semana').scrollIntoView({behavior:'smooth'})` },
                 _isKidsGrid
-                    ? { icon:'fa-book-open', label:'Boletim',  cor:'#a78bfa', fn:`boletim.abrir(auth.currentUser.id)` }
-                    : { icon:'fa-book',      label:'Diário',   cor:'#a78bfa', fn:`treinoPost.abrirDiario()` },
-                { icon:'fa-medal',        label:'Conquistas', cor:'#f59e0b', fn:`document.getElementById('mural-conquistas').scrollIntoView({behavior:'smooth'})` },
-                { icon:'fa-graduation-cap', label:'Exame',    cor:'#a855f7', fn:`ui.showTab('tab-exame')` },
-                { icon:'fa-stopwatch',      label:'Cronômetro',cor:'#38bdf8', fn:`cronometro.abrir()` },
+                    ? { icon:'fa-book-open', label:i18n.t('nav_report_card'), cor:'#a78bfa', fn:`boletim.abrir(auth.currentUser.id)` }
+                    : { icon:'fa-book',      label:i18n.t('nav_diary'),       cor:'#a78bfa', fn:`treinoPost.abrirDiario()` },
+                { icon:'fa-medal',        label:i18n.t('nav_achievements'),cor:'#f59e0b', fn:`document.getElementById('mural-conquistas').scrollIntoView({behavior:'smooth'})` },
+                { icon:'fa-graduation-cap', label:i18n.t('nav_exam'),     cor:'#a855f7', fn:`ui.showTab('tab-exame')` },
+                { icon:'fa-stopwatch',      label:i18n.t('nav_timer'),    cor:'#38bdf8', fn:`cronometro.abrir()` },
             ];
 
             const cardsHtml = cards.map(c => `
@@ -6321,7 +6361,7 @@ Ele voltará a ser aluno normal.`)) return;
                         <span style="font-size:0.85rem;">${medals[i]}</span>
                         <span style="font-size:0.72rem;font-weight:${isMe?'900':'600'};color:${isMe?'#f59e0b':'#e2e8f0'};">${r.nome.split(' ')[0]} ${r.nome.split(' ')[1]||''}</span>
                     </div>
-                    <span style="font-size:0.7rem;font-weight:800;color:${isMe?'#f59e0b':'#94a3b8'};">${r.aulasMs} aula${r.aulasMs!==1?'s':''}</span>
+                    <span style="font-size:0.7rem;font-weight:800;color:${isMe?'#f59e0b':'#94a3b8'};">${r.aulasMs} ${r.aulasMs!==1?i18n.t('classes'):i18n.t('class')}</span>
                 </div>`;
             }).join('');
 
@@ -6329,9 +6369,9 @@ Ele voltará a ser aluno normal.`)) return;
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#f59e0b0a;border-radius:6px;margin-top:4px;border:1px dashed #f59e0b44;">
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="font-size:0.72rem;color:#64748b;">${rankPos}°</span>
-                        <span style="font-size:0.72rem;font-weight:900;color:#f59e0b;">${primeiroNome} (você)</span>
+                        <span style="font-size:0.72rem;font-weight:900;color:#f59e0b;">${primeiroNome} (${i18n.t('you')})</span>
                     </div>
-                    <span style="font-size:0.7rem;font-weight:800;color:#f59e0b;">${ranking[rankPos-1]?.aulasMs||0} aulas</span>
+                    <span style="font-size:0.7rem;font-weight:800;color:#f59e0b;">${ranking[rankPos-1]?.aulasMs||0} ${i18n.t('classes')}</span>
                 </div>` : '';
 
             el.innerHTML = `
@@ -6344,12 +6384,12 @@ Ele voltará a ser aluno normal.`)) return;
                         </div>
                         <div style="text-align:right;">
                             <div style="font-size:0.65rem;font-weight:800;color:${corFaixa};">${faixa.toUpperCase()}</div>
-                            <div style="font-size:0.55rem;color:#64748b;">${grau}° Grau</div>
+                            <div style="font-size:0.55rem;color:#64748b;">${grau}° ${i18n.t('degree')}</div>
                         </div>
                     </div>
                     <!-- Barra de progresso -->
                     <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-                        <span style="font-size:0.58rem;color:#64748b;font-weight:700;">Meta de aulas</span>
+                        <span style="font-size:0.58rem;color:#64748b;font-weight:700;">${i18n.t('attendance_goal')}</span>
                         <span style="font-size:0.58rem;font-weight:800;color:${pct>=100?'#10b981':corFaixa};">${aulas}/${meta} · ${pct}%</span>
                     </div>
                     <div style="background:#0f172a;border-radius:999px;height:8px;overflow:hidden;">
@@ -6372,7 +6412,7 @@ Ele voltará a ser aluno normal.`)) return;
                 <div style="background:#1e293b;border:1px solid #f59e0b22;border-radius:14px;padding:14px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                         <div style="font-size:0.62rem;font-weight:800;color:#f59e0b;">🔥 ${i18n.t('ranking').toUpperCase()} — ${mesNome.toUpperCase()}</div>
-                        <span style="font-size:0.55rem;color:#475569;">${rankTotal} alunos</span>
+                        <span style="font-size:0.55rem;color:#475569;">${rankTotal} ${i18n.t('students')}</span>
                     </div>
                     ${rankingHtml}
                     ${minhaPosHtml}
@@ -6409,8 +6449,8 @@ Ele voltará a ser aluno normal.`)) return;
             cont.innerHTML = `
                 <div style="background:#1e293b;border:1px solid #1e293b;border-left:3px solid #f59e0b;border-radius:14px;padding:14px 14px 12px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                        <div style="font-size:0.62rem;font-weight:800;color:#f59e0b;">🥋 CONHEÇA OS PRETAS</div>
-                        <button onclick="ui.showTab('tab-pretas');pretas.render()" style="font-size:0.5rem;font-weight:800;color:#64748b;background:none;border:none;cursor:pointer;padding:0;">VER TODOS →</button>
+                        <div style="font-size:0.62rem;font-weight:800;color:#f59e0b;">${i18n.t('know_the_blacks')}</div>
+                        <button onclick="ui.showTab('tab-pretas');pretas.render()" style="font-size:0.5rem;font-weight:800;color:#64748b;background:none;border:none;cursor:pointer;padding:0;">${i18n.t('see_all')}</button>
                     </div>
                     <div style="display:flex;gap:14px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;">
                         ${chips}
@@ -6433,14 +6473,14 @@ Ele voltará a ser aluno normal.`)) return;
                         onmousedown="this.style.opacity='0.7'" onmouseup="this.style.opacity='1'" ontouchstart="this.style.opacity='0.7'" ontouchend="this.style.opacity='1'">
                         ${fotoEl}
                         <div style="font-size:0.52rem;font-weight:800;color:#e2e8f0;text-align:center;line-height:1.2;">${d.nome.split(' ')[0].toUpperCase()}</div>
-                        <div style="font-size:0.45rem;color:#3b82f6;font-weight:700;">ACESSAR</div>
+                        <div style="font-size:0.45rem;color:#3b82f6;font-weight:700;">${i18n.t('access')}</div>
                     </div>`;
                 }).join('');
                 const divDep = document.createElement('div');
                 divDep.style.marginBottom = '12px';
                 divDep.innerHTML = `
                     <div style="background:#1e293b;border:1px solid #3b82f644;border-left:3px solid #3b82f6;border-radius:14px;padding:14px 14px 12px;">
-                        <div style="font-size:0.62rem;font-weight:800;color:#3b82f6;margin-bottom:12px;">👨‍👧‍👦 MEUS DEPENDENTES</div>
+                        <div style="font-size:0.62rem;font-weight:800;color:#3b82f6;margin-bottom:12px;">${i18n.t('my_dependents')}</div>
                         <div style="display:flex;gap:14px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;">${depCards}</div>
                     </div>`;
                 cont.parentNode.insertBefore(divDep, cont);

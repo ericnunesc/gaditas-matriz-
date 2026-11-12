@@ -209,14 +209,14 @@
 
                 <div id="card-tecnica-semana" class="curriculo-atleta hidden" style="background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155; margin-top: 15px; position: relative;">
                     <span style="position: absolute; top: 12px; right: 12px; background: #1e3a8a; color: #60a5fa; font-size: 0.55rem; padding: 3px 8px; border-radius: 4px; font-weight: 800;">ESTUDE A TÉCNICA</span>
-                    <h4 style="color:white; margin:0 0 4px 0; font-size:0.85rem; font-weight:800;"><i class="fas fa-video" style="color:#f43f5e; margin-right: 4px;"></i> Posição da Semana</h4>
+                    <h4 style="color:white; margin:0 0 4px 0; font-size:0.85rem; font-weight:800;"><i class="fas fa-video" style="color:#f43f5e; margin-right: 4px;"></i> <span id="txt-technique-week">Posição da Semana</span></h4>
                     <p id="display-tecnica-titulo" style="color:#94a3b8; font-size:0.75rem; margin:0 0 12px 0; font-weight:500; max-width:80%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></p>
                     <div style="display:flex; gap:8px;">
-                        <button id="btn-ver-tecnica" style="margin:0; flex:1; font-size:0.7rem; padding:10px; background:#3b82f6; border:none; color:white; border-radius:6px; font-weight:700; cursor:pointer;"><i class="fas fa-play"></i> ASSISTIR VÍDEO COMPLETO</button>
-                        <button onclick="academia.toggleBiblioteca()" style="margin:0; font-size:0.7rem; padding:10px 14px; background:#334155; border:none; color:white; border-radius:6px; cursor:pointer;"><i class="fas fa-history"></i> HISTÓRICO</button>
+                        <button id="btn-ver-tecnica" style="margin:0; flex:1; font-size:0.7rem; padding:10px; background:#3b82f6; border:none; color:white; border-radius:6px; font-weight:700; cursor:pointer;"><i class="fas fa-play"></i> <span id="txt-watch-video">ASSISTIR VÍDEO COMPLETO</span></button>
+                        <button onclick="academia.toggleBiblioteca()" style="margin:0; font-size:0.7rem; padding:10px 14px; background:#334155; border:none; color:white; border-radius:6px; cursor:pointer;"><i class="fas fa-history"></i> <span id="txt-history-btn">HISTÓRICO</span></button>
                     </div>
                     <div id="secao-historico-tecnica" class="hidden" style="margin-top:15px; padding-top:12px; border-top:1px solid #334155; max-height:200px; overflow-y:auto;">
-                        <small style="color:#3b82f6; font-weight:800; display:block; margin-bottom:8px; font-size:0.55rem;">ARQUIVO DE VÍDEOS DE TREINAMENTO:</small>
+                        <small id="txt-video-archive" style="color:#3b82f6; font-weight:800; display:block; margin-bottom:8px; font-size:0.55rem;">ARQUIVO DE VÍDEOS DE TREINAMENTO:</small>
                         <div id="lista-historico-tecnicas"></div>
                     </div>
                 </div>
@@ -228,9 +228,9 @@
                     <!-- hidden select mantido para compatibilidade com funções existentes -->
                     <select id="select-turma-aluno" style="display:none;"></select>
                     <div id="preview-plano-aula"></div>
-                    <button id="btn-ver-quem-treina" onclick="ui._verQuemTreina()" style="display:none;width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.7rem;font-weight:700;cursor:pointer;margin-top:6px;">👀 Ver quem vai treinar</button>
+                    <button id="btn-ver-quem-treina" onclick="ui._verQuemTreina()" style="display:none;width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.7rem;font-weight:700;cursor:pointer;margin-top:6px;">👀 <span id="txt-who-trains">Ver quem vai treinar</span></button>
                     <div id="area-quem-treina" style="display:none; background:#0f172a; padding:12px; border-radius:10px; margin:12px 0; border:1px solid #334155;">
-                        <small style="font-size:0.55rem; color:#64748b; display:block; font-weight:800; margin-bottom:6px;">QUEM JÁ CONFIRMOU NESSA TURMA:</small>
+                        <small id="txt-who-confirmed" style="font-size:0.55rem; color:#64748b; display:block; font-weight:800; margin-bottom:6px;">QUEM JÁ CONFIRMOU NESSA TURMA:</small>
                         <div id="quem-treina-hoje"></div>
                     </div>
                     <!-- Botão scanner QR in-app -->
@@ -331,12 +331,12 @@
 
                 <div id="wrapper-perfil-proprio" class="hidden" style="width: 100%;">
                     <button onclick="GaditasFiltros.abrirFormPerfilAlunoHome()" id="btn-meus-dados-aluno-trigger" class="btn-save" style="background: #1e293b; border: 1px solid #334155; margin: 15px 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
-                        <span><i class="fas fa-user-cog" style="color:#3b82f6; margin-right:8px; font-size:1.1rem;"></i> MEUS DADOS CADASTRAIS</span>
+                        <span><i class="fas fa-user-cog" style="color:#3b82f6; margin-right:8px; font-size:1.1rem;"></i> <span id="txt-my-data">MEUS DADOS CADASTRAIS</span></span>
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
                     <div id="home-perfil-container" class="card hidden" style="background:#1e293b; border: 1px solid #334155; padding:15px; border-radius:12px; margin-bottom:8px;"></div>
                     <button onclick="alterarSenhaToggle()" class="btn-save" style="background: #1e293b; border: 1px solid #334155; margin: 0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
-                        <span><i class="fas fa-key" style="color:#f59e0b; margin-right:8px; font-size:1.1rem;"></i> ALTERAR MINHA SENHA</span>
+                        <span><i class="fas fa-key" style="color:#f59e0b; margin-right:8px; font-size:1.1rem;"></i> <span id="txt-change-password">ALTERAR MINHA SENHA</span></span>
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
                     <div id="card-alterar-senha" class="hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-bottom:8px;">
@@ -347,7 +347,7 @@
 
                     <!-- ── IDIOMA DO APP ── -->
                     <button onclick="document.getElementById('card-selecionar-idioma').classList.toggle('hidden')" class="btn-save" style="background:#1e293b; border:1px solid #334155; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
-                        <span><i class="fas fa-globe" style="color:#38bdf8; margin-right:8px; font-size:1.1rem;"></i> <span id="txt-lang-label">🇧🇷 Português</span></span>
+                        <span><i class="fas fa-globe" style="color:#38bdf8; margin-right:8px; font-size:1.1rem;"></i> <span id="txt-lang-setting">APP LANGUAGE</span> — <span id="txt-lang-label">🇧🇷 Português</span></span>
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
                     <div id="card-selecionar-idioma" class="hidden" style="background:#1e293b; border:1px solid #334155; padding:12px; border-radius:12px; margin-bottom:8px; display:flex; gap:8px;">
@@ -358,13 +358,13 @@
 
                     <!-- ── TRANCAMENTO DE MATRÍCULA (aluno) ── -->
                     <button onclick="GaditasFiltros.solicitarTrancamento()" class="btn-save" style="background:#1e293b; border:1px solid #f59e0b44; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
-                        <span><i class="fas fa-pause-circle" style="color:#f59e0b; margin-right:8px; font-size:1.1rem;"></i> SOLICITAR TRANCAMENTO DE MATRÍCULA</span>
+                        <span><i class="fas fa-pause-circle" style="color:#f59e0b; margin-right:8px; font-size:1.1rem;"></i> <span id="txt-lock-enrollment">SOLICITAR TRANCAMENTO DE MATRÍCULA</span></span>
                         <i class="fas fa-chevron-right" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
 
                     <!-- ── RELATO DE SAÚDE (aluno) ── -->
                     <button id="btn-relato-saude-trigger" onclick="academia.toggleRelatoSaude()" class="btn-save" style="background:#1e293b; border:1px solid #f43f5e44; margin:0 0 8px 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
-                        <span><i class="fas fa-heartbeat" style="color:#f43f5e; margin-right:8px; font-size:1.1rem;"></i> ESTOU MACHUCADO / DOENTE
+                        <span><i class="fas fa-heartbeat" style="color:#f43f5e; margin-right:8px; font-size:1.1rem;"></i> <span id="txt-injured">ESTOU MACHUCADO / DOENTE</span>
                             <span id="badge-resposta-relato" class="hidden" style="background:#3b82f6; color:white; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800; animation: pulse 1.5s infinite;">💬 RESPOSTA</span>
                         </span>
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>

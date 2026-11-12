@@ -1,4 +1,205 @@
-﻿const firebaseConfig = {
+﻿// ══════════════════════════════════════════════════════════
+// INTERNACIONALIZAÇÃO (i18n) — textos visíveis ao aluno
+// ══════════════════════════════════════════════════════════
+const i18n = {
+    _lang: 'pt',
+    _loaded: false,
+
+    async init() {
+        // Tenta carregar idioma salvo do aluno (localStorage primeiro, depois Firestore)
+        try {
+            const local = localStorage.getItem('app_lang');
+            if (local) { this._lang = local; }
+        } catch(_) {}
+        this._loaded = true;
+    },
+
+    setLang(lang) {
+        this._lang = lang;
+        try { localStorage.setItem('app_lang', lang); } catch(_) {}
+        this._applyStatic();
+        // Re-renderiza a tela atual
+        if (typeof auth !== 'undefined' && auth.role === 'aluno') {
+            if (typeof academia !== 'undefined') {
+                academia.renderHome?.();
+                academia.renderRanking?.();
+            }
+        }
+    },
+
+    _applyStatic() {
+        const set = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = this.t(key); };
+        const cp = document.getElementById('txt-confirm-presence');
+        if (cp) cp.innerHTML = `<i class="fas fa-qrcode"></i> ${this.t('confirm_presence')}`;
+        set('txt-select-class', 'select_class_today');
+        set('txt-scan-qr', 'scan_qr');
+        set('txt-lang-label', 'lang_label');
+    },
+
+    t(key) {
+        return (this._strings[this._lang] || this._strings['pt'])[key] || this._strings['pt'][key] || key;
+    },
+
+    _strings: {
+        pt: {
+            // Saudação
+            'oss_welcome': 'OSS, BEM-VINDO(A)!',
+            'oss': 'OSS!',
+
+            // Home / Presença
+            'confirm_presence': 'Confirmar Presença no Treino',
+            'select_class_today': 'SELECIONE SUA TURMA DE HOJE:',
+            'no_class_today': 'Sem treinos hoje',
+            'scan_qr': 'ESCANEAR QR CODE DA TURMA',
+            'checkin_sent': 'Check-in enviado! Aguarde a aprovação do professor.',
+            'checkin_already_sent': 'Você já enviou check-in para esta turma hoje! OSS!',
+            'checkin_cancel_confirm': 'Deseja cancelar seu check-in?',
+            'checkin_cancel_error': 'Erro ao cancelar check-in.',
+            'checkin_kids_block': 'Alunos até 13 anos não podem fazer check-in nas turmas adulto.',
+            'checkin_pending': 'Check-in pendente',
+            'presence_confirmed': '✅ Presença confirmada!',
+            'presence_already': 'Presença já registrada hoje',
+
+            // Ranking
+            'ranking': 'Ranking',
+            'ranking_month': 'Ranking do Mês',
+            'no_training_month': 'Nenhum treino registrado este mês.',
+
+            // Histórico
+            'history': 'Histórico',
+            'my_history': 'Meu Histórico',
+            'no_history': 'Nenhum treino registrado.',
+            'trainings': 'treinos',
+            'this_month': 'este mês',
+
+            // Conquistas
+            'achievements': 'Conquistas',
+            'no_achievements': 'Nenhuma conquista ainda. Continue treinando!',
+
+            // Notificações / Recados
+            'notifications': 'Recados',
+            'no_notifications': 'Nenhum recado.',
+
+            // Faixa / Exame
+            'belt': 'Faixa',
+            'exam': 'Exame',
+            'exam_invite': 'Você foi convocado(a) para o exame de faixa!',
+
+            // Geral
+            'loading': 'Carregando...',
+            'close': 'Fechar',
+            'cancel': 'Cancelar',
+            'confirm': 'Confirmar',
+            'save': 'Salvar',
+            'back': 'Voltar',
+            'attendance': 'Presenças',
+            'active': 'Ativo',
+            'inactive': 'Inativo',
+            'month': 'mês',
+            'lang_label': '🇧🇷 Português',
+        },
+        en: {
+            'oss_welcome': 'WELCOME!',
+            'oss': 'OSS!',
+
+            'confirm_presence': 'Confirm Training Attendance',
+            'select_class_today': 'SELECT YOUR CLASS TODAY:',
+            'no_class_today': 'No training today',
+            'scan_qr': 'SCAN CLASS QR CODE',
+            'checkin_sent': 'Check-in sent! Wait for the instructor\'s approval.',
+            'checkin_already_sent': 'You already checked in for this class today! OSS!',
+            'checkin_cancel_confirm': 'Cancel your check-in?',
+            'checkin_cancel_error': 'Error cancelling check-in.',
+            'checkin_kids_block': 'Students under 13 cannot check in to adult classes.',
+            'checkin_pending': 'Check-in pending',
+            'presence_confirmed': '✅ Attendance confirmed!',
+            'presence_already': 'Attendance already recorded today',
+
+            'ranking': 'Ranking',
+            'ranking_month': 'Monthly Ranking',
+            'no_training_month': 'No training recorded this month.',
+
+            'history': 'History',
+            'my_history': 'My History',
+            'no_history': 'No training recorded.',
+            'trainings': 'classes',
+            'this_month': 'this month',
+
+            'achievements': 'Achievements',
+            'no_achievements': 'No achievements yet. Keep training!',
+
+            'notifications': 'Messages',
+            'no_notifications': 'No messages.',
+
+            'belt': 'Belt',
+            'exam': 'Exam',
+            'exam_invite': 'You have been invited to the belt exam!',
+
+            'loading': 'Loading...',
+            'close': 'Close',
+            'cancel': 'Cancel',
+            'confirm': 'Confirm',
+            'save': 'Save',
+            'back': 'Back',
+            'attendance': 'Attendance',
+            'active': 'Active',
+            'inactive': 'Inactive',
+            'month': 'month',
+            'lang_label': '🇺🇸 English',
+        },
+        es: {
+            'oss_welcome': '¡BIENVENIDO(A)!',
+            'oss': '¡OSS!',
+
+            'confirm_presence': 'Confirmar Asistencia al Entrenamiento',
+            'select_class_today': 'SELECCIONA TU CLASE DE HOY:',
+            'no_class_today': 'Sin entrenamientos hoy',
+            'scan_qr': 'ESCANEAR QR CODE DE LA CLASE',
+            'checkin_sent': '¡Check-in enviado! Espera la aprobación del profesor.',
+            'checkin_already_sent': '¡Ya enviaste check-in para esta clase hoy! OSS!',
+            'checkin_cancel_confirm': '¿Cancelar tu check-in?',
+            'checkin_cancel_error': 'Error al cancelar check-in.',
+            'checkin_kids_block': 'Alumnos menores de 13 años no pueden hacer check-in en clases de adultos.',
+            'checkin_pending': 'Check-in pendiente',
+            'presence_confirmed': '✅ ¡Asistencia confirmada!',
+            'presence_already': 'Asistencia ya registrada hoy',
+
+            'ranking': 'Ranking',
+            'ranking_month': 'Ranking del Mes',
+            'no_training_month': 'Sin entrenamientos registrados este mes.',
+
+            'history': 'Historial',
+            'my_history': 'Mi Historial',
+            'no_history': 'Sin entrenamientos registrados.',
+            'trainings': 'clases',
+            'this_month': 'este mes',
+
+            'achievements': 'Logros',
+            'no_achievements': 'Sin logros aún. ¡Sigue entrenando!',
+
+            'notifications': 'Mensajes',
+            'no_notifications': 'Sin mensajes.',
+
+            'belt': 'Cinturón',
+            'exam': 'Examen',
+            'exam_invite': '¡Fuiste convocado(a) al examen de cinturón!',
+
+            'loading': 'Cargando...',
+            'close': 'Cerrar',
+            'cancel': 'Cancelar',
+            'confirm': 'Confirmar',
+            'save': 'Guardar',
+            'back': 'Volver',
+            'attendance': 'Asistencias',
+            'active': 'Activo',
+            'inactive': 'Inactivo',
+            'month': 'mes',
+            'lang_label': '🇪🇸 Español',
+        }
+    }
+};
+
+const firebaseConfig = {
   apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
   authDomain: "gaditasmatriz.firebaseapp.com",
   projectId: "gaditasmatriz",
@@ -228,8 +429,10 @@ const auth = {
         }
     },
 
-    sucesso() {
+    async sucesso() {
         localStorage.setItem('gaditas_sessao', JSON.stringify({ id: this.currentUser.id, role: this.role }));
+        await i18n.init();
+        i18n._applyStatic();
         document.getElementById('screen-login').classList.add('hidden');
         document.getElementById('screen-dashboard').classList.remove('hidden');
         document.getElementById('display-user').innerText = this.currentUser.nome;
@@ -3610,12 +3813,12 @@ const academia = {
     },
 
     async cancelarMeuCheckin(checkinId) {
-        if (!confirm("Deseja cancelar seu check-in?")) return;
+        if (!confirm(i18n.t('checkin_cancel_confirm'))) return;
         try {
             await db.collection("checkins").doc(checkinId).delete();
             await this.carregarMeusCheckinsPendentes();
             await this.atualizarPresencaAntecipada();
-        } catch(e) { alert("Erro ao cancelar check-in."); }
+        } catch(e) { alert(i18n.t('checkin_cancel_error')); }
     },
 
     async alunoEnviaCheckin() {
@@ -3676,7 +3879,7 @@ const academia = {
                 .where("turma", "==", t).get();
             const inicioHoje = new Date(); inicioHoje.setHours(0,0,0,0);
             const jaPendente = snapCI.docs.some(d => d.data().data >= inicioHoje.getTime());
-            if (jaPendente) return alert("⚠️ Você já enviou check-in para esta turma hoje! OSS!");
+            if (jaPendente) return alert("⚠️ " + i18n.t('checkin_already_sent'));
 
             // 2) Verifica se já foi aprovado hoje (via QR ou aprovação anterior) no histórico
             const alunoDoc = await db.collection("alunos").doc(auth.currentUser.id).get();
@@ -3707,7 +3910,7 @@ const academia = {
             db.collection("checkins").add({ alunoId: auth.currentUser.id, alunoNome: auth.currentUser.nome, turma: t, data: agora }),
             db.collection("alunos").doc(auth.currentUser.id).update({ ultimoCheckin: agora }),
         ]);
-        alert("Check-in enviado! Aguarde a aprovação do professor."); this.atualizarPresencaAntecipada(); this.carregarMeusCheckinsPendentes();
+        alert(i18n.t('checkin_sent')); this.atualizarPresencaAntecipada(); this.carregarMeusCheckinsPendentes();
     },
 
     async renderRanking() {
@@ -3762,7 +3965,7 @@ const academia = {
                     ? `<img src="${a.fotoPerfil}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid ${cor};flex-shrink:0;cursor:pointer;" onclick="verFotoAluno('${a.fotoPerfil}','${nomeEscJJ}')">`
                     : `<div style="width:32px;height:32px;border-radius:50%;background:#334155;border:2px solid ${cor};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.85rem;">👤</div>`;
                 return `<div class="ranking-item"><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.85rem;font-weight:700;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>${fotoEl}<span style="font-weight:600;color:#cbd5e1;font-size:0.8rem;">${a.nome}</span></div><div style="text-align:right;"><b style="color:#3b82f6;font-size:0.85rem;font-weight:800;">${a._aulasRanking}</b></div></div>`;
-            }).join('') || "<small style='color:var(--text-muted);'>Nenhum treino em " + nomeMes + ".</small>";
+            }).join('') || "<small style='color:var(--text-muted);'>" + i18n.t('no_training_month') + "</small>";
         });
 
         // ── MUAY THAI — lista única (kids + adulto juntos) ───────────
@@ -3786,7 +3989,7 @@ const academia = {
                     ? `<img src="${a.fotoPerfil}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid ${cor};flex-shrink:0;cursor:pointer;" onclick="verFotoAluno('${a.fotoPerfil}','${nomeEscMT}')">`
                     : `<div style="width:32px;height:32px;border-radius:50%;background:#334155;border:2px solid ${cor};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.85rem;">👤</div>`;
                 return `<div class="ranking-item"><div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;"><span style="font-size:0.85rem;font-weight:700;flex-shrink:0;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span>${fotoEl}<span style="font-weight:600;color:#cbd5e1;font-size:0.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome}${a._tag}</span></div><div style="text-align:right;flex-shrink:0;"><b style="color:#f43f5e;font-size:0.85rem;font-weight:800;">${a._aulasRanking}</b></div></div>`;
-            }).join('') || `<small style='color:var(--text-muted);'>Nenhum treino em ${nomeMes}.</small>`;
+            }).join('') || `<small style='color:var(--text-muted);'>${i18n.t('no_training_month')}</small>`;
         }
     },
 
@@ -6107,7 +6310,7 @@ Ele voltará a ser aluno normal.`)) return;
                 <div style="background:#1e293b;border:1px solid ${corFaixa}33;border-radius:16px;padding:16px;margin-bottom:12px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                         <div>
-                            <div style="font-size:0.55rem;color:#64748b;font-weight:700;letter-spacing:1px;text-transform:uppercase;">OSS, bem-vindo(a)!</div>
+                            <div style="font-size:0.55rem;color:#64748b;font-weight:700;letter-spacing:1px;text-transform:uppercase;">${i18n.t('oss_welcome')}</div>
                             <div style="font-size:1rem;font-weight:900;color:white;margin-top:1px;">${primeiroNome} 👋</div>
                         </div>
                         <div style="text-align:right;">
@@ -6139,7 +6342,7 @@ Ele voltará a ser aluno normal.`)) return;
                 <!-- Ranking do mês -->
                 <div style="background:#1e293b;border:1px solid #f59e0b22;border-radius:14px;padding:14px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                        <div style="font-size:0.62rem;font-weight:800;color:#f59e0b;">🔥 RANKING — ${mesNome.toUpperCase()}</div>
+                        <div style="font-size:0.62rem;font-weight:800;color:#f59e0b;">🔥 ${i18n.t('ranking').toUpperCase()} — ${mesNome.toUpperCase()}</div>
                         <span style="font-size:0.55rem;color:#475569;">${rankTotal} alunos</span>
                     </div>
                     ${rankingHtml}

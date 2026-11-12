@@ -3052,10 +3052,16 @@ const academia = {
                     .get();
                 snapSubs.docs.forEach(d => {
                     const s = d.data();
-                    if (s.status !== 'ativo') return;
-                    if (s.dataFim < hojeISO) return;
+                    const dentroDoP = s.dataFim >= hojeISO;
+                    if (!dentroDoP) return;
+                    // Novo formato: coberturaDiaria
                     const cob = (s.coberturaDiaria || {})[hojeISO];
                     if (cob?.profId === auth.currentUser.id) {
+                        turmasSubstituicaoHoje.push(s.turmaLabel);
+                        return;
+                    }
+                    // Formato legado: status 'aceito' + professorSubstituindoId
+                    if (s.status === 'aceito' && s.professorSubstituindoId === auth.currentUser.id) {
                         turmasSubstituicaoHoje.push(s.turmaLabel);
                     }
                 });
@@ -22377,16 +22383,19 @@ const substituicaoProf = {
         const hoje = new Date().toISOString().split('T')[0];
         try {
             const snap = await db.collection('substituicoes')
-                .where('status', '==', 'ativo')
                 .where('dataInicio', '<=', hoje)
                 .get();
-            const ativas = snap.docs.filter(d => {
+            const validos = snap.docs.filter(d => {
                 const s = d.data();
+                if (s.dataFim < hoje) return false;
+                // Novo formato
                 const cob = (s.coberturaDiaria || {})[hoje];
-                return s.dataFim >= hoje && cob?.profId === profId && !cob.pontoValidado;
+                if (cob?.profId === profId && !cob.pontoValidado) return true;
+                // Legado
+                return s.status === 'aceito' && s.professorSubstituindoId === profId && !s.pontoValidado;
             });
-            if (!ativas.length) return;
-            this._mostrarBannerValidarPonto(ativas[0].id, ativas[0].data(), hoje);
+            if (!validos.length) return;
+            this._mostrarBannerValidarPonto(validos[0].id, validos[0].data(), hoje);
         } catch(e) { console.warn('Erro verificar sub hoje:', e); }
     },
 

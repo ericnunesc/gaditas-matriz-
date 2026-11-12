@@ -232,6 +232,93 @@ const i18n = {
             'spots': 'VAGAS',
             // Horários
             'no_training_today': 'Sem treinos hoje',
+            // Financeiro (aluno)
+            'fin_uptodate': 'MENSALIDADE EM DIA!',
+            'fin_keep_going': 'Continue assim, campeão! 💪',
+            'fin_view_history': 'VER HISTÓRICO DE PAGAMENTOS',
+            'fin_pending': 'FATURA(S) PENDENTE(S)',
+            'fin_blocked_tag': 'BLOQUEADO (VENCIDO HÁ {n} DIAS)',
+            'fin_overdue_tag': 'MENSALIDADE VENCIDA (ATRASO: {n}D)',
+            'fin_due_today': '⚡ VENCE HOJE!',
+            'fin_upcoming': '⏳ MENSALIDADE A VENCER',
+            'fin_next_invoice': '📅 PRÓXIMA FATURA',
+            'fin_invoice_amount': 'VALOR DA FATURA',
+            'fin_card': 'CARTÃO',
+            'fin_pay_first': 'Pague a fatura atual primeiro',
+            'fin_future': '+{n} fatura(s) futura(s) — próx. {date}',
+            'fin_history_loading': 'Buscando histórico...',
+            'fin_not_found': 'Atleta não localizado no Asaas.',
+            'fin_no_payments': 'Nenhum pagamento confirmado encontrado.',
+            'fin_paid_count': '{n} pagamento(s) confirmado(s):',
+            'fin_paid': 'PAGO',
+            'fin_confirmed': '💳 CONFIRMADO',
+            'fin_back': '← VOLTAR',
+            'fin_error_history': 'Erro ao carregar histórico.',
+            'fin_situation': 'SITUAÇÃO FINANCEIRA',
+            'fin_pix_scan': 'ESCANEIE O QR CODE PIX',
+            'fin_pix_copycode': 'ou use o código Pix Copia e Cola:',
+            'fin_copy_pix': 'COPIAR CÓDIGO PIX',
+            'fin_pix_key_label': 'OU PAGUE VIA CHAVE PIX:',
+            'fin_copy_key': 'COPIAR CHAVE PIX',
+            'fin_confirm_recurring': 'CONFIRMAR RECORRÊNCIA',
+            'fin_pix_error_title': 'ERRO AO GERAR PIX',
+            'fin_conn_error_title': 'FALHA NA CONEXÃO',
+            'fin_conn_error_msg': 'Não foi possível conectar ao sistema de pagamento. Verifique sua conexão e tente novamente.',
+            'fin_pix_contact': 'Se o problema persistir, entre em contato com a academia.',
+            'fin_retry': 'TENTAR NOVAMENTE',
+            'fin_modal_blocked': 'ACESSO BLOQUEADO',
+            'fin_modal_overdue': 'FATURA EM ATRASO',
+            'fin_modal_blocked_msg': 'Seu acesso ao check-in está <strong>bloqueado</strong> por inadimplência de <strong>{n} dias</strong>.<br><br>Regularize agora para voltar a treinar!',
+            'fin_modal_overdue_msg': 'Você possui fatura vencida há <strong>{n} dia{s}</strong>.<br><br>Regularize para evitar o bloqueio do seu acesso.',
+            'fin_modal_amount': 'VALOR EM ABERTO',
+            'fin_modal_pay_now': '💳 PAGAR AGORA',
+            'fin_modal_close': 'Fechar e ver depois',
+            'fin_checkin_blocked': '🛑 CHECK-IN RECUSADO!\n\nIdentificamos pendências na tua mensalidade vencidas há mais de 3 dias.\n\nPor favor, aceda à aba \'FINANCEIRO\' no menu inferior para regularizar via PIX ou Cartão e liberar o teu acesso ao tatame. OSS!',
+            // Cronômetro (Timer)
+            'timer_custom_time': '✏️ TEMPO PERSONALIZADO',
+            'timer_config_cycles': '⚙️ CONFIGURAR CICLOS',
+            'timer_num_rounds': 'Nº DE LUTAS',
+            'timer_interval': 'INTERVALO',
+            'timer_round_label': 'LUTA',
+            'timer_ready': 'PRONTO',
+            'timer_overtime_status': 'OVERTIME',
+            'timer_rest_status': 'INTERVALO',
+            'timer_fight_status': 'LUTA!',
+            'timer_overtime_end': 'FIM DO OVERTIME!',
+            'timer_end': 'FIM!',
+            'timer_rounds_done': 'LUTA{s} CONCLUÍDA{s2}',
+            'timer_close': '✕ Fechar',
+            'timer_use': '✓ Usar',
+            'timer_preset_kids': 'Infantil',
+            'timer_preset_youth': 'Juvenil',
+            'timer_preset_adult': 'Adulto',
+            'timer_preset_adv': 'Avançado',
+            'timer_preset_black': 'Faixa Preta',
+            // Pretas / Hall de Faixas Pretas
+            'blacks_hall_title': 'HALL DAS FAIXAS PRETAS',
+            'blacks_graduated_on': 'Graduado em',
+            'blacks_none': 'Nenhum faixa preta cadastrado ainda.',
+            'blacks_featured_pin': '📌 DESTAQUE',
+            'blacks_inactive': 'INATIVO',
+            'blacks_featured': '⭐ DESTAQUE',
+            'blacks_total': '{n} graduado{s}',
+            'blacks_degree': 'º GRAU',
+            'blacks_black_belt': 'FAIXA PRETA',
+            // Plano família / financeiro header
+            'fin_family_plan': 'PLANO FAMÍLIA',
+            'fin_family_managed': 'Pagamento Gerenciado pelo Titular',
+            'fin_family_holder': 'TITULAR DO PLANO:',
+            'fin_family_msg': 'Você faz parte de um plano família.<br>O pagamento é de responsabilidade do titular.',
+            'fin_my_financial': 'MEU FINANCEIRO',
+            'fin_loading_charges': 'Consultando cobranças...',
+            // Perfil — salvar
+            'profile_saved': 'Dados salvos com sucesso no teu perfil! OSS.',
+            'profile_save_error': 'Erro ao gravar alterações.',
+            // Trancamento (matrícula)
+            'lock_pending_exists': 'Você já tem uma solicitação de trancamento pendente.\nAguarde o retorno da academia.',
+            'lock_confirm': 'Deseja solicitar o trancamento da sua matrícula?\n\n• Plano mensal: trancamento sem multa\n• Outros planos: pode ser gerada multa contratual\n\nA academia entrará em contato para finalizar.',
+            'lock_sent': '✅ Solicitação enviada!\nA academia entrará em contato em breve.',
+            'lock_error': 'Erro ao enviar solicitação: ',
         },
         en: {
             'oss_welcome': 'WELCOME!', 'oss': 'OSS!',
@@ -362,6 +449,93 @@ const i18n = {
             'spots': 'SPOTS',
             // Schedule
             'no_training_today': 'No training today',
+            // Financial (student)
+            'fin_uptodate': 'MONTHLY PAYMENT UP TO DATE!',
+            'fin_keep_going': 'Keep it up, champion! 💪',
+            'fin_view_history': 'VIEW PAYMENT HISTORY',
+            'fin_pending': 'PENDING INVOICE(S)',
+            'fin_blocked_tag': 'BLOCKED (OVERDUE BY {n} DAYS)',
+            'fin_overdue_tag': 'OVERDUE PAYMENT ({n}D LATE)',
+            'fin_due_today': '⚡ DUE TODAY!',
+            'fin_upcoming': '⏳ UPCOMING PAYMENT',
+            'fin_next_invoice': '📅 NEXT INVOICE',
+            'fin_invoice_amount': 'INVOICE AMOUNT',
+            'fin_card': 'CARD',
+            'fin_pay_first': 'Pay current invoice first',
+            'fin_future': '+{n} future invoice(s) — next: {date}',
+            'fin_history_loading': 'Loading history...',
+            'fin_not_found': 'Athlete not found in Asaas.',
+            'fin_no_payments': 'No confirmed payments found.',
+            'fin_paid_count': '{n} confirmed payment(s):',
+            'fin_paid': 'PAID',
+            'fin_confirmed': '💳 CONFIRMED',
+            'fin_back': '← BACK',
+            'fin_error_history': 'Error loading history.',
+            'fin_situation': 'FINANCIAL STATUS',
+            'fin_pix_scan': 'SCAN PIX QR CODE',
+            'fin_pix_copycode': 'or use the Pix Copy and Paste code:',
+            'fin_copy_pix': 'COPY PIX CODE',
+            'fin_pix_key_label': 'OR PAY VIA PIX KEY:',
+            'fin_copy_key': 'COPY PIX KEY',
+            'fin_confirm_recurring': 'CONFIRM RECURRING',
+            'fin_pix_error_title': 'ERROR GENERATING PIX',
+            'fin_conn_error_title': 'CONNECTION FAILURE',
+            'fin_conn_error_msg': 'Could not connect to the payment system. Check your connection and try again.',
+            'fin_pix_contact': 'If the problem persists, contact the academy.',
+            'fin_retry': 'TRY AGAIN',
+            'fin_modal_blocked': 'ACCESS BLOCKED',
+            'fin_modal_overdue': 'OVERDUE INVOICE',
+            'fin_modal_blocked_msg': 'Your check-in access is <strong>blocked</strong> due to <strong>{n} days</strong> of non-payment.<br><br>Settle now to return to training!',
+            'fin_modal_overdue_msg': 'You have an invoice overdue by <strong>{n} day{s}</strong>.<br><br>Settle to avoid access being blocked.',
+            'fin_modal_amount': 'OUTSTANDING AMOUNT',
+            'fin_modal_pay_now': '💳 PAY NOW',
+            'fin_modal_close': 'Close and see later',
+            'fin_checkin_blocked': '🛑 CHECK-IN REFUSED!\n\nWe found overdue payments on your account for more than 3 days.\n\nPlease go to the \'FINANCIAL\' tab in the bottom menu to settle via PIX or Card and unlock your access to the mat. OSS!',
+            // Timer
+            'timer_custom_time': '✏️ CUSTOM TIME',
+            'timer_config_cycles': '⚙️ CONFIGURE CYCLES',
+            'timer_num_rounds': 'NO. OF ROUNDS',
+            'timer_interval': 'REST',
+            'timer_round_label': 'ROUND',
+            'timer_ready': 'READY',
+            'timer_overtime_status': 'OVERTIME',
+            'timer_rest_status': 'REST',
+            'timer_fight_status': 'ROUND!',
+            'timer_overtime_end': 'END OF OVERTIME!',
+            'timer_end': 'END!',
+            'timer_rounds_done': 'ROUND{s} COMPLETED',
+            'timer_close': '✕ Close',
+            'timer_use': '✓ Use',
+            'timer_preset_kids': 'Kids',
+            'timer_preset_youth': 'Youth',
+            'timer_preset_adult': 'Adult',
+            'timer_preset_adv': 'Advanced',
+            'timer_preset_black': 'Black Belt',
+            // Black Belts Hall
+            'blacks_hall_title': 'BLACK BELTS HALL',
+            'blacks_graduated_on': 'Graduated on',
+            'blacks_none': 'No black belts registered yet.',
+            'blacks_featured_pin': '📌 FEATURED',
+            'blacks_inactive': 'INACTIVE',
+            'blacks_featured': '⭐ FEATURED',
+            'blacks_total': '{n} graduated',
+            'blacks_degree': 'º DEGREE',
+            'blacks_black_belt': 'BLACK BELT',
+            // Family plan / financial header
+            'fin_family_plan': 'FAMILY PLAN',
+            'fin_family_managed': 'Payment Managed by Account Holder',
+            'fin_family_holder': 'ACCOUNT HOLDER:',
+            'fin_family_msg': 'You are part of a family plan.<br>Payment is the responsibility of the account holder.',
+            'fin_my_financial': 'MY FINANCES',
+            'fin_loading_charges': 'Checking charges...',
+            // Profile — save
+            'profile_saved': 'Profile saved successfully! OSS.',
+            'profile_save_error': 'Error saving changes.',
+            // Enrollment lock
+            'lock_pending_exists': 'You already have a pending enrollment lock request.\nPlease wait for the academy to respond.',
+            'lock_confirm': 'Request enrollment lock?\n\n• Monthly plan: no penalty\n• Other plans: contractual penalty may apply\n\nThe academy will contact you to finalize.',
+            'lock_sent': '✅ Request sent!\nThe academy will contact you shortly.',
+            'lock_error': 'Error sending request: ',
         },
         es: {
             'oss_welcome': '¡BIENVENIDO(A)!', 'oss': '¡OSS!',
@@ -492,6 +666,93 @@ const i18n = {
             'spots': 'PLAZAS',
             // Horarios
             'no_training_today': 'Sin entrenamientos hoy',
+            // Financiero (alumno)
+            'fin_uptodate': '¡MENSUALIDAD AL DÍA!',
+            'fin_keep_going': '¡Sigue así, campeón! 💪',
+            'fin_view_history': 'VER HISTORIAL DE PAGOS',
+            'fin_pending': 'FACTURA(S) PENDIENTE(S)',
+            'fin_blocked_tag': 'BLOQUEADO (VENCIDO HACE {n} DÍAS)',
+            'fin_overdue_tag': 'MENSUALIDAD VENCIDA (ATRASO: {n}D)',
+            'fin_due_today': '⚡ ¡VENCE HOY!',
+            'fin_upcoming': '⏳ PAGO PRÓXIMO',
+            'fin_next_invoice': '📅 PRÓXIMA FACTURA',
+            'fin_invoice_amount': 'MONTO DE LA FACTURA',
+            'fin_card': 'TARJETA',
+            'fin_pay_first': 'Pague la factura actual primero',
+            'fin_future': '+{n} factura(s) futura(s) — próx. {date}',
+            'fin_history_loading': 'Cargando historial...',
+            'fin_not_found': 'Atleta no encontrado en Asaas.',
+            'fin_no_payments': 'Ningún pago confirmado encontrado.',
+            'fin_paid_count': '{n} pago(s) confirmado(s):',
+            'fin_paid': 'PAGADO',
+            'fin_confirmed': '💳 CONFIRMADO',
+            'fin_back': '← VOLVER',
+            'fin_error_history': 'Error al cargar historial.',
+            'fin_situation': 'SITUACIÓN FINANCIERA',
+            'fin_pix_scan': 'ESCANEE EL QR CODE PIX',
+            'fin_pix_copycode': 'o usa el código Pix Copiar y Pegar:',
+            'fin_copy_pix': 'COPIAR CÓDIGO PIX',
+            'fin_pix_key_label': 'O PAGA VÍA CLAVE PIX:',
+            'fin_copy_key': 'COPIAR CLAVE PIX',
+            'fin_confirm_recurring': 'CONFIRMAR RECURRENCIA',
+            'fin_pix_error_title': 'ERROR AL GENERAR PIX',
+            'fin_conn_error_title': 'FALLO DE CONEXIÓN',
+            'fin_conn_error_msg': 'No fue posible conectar al sistema de pago. Verifica tu conexión e intenta de nuevo.',
+            'fin_pix_contact': 'Si el problema persiste, contacta a la academia.',
+            'fin_retry': 'INTENTAR DE NUEVO',
+            'fin_modal_blocked': 'ACCESO BLOQUEADO',
+            'fin_modal_overdue': 'FACTURA ATRASADA',
+            'fin_modal_blocked_msg': 'Tu acceso al check-in está <strong>bloqueado</strong> por <strong>{n} días</strong> de falta de pago.<br><br>¡Regulariza ahora para volver a entrenar!',
+            'fin_modal_overdue_msg': 'Tienes una factura vencida hace <strong>{n} día{s}</strong>.<br><br>Regulariza para evitar que se bloquee tu acceso.',
+            'fin_modal_amount': 'MONTO PENDIENTE',
+            'fin_modal_pay_now': '💳 PAGAR AHORA',
+            'fin_modal_close': 'Cerrar y ver después',
+            'fin_checkin_blocked': '🛑 ¡CHECK-IN RECHAZADO!\n\nEncontramos pagos atrasados en tu cuenta de más de 3 días.\n\nPor favor, ve a la pestaña \'FINANCIERO\' en el menú inferior para regularizar vía PIX o Tarjeta y desbloquear tu acceso al tatami. ¡OSS!',
+            // Cronómetro (Timer)
+            'timer_custom_time': '✏️ TIEMPO PERSONALIZADO',
+            'timer_config_cycles': '⚙️ CONFIGURAR CICLOS',
+            'timer_num_rounds': 'Nº DE COMBATES',
+            'timer_interval': 'DESCANSO',
+            'timer_round_label': 'COMBATE',
+            'timer_ready': 'LISTO',
+            'timer_overtime_status': 'OVERTIME',
+            'timer_rest_status': 'DESCANSO',
+            'timer_fight_status': '¡COMBATE!',
+            'timer_overtime_end': '¡FIN DEL OVERTIME!',
+            'timer_end': '¡FIN!',
+            'timer_rounds_done': 'COMBATE{s} COMPLETADO{s2}',
+            'timer_close': '✕ Cerrar',
+            'timer_use': '✓ Usar',
+            'timer_preset_kids': 'Infantil',
+            'timer_preset_youth': 'Juvenil',
+            'timer_preset_adult': 'Adulto',
+            'timer_preset_adv': 'Avanzado',
+            'timer_preset_black': 'Cinturón Negro',
+            // Salón de Cinturones Negros
+            'blacks_hall_title': 'SALÓN DE CINTURONES NEGROS',
+            'blacks_graduated_on': 'Graduado el',
+            'blacks_none': 'Ningún cinturón negro registrado aún.',
+            'blacks_featured_pin': '📌 DESTACADO',
+            'blacks_inactive': 'INACTIVO',
+            'blacks_featured': '⭐ DESTACADO',
+            'blacks_total': '{n} graduado{s}',
+            'blacks_degree': 'º GRADO',
+            'blacks_black_belt': 'CINTURÓN NEGRO',
+            // Plan familia / financiero header
+            'fin_family_plan': 'PLAN FAMILIA',
+            'fin_family_managed': 'Pago Gestionado por el Titular',
+            'fin_family_holder': 'TITULAR DEL PLAN:',
+            'fin_family_msg': 'Eres parte de un plan familiar.<br>El pago es responsabilidad del titular.',
+            'fin_my_financial': 'MIS FINANZAS',
+            'fin_loading_charges': 'Consultando cobros...',
+            // Perfil — guardar
+            'profile_saved': '¡Datos guardados con éxito! OSS.',
+            'profile_save_error': 'Error al guardar cambios.',
+            // Congelamiento de matrícula
+            'lock_pending_exists': 'Ya tienes una solicitud de congelamiento pendiente.\nAguarda la respuesta de la academia.',
+            'lock_confirm': '¿Solicitar congelamiento de matrícula?\n\n• Plan mensual: sin multa\n• Otros planes: puede aplicar multa contractual\n\nLa academia se pondrá en contacto contigo.',
+            'lock_sent': '✅ ¡Solicitud enviada!\nLa academia te contactará en breve.',
+            'lock_error': 'Error al enviar solicitud: ',
         }
     }
 };
@@ -4164,7 +4425,7 @@ const academia = {
             const estahInadimplente = await GaditasFiltros.verificarBloqueioInadimplencia(auth.currentUser.email);
             if (botaoCheckin) { botaoCheckin.innerText = botaoOriginalTxt; botaoCheckin.disabled = false; }
             if (estahInadimplente) {
-                alert("🛑 CHECK-IN RECUSADO!\n\nIdentificamos pendências na tua mensalidade vencidas há mais de 3 dias.\n\nPor favor, aceda à aba 'FINANCEIRO' no menu inferior para regularizar via PIX ou Cartão e liberar o teu acesso ao tatame. OSS!");
+                alert(i18n.t('fin_checkin_blocked'));
                 return;
             }
         }
@@ -23334,13 +23595,13 @@ const cronometro = {
     _timer: null, _segundos: 0, _rodando: false,
     _tempoSel: 300, _overtime: false,
     _cicloAtual: 0, _totalCiclos: 1, _intervaloSeg: 60, _emIntervalo: false,
-    _tempos: [
-        { label: 'Infantil',    s: 180, cor: '#22c55e' },
-        { label: 'Juvenil',     s: 240, cor: '#3b82f6' },
-        { label: 'Adulto',      s: 300, cor: '#a855f7' },
-        { label: 'Avançado',    s: 360, cor: '#f59e0b' },
-        { label: 'Faixa Preta', s: 480, cor: '#94a3b8' },
-    ],
+    get _tempos() { return [
+        { label: i18n.t('timer_preset_kids'),  s: 180, cor: '#22c55e' },
+        { label: i18n.t('timer_preset_youth'), s: 240, cor: '#3b82f6' },
+        { label: i18n.t('timer_preset_adult'), s: 300, cor: '#a855f7' },
+        { label: i18n.t('timer_preset_adv'),   s: 360, cor: '#f59e0b' },
+        { label: i18n.t('timer_preset_black'), s: 480, cor: '#94a3b8' },
+    ]; },
 
     abrir() {
         document.getElementById('modal-cronometro')?.remove();
@@ -23364,7 +23625,7 @@ const cronometro = {
 
             <!-- Tempo personalizado (oculto por padrão) -->
             <div id="cron-custom-panel" style="display:none;background:#0f172a;border:1px solid #38bdf833;border-radius:12px;padding:12px;margin-bottom:10px;">
-                <div style="font-size:0.55rem;font-weight:800;color:#38bdf8;letter-spacing:1px;margin-bottom:10px;">✏️ TEMPO PERSONALIZADO</div>
+                <div style="font-size:0.55rem;font-weight:800;color:#38bdf8;letter-spacing:1px;margin-bottom:10px;">${i18n.t('timer_custom_time')}</div>
                 <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
                     <button onclick="cronometro._adjCustomTempo(-30)" style="width:44px;height:44px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:white;font-size:1.2rem;cursor:pointer;font-weight:700;">−</button>
                     <span id="cron-custom-display" style="font-size:2rem;font-weight:900;color:#38bdf8;font-family:monospace;min-width:80px;text-align:center;">${this._fmt(this._tempoSel)}</span>
@@ -23373,16 +23634,16 @@ const cronometro = {
                 <div style="display:flex;gap:6px;justify-content:center;margin-top:10px;">
                     <button onclick="cronometro._adjCustomTempo(-60)" style="padding:5px 10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#64748b;font-size:0.6rem;font-weight:700;cursor:pointer;">−1min</button>
                     <button onclick="cronometro._adjCustomTempo(60)" style="padding:5px 10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#64748b;font-size:0.6rem;font-weight:700;cursor:pointer;">+1min</button>
-                    <button onclick="cronometro._confirmarCustom()" style="padding:5px 14px;border-radius:8px;border:none;background:#38bdf8;color:#000;font-size:0.6rem;font-weight:800;cursor:pointer;">✓ Usar</button>
+                    <button onclick="cronometro._confirmarCustom()" style="padding:5px 14px;border-radius:8px;border:none;background:#38bdf8;color:#000;font-size:0.6rem;font-weight:800;cursor:pointer;">${i18n.t('timer_use')}</button>
                 </div>
             </div>
 
             <!-- Configurações: ciclos e intervalo -->
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px;margin-bottom:14px;">
-                <div style="font-size:0.55rem;font-weight:800;color:#64748b;letter-spacing:1px;margin-bottom:10px;">⚙️ CONFIGURAR CICLOS</div>
+                <div style="font-size:0.55rem;font-weight:800;color:#64748b;letter-spacing:1px;margin-bottom:10px;">${i18n.t('timer_config_cycles')}</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <div>
-                        <div style="font-size:0.55rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">Nº DE LUTAS</div>
+                        <div style="font-size:0.55rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">${i18n.t('timer_num_rounds')}</div>
                         <div style="display:flex;align-items:center;gap:6px;">
                             <button onclick="cronometro._adjCiclos(-1)" style="width:28px;height:28px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;font-size:1rem;cursor:pointer;font-weight:700;">−</button>
                             <span id="cron-ciclos-val" style="font-size:1.2rem;font-weight:900;color:white;min-width:24px;text-align:center;">${this._totalCiclos}</span>
@@ -23390,7 +23651,7 @@ const cronometro = {
                         </div>
                     </div>
                     <div>
-                        <div style="font-size:0.55rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">INTERVALO</div>
+                        <div style="font-size:0.55rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">${i18n.t('timer_interval')}</div>
                         <div style="display:flex;align-items:center;gap:6px;">
                             <button onclick="cronometro._adjIntervalo(-30)" style="width:28px;height:28px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;font-size:0.75rem;cursor:pointer;font-weight:700;">−</button>
                             <span id="cron-intervalo-val" style="font-size:0.9rem;font-weight:900;color:white;min-width:36px;text-align:center;">${this._fmt(this._intervaloSeg)}</span>
@@ -23402,9 +23663,9 @@ const cronometro = {
 
             <!-- Display principal -->
             <div style="text-align:center;margin-bottom:12px;">
-                <div id="cron-ciclo-label" style="font-size:0.65rem;font-weight:800;color:#64748b;letter-spacing:2px;margin-bottom:4px;">LUTA 1 / ${this._totalCiclos}</div>
+                <div id="cron-ciclo-label" style="font-size:0.65rem;font-weight:800;color:#64748b;letter-spacing:2px;margin-bottom:4px;">${this._totalCiclos > 1 ? `${i18n.t('timer_round_label')} 1 / ${this._totalCiclos}` : ''}</div>
                 <div id="cron-display" style="font-size:5.5rem;font-weight:900;color:white;font-family:monospace;line-height:1;letter-spacing:4px;">${this._fmt(this._tempoSel)}</div>
-                <div id="cron-status" style="font-size:0.75rem;font-weight:800;color:#64748b;margin-top:6px;letter-spacing:2px;">PRONTO</div>
+                <div id="cron-status" style="font-size:0.75rem;font-weight:800;color:#64748b;margin-top:6px;letter-spacing:2px;">${i18n.t('timer_ready')}</div>
             </div>
 
             <!-- Barra de progresso -->
@@ -23425,7 +23686,7 @@ const cronometro = {
             </button>
             <button onclick="cronometro._fechar()"
                 style="width:100%;padding:10px;border-radius:12px;border:1px solid #334155;background:transparent;color:#475569;font-size:0.72rem;font-weight:700;cursor:pointer;">
-                ✕ Fechar
+                ${i18n.t('timer_close')}
             </button>
         </div>`;
         document.body.appendChild(modal);
@@ -23502,7 +23763,7 @@ const cronometro = {
 
     _atualizarCicloLabel() {
         const el = document.getElementById('cron-ciclo-label');
-        if (el) el.textContent = this._totalCiclos > 1 ? `LUTA ${this._cicloAtual} / ${this._totalCiclos}` : '';
+        if (el) el.textContent = this._totalCiclos > 1 ? `${i18n.t('timer_round_label')} ${this._cicloAtual} / ${this._totalCiclos}` : '';
     },
 
     _toggle() { if (this._rodando) this._parar(); else this._iniciar(); },
@@ -23513,9 +23774,9 @@ const cronometro = {
         const btn = document.getElementById('btn-cron-play'); if (btn) btn.textContent = '⏸';
         const status = document.getElementById('cron-status');
         if (status) {
-            if (this._overtime) { status.textContent = 'OVERTIME'; status.style.color = '#f59e0b'; }
-            else if (this._emIntervalo) { status.textContent = 'INTERVALO'; status.style.color = '#38bdf8'; }
-            else { status.textContent = 'LUTA!'; status.style.color = '#22c55e'; }
+            if (this._overtime) { status.textContent = i18n.t('timer_overtime_status'); status.style.color = '#f59e0b'; }
+            else if (this._emIntervalo) { status.textContent = i18n.t('timer_rest_status'); status.style.color = '#38bdf8'; }
+            else { status.textContent = i18n.t('timer_fight_status'); status.style.color = '#22c55e'; }
         }
         this._timer = setInterval(() => {
             this._segundos--;
@@ -23526,7 +23787,7 @@ const cronometro = {
                 this._parar();
                 if (this._overtime) {
                     this._tocarApito('fim');
-                    this._setStatus('FIM DO OVERTIME!', '#f43f5e');
+                    this._setStatus(i18n.t('timer_overtime_end'), '#f43f5e');
                     return;
                 }
                 if (this._emIntervalo) {
@@ -23556,7 +23817,7 @@ const cronometro = {
                         const d = document.getElementById('cron-display'); if(d) d.style.color = 'white';
                         setTimeout(() => { if (document.getElementById('cron-display')) this._iniciar(); }, 1500);
                     } else {
-                        this._setStatus(`FIM! ${this._totalCiclos} LUTA${this._totalCiclos>1?'S':''} CONCLUÍDA${this._totalCiclos>1?'S':''}`, '#f43f5e');
+                        this._setStatus(`${i18n.t('timer_end')} ${this._totalCiclos} ${i18n.t('timer_round_label')}${this._totalCiclos>1?'S':''} ${i18n.t('timer_rounds_done').replace('{s}',this._totalCiclos>1?'S':'').replace('{s2}',this._totalCiclos>1?'S':'')}`, '#f43f5e');
                     }
                 }
             }
@@ -23579,7 +23840,7 @@ const cronometro = {
         this._cicloAtual = 1; this._segundos = this._tempoSel;
         const disp = document.getElementById('cron-display');
         if (disp) { disp.textContent = this._fmt(this._segundos); disp.style.color = 'white'; }
-        this._setStatus('PRONTO', '#64748b');
+        this._setStatus(i18n.t('timer_ready'), '#64748b');
         this._atualizarCicloLabel();
         this._atualizar();
     },
@@ -25870,7 +26131,7 @@ const pretas = {
     async render() {
         const el = document.getElementById('pretas-container');
         if (!el) return;
-        el.innerHTML = `<div style="text-align:center;padding:40px;color:#475569;font-size:0.75rem;">Carregando...</div>`;
+        el.innerHTML = `<div style="text-align:center;padding:40px;color:#475569;font-size:0.75rem;">${i18n.t('loading')}</div>`;
         try {
             const snap = await db.collection('faixas_pretas').orderBy('dataGraduacao', 'asc').get();
             this._lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -25913,16 +26174,16 @@ const pretas = {
                 </div>
                 <!-- Info -->
                 <div style="padding:12px;">
-                    ${pinned ? `<div style="font-size:0.52rem;color:#3b82f6;font-weight:800;letter-spacing:1px;margin-bottom:2px;">📌 DESTAQUE</div>` : `<div style="font-size:0.75rem;color:white;font-weight:800;letter-spacing:1px;margin-bottom:2px;"># ${String(p.numero).padStart(2,'0')}</div>`}
-                    ${inativo ? `<div style="font-size:0.5rem;color:#ef4444;font-weight:800;letter-spacing:1px;margin-bottom:2px;">INATIVO</div>` : ''}
-                    ${p.destaque && !pinned ? `<div style="font-size:0.52rem;color:#f59e0b;font-weight:800;letter-spacing:1px;margin-bottom:2px;">⭐ DESTAQUE</div>` : ''}
+                    ${pinned ? `<div style="font-size:0.52rem;color:#3b82f6;font-weight:800;letter-spacing:1px;margin-bottom:2px;">${i18n.t('blacks_featured_pin')}</div>` : `<div style="font-size:0.75rem;color:white;font-weight:800;letter-spacing:1px;margin-bottom:2px;"># ${String(p.numero).padStart(2,'0')}</div>`}
+                    ${inativo ? `<div style="font-size:0.5rem;color:#ef4444;font-weight:800;letter-spacing:1px;margin-bottom:2px;">${i18n.t('blacks_inactive')}</div>` : ''}
+                    ${p.destaque && !pinned ? `<div style="font-size:0.52rem;color:#f59e0b;font-weight:800;letter-spacing:1px;margin-bottom:2px;">${i18n.t('blacks_featured')}</div>` : ''}
                     <div style="font-size:0.85rem;font-weight:800;color:white;margin-bottom:2px;letter-spacing:-0.3px;">${p.nome.toUpperCase()}</div>
-                    ${dataFmt ? `<div style="font-size:0.58rem;color:#64748b;margin-bottom:6px;">Graduado em ${dataFmt}</div>` : ''}
+                    ${dataFmt ? `<div style="font-size:0.58rem;color:#64748b;margin-bottom:6px;">${i18n.t('blacks_graduated_on')} ${dataFmt}</div>` : ''}
                     ${p.observacao ? `<div style="font-size:0.65rem;color:#94a3b8;font-style:italic;line-height:1.4;margin-bottom:6px;">"${p.observacao}"</div>` : ''}
                     <!-- Faixa visual estilo BJJ -->
                     <div style="margin-top:8px;">
                         ${ui.renderBeltJJ('Preta', p.graus || 0)}
-                        <div style="font-size:0.5rem;color:#475569;font-weight:700;margin-top:3px;letter-spacing:0.5px;">FAIXA PRETA${p.graus > 0 ? ` — ${p.graus}º GRAU` : ''}</div>
+                        <div style="font-size:0.5rem;color:#475569;font-weight:700;margin-top:3px;letter-spacing:0.5px;">${i18n.t('blacks_black_belt')}${p.graus > 0 ? ` — ${p.graus}${i18n.t('blacks_degree')}` : ''}</div>
                     </div>
                     ${isAdmin ? `
                     <div style="display:flex;gap:6px;margin-top:10px;">
@@ -25938,8 +26199,8 @@ const pretas = {
         <!-- Cabeçalho -->
         <div style="text-align:center;margin-bottom:24px;padding:20px 0 10px;">
             <div style="font-size:2rem;margin-bottom:6px;">🥋</div>
-            <div style="font-size:1.1rem;font-weight:800;color:white;letter-spacing:-0.5px;">HALL DAS FAIXAS PRETAS</div>
-            <div style="font-size:0.62rem;color:#475569;margin-top:4px;">Gaditas Academy — ${total} graduado${total !== 1 ? 's' : ''}</div>
+            <div style="font-size:1.1rem;font-weight:800;color:white;letter-spacing:-0.5px;">${i18n.t('blacks_hall_title')}</div>
+            <div style="font-size:0.62rem;color:#475569;margin-top:4px;">Gaditas Academy — ${i18n.t('blacks_total').replace('{n}',total).replace('{s}',total!==1?'s':'')}</div>
             <div style="width:60px;height:3px;background:#000;border:1px solid #334155;border-radius:2px;margin:10px auto 0;"></div>
         </div>
 
@@ -25949,7 +26210,7 @@ const pretas = {
         </button>` : ''}
 
         ${total === 0
-            ? `<div style="text-align:center;padding:40px;color:#334155;font-size:0.8rem;">Nenhum faixa preta cadastrado ainda.</div>`
+            ? `<div style="text-align:center;padding:40px;color:#334155;font-size:0.8rem;">${i18n.t('blacks_none')}</div>`
             : `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">${cards}</div>`}`;
     },
 

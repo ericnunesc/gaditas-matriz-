@@ -72,14 +72,15 @@ const GaditasModalFinanceiro = {
         const corFundo = bloqueado ? '#1a0008' : '#1c1000';
         const corBorda = bloqueado ? '#f43f5e' : '#f59e0b';
         const emoji = bloqueado ? '🔒' : '⚠️';
-        const titulo = bloqueado ? 'ACESSO BLOQUEADO' : 'FATURA EM ATRASO';
+        const titulo = bloqueado ? i18n.t('fin_modal_blocked') : i18n.t('fin_modal_overdue');
+        const s = diasAtraso > 1 ? 's' : '';
         const mensagem = bloqueado ?
-            `Seu acesso ao check-in está <strong>bloqueado</strong> por inadimplência de <strong>${diasAtraso} dias</strong>.<br><br>Regularize agora para voltar a treinar!` :
-            `Você possui fatura vencida há <strong>${diasAtraso} dia${diasAtraso > 1 ? 's' : ''}</strong>.<br><br>Regularize para evitar o bloqueio do seu acesso.`;
-        
+            i18n.t('fin_modal_blocked_msg').replace('{n}', diasAtraso) :
+            i18n.t('fin_modal_overdue_msg').replace('{n}', diasAtraso).replace('{s}', s);
+
         const valorTexto = valorDevido > 0 ?
             `<div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 12px; margin: 16px 0; text-align: center;">
-                <span style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">VALOR EM ABERTO</span>
+                <span style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">${i18n.t('fin_modal_amount')}</span>
                 <span style="font-size: 1.8rem; font-weight: 900; color: ${corPrincipal};">
                     ${valorDevido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </span>
@@ -157,7 +158,7 @@ const GaditasModalFinanceiro = {
                     cursor: pointer;
                     margin-bottom: 10px;
                     letter-spacing: 0.5px;
-                ">💳 PAGAR AGORA</button>
+                ">${i18n.t('fin_modal_pay_now')}</button>
 
                 <button onclick="GaditasModalFinanceiro.fechar()" style="
                     width: 100%;
@@ -169,7 +170,7 @@ const GaditasModalFinanceiro = {
                     font-size: 0.85rem;
                     font-weight: 600;
                     cursor: pointer;
-                ">Fechar e ver depois</button>
+                ">${i18n.t('fin_modal_close')}</button>
             </div>
         `;
         

@@ -476,9 +476,9 @@ const GaditasFiltros = {
             // Unificado e corrigido de 'city' para 'cidade' para manter consistência total com o banco
             const upData = { cpf, telefone, cep, rua, numero, complemento, bairro, cidade, estado };
             await db.collection("alunos").doc(auth.currentUser.id).update(upData);
-            alert("Dados salvos com sucesso no teu perfil! OSS.");
+            alert(i18n.t('profile_saved'));
             document.getElementById('home-perfil-container').classList.add('hidden');
-        } catch(e) { alert("Erro ao gravar alterações."); }
+        } catch(e) { alert(i18n.t('profile_save_error')); }
     },
 
     async renderTelaFinanceiroDependente() {
@@ -496,15 +496,14 @@ const GaditasFiltros = {
         conteudo.innerHTML = `
             <div style="text-align:center; padding:24px 16px; background:linear-gradient(135deg,#0c1a3a,#1e293b); border:1px solid #3b82f655; border-radius:16px;">
                 <div style="font-size:2rem; margin-bottom:10px;">👨‍👩‍👧‍👦</div>
-                <div style="font-size:0.55rem; color:#60a5fa; font-weight:800; letter-spacing:1.2px; margin-bottom:6px;">PLANO FAMÍLIA</div>
-                <div style="font-size:0.95rem; font-weight:800; color:white; margin-bottom:8px;">Pagamento Gerenciado pelo Titular</div>
+                <div style="font-size:0.55rem; color:#60a5fa; font-weight:800; letter-spacing:1.2px; margin-bottom:6px;">${i18n.t('fin_family_plan')}</div>
+                <div style="font-size:0.95rem; font-weight:800; color:white; margin-bottom:8px;">${i18n.t('fin_family_managed')}</div>
                 <div style="background:#0f172a; border-radius:10px; padding:10px 14px; margin:10px 0; text-align:left;">
-                    <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:3px;">TITULAR DO PLANO:</div>
+                    <div style="font-size:0.58rem; color:#64748b; font-weight:700; margin-bottom:3px;">${i18n.t('fin_family_holder')}</div>
                     <div style="font-size:0.85rem; font-weight:800; color:#60a5fa;">${nomeResponsavel.toUpperCase()}</div>
                 </div>
                 <div style="font-size:0.68rem; color:#475569; line-height:1.6;">
-                    Você faz parte de um plano família.<br>
-                    O pagamento é de responsabilidade do titular.
+                    ${i18n.t('fin_family_msg')}
                 </div>
             </div>`;
     },
@@ -517,15 +516,15 @@ const GaditasFiltros = {
             <div style="padding: 4px 0 18px;">
                 <div style="font-size: 0.55rem; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 3px;">Gaditas Matriz</div>
                 <div style="font-size: 1.05rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.3px;">
-                    <i class="fas fa-wallet" style="color: #3b82f6; margin-right: 8px; font-size: 0.9rem;"></i>MEU FINANCEIRO
+                    <i class="fas fa-wallet" style="color: #3b82f6; margin-right: 8px; font-size: 0.9rem;"></i>${i18n.t('fin_my_financial')}
                 </div>
             </div>
             <div style="background:#1e293b; border:1px solid #2d3f55; border-radius:20px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.4); margin-bottom:14px;">
                 <div style="height:3px; background:linear-gradient(90deg,#3b82f6,#8b5cf6);"></div>
                 <div style="padding:16px;">
-                    <div style="font-size:0.58rem; color:#64748b; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; margin-bottom:12px;">SITUAÇÃO FINANCEIRA</div>
+                    <div style="font-size:0.58rem; color:#64748b; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; margin-bottom:12px;">${i18n.t('fin_situation')}</div>
                     <div id="financeiro-loading" style="color:#64748b; text-align:center; font-size:0.82rem; padding:20px 0;">
-                        <i class="fas fa-spinner fa-spin" style="display:block; font-size:1.4rem; color:#3b82f6; margin-bottom:8px;"></i>Consultando cobranças...
+                        <i class="fas fa-spinner fa-spin" style="display:block; font-size:1.4rem; color:#3b82f6; margin-bottom:8px;"></i>${i18n.t('fin_loading_charges')}
                     </div>
                     <div id="financeiro-conteudo" class="hidden"></div>
                 </div>
@@ -543,16 +542,11 @@ const GaditasFiltros = {
         const snap = await db.collection('trancamentos_solicitacoes')
             .where('alunoId', '==', alunoId).where('status', '==', 'pendente').get();
         if (!snap.empty) {
-            alert('Você já tem uma solicitação de trancamento pendente.\nAguarde o retorno da academia.');
+            alert(i18n.t('lock_pending_exists'));
             return;
         }
 
-        const confirmar = confirm(
-            'Deseja solicitar o trancamento da sua matrícula?\n\n' +
-            '• Plano mensal: trancamento sem multa\n' +
-            '• Outros planos: pode ser gerada multa contratual\n\n' +
-            'A academia entrará em contato para finalizar.'
-        );
+        const confirmar = confirm(i18n.t('lock_confirm'));
         if (!confirmar) return;
 
         try {
@@ -566,9 +560,9 @@ const GaditasFiltros = {
                 const token = cfg.exists ? cfg.data().fcmToken : null;
                 if (token) auth._enviarPush(token, '🔒 Solicitação de Trancamento', `${alunoNome} solicitou trancamento de matrícula`);
             } catch(_) {}
-            alert('✅ Solicitação enviada!\nA academia entrará em contato em breve.');
+            alert(i18n.t('lock_sent'));
         } catch(e) {
-            alert('Erro ao enviar solicitação: ' + e.message);
+            alert(i18n.t('lock_error') + e.message);
         }
     },
 
@@ -628,7 +622,7 @@ const GaditasFiltros = {
             if (!dadosCliente.data || dadosCliente.data.length === 0) {
                 if(document.getElementById('financeiro-loading')) document.getElementById('financeiro-loading').classList.add('hidden'); 
                 conteudo.classList.remove('hidden');
-                conteudo.innerHTML = `<p style="text-align:center; color:var(--text-secondary); font-size:0.8rem; padding:15px;"><i class="fas fa-user-slash" style="color:#f59e0b; display:block; font-size:1.5rem; margin-bottom:8px;"></i>Atleta não localizado no Asaas.</p>`;
+                conteudo.innerHTML = `<p style="text-align:center; color:var(--text-secondary); font-size:0.8rem; padding:15px;"><i class="fas fa-user-slash" style="color:#f59e0b; display:block; font-size:1.5rem; margin-bottom:8px;"></i>${i18n.t('fin_not_found')}</p>`;
                 return;
             }
 
@@ -653,12 +647,12 @@ const GaditasFiltros = {
                 conteudo.innerHTML = `
                     <div style="text-align:center; padding:24px 16px; background:linear-gradient(135deg,#064e3b,#065f46); border:1px solid #10b981; border-radius:16px; margin-bottom:12px;">
                         <div style="font-size:2.2rem; margin-bottom:10px;">✅</div>
-                        <div style="font-size:0.55rem; color:#34d399; font-weight:800; letter-spacing:1.2px; margin-bottom:6px;">SITUAÇÃO FINANCEIRA</div>
-                        <div style="font-size:1.1rem; font-weight:800; color:white;">MENSALIDADE EM DIA!</div>
-                        <div style="font-size:0.72rem; color:#6ee7b7; margin-top:6px; font-weight:500;">Continue assim, campeão! 💪</div>
+                        <div style="font-size:0.55rem; color:#34d399; font-weight:800; letter-spacing:1.2px; margin-bottom:6px;">${i18n.t('fin_situation')}</div>
+                        <div style="font-size:1.1rem; font-weight:800; color:white;">${i18n.t('fin_uptodate')}</div>
+                        <div style="font-size:0.72rem; color:#6ee7b7; margin-top:6px; font-weight:500;">${i18n.t('fin_keep_going')}</div>
                     </div>
                     <button onclick="GaditasFiltros.carregarHistoricoPagamentos()" style="width:100%; padding:13px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:14px; font-size:0.75rem; font-weight:700; cursor:pointer; letter-spacing:0.3px;">
-                        <i class="fas fa-history" style="margin-right:6px;"></i>VER HISTÓRICO DE PAGAMENTOS
+                        <i class="fas fa-history" style="margin-right:6px;"></i>${i18n.t('fin_view_history')}
                     </button>`;
                 return;
             }
@@ -680,7 +674,7 @@ const GaditasFiltros = {
             });
 
             const totalLabel = this.cobrancasAbertas.length;
-            let htmlFaturas = `<div style="font-size:0.55rem; color:#f59e0b; font-weight:800; letter-spacing:0.8px; margin-bottom:14px; display:flex; align-items:center; gap:6px;"><i class="fas fa-exclamation-triangle"></i>${totalLabel} FATURA(S) PENDENTE(S)</div>`;
+            let htmlFaturas = `<div style="font-size:0.55rem; color:#f59e0b; font-weight:800; letter-spacing:0.8px; margin-bottom:14px; display:flex; align-items:center; gap:6px;"><i class="fas fa-exclamation-triangle"></i>${totalLabel} ${i18n.t('fin_pending')}</div>`;
 
             urgentes.forEach(({ c: cobranca, dias: diferencaDias }, idx) => {
                 const valorFormatado = cobranca.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -691,19 +685,19 @@ const GaditasFiltros = {
                 if (diferencaDias > 0) {
                     corFundo = "#4c0519"; corBorda = "#f43f5e"; corTextoTag = "#f43f5e";
                     if (diferencaDias > 3) {
-                        textoTag = `⚠️ BLOQUEADO (VENCIDO HÁ ${diferencaDias} DIAS)`; algumBloqueioAtivo = true;
+                        textoTag = `⚠️ ${i18n.t('fin_blocked_tag').replace('{n}',diferencaDias)}`; algumBloqueioAtivo = true;
                     } else {
-                        textoTag = `⚠️ MENSALIDADE VENCIDA (ATRASO: ${diferencaDias}D)`;
+                        textoTag = `⚠️ ${i18n.t('fin_overdue_tag').replace('{n}',diferencaDias)}`;
                     }
                 } else if (diferencaDias === 0) {
-                    corFundo = "#451a03"; corBorda = "#f59e0b"; corTextoTag = "#fbbf24"; textoTag = "⚡ VENCE HOJE!";
+                    corFundo = "#451a03"; corBorda = "#f59e0b"; corTextoTag = "#fbbf24"; textoTag = i18n.t('fin_due_today');
                 } else {
                     // A vencer (dentro de 10 dias)
                     if (isPrimeira) {
-                        corFundo = "#064e3b"; corBorda = "#10b981"; corTextoTag = "#34d399"; textoTag = "⏳ MENSALIDADE A VENCER";
+                        corFundo = "#064e3b"; corBorda = "#10b981"; corTextoTag = "#34d399"; textoTag = i18n.t('fin_upcoming');
                     } else {
                         // Próxima fatura (não é a mais urgente) — visual apagado
-                        corFundo = "#0f1f2e"; corBorda = "#1e3a5f44"; corTextoTag = "#475569"; textoTag = "📅 PRÓXIMA FATURA";
+                        corFundo = "#0f1f2e"; corBorda = "#1e3a5f44"; corTextoTag = "#475569"; textoTag = i18n.t('fin_next_invoice');
                     }
                 }
 
@@ -717,7 +711,7 @@ const GaditasFiltros = {
                         </div>
                         <div style="padding:16px 16px 14px; display:flex; justify-content:space-between; align-items:flex-end;">
                             <div>
-                                <div style="font-size:0.55rem; color:#64748b; font-weight:700; margin-bottom:4px; letter-spacing:0.5px;">VALOR DA FATURA</div>
+                                <div style="font-size:0.55rem; color:#64748b; font-weight:700; margin-bottom:4px; letter-spacing:0.5px;">${i18n.t('fin_invoice_amount')}</div>
                                 <div style="font-size:1.9rem; font-weight:800; color:white; letter-spacing:-1px; line-height:1;">${valorFormatado}</div>
                             </div>
                             <div style="background:rgba(0,0,0,0.2); border-radius:10px; padding:6px 10px; text-align:center;">
@@ -726,7 +720,7 @@ const GaditasFiltros = {
                         </div>
                         <div style="display:flex; gap:8px; padding:0 14px 8px;">
                             <button onclick="GaditasFiltros.gerarPixReal('${cobranca.id}')" style="flex:1; background:#10b981; border:none; padding:12px; color:white; font-weight:800; border-radius:12px; font-size:0.72rem; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-qrcode" style="margin-right:5px;"></i>PIX</button>
-                            <button onclick="GaditasFiltros.abrirFormularioCartaoReal('${cobranca.id}')" style="flex:1; background:#3b82f6; border:none; padding:12px; color:white; font-weight:800; border-radius:12px; font-size:0.72rem; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-credit-card" style="margin-right:5px;"></i>CARTÃO</button>
+                            <button onclick="GaditasFiltros.abrirFormularioCartaoReal('${cobranca.id}')" style="flex:1; background:#3b82f6; border:none; padding:12px; color:white; font-weight:800; border-radius:12px; font-size:0.72rem; cursor:pointer; letter-spacing:0.3px;"><i class="fas fa-credit-card" style="margin-right:5px;"></i>${i18n.t('fin_card')}</button>
                         </div>
                         ${(() => {
                             const cfg = auth.adminCreds?.linkExtraFin;
@@ -745,7 +739,7 @@ const GaditasFiltros = {
                                 <div style="font-size:0.5rem; font-weight:800; color:#475569; letter-spacing:0.8px; margin-bottom:2px;">${textoTag} · ${dataVencimento}</div>
                                 <div style="font-size:1rem; font-weight:800; color:#64748b;">${valorFormatado}</div>
                             </div>
-                            <div style="font-size:0.55rem; color:#334155; text-align:right; max-width:110px; line-height:1.4;">Pague a fatura atual primeiro</div>
+                            <div style="font-size:0.55rem; color:#334155; text-align:right; max-width:110px; line-height:1.4;">${i18n.t('fin_pay_first')}</div>
                         </div>
                     </div>`;
                 }
@@ -754,13 +748,13 @@ const GaditasFiltros = {
             // Faturas muito distantes (>10 dias): só aviso discreto
             if (futuras.length > 0) {
                 const proximaData = futuras[0].c.dueDate.split('-').reverse().join('/');
-                htmlFaturas += `<div style="text-align:center; padding:8px; font-size:0.58rem; color:#334155; font-weight:600;">+${futuras.length} fatura(s) futura(s) — próx. ${proximaData}</div>`;
+                htmlFaturas += `<div style="text-align:center; padding:8px; font-size:0.58rem; color:#334155; font-weight:600;">${i18n.t('fin_future').replace('{n}',futuras.length).replace('{date}',proximaData)}</div>`;
             }
             
             this.statusBloqueado = algumBloqueioAtivo;
             htmlFaturas += `
                 <button onclick="GaditasFiltros.carregarHistoricoPagamentos()" style="width:100%; padding:13px; background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:14px; font-size:0.75rem; font-weight:700; cursor:pointer; letter-spacing:0.3px;">
-                    <i class="fas fa-history" style="margin-right:6px;"></i>VER HISTÓRICO DE PAGAMENTOS
+                    <i class="fas fa-history" style="margin-right:6px;"></i>${i18n.t('fin_view_history')}
                 </button>`;
             conteudo.innerHTML = htmlFaturas;
         } catch (error) { console.error(error); }
@@ -770,15 +764,15 @@ const GaditasFiltros = {
     async carregarHistoricoPagamentos() {
         const conteudo = document.getElementById('financeiro-conteudo');
         if (!conteudo) return;
-        conteudo.innerHTML = `<div style="text-align:center; padding:20px; color:#64748b;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem; color:#3b82f6; display:block; margin-bottom:8px;"></i>Buscando histórico...</div>`;
+        conteudo.innerHTML = `<div style="text-align:center; padding:20px; color:#64748b;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem; color:#3b82f6; display:block; margin-bottom:8px;"></i>${i18n.t('fin_history_loading')}</div>`;
 
         try {
             const emailAtleta = auth.currentUser.email.trim();
             const resCliente = await fetch(`${this.asaasUrl}?endpoint=customers&email=${encodeURIComponent(emailAtleta)}`);
             const dadosCliente = await resCliente.json();
             if (!dadosCliente.data || dadosCliente.data.length === 0) {
-                conteudo.innerHTML = `<p style="color:#94a3b8; text-align:center; padding:15px;">Atleta não localizado no Asaas.</p>
-                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">← VOLTAR</button>`;
+                conteudo.innerHTML = `<p style="color:#94a3b8; text-align:center; padding:15px;">${i18n.t('fin_not_found')}</p>
+                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">${i18n.t('fin_back')}</button>`;
                 return;
             }
 
@@ -787,14 +781,14 @@ const GaditasFiltros = {
             const dadosPagos = await resPagos.json();
 
             if (!dadosPagos.data || dadosPagos.data.length === 0) {
-                conteudo.innerHTML = `<p style="color:#94a3b8; text-align:center; padding:15px;">Nenhum pagamento confirmado encontrado.</p>
-                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">← VOLTAR</button>`;
+                conteudo.innerHTML = `<p style="color:#94a3b8; text-align:center; padding:15px;">${i18n.t('fin_no_payments')}</p>
+                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">${i18n.t('fin_back')}</button>`;
                 return;
             }
 
             dadosPagos.data.sort((a, b) => new Date(b.paymentDate || b.dueDate) - new Date(a.paymentDate || a.dueDate));
 
-            let html = `<p style="font-size:0.8rem; color:#94a3b8; font-weight:600; margin-bottom:12px;">✅ ${dadosPagos.data.length} pagamento(s) confirmado(s):</p>`;
+            let html = `<p style="font-size:0.8rem; color:#94a3b8; font-weight:600; margin-bottom:12px;">✅ ${i18n.t('fin_paid_count').replace('{n}',dadosPagos.data.length)}</p>`;
             dadosPagos.data.forEach(p => {
                 const valor = p.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                 const dataBruta = p.paymentDate || p.dueDate;
@@ -811,16 +805,16 @@ const GaditasFiltros = {
                         </div>
                         <div style="text-align:right; flex-shrink:0;">
                             <span style="font-size:0.88rem; font-weight:800; color:#10b981; display:block;">${valor}</span>
-                            <span style="font-size:0.5rem; color:#34d399; font-weight:800; letter-spacing:0.5px;">PAGO</span>
+                            <span style="font-size:0.5rem; color:#34d399; font-weight:800; letter-spacing:0.5px;">${i18n.t('fin_paid')}</span>
                         </div>
                     </div>`;
             });
-            html += `<button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer; margin-top:8px;">← VOLTAR</button>`;
+            html += `<button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer; margin-top:8px;">${i18n.t('fin_back')}</button>`;
             conteudo.innerHTML = html;
         } catch (e) {
             console.error(e);
-            conteudo.innerHTML = `<p style="color:#f43f5e; text-align:center;">Erro ao carregar histórico.</p>
-                <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer; margin-top:8px;">← VOLTAR</button>`;
+            conteudo.innerHTML = `<p style="color:#f43f5e; text-align:center;">${i18n.t('fin_error_history')}</p>
+                <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer; margin-top:8px;">${i18n.t('fin_back')}</button>`;
         }
     },
 
@@ -855,39 +849,39 @@ const GaditasFiltros = {
                 conteudo.innerHTML = `
                     <div style="text-align:center; padding:20px; background:#4c0519; border:1px solid #f43f5e; border-radius:12px; margin-bottom:12px;">
                         <div style="font-size:1.8rem; margin-bottom:10px;">❌</div>
-                        <div style="font-size:0.8rem; color:#fda4af; font-weight:700; margin-bottom:6px;">ERRO AO GERAR PIX</div>
+                        <div style="font-size:0.8rem; color:#fda4af; font-weight:700; margin-bottom:6px;">${i18n.t('fin_pix_error_title')}</div>
                         <div style="font-size:0.72rem; color:#fecdd3;">${msgErro}</div>
-                        <div style="font-size:0.65rem; color:#94a3b8; margin-top:8px;">Se o problema persistir, entre em contato com a academia.</div>
+                        <div style="font-size:0.65rem; color:#94a3b8; margin-top:8px;">${i18n.t('fin_pix_contact')}</div>
                     </div>
-                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:10px; font-weight:700; cursor:pointer;">← VOLTAR</button>`;
+                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:10px; font-weight:700; cursor:pointer;">${i18n.t('fin_back')}</button>`;
                 return;
             }
 
             const chavePix = '8be2e00e-0342-46e4-bd20-f2147743c6c6';
             conteudo.innerHTML = `
                 <div style="text-align: center; background: #0f172a; padding: 15px; border-radius: 12px; border: 1px solid #334155;">
-                    <div style="font-size:0.6rem; color:#10b981; font-weight:800; letter-spacing:1px; margin-bottom:10px;">ESCANEIE O QR CODE PIX</div>
+                    <div style="font-size:0.6rem; color:#10b981; font-weight:800; letter-spacing:1px; margin-bottom:10px;">${i18n.t('fin_pix_scan')}</div>
                     <div style="background: white; width: 160px; height: 160px; margin: 0 auto 12px auto; padding: 10px; border-radius: 8px;"><img src="data:image/png;base64,${dadosPix.encodedImage}" style="width:100%; height:100%;"></div>
-                    <div style="font-size:0.6rem; color:#64748b; margin-bottom:6px;">ou use o código Pix Copia e Cola:</div>
+                    <div style="font-size:0.6rem; color:#64748b; margin-bottom:6px;">${i18n.t('fin_pix_copycode')}</div>
                     <input type="text" id="pix-copia-cola-real" value="${dadosPix.payload}" readonly style="margin-bottom: 8px; text-align: center; font-size: 0.7rem; background: #1e293b; border: 1px solid #334155; padding: 10px; width: 100%; border-radius: 6px; color:#fff; outline:none;">
-                    <button onclick="navigator.clipboard.writeText(document.getElementById('pix-copia-cola-real').value).then(()=>alert('Código copiado! Cole no seu banco para pagar. ✅')).catch(()=>{document.getElementById('pix-copia-cola-real').select(); document.execCommand('copy'); alert('Copiado!')});" class="btn-save" style="background:#10b981; width:100%; padding:12px; border-radius:10px; color:white; border:none; font-weight:700; cursor:pointer; margin-bottom:8px;"><i class="fas fa-copy" style="margin-right:5px;"></i>COPIAR CÓDIGO PIX</button>
+                    <button onclick="navigator.clipboard.writeText(document.getElementById('pix-copia-cola-real').value).then(()=>alert('Código copiado! Cole no seu banco para pagar. ✅')).catch(()=>{document.getElementById('pix-copia-cola-real').select(); document.execCommand('copy'); alert('Copiado!')});" class="btn-save" style="background:#10b981; width:100%; padding:12px; border-radius:10px; color:white; border:none; font-weight:700; cursor:pointer; margin-bottom:8px;"><i class="fas fa-copy" style="margin-right:5px;"></i>${i18n.t('fin_copy_pix')}</button>
                     <div style="margin:8px 0; padding:10px; background:#1e293b; border:1px solid #334155; border-radius:10px; text-align:left;">
-                        <div style="font-size:0.55rem; color:#64748b; font-weight:800; letter-spacing:0.8px; margin-bottom:4px;">OU PAGUE VIA CHAVE PIX:</div>
+                        <div style="font-size:0.55rem; color:#64748b; font-weight:800; letter-spacing:0.8px; margin-bottom:4px;">${i18n.t('fin_pix_key_label')}</div>
                         <div style="font-size:0.65rem; color:#94a3b8; word-break:break-all; margin-bottom:6px;">${chavePix}</div>
-                        <button onclick="navigator.clipboard.writeText('${chavePix}').then(()=>alert('Chave Pix copiada! ✅ Cole no campo \\'Pagar com chave\\' do seu banco.')).catch(()=>prompt('Copie a chave Pix:', '${chavePix}'));" style="width:100%; padding:8px; background:#334155; border:none; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:700; cursor:pointer;"><i class="fas fa-key" style="margin-right:4px;"></i>COPIAR CHAVE PIX</button>
+                        <button onclick="navigator.clipboard.writeText('${chavePix}').then(()=>alert('Chave Pix copiada! ✅ Cole no campo \\'Pagar com chave\\' do seu banco.')).catch(()=>prompt('Copie a chave Pix:', '${chavePix}'));" style="width:100%; padding:8px; background:#334155; border:none; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:700; cursor:pointer;"><i class="fas fa-key" style="margin-right:4px;"></i>${i18n.t('fin_copy_key')}</button>
                     </div>
-                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" class="btn-save" style="background: #334155; width:100%; padding:12px; border-radius:10px; color:white; border:none; font-weight:700; cursor:pointer;">← VOLTAR</button>
+                    <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" class="btn-save" style="background: #334155; width:100%; padding:12px; border-radius:10px; color:white; border:none; font-weight:700; cursor:pointer;">${i18n.t('fin_back')}</button>
                 </div>`;
         } catch (e) {
             console.error('[gerarPixReal]', e);
             conteudo.innerHTML = `
                 <div style="text-align:center; padding:20px; background:#4c0519; border:1px solid #f43f5e; border-radius:12px; margin-bottom:12px;">
                     <div style="font-size:1.8rem; margin-bottom:10px;">⚠️</div>
-                    <div style="font-size:0.8rem; color:#fda4af; font-weight:700; margin-bottom:6px;">FALHA NA CONEXÃO</div>
-                    <div style="font-size:0.72rem; color:#fecdd3;">Não foi possível conectar ao sistema de pagamento. Verifique sua conexão e tente novamente.</div>
+                    <div style="font-size:0.8rem; color:#fda4af; font-weight:700; margin-bottom:6px;">${i18n.t('fin_conn_error_title')}</div>
+                    <div style="font-size:0.72rem; color:#fecdd3;">${i18n.t('fin_conn_error_msg')}</div>
                 </div>
-                <button onclick="GaditasFiltros.gerarPixReal('${idCobranca}')" style="width:100%; padding:12px; background:#10b981; border:none; color:white; border-radius:10px; font-weight:700; cursor:pointer; margin-bottom:8px;"><i class="fas fa-redo" style="margin-right:5px;"></i>TENTAR NOVAMENTE</button>
-                <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:10px; font-weight:700; cursor:pointer;">← VOLTAR</button>`;
+                <button onclick="GaditasFiltros.gerarPixReal('${idCobranca}')" style="width:100%; padding:12px; background:#10b981; border:none; color:white; border-radius:10px; font-weight:700; cursor:pointer; margin-bottom:8px;"><i class="fas fa-redo" style="margin-right:5px;"></i>${i18n.t('fin_retry')}</button>
+                <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" style="width:100%; padding:12px; background:#334155; border:none; color:white; border-radius:10px; font-weight:700; cursor:pointer;">${i18n.t('fin_back')}</button>`;
         }
     },
 
@@ -902,8 +896,8 @@ const GaditasFiltros = {
                     <input type="text" id="cartao-exp-a" placeholder="AAAA" maxlength="4" style="font-size: 0.8rem; padding: 12px; background: #1e293b; border: 1px solid #334155; border-radius: 10px; color:#fff; flex: 1; outline:none; margin:0;">
                     <input type="text" id="cartao-cvv" placeholder="CVV" maxlength="4" style="font-size: 0.8rem; padding: 12px; background: #1e293b; border: 1px solid #334155; border-radius: 10px; color:#fff; flex: 1; outline:none; margin:0;">
                 </div>
-                <button onclick="GaditasFiltros.processarAssinaturaCartaoReal('${idCobranca}')" class="btn-save" style="background: #10b981; width:100%; padding:14px; border:none; border-radius:10px; color:white; font-weight:700; cursor:pointer;">CONFIRMAR RECORRÊNCIA</button>
-                <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" class="btn-save" style="background:#334155; width:100%; padding:14px; border:none; border-radius:10px; color:white; font-weight:700; cursor:pointer; margin-top:8px;">VOLTAR</button>
+                <button onclick="GaditasFiltros.processarAssinaturaCartaoReal('${idCobranca}')" class="btn-save" style="background: #10b981; width:100%; padding:14px; border:none; border-radius:10px; color:white; font-weight:700; cursor:pointer;">${i18n.t('fin_confirm_recurring')}</button>
+                <button onclick="GaditasFiltros.carregarDadosFinanceirosReal()" class="btn-save" style="background:#334155; width:100%; padding:14px; border:none; border-radius:10px; color:white; font-weight:700; cursor:pointer; margin-top:8px;">${i18n.t('fin_back')}</button>
             </div>`;
     },
 

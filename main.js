@@ -3038,14 +3038,36 @@ const academia = {
             (await Promise.all(batches)).forEach(r => r.forEach(d => { info[d.id] = d.data(); }));
         }
         const hoje = new Date().toLocaleDateString('pt-BR');
+        const hojeISO = new Date().toISOString().split('T')[0];
         const g = {};
         const toDelete = []; // docs órfãos/duplicados para limpar
         const seen = new Set(); // dedup: alunoId|turma
 
+        // Turmas cobertas por substituição hoje (professor substituto)
+        let turmasSubstituicaoHoje = [];
+        if (auth.role === 'professor' && auth.currentUser?.id) {
+            try {
+                const snapSubs = await db.collection('substituicoes')
+                    .where('status', '==', 'ativo')
+                    .where('dataInicio', '<=', hojeISO)
+                    .get();
+                snapSubs.docs.forEach(d => {
+                    const s = d.data();
+                    const cob = (s.coberturaDiaria || {})[hojeISO];
+                    if (s.dataFim >= hojeISO && cob?.profId === auth.currentUser.id) {
+                        turmasSubstituicaoHoje.push(s.turmaLabel);
+                    }
+                });
+            } catch(_) {}
+        }
+
         snap.docs.forEach(doc => {
             const c = doc.data();
             if (c.tipo === 'visual') return;
-            if (!(auth.role === 'admin' || (auth.currentUser.turmasAcesso && auth.currentUser.turmasAcesso.includes(c.turma)))) return;
+            const temAcesso = auth.role === 'admin'
+                || (auth.currentUser.turmasAcesso && auth.currentUser.turmasAcesso.includes(c.turma))
+                || turmasSubstituicaoHoje.includes(c.turma);
+            if (!temAcesso) return;
 
             // Bug 1: aluno já tem presença no histórico hoje (QR registrou no dispositivo dele)
             const al = info[c.alunoId] || {};
@@ -3154,6 +3176,8 @@ const academia = {
         }
         await db.collection("checkins").doc(cId).delete();
         this.renderCheckins(); academia.renderRanking(); academia.carregarConquistas();
+        // Se for professor substituto, mostra banner Validar Ponto após confirmar check-in
+        if (auth.role === 'professor') substituicaoProf._verificarSubstituicaoHoje(auth.currentUser.id).catch(() => {});
     },
 
     async recusarCheckin(cId) { if(confirm("Remover?")) { await db.collection("checkins").doc(cId).delete(); this.renderCheckins(); } },

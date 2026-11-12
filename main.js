@@ -8379,6 +8379,7 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
                     ? '<div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">' +
                       '<button onclick="academia.abrirEventosQR()" style="background:#1a0050; border:1px solid #8b5cf6; color:#a78bfa; padding:8px 12px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🎟️ EVENTO QR</button>' +
                       '<button onclick="academia.gerarQRCodesHorarios()" style="background:#1e3a8a; border:1px solid #3b82f6; color:#60a5fa; padding:8px 12px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">📱 QR CODES</button>' +
+                      '<button onclick="academia.abrirRestaurarGrade()" style="background:#1c0a00; border:1px solid #f97316; color:#fb923c; padding:8px 12px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">↩️ RESTAURAR</button>' +
                       '<button onclick="academia.toggleEdicaoHorarios()" style="background:' + (modoEditar ? '#334155' : '#f59e0b') + '; border:none; color:' + (modoEditar ? 'white' : '#000') + '; padding:8px 14px; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">' + (modoEditar ? '✕ FECHAR' : '✏️ EDITAR') + '</button>' +
                       '</div>'
                     : ''}
@@ -8905,6 +8906,7 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
                 });
             }
             this.gradeFirebase = grade;
+            await this._salvarBackupGrade();
             await db.collection('configuracoes').doc('horarios').set(grade);
             document.body.removeChild(ov);
             this.renderHorarios(true);
@@ -8964,7 +8966,7 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
         if (grade.desativadas[key]) delete grade.desativadas[key];
         else grade.desativadas[key] = true;
         this.gradeFirebase = grade;
-        try { await db.collection('configuracoes').doc('horarios').set(grade); }
+        try { await this._salvarBackupGrade(); await db.collection('configuracoes').doc('horarios').set(grade); }
         catch(e) { console.warn('Erro ao salvar toggle turma:', e); }
         this.renderHorarios(true);
         this.renderChamadaProf();
@@ -8992,6 +8994,7 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
         grade.nomesDisplay = nomesDisplay;
         this.gradeFirebase = grade;
         try {
+            await this._salvarBackupGrade();
             await db.collection('configuracoes').doc('horarios').set(grade);
         } catch(e) { console.warn('Erro ao salvar nomesDisplay:', e); }
         this.renderHorarios(true);
@@ -9007,6 +9010,7 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
         }
         this.gradeFirebase = grade;
         try {
+            await this._salvarBackupGrade();
             await db.collection('configuracoes').doc('horarios').set(grade);
         } catch(e) { console.warn('Erro ao salvar horário:', e); }
         this.renderHorarios(true);
@@ -9015,6 +9019,68 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
         this.renderPlanoAulaProf();
         if (typeof ui !== 'undefined') ui.atualizarTurmasDinamicas();
         if (typeof planoCal !== 'undefined' && planoCal._dia) { const c = document.getElementById('plano-aula-cal-card'); if (c) { c.innerHTML = planoCal._buildCard(); planoCal._bindTextareas?.(); } }
+    },
+
+    // ── BACKUP / RESTAURAÇÃO DA GRADE ─────────────────────────
+    async _salvarBackupGrade() {
+        try {
+            const grade = this.getGrade();
+            if (!grade) return;
+            const hoje = new Date().toISOString().split('T')[0];
+            const docId = `horarios_backup_${hoje}`;
+            const ref = db.collection('configuracoes').doc(docId);
+            const snap = await ref.get();
+            if (!snap.exists) await ref.set({ ...grade, _backupData: hoje });
+        } catch(_) {}
+    },
+
+    async abrirRestaurarGrade() {
+        const modal = document.createElement('div');
+        modal.id = 'modal-restaurar-grade';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
+            <div style="font-size:0.85rem;font-weight:800;color:#fb923c;margin-bottom:14px;">↩️ Restaurar Grade de Horários</div>
+            <div id="restaurar-lista" style="color:#94a3b8;font-size:0.72rem;text-align:center;">⏳ Buscando backups...</div>
+            <button onclick="document.getElementById('modal-restaurar-grade').remove()" style="width:100%;margin-top:14px;padding:10px;background:#334155;border:none;color:white;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.72rem;">✕ Fechar</button>
+        </div>`;
+        document.body.appendChild(modal);
+        // Busca os últimos 7 backups
+        try {
+            const hoje = new Date();
+            const checks = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(hoje); d.setDate(d.getDate() - i);
+                checks.push(d.toISOString().split('T')[0]);
+            }
+            const snaps = await Promise.all(checks.map(dt => db.collection('configuracoes').doc(`horarios_backup_${dt}`).get()));
+            const disponiveis = snaps.filter(s => s.exists).map(s => ({ id: s.id, data: s.data()._backupData || s.id.replace('horarios_backup_','') }));
+            const el = document.getElementById('restaurar-lista');
+            if (!el) return;
+            if (!disponiveis.length) { el.innerHTML = '<p style="color:#64748b;">Nenhum backup encontrado.</p>'; return; }
+            el.innerHTML = disponiveis.map(b => `
+                <div style="display:flex;justify-content:space-between;align-items:center;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 12px;margin-bottom:6px;">
+                    <span style="font-size:0.68rem;color:#e2e8f0;font-weight:700;">📅 ${b.data}</span>
+                    <button onclick="academia._confirmarRestaurar('${b.id}')" style="background:#7c2d12;border:1px solid #f97316;color:#fb923c;padding:5px 12px;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">↩️ RESTAURAR</button>
+                </div>`).join('');
+        } catch(e) {
+            const el = document.getElementById('restaurar-lista');
+            if (el) el.innerHTML = `<p style="color:#f43f5e;">Erro: ${e.message}</p>`;
+        }
+    },
+
+    async _confirmarRestaurar(docId) {
+        if (!confirm('⚠️ Isso vai substituir a grade e os QR Codes atuais pela versão do backup.\n\nTem certeza?')) return;
+        try {
+            const snap = await db.collection('configuracoes').doc(docId).get();
+            if (!snap.exists) return alert('Backup não encontrado.');
+            const backup = snap.data();
+            delete backup._backupData;
+            await db.collection('configuracoes').doc('horarios').set(backup);
+            this.gradeFirebase = backup;
+            document.getElementById('modal-restaurar-grade')?.remove();
+            this.renderHorarios(true);
+            alert('✅ Grade restaurada com sucesso!');
+        } catch(e) { alert('Erro: ' + e.message); }
     },
 
     // ── GERADOR DE QR CODES PARA IMPRESSÃO ───────────────────

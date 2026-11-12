@@ -9037,14 +9037,15 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
     async abrirRestaurarGrade() {
         const modal = document.createElement('div');
         modal.id = 'modal-restaurar-grade';
-        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
-        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:380px;">
-            <div style="font-size:0.85rem;font-weight:800;color:#fb923c;margin-bottom:14px;">↩️ Restaurar Grade de Horários</div>
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:10000;display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `<div style="width:100%;max-width:420px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <div style="font-size:0.85rem;font-weight:800;color:#fb923c;">↩️ Restaurar Horários</div>
+                <button onclick="document.getElementById('modal-restaurar-grade').remove()" style="background:#334155;border:none;color:white;padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
+            </div>
             <div id="restaurar-lista" style="color:#94a3b8;font-size:0.72rem;text-align:center;">⏳ Buscando backups...</div>
-            <button onclick="document.getElementById('modal-restaurar-grade').remove()" style="width:100%;margin-top:14px;padding:10px;background:#334155;border:none;color:white;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.72rem;">✕ Fechar</button>
         </div>`;
         document.body.appendChild(modal);
-        // Busca os últimos 7 backups
         try {
             const hoje = new Date();
             const checks = [];
@@ -9053,15 +9054,36 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
                 checks.push(d.toISOString().split('T')[0]);
             }
             const snaps = await Promise.all(checks.map(dt => db.collection('configuracoes').doc(`horarios_backup_${dt}`).get()));
-            const disponiveis = snaps.filter(s => s.exists).map(s => ({ id: s.id, data: s.data()._backupData || s.id.replace('horarios_backup_','') }));
+            const disponiveis = snaps.filter(s => s.exists);
             const el = document.getElementById('restaurar-lista');
             if (!el) return;
-            if (!disponiveis.length) { el.innerHTML = '<p style="color:#64748b;">Nenhum backup encontrado.</p>'; return; }
-            el.innerHTML = disponiveis.map(b => `
-                <div style="display:flex;justify-content:space-between;align-items:center;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 12px;margin-bottom:6px;">
-                    <span style="font-size:0.68rem;color:#e2e8f0;font-weight:700;">📅 ${b.data}</span>
-                    <button onclick="academia._confirmarRestaurar('${b.id}')" style="background:#7c2d12;border:1px solid #f97316;color:#fb923c;padding:5px 12px;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">↩️ RESTAURAR</button>
-                </div>`).join('');
+            if (!disponiveis.length) { el.innerHTML = '<p style="color:#64748b;text-align:center;">Nenhum backup encontrado.<br><small>Backups são criados automaticamente a partir da próxima edição.</small></p>'; return; }
+            const diasNomes = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+            let html = '';
+            disponiveis.forEach(snap => {
+                const backup = snap.data();
+                const dataLabel = backup._backupData || snap.id.replace('horarios_backup_','');
+                html += `<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:12px;margin-bottom:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <span style="font-size:0.72rem;font-weight:800;color:#fb923c;">📅 Backup de ${dataLabel}</span>
+                        <button onclick="academia._confirmarRestaurar('${snap.id}')" style="background:#7c2d12;border:1px solid #f97316;color:#fb923c;padding:4px 10px;border-radius:7px;font-size:0.58rem;font-weight:800;cursor:pointer;">↩️ RESTAURAR TUDO</button>
+                    </div>`;
+                for (let d = 0; d <= 6; d++) {
+                    const slots = (backup[d] || backup[String(d)] || []).filter(s => s && !s.includes('Sem treinos'));
+                    if (!slots.length) continue;
+                    html += `<div style="background:#1e293b;border-radius:8px;padding:8px 10px;margin-bottom:6px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+                            <div>
+                                <div style="font-size:0.6rem;font-weight:800;color:#818cf8;margin-bottom:4px;">${diasNomes[d]}</div>
+                                ${slots.map(s => `<div style="font-size:0.62rem;color:#94a3b8;">• ${s}</div>`).join('')}
+                            </div>
+                            <button onclick="academia._restaurarDia('${snap.id}',${d})" style="background:#1e1b4b;border:1px solid #6366f1;color:#818cf8;padding:4px 9px;border-radius:7px;font-size:0.58rem;font-weight:800;cursor:pointer;white-space:nowrap;">↩️ Só ${diasNomes[d]}</button>
+                        </div>
+                    </div>`;
+                }
+                html += `</div>`;
+            });
+            el.innerHTML = html;
         } catch(e) {
             const el = document.getElementById('restaurar-lista');
             if (el) el.innerHTML = `<p style="color:#f43f5e;">Erro: ${e.message}</p>`;
@@ -9069,7 +9091,7 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
     },
 
     async _confirmarRestaurar(docId) {
-        if (!confirm('⚠️ Isso vai substituir a grade e os QR Codes atuais pela versão do backup.\n\nTem certeza?')) return;
+        if (!confirm('⚠️ Isso vai substituir TODA a grade atual pela versão do backup.\n\nTem certeza?')) return;
         try {
             const snap = await db.collection('configuracoes').doc(docId).get();
             if (!snap.exists) return alert('Backup não encontrado.');
@@ -9079,7 +9101,30 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
             this.gradeFirebase = backup;
             document.getElementById('modal-restaurar-grade')?.remove();
             this.renderHorarios(true);
-            alert('✅ Grade restaurada com sucesso!');
+            alert('✅ Grade completa restaurada!');
+        } catch(e) { alert('Erro: ' + e.message); }
+    },
+
+    async _restaurarDia(docId, dia) {
+        const diasNomes = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+        if (!confirm(`↩️ Restaurar apenas os horários de ${diasNomes[dia]} pelo backup?\n\nOs outros dias ficam como estão.`)) return;
+        try {
+            const snap = await db.collection('configuracoes').doc(docId).get();
+            if (!snap.exists) return alert('Backup não encontrado.');
+            const backup = snap.data();
+            const grade = this.getGrade();
+            // Copia slots do dia
+            grade[dia] = backup[dia] || backup[String(dia)] || ['Sem treinos hoje'];
+            // Copia durações e limites dos slots daquele dia
+            const slots = grade[dia].filter(s => !s.includes('Sem treinos'));
+            if (backup.duracoes) { grade.duracoes = grade.duracoes || {}; slots.forEach(s => { if (backup.duracoes[s]) grade.duracoes[s] = backup.duracoes[s]; }); }
+            if (backup.limites)  { grade.limites  = grade.limites  || {}; slots.forEach(s => { if (backup.limites[s])  grade.limites[s]  = backup.limites[s];  }); }
+            if (backup.nomesDisplay) { grade.nomesDisplay = grade.nomesDisplay || {}; slots.forEach(s => { if (backup.nomesDisplay[s]) grade.nomesDisplay[s] = backup.nomesDisplay[s]; }); }
+            this.gradeFirebase = grade;
+            await db.collection('configuracoes').doc('horarios').set(grade);
+            document.getElementById('modal-restaurar-grade')?.remove();
+            this.renderHorarios(true);
+            alert(`✅ ${diasNomes[dia]} restaurado!`);
         } catch(e) { alert('Erro: ' + e.message); }
     },
 

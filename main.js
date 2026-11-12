@@ -22495,7 +22495,7 @@ const substituicaoProf = {
         try {
             const snap = await db.collection('substituicoes')
                 .where('dataInicio', '<=', hoje)
-                .get();
+                .get({ source: 'server' });
             const validos = snap.docs.filter(d => {
                 const s = d.data();
                 if (s.dataFim < hoje) return false;

@@ -22185,7 +22185,10 @@ const substituicaoProf = {
                 } else if (convHoje?.status === 'aguardando') {
                     statusHojeHtml = `<div style="background:#1c1000;border:1px solid #f59e0b;border-radius:6px;padding:5px 8px;font-size:0.6rem;color:#f59e0b;margin-bottom:6px;">⏳ Hoje: aguardando resposta do ${(s.lista||[])[convHoje.indexAtual||0]?.profNome||'—'}</div>`;
                 } else if (convHoje?.status === 'esgotado') {
-                    statusHojeHtml = `<div style="background:#1e0a0a;border:1px solid #f43f5e;border-radius:6px;padding:5px 8px;font-size:0.6rem;color:#f43f5e;margin-bottom:6px;">❌ Hoje: sem substituto disponível</div>`;
+                    statusHojeHtml = `<div style="background:#1e0a0a;border:1px solid #f43f5e;border-radius:6px;padding:5px 8px;font-size:0.6rem;color:#f43f5e;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+                        <span>❌ Hoje: todos rejeitaram</span>
+                        <button onclick="substituicaoProf._reenviarHoje('${doc.id}')" style="background:#7c2d12;border:1px solid #f97316;color:#fb923c;padding:2px 8px;border-radius:5px;font-size:0.55rem;font-weight:800;cursor:pointer;">🔄 Re-enviar</button>
+                    </div>`;
                 } else if (hoje >= s.dataInicio && hoje <= s.dataFim) {
                     statusHojeHtml = `<div style="background:#1e1b4b;border:1px solid #6366f1;border-radius:6px;padding:5px 8px;font-size:0.6rem;color:#818cf8;margin-bottom:6px;">🔄 Hoje: aguardando disparar convite</div>`;
                 }
@@ -22380,6 +22383,24 @@ const substituicaoProf = {
             token = (snapP.exists ? snapP.data().fcmToken : null) || (snapA.exists ? snapA.data().fcmToken : null);
         } catch(_) {}
         auth._enviarPush(token, '🔄 Convite de Substituição', `${turma} · ${dataDaAula}`);
+    },
+
+    // ── Admin: re-enviar convites do dia (reinicia cascata) ─
+    async _reenviarHoje(subId) {
+        if (!confirm('Re-enviar convite para o 1º professor da lista hoje?')) return;
+        const hoje = new Date().toISOString().split('T')[0];
+        try {
+            const subDoc = await db.collection('substituicoes').doc(subId).get();
+            if (!subDoc.exists) return;
+            const sub = subDoc.data();
+            // Reseta o convite do dia
+            const update = {};
+            update[`convitesDiarios.${hoje}`] = { indexAtual: 0, status: 'aguardando' };
+            await db.collection('substituicoes').doc(subId).update(update);
+            await this._notificarProximo(subId, sub.lista, 0, sub.turmaLabel, hoje);
+            await this._carregarLista();
+            alert('✅ Convite re-enviado para o 1º professor da lista.');
+        } catch(e) { alert('Erro: ' + e.message); }
     },
 
     // ── Admin: cancelar substituição ───────────────────────

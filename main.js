@@ -313,7 +313,7 @@ const auth = {
         if (this.eAluno) { academia.iniciarListenerRelatoAluno(); setTimeout(() => academia.iniciarListenerRecadosAluno(), 1500); }
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerRelatosProf();
         if (this.role === 'admin' || this.role === 'professor') academia.iniciarListenerCheckins();
-        if (this.role === 'professor') { profComms.iniciarListenerRecadosProf(); setTimeout(() => profComms.renderPainelDispensas(), 1000); setTimeout(() => profComms._verificarNotificacoesProf(), 1500); setTimeout(() => substituicaoProf.verificarConvites(), 2000); }
+        if (this.role === 'professor') { profComms.iniciarListenerRecadosProf(); setTimeout(() => profComms.renderPainelDispensas(), 1000); setTimeout(() => profComms._verificarNotificacoesProf(), 1500); setTimeout(() => substituicaoProf.iniciarListenerConvites(), 2000); }
         if (this.role === 'admin') {
             setTimeout(() => profComms.renderPainelConvocacoes(), 1500);
             setTimeout(() => profComms.verificarDispensasAdmin(), 2000);
@@ -22472,14 +22472,54 @@ const substituicaoProf = {
     },
 
     // ── Professor: verificar convites ao logar ─────────────
+    iniciarListenerConvites() {
+        if (auth.role !== 'professor' || !auth.currentUser?.id) return;
+        const profId = auth.currentUser.id;
+        // Cancela listener anterior se houver
+        if (this._listenerConvites) { this._listenerConvites(); this._listenerConvites = null; }
+        // Verifica e dispara convites do dia (uma vez ao iniciar)
+        this._verificarEDisparar().catch(() => {});
+        // Listener em tempo real nas notificações deste professor
+        this._listenerConvites = db.collection('notificacoes_substituicao')
+            .where('profId', '==', profId)
+            .onSnapshot(snap => {
+                const hoje = new Date().toISOString().split('T')[0];
+                const pendentes = snap.docs.filter(d => {
+                    const n = d.data();
+                    return n.status === 'pendente' && n.dataDaAula === hoje;
+                });
+                // Já tem modal aberto? não abre outro
+                if (document.getElementById('modal-convite-sub')) return;
+                if (!pendentes.length) {
+                    this._verificarSubstituicaoHoje(profId).catch(() => {});
+                    return;
+                }
+                const doc = pendentes[0];
+                const n = doc.data();
+                if (n.subId) {
+                    db.collection('substituicoes').doc(n.subId).get().then(subDoc => {
+                        if (!subDoc.exists || subDoc.data().status !== 'ativo') {
+                            doc.ref.update({ status: 'expirado' }).catch(() => {});
+                        } else {
+                            this._mostrarConvite(doc.id, n);
+                        }
+                    }).catch(() => {});
+                }
+            }, () => {});
+    },
+
     async verificarConvites() {
+        if (auth.role !== 'professor' || !auth.currentUser?.id) return;
+        this.iniciarListenerConvites();
+    },
+
+    // kept for internal async use
+    async _verificarConvitesAsync() {
         if (auth.role !== 'professor' || !auth.currentUser?.id) return;
         const profId = auth.currentUser.id;
         const hoje = new Date().toISOString().split('T')[0];
         try {
-            // Verifica se há substituições ativas que ainda não dispararam convite hoje
             await this._verificarEDisparar();
-            // Busca convites pendentes para este professor
             const snap = await db.collection('notificacoes_substituicao').where('profId', '==', profId).get();
             const pendentes = snap.docs.filter(d => {
                 const n = d.data();
@@ -22488,7 +22528,6 @@ const substituicaoProf = {
             if (pendentes.length) {
                 const doc = pendentes[0];
                 const n = doc.data();
-                // Confirma que a substituição ainda está ativa
                 if (n.subId) {
                     const subDoc = await db.collection('substituicoes').doc(n.subId).get();
                     if (!subDoc.exists || subDoc.data().status !== 'ativo') {
@@ -22499,7 +22538,6 @@ const substituicaoProf = {
                     }
                 }
             }
-            // Verifica se tem cobertura aceita hoje para mostrar banner
             await this._verificarSubstituicaoHoje(profId);
         } catch(e) { console.warn('Erro verificar convites sub:', e); }
     },

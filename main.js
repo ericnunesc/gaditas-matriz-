@@ -6,19 +6,34 @@ const i18n = {
     _loaded: false,
 
     async init() {
-        // Tenta carregar idioma salvo do aluno (localStorage primeiro, depois Firestore)
         try {
+            // Idioma padrão definido pelo admin (Firestore) — base para todos
+            const cfgSnap = await db.collection('configuracoes').doc('app_config').get();
+            const adminLang = cfgSnap.data()?.idiomaPadrao;
+            if (adminLang) this._lang = adminLang;
+        } catch(_) {}
+        try {
+            // Preferência individual do aluno sobrescreve o padrão do admin
             const local = localStorage.getItem('app_lang');
-            if (local) { this._lang = local; }
+            if (local) this._lang = local;
         } catch(_) {}
         this._loaded = true;
     },
 
+    async setLangAdmin(lang) {
+        // Admin muda idioma padrão global — salva no Firestore e aplica localmente
+        await db.collection('configuracoes').doc('app_config').set({ idiomaPadrao: lang }, { merge: true });
+        try { localStorage.removeItem('app_lang'); } catch(_) {}
+        this._lang = lang;
+        this._applyStatic();
+        alert('✅ Idioma padrão do app alterado para ' + this.t('lang_label') + '. Todos os alunos verão esse idioma.');
+    },
+
     setLang(lang) {
+        // Aluno muda só a própria preferência
         this._lang = lang;
         try { localStorage.setItem('app_lang', lang); } catch(_) {}
         this._applyStatic();
-        // Re-renderiza a tela atual
         if (typeof auth !== 'undefined' && auth.role === 'aluno') {
             if (typeof academia !== 'undefined') {
                 academia.renderHome?.();
@@ -7204,6 +7219,16 @@ Ele voltará a ser aluno normal.`)) return;
                     <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:4px;">ADICIONAL (opcional)</small>
                     <input type="text" id="cfg-luto-adicional" value="${auth.adminCreds?.lutoAdicional || ''}" placeholder="Ex: Pai do aluno Fulano de Tal"
                         style="${inp} margin-bottom:0;"/>
+                </div>
+                <!-- IDIOMA PADRÃO DO APP -->
+                <div style="background:#0f172a;border:1px solid #38bdf844;border-radius:10px;padding:14px;margin-top:12px;">
+                    <div style="font-size:0.75rem;font-weight:800;color:#e2e8f0;margin-bottom:4px;">🌐 IDIOMA PADRÃO DO APP</div>
+                    <div style="font-size:0.62rem;color:#64748b;margin-bottom:10px;">Define o idioma para todos os alunos. Cada aluno pode mudar em "Meus Dados".</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                        <button onclick="i18n.setLangAdmin('pt').then(()=>document.getElementById('modal-config-admin').remove())" style="padding:10px;background:#334155;border:2px solid #38bdf8;color:white;border-radius:8px;font-weight:800;font-size:0.75rem;cursor:pointer;">🇧🇷 Português</button>
+                        <button onclick="i18n.setLangAdmin('en').then(()=>document.getElementById('modal-config-admin').remove())" style="padding:10px;background:#334155;border:1px solid #475569;color:white;border-radius:8px;font-weight:800;font-size:0.75rem;cursor:pointer;">🇺🇸 English</button>
+                        <button onclick="i18n.setLangAdmin('es').then(()=>document.getElementById('modal-config-admin').remove())" style="padding:10px;background:#334155;border:1px solid #475569;color:white;border-radius:8px;font-weight:800;font-size:0.75rem;cursor:pointer;">🇪🇸 Español</button>
+                    </div>
                 </div>
                 <div style="height:10px;"></div>
                 <button onclick="academia.salvarConfigAdmin()" style="width:100%;padding:13px;background:#3b82f6;border:none;color:white;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.85rem;">💾 SALVAR CONFIGURAÇÕES</button>

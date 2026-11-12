@@ -22079,7 +22079,7 @@ _Gaditas Academy_`);
                 // Seção de substituições
                 const anoMes = `${mesRef.getFullYear()}-${String(mesRef.getMonth()+1).padStart(2,'0')}`;
                 const htmlSubs = await substituicaoProf.carregarComissaoSubstituicoes(anoMes);
-                html += htmlSubs;
+                html += `<div id="comissao-subs-bloco">${htmlSubs}</div>`;
 
                 html += `
                 <div style="background:#1c1000;border:2px solid #f59e0b;border-radius:12px;padding:14px;text-align:center;margin-top:4px;">
@@ -22666,44 +22666,150 @@ const substituicaoProf = {
     // ── Admin: seção de substituições no relatório de comissão ──
     async carregarComissaoSubstituicoes(anoMes) {
         try {
-            const [snapSubs, snapCfg] = await Promise.all([
+            const [snapSubs, snapCfg, snapAjustes] = await Promise.all([
                 db.collection('substituicoes').where('mes', '==', anoMes).get(),
-                db.collection('configuracoes').doc('substituicao_config').get()
+                db.collection('configuracoes').doc('substituicao_config').get(),
+                db.collection('configuracoes').doc(`substituicao_ajustes_${anoMes}`).get()
             ]);
             const valorPadrao = snapCfg.exists ? (snapCfg.data().valorPorAula || 0) : 0;
+            // excluidos: Set de chaves "subId|data" que o admin removeu manualmente
+            const excluidos = new Set(snapAjustes.exists ? (snapAjustes.data().excluidos || []) : []);
+            // manuais: entradas adicionadas manualmente [{profId,profNome,turmaLabel,data,valor}]
+            const manuais = snapAjustes.exists ? (snapAjustes.data().manuais || []) : [];
+
             const porProf = {};
             snapSubs.forEach(doc => {
                 const s = doc.data();
                 const cob = s.coberturaDiaria || {};
                 Object.entries(cob).forEach(([data, entry]) => {
                     if (!entry.pontoValidado || !data.startsWith(anoMes)) return;
+                    if (excluidos.has(`${doc.id}|${data}`)) return;
                     const pid = entry.profId;
                     if (!pid) return;
                     if (!porProf[pid]) porProf[pid] = { nome: entry.profNome, aulas: [] };
-                    porProf[pid].aulas.push({ turmaLabel: s.turmaLabel, data, valor: s.valorPorAula || valorPadrao });
+                    porProf[pid].aulas.push({ key: `${doc.id}|${data}`, turmaLabel: s.turmaLabel, data, valor: s.valorPorAula || valorPadrao, manual: false });
                 });
             });
-            if (!Object.keys(porProf).length) return '';
-            let html = `<div style="background:#1e1b4b;border:1px solid #4f46e5;border-radius:10px;padding:12px;margin-top:12px;">
-                <div style="font-size:0.65rem;font-weight:800;color:#818cf8;letter-spacing:1px;margin-bottom:10px;">🔄 SUBSTITUIÇÕES DO MÊS</div>`;
-            let totalSubs = 0;
-            Object.values(porProf).forEach(p => {
-                const totalProf = p.aulas.reduce((acc, a) => acc + a.valor, 0);
-                totalSubs += totalProf;
-                html += `<div style="background:#0f0f2a;border-radius:8px;padding:10px;margin-bottom:8px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                        <div style="font-size:0.68rem;font-weight:800;color:#818cf8;">${p.nome}</div>
-                        <div style="font-size:0.75rem;font-weight:900;color:#f59e0b;">R$ ${totalProf.toFixed(2)}</div>
-                    </div>
-                    ${p.aulas.map(a => `<div style="display:flex;justify-content:space-between;font-size:0.58rem;color:#64748b;margin-bottom:2px;"><span>${a.turmaLabel} · ${a.data}</span><span>R$ ${a.valor.toFixed(2)}</span></div>`).join('')}
-                </div>`;
+            manuais.forEach((m, idx) => {
+                if (!porProf[m.profId]) porProf[m.profId] = { nome: m.profNome, aulas: [] };
+                porProf[m.profId].aulas.push({ key: `manual_${idx}`, turmaLabel: m.turmaLabel, data: m.data, valor: m.valor, manual: true, idx });
             });
-            html += `<div style="display:flex;justify-content:space-between;padding:8px 4px 0;border-top:1px solid #334155;margin-top:4px;">
-                <span style="font-size:0.6rem;color:#818cf8;font-weight:800;">TOTAL SUBSTITUIÇÕES</span>
-                <span style="font-size:0.75rem;font-weight:900;color:#818cf8;">R$ ${totalSubs.toFixed(2)}</span>
-            </div></div>`;
+
+            const anoMesEsc = anoMes.replace(/"/g,'');
+            let html = `<div style="background:#1e1b4b;border:1px solid #4f46e5;border-radius:10px;padding:12px;margin-top:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <div style="font-size:0.65rem;font-weight:800;color:#818cf8;letter-spacing:1px;">🔄 SUBSTITUIÇÕES DO MÊS</div>
+                    <button onclick="substituicaoProf._adicionarSubManual('${anoMesEsc}')" style="background:#1e3a8a;border:1px solid #3b82f6;color:#60a5fa;padding:3px 9px;border-radius:6px;font-size:0.55rem;font-weight:800;cursor:pointer;">+ ADICIONAR</button>
+                </div>`;
+
+            if (!Object.keys(porProf).length) {
+                html += `<div style="font-size:0.62rem;color:#64748b;text-align:center;padding:8px;">Nenhuma substituição registrada.</div>`;
+            } else {
+                let totalSubs = 0;
+                Object.values(porProf).forEach(p => {
+                    const totalProf = p.aulas.reduce((acc, a) => acc + a.valor, 0);
+                    totalSubs += totalProf;
+                    html += `<div style="background:#0f0f2a;border-radius:8px;padding:10px;margin-bottom:8px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <div style="font-size:0.68rem;font-weight:800;color:#818cf8;">${p.nome}</div>
+                            <div style="font-size:0.75rem;font-weight:900;color:#f59e0b;">R$ ${totalProf.toFixed(2)}</div>
+                        </div>
+                        ${p.aulas.map(a => `
+                        <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.58rem;color:#64748b;margin-bottom:3px;">
+                            <span style="flex:1;">${a.manual ? '✏️ ' : ''}${a.turmaLabel} · ${a.data}</span>
+                            <span style="margin:0 8px;">R$ ${a.valor.toFixed(2)}</span>
+                            <button onclick="substituicaoProf._excluirSubComissao('${anoMesEsc}','${a.key}',${a.manual},${a.manual ? a.idx : 'null'})" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.65rem;padding:0 2px;">✕</button>
+                        </div>`).join('')}
+                    </div>`;
+                });
+                html += `<div style="display:flex;justify-content:space-between;padding:8px 4px 0;border-top:1px solid #334155;margin-top:4px;">
+                    <span style="font-size:0.6rem;color:#818cf8;font-weight:800;">TOTAL SUBSTITUIÇÕES</span>
+                    <span style="font-size:0.75rem;font-weight:900;color:#818cf8;">R$ ${totalSubs.toFixed(2)}</span>
+                </div>`;
+            }
+            html += `</div>`;
             return html;
         } catch(e) { return ''; }
+    },
+
+    async _excluirSubComissao(anoMes, key, isManual, idxManual) {
+        if (!confirm('Remover esta substituição do relatório?')) return;
+        const ref = db.collection('configuracoes').doc(`substituicao_ajustes_${anoMes}`);
+        const snap = await ref.get();
+        const data = snap.exists ? snap.data() : { excluidos: [], manuais: [] };
+        if (isManual) {
+            (data.manuais || []).splice(idxManual, 1);
+        } else {
+            data.excluidos = [...new Set([...(data.excluidos || []), key])];
+        }
+        await ref.set(data, { merge: false });
+        // Recarrega o relatório
+        const el = document.getElementById('comissao-subs-bloco');
+        if (el) el.innerHTML = await this.carregarComissaoSubstituicoes(anoMes);
+    },
+
+    async _adicionarSubManual(anoMes) {
+        // Carrega lista de professores para o select
+        const [snapProfs, snapPromovidos] = await Promise.all([
+            db.collection('professores').get(),
+            db.collection('alunos').where('role','==','professor').get()
+        ]);
+        const profs = [];
+        snapProfs.docs.forEach(d => { if (d.data().role !== 'financeiro') profs.push({ id: d.id, nome: d.data().nome }); });
+        snapPromovidos.docs.forEach(d => profs.push({ id: d.id, nome: d.data().nome }));
+        profs.sort((a,b) => a.nome.localeCompare(b.nome));
+        const opcoes = profs.map(p => `<option value="${p.id}|${p.nome.replace(/"/g,'')}">${p.nome}</option>`).join('');
+        const hoje = new Date().toISOString().split('T')[0];
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-add-sub-manual';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10001;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `<div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:360px;">
+            <div style="font-size:0.82rem;font-weight:800;color:#60a5fa;margin-bottom:14px;">+ Adicionar Substituição Manual</div>
+            <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">PROFESSOR</div>
+            <select id="asm-prof" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.75rem;margin-bottom:10px;">
+                <option value="">— Selecione —</option>${opcoes}
+            </select>
+            <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">TURMA / DESCRIÇÃO</div>
+            <input id="asm-turma" type="text" placeholder="Ex: Jiu-Jitsu Segunda 19h" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.75rem;margin-bottom:10px;box-sizing:border-box;" />
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <div style="flex:1;">
+                    <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">DATA</div>
+                    <input id="asm-data" type="date" value="${hoje}" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.75rem;box-sizing:border-box;" />
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">VALOR (R$)</div>
+                    <input id="asm-valor" type="number" min="0" step="0.01" placeholder="20.00" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.75rem;box-sizing:border-box;" />
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button onclick="substituicaoProf._salvarSubManual('${anoMes}')" style="flex:1;padding:11px;background:#1e3a8a;border:1px solid #3b82f6;color:#60a5fa;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.72rem;">✅ SALVAR</button>
+                <button onclick="document.getElementById('modal-add-sub-manual').remove()" style="flex:1;padding:11px;background:#334155;border:none;color:#e2e8f0;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.72rem;">✕ Cancelar</button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async _salvarSubManual(anoMes) {
+        const profVal = document.getElementById('asm-prof')?.value;
+        const turma = document.getElementById('asm-turma')?.value.trim();
+        const data = document.getElementById('asm-data')?.value;
+        const valorStr = document.getElementById('asm-valor')?.value;
+        if (!profVal) return alert('Selecione o professor.');
+        if (!turma) return alert('Informe a turma/descrição.');
+        if (!data) return alert('Informe a data.');
+        const valor = parseFloat(valorStr);
+        if (isNaN(valor) || valor < 0) return alert('Valor inválido.');
+        const [profId, profNome] = profVal.split('|');
+        const ref = db.collection('configuracoes').doc(`substituicao_ajustes_${anoMes}`);
+        const snap = await ref.get();
+        const docData = snap.exists ? snap.data() : { excluidos: [], manuais: [] };
+        if (!docData.manuais) docData.manuais = [];
+        docData.manuais.push({ profId, profNome, turmaLabel: turma, data, valor });
+        await ref.set(docData, { merge: false });
+        document.getElementById('modal-add-sub-manual')?.remove();
+        const el = document.getElementById('comissao-subs-bloco');
+        if (el) el.innerHTML = await this.carregarComissaoSubstituicoes(anoMes);
     },
 };
 

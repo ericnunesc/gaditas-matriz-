@@ -22385,21 +22385,82 @@ const substituicaoProf = {
         auth._enviarPush(token, '🔄 Convite de Substituição', `${turma} · ${dataDaAula}`);
     },
 
-    // ── Admin: re-enviar convites do dia (reinicia cascata) ─
+    // ── Admin: re-enviar convites do dia (abre modal para editar lista) ─
     async _reenviarHoje(subId) {
-        if (!confirm('Re-enviar convite para o 1º professor da lista hoje?')) return;
+        const subDoc = await db.collection('substituicoes').doc(subId).get();
+        if (!subDoc.exists) return;
+        const sub = subDoc.data();
+
+        const [snapProfs, snapPromovidos] = await Promise.all([
+            db.collection('professores').get(),
+            db.collection('alunos').where('role','==','professor').get()
+        ]);
+        const profs = [];
+        snapProfs.docs.forEach(d => { if (d.data().role !== 'financeiro') profs.push({ id: d.id, nome: d.data().nome }); });
+        snapPromovidos.docs.forEach(d => profs.push({ id: d.id, nome: d.data().nome }));
+        profs.sort((a,b) => a.nome.localeCompare(b.nome));
+        const opcoes = profs.map(p => `<option value="${p.id}|${p.nome.replace(/"/g,'')}">${p.nome}</option>`).join('');
+
+        this._listaReenvio = (sub.lista || []).map(p => ({ profId: p.profId, profNome: p.profNome }));
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-reenviar-sub';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;">
+                <div style="font-size:0.82rem;font-weight:800;color:#fb923c;margin-bottom:4px;">🔄 Re-enviar Convites</div>
+                <div style="font-size:0.6rem;color:#64748b;margin-bottom:14px;">${sub.turmaLabel}</div>
+                <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">LISTA (ordem de prioridade)</div>
+                <div id="reenv-lista" style="margin-bottom:8px;"></div>
+                <select id="reenv-sel" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.78rem;margin-bottom:6px;">
+                    <option value="">— Adicionar professor —</option>${opcoes}
+                </select>
+                <button onclick="substituicaoProf._adicionarReenvio()" style="width:100%;padding:8px;background:#1e1b4b;border:1px solid #6366f1;color:#818cf8;border-radius:8px;font-size:0.68rem;font-weight:700;cursor:pointer;margin-bottom:14px;">+ Adicionar</button>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="substituicaoProf._confirmarReenvio('${subId}')" style="flex:1;padding:11px;background:#7c2d12;border:1px solid #f97316;color:#fb923c;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.72rem;">🔄 ENVIAR</button>
+                    <button onclick="document.getElementById('modal-reenviar-sub').remove()" style="flex:1;padding:11px;background:#334155;border:none;color:#e2e8f0;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.72rem;">✕ Cancelar</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        this._renderListaReenvio();
+    },
+
+    _adicionarReenvio() {
+        const sel = document.getElementById('reenv-sel');
+        if (!sel?.value) return;
+        const [id, nome] = sel.value.split('|');
+        if (this._listaReenvio.some(p => p.profId === id)) { alert('Já está na lista.'); return; }
+        this._listaReenvio.push({ profId: id, profNome: nome });
+        this._renderListaReenvio();
+        sel.value = '';
+    },
+
+    _renderListaReenvio() {
+        const el = document.getElementById('reenv-lista');
+        if (!el) return;
+        if (!this._listaReenvio.length) { el.innerHTML = '<div style="font-size:0.6rem;color:#64748b;text-align:center;padding:6px;">Lista vazia.</div>'; return; }
+        el.innerHTML = this._listaReenvio.map((p, i) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;background:#0f172a;border:1px solid #334155;border-radius:7px;padding:7px 10px;margin-bottom:4px;">
+                <span style="font-size:0.65rem;color:#818cf8;font-weight:700;">${i+1}º</span>
+                <span style="flex:1;font-size:0.65rem;color:#e2e8f0;margin:0 8px;">${p.profNome}</span>
+                <button onclick="substituicaoProf._listaReenvio.splice(${i},1);substituicaoProf._renderListaReenvio()" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.7rem;">✕</button>
+            </div>`).join('');
+    },
+
+    async _confirmarReenvio(subId) {
+        if (!this._listaReenvio.length) return alert('Adicione ao menos um professor.');
         const hoje = new Date().toISOString().split('T')[0];
         try {
-            const subDoc = await db.collection('substituicoes').doc(subId).get();
-            if (!subDoc.exists) return;
-            const sub = subDoc.data();
-            // Reseta o convite do dia
             const update = {};
             update[`convitesDiarios.${hoje}`] = { indexAtual: 0, status: 'aguardando' };
+            update['lista'] = this._listaReenvio;
             await db.collection('substituicoes').doc(subId).update(update);
-            await this._notificarProximo(subId, sub.lista, 0, sub.turmaLabel, hoje);
+            const subDoc = await db.collection('substituicoes').doc(subId).get();
+            const sub = subDoc.data();
+            await this._notificarProximo(subId, this._listaReenvio, 0, sub.turmaLabel, hoje);
+            document.getElementById('modal-reenviar-sub')?.remove();
             await this._carregarLista();
-            alert('✅ Convite re-enviado para o 1º professor da lista.');
+            alert('✅ Convite enviado para o 1º professor da nova lista.');
         } catch(e) { alert('Erro: ' + e.message); }
     },
 

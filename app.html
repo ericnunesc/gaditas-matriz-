@@ -167,7 +167,7 @@
                 </div>
 
                 <div id="mural-conquistas" class="card hidden" style="background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-                    <div class="card-title" style="color: #f59e0b; font-weight: 800; font-size: 0.85rem; margin-bottom: 10px;"><i class="fas fa-bullseye"></i> Conquistas & Notificações do Dia</div>
+                    <div class="card-title" style="color: #f59e0b; font-weight: 800; font-size: 0.85rem; margin-bottom: 10px;"><i class="fas fa-bullseye"></i> <span id="txt-conquistas-day">Conquistas & Notificações do Dia</span></div>
                     <div id="lista-conquistas" class="list-container"></div>
                 </div>
 
@@ -277,9 +277,9 @@
                 <!-- ══ PRESENÇA VISUAL DO ADMIN NAS TURMAS ══ -->
                 <div id="card-presenca-admin" style="display:none; background:#1e293b; border:1px solid #f59e0b44; border-radius:12px; padding:15px; margin-top:15px;">
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-                        <span style="font-size:0.85rem; font-weight:800; color:#f59e0b;">🥋 MINHA PRESENÇA NA AULA HOJE</span>
+                        <span id="txt-my-attendance-today" style="font-size:0.85rem; font-weight:800; color:#f59e0b;">🥋 MINHA PRESENÇA NA AULA HOJE</span>
                     </div>
-                    <small style="color:#94a3b8; font-size:0.65rem; display:block; margin-bottom:10px;">Marque as turmas que você estará presente. Os alunos verão seu nome destacado no "quem treina hoje". <strong style="color:#f59e0b;">Não conta como frequência.</strong></small>
+                    <small id="txt-attendance-hint" style="color:#94a3b8; font-size:0.65rem; display:block; margin-bottom:10px;">Marque as turmas que você estará presente. Os alunos verão seu nome destacado no "quem treina hoje". Não conta como frequência.</small>
                     <div id="lista-turmas-presenca-admin" style="display:flex; flex-direction:column; gap:8px;"></div>
                 </div>
 
@@ -288,7 +288,7 @@
                 <div id="painel-recados-prof" style="display:none;margin-top:8px;"></div>
 
                 <div id="area-professor-checkin" class="card hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-top:15px;">
-                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-user-check"></i> Check-ins Pendentes no Tatame</div>
+                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-user-check"></i> <span id="txt-pending-checkins-mat">Check-ins Pendentes no Tatame</span></div>
                     <div id="list-checkins" class="list-container"></div>
                 </div>
 
@@ -296,15 +296,15 @@
                     <div class="card-title" id="titulo-ranking-jj" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-trophy"></i> 🥋 Top 5 Jiu-Jitsu</div>
                     <div class="tabs-ranking-container">
                         <div class="ranking-column">
-                            <h4 style="font-size:0.65rem; color:#94a3b8; margin-bottom:8px;">KIDS 1 (Até 8 anos)</h4>
+                            <h4 id="txt-ranking-kids1-label" style="font-size:0.65rem; color:#94a3b8; margin-bottom:8px;">KIDS 1 (Até 8 anos)</h4>
                             <div id="lista-ranking-kids1"></div>
                         </div>
                         <div class="ranking-column">
-                            <h4 style="font-size:0.65rem; color:#94a3b8; margin-bottom:8px;">KIDS 2 (9 a 14 anos)</h4>
+                            <h4 id="txt-ranking-kids2-label" style="font-size:0.65rem; color:#94a3b8; margin-bottom:8px;">KIDS 2 (9 a 14 anos)</h4>
                             <div id="lista-ranking-kids2"></div>
                         </div>
                         <div class="ranking-column">
-                            <h4 style="font-size:0.65rem; color:#94a3b8; margin-bottom:8px;">ADULTO (15+ anos)</h4>
+                            <h4 id="txt-ranking-adult-label" style="font-size:0.65rem; color:#94a3b8; margin-bottom:8px;">ADULTO (15+ anos)</h4>
                             <div id="lista-ranking-adulto"></div>
                         </div>
                     </div>
@@ -318,7 +318,7 @@
 
                 <!-- ══ MURAL DE DEPOIMENTOS (público) ══ -->
                 <button id="btn-depoimentos-trigger" onclick="academia.toggleDepoimentos()" style="background:#1e293b; border:1px solid #f59e0b44; margin:12px 0 0 0; width:100%; border-radius:12px; color:white; font-weight:700; padding:14px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; outline:none;">
-                    <span><i class="fas fa-star" style="color:#f59e0b; margin-right:8px; font-size:1.1rem;"></i> DEPOIMENTOS &amp; FEEDBACK
+                    <span><i class="fas fa-star" style="color:#f59e0b; margin-right:8px; font-size:1.1rem;"></i> <span id="txt-testimonials-btn">DEPOIMENTOS &amp; FEEDBACK</span>
                         <span id="badge-depoimentos-count" class="hidden" style="background:#f59e0b; color:#000; font-size:0.55rem; padding:2px 7px; border-radius:10px; margin-left:8px; font-weight:800;">0</span>
                     </span>
                     <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>

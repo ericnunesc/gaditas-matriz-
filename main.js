@@ -41,17 +41,29 @@ const i18n = {
         try { localStorage.removeItem('app_lang'); } catch(_) {}
         this._lang = lang;
         this._applyStatic();
-        if (typeof academia !== 'undefined') { academia.renderDashboardAluno?.(); academia.renderRanking?.(); }
+        this._reRenderCurrent();
     },
 
     setLang(lang) {
         this._lang = lang;
         try { localStorage.setItem('app_lang', lang); } catch(_) {}
         this._applyStatic();
-        if (typeof academia !== 'undefined') {
+        this._reRenderCurrent();
+    },
+
+    _reRenderCurrent() {
+        if (typeof academia === 'undefined') return;
+        const role = typeof auth !== 'undefined' ? auth.role : null;
+        if (role === 'admin' || role === 'professor') {
+            academia.renderDashboardGrid?.();
+            academia.renderPlanoAulaProf?.();
+            academia.renderChamadaProf?.();
+            academia.carregarConquistas?.();
+            if (typeof planoCal !== 'undefined') planoCal.render?.();
+        } else {
             academia.renderDashboardAluno?.();
-            academia.renderRanking?.();
         }
+        academia.renderRanking?.();
     },
 
     _applyStatic() {
@@ -85,6 +97,16 @@ const i18n = {
         set('txt-watch-video', 'watch_video');
         set('txt-history-btn', 'history');
         set('txt-video-archive', 'video_archive');
+        // Training tab — static headings
+        set('txt-conquistas-day', 'conquistas_day');
+        set('txt-my-attendance-today', 'my_attendance_today');
+        set('txt-pending-checkins-mat', 'pending_checkins_mat');
+        set('txt-ranking-kids1-label', 'ranking_kids1');
+        set('txt-ranking-kids2-label', 'ranking_kids2');
+        set('txt-ranking-adult-label', 'ranking_adults');
+        set('txt-testimonials-btn', 'testimonials');
+        const ah = document.getElementById('txt-attendance-hint');
+        if (ah) ah.textContent = this.t('attendance_hint');
     },
 
     t(key) {
@@ -319,6 +341,24 @@ const i18n = {
             'lock_confirm': 'Deseja solicitar o trancamento da sua matrícula?\n\n• Plano mensal: trancamento sem multa\n• Outros planos: pode ser gerada multa contratual\n\nA academia entrará em contato para finalizar.',
             'lock_sent': '✅ Solicitação enviada!\nA academia entrará em contato em breve.',
             'lock_error': 'Erro ao enviar solicitação: ',
+            // Dashboard admin / professor
+            'conquistas_day': 'Conquistas & Notificações do Dia',
+            'my_attendance_today': 'MINHA PRESENÇA NA AULA HOJE',
+            'attendance_hint': 'Marque as turmas que você estará presente. Os alunos verão seu nome destacado no "quem treina hoje". Não conta como frequência.',
+            'pending_checkins_mat': 'Check-ins Pendentes no Tatame',
+            'ranking_kids1': 'KIDS 1 (Até 8 anos)', 'ranking_kids2': 'KIDS 2 (9 a 14 anos)', 'ranking_adults': 'ADULTO (15+ anos)',
+            'testimonials': 'DEPOIMENTOS & FEEDBACK',
+            'adm_checkin': 'Check-in', 'adm_students': 'Alunos', 'adm_schedule': 'Horários',
+            'adm_financial': 'Financeiro', 'adm_exam': 'Exame', 'adm_reports': 'Relatórios',
+            'adm_store': 'Loja', 'adm_events': 'Eventos', 'adm_timer': 'Cronômetro',
+            'adm_missing': 'Sumidos', 'adm_surveys': 'Avaliações', 'adm_birthdays': 'Aniversários',
+            'adm_daily_summary': 'RESUMO DO DIA', 'adm_present': 'PRESENTES', 'adm_active_students': 'ALUNOS ATIVOS',
+            'adm_lesson_plan_today': 'PLANO DA AULA DE HOJE', 'adm_cancel_class': '🚫 CANCELAR AULA',
+            'adm_reactivate_class': '✓ REATIVAR', 'adm_save_lesson': 'SALVAR CONTEÚDO DA AULA',
+            'adm_lesson_placeholder': 'Ex: Raspagens da guarda fechada + finalização kimura...',
+            'adm_lesson_history': 'PLANO DE AULA — HISTÓRICO',
+            'adm_roll_call': 'CHAMADA POR LISTA', 'adm_class_label': 'TURMA:',
+            'adm_open_student_list': 'ABRIR LISTA DE ALUNOS',
         },
         en: {
             'oss_welcome': 'WELCOME!', 'oss': 'OSS!',
@@ -536,6 +576,24 @@ const i18n = {
             'lock_confirm': 'Request enrollment lock?\n\n• Monthly plan: no penalty\n• Other plans: contractual penalty may apply\n\nThe academy will contact you to finalize.',
             'lock_sent': '✅ Request sent!\nThe academy will contact you shortly.',
             'lock_error': 'Error sending request: ',
+            // Admin / professor dashboard
+            'conquistas_day': 'Achievements & Notifications',
+            'my_attendance_today': 'MY ATTENDANCE TODAY',
+            'attendance_hint': 'Mark the classes you will attend. Students will see your name highlighted in "who trains today". Does not count as attendance.',
+            'pending_checkins_mat': 'Pending Check-ins on the Mat',
+            'ranking_kids1': 'KIDS 1 (Up to 8 years)', 'ranking_kids2': 'KIDS 2 (9 to 14 years)', 'ranking_adults': 'ADULT (15+ years)',
+            'testimonials': 'TESTIMONIALS & FEEDBACK',
+            'adm_checkin': 'Check-in', 'adm_students': 'Students', 'adm_schedule': 'Schedule',
+            'adm_financial': 'Financial', 'adm_exam': 'Exam', 'adm_reports': 'Reports',
+            'adm_store': 'Store', 'adm_events': 'Events', 'adm_timer': 'Timer',
+            'adm_missing': 'Missing', 'adm_surveys': 'Surveys', 'adm_birthdays': 'Birthdays',
+            'adm_daily_summary': 'DAILY SUMMARY', 'adm_present': 'PRESENT', 'adm_active_students': 'ACTIVE STUDENTS',
+            'adm_lesson_plan_today': "TODAY'S LESSON PLAN", 'adm_cancel_class': '🚫 CANCEL CLASS',
+            'adm_reactivate_class': '✓ REACTIVATE', 'adm_save_lesson': 'SAVE LESSON CONTENT',
+            'adm_lesson_placeholder': 'Ex: Guard sweeps + kimura finish...',
+            'adm_lesson_history': 'LESSON PLAN — HISTORY',
+            'adm_roll_call': 'ROLL CALL', 'adm_class_label': 'CLASS:',
+            'adm_open_student_list': 'OPEN STUDENT LIST',
         },
         es: {
             'oss_welcome': '¡BIENVENIDO(A)!', 'oss': '¡OSS!',
@@ -753,6 +811,24 @@ const i18n = {
             'lock_confirm': '¿Solicitar congelamiento de matrícula?\n\n• Plan mensual: sin multa\n• Otros planes: puede aplicar multa contractual\n\nLa academia se pondrá en contacto contigo.',
             'lock_sent': '✅ ¡Solicitud enviada!\nLa academia te contactará en breve.',
             'lock_error': 'Error al enviar solicitud: ',
+            // Admin / panel de profesor
+            'conquistas_day': 'Logros y Notificaciones del Día',
+            'my_attendance_today': 'MI ASISTENCIA HOY',
+            'attendance_hint': 'Marca las clases en las que estarás presente. Los alumnos verán tu nombre destacado en "quién entrena hoy". No cuenta como asistencia.',
+            'pending_checkins_mat': 'Check-ins Pendientes en el Tatami',
+            'ranking_kids1': 'KIDS 1 (Hasta 8 años)', 'ranking_kids2': 'KIDS 2 (9 a 14 años)', 'ranking_adults': 'ADULTO (15+ años)',
+            'testimonials': 'TESTIMONIOS Y OPINIONES',
+            'adm_checkin': 'Check-in', 'adm_students': 'Alumnos', 'adm_schedule': 'Horarios',
+            'adm_financial': 'Financiero', 'adm_exam': 'Examen', 'adm_reports': 'Informes',
+            'adm_store': 'Tienda', 'adm_events': 'Eventos', 'adm_timer': 'Cronómetro',
+            'adm_missing': 'Ausentes', 'adm_surveys': 'Encuestas', 'adm_birthdays': 'Cumpleaños',
+            'adm_daily_summary': 'RESUMEN DEL DÍA', 'adm_present': 'PRESENTES', 'adm_active_students': 'ALUMNOS ACTIVOS',
+            'adm_lesson_plan_today': 'PLAN DE CLASE DE HOY', 'adm_cancel_class': '🚫 CANCELAR CLASE',
+            'adm_reactivate_class': '✓ REACTIVAR', 'adm_save_lesson': 'GUARDAR CONTENIDO DE CLASE',
+            'adm_lesson_placeholder': 'Ej: Barridas de guardia + finalización kimura...',
+            'adm_lesson_history': 'PLAN DE CLASE — HISTORIAL',
+            'adm_roll_call': 'LISTA DE ASISTENCIA', 'adm_class_label': 'CLASE:',
+            'adm_open_student_list': 'ABRIR LISTA DE ALUMNOS',
         }
     }
 };
@@ -4023,7 +4099,7 @@ const academia = {
         container.innerHTML = `
             <div style="background:#1e293b; border:1px solid #8b5cf644; border-left:3px solid #8b5cf6; border-radius:12px; padding:15px;">
                 <div style="font-size:0.75rem; font-weight:800; color:#8b5cf6; margin-bottom:12px; letter-spacing:0.3px;">
-                    <i class="fas fa-clipboard-list"></i> PLANO DA AULA DE HOJE
+                    <i class="fas fa-clipboard-list"></i> ${i18n.t('adm_lesson_plan_today')}
                 </div>
                 ${turmasVisiveis.map(turma => {
                     const inputId     = 'plano_' + turma.replace(/[^a-z0-9]/gi, '_');
@@ -4037,16 +4113,16 @@ const academia = {
                             </small>
                             <button onclick="academia.toggleCancelamentoAula('${turmaEsc}', ${turmaCancelada})"
                                 style="background:${turmaCancelada ? '#064e3b' : '#1a0a0a'}; border:1px solid ${turmaCancelada ? '#10b981' : '#ef4444'}; color:${turmaCancelada ? '#10b981' : '#ef4444'}; padding:3px 10px; border-radius:6px; font-size:0.55rem; font-weight:800; cursor:pointer; white-space:nowrap;">
-                                ${turmaCancelada ? '✓ REATIVAR' : '🚫 CANCELAR AULA'}
+                                ${turmaCancelada ? i18n.t('adm_reactivate_class') : i18n.t('adm_cancel_class')}
                             </button>
                         </div>
                         ${turmaCancelada
                             ? `<div style="background:#1a0404; border:1px solid #ef444444; border-radius:8px; padding:10px; font-size:0.7rem; color:#ef4444; font-weight:700; text-align:center;">Alunos verão aviso de aula cancelada.</div>`
-                            : `<textarea id="${inputId}" placeholder="Ex: Raspagens da guarda fechada + finalização kimura..." rows="2"
+                            : `<textarea id="${inputId}" placeholder="${i18n.t('adm_lesson_placeholder')}" rows="2"
                                 style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; font-size:0.8rem; outline:none; resize:none; margin-bottom:6px;">${conteudoSalvo}</textarea>
                                <button onclick="academia.salvarPlanoAula('${turmaEsc}', document.getElementById('${inputId}').value)"
                                 style="width:100%; padding:9px; background:#8b5cf6; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem;">
-                                <i class="fas fa-save"></i> SALVAR CONTEÚDO DA AULA
+                                <i class="fas fa-save"></i> ${i18n.t('adm_save_lesson')}
                                </button>`
                         }
                     </div>`;
@@ -4075,16 +4151,16 @@ const academia = {
         const opts = todasTurmas.map(t => `<option value="${t}">${t}</option>`).join('');
         card.innerHTML = `
             <div style="font-size:0.75rem; font-weight:800; color:#0ea5e9; margin-bottom:12px; letter-spacing:0.3px;">
-                <i class="fas fa-list-check"></i> CHAMADA POR LISTA
+                <i class="fas fa-list-check"></i> ${i18n.t('adm_roll_call')}
             </div>
-            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:5px;">TURMA:</small>
+            <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:5px;">${i18n.t('adm_class_label')}</small>
             <select id="chamada-select-turma"
                 style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:10px;">
                 ${opts}
             </select>
             <button onclick="academia.abrirChamada()"
                 style="width:100%; padding:12px; background:#0ea5e9; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.85rem;">
-                <i class="fas fa-users"></i> ABRIR LISTA DE ALUNOS
+                <i class="fas fa-users"></i> ${i18n.t('adm_open_student_list')}
             </button>`;
     },
 
@@ -4477,9 +4553,11 @@ const academia = {
         const anoAtual = agora.getFullYear();
         const mesAtual = agora.getMonth(); // 0-indexed
 
-        const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                        'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-        const nomeMes = meses[mesAtual];
+        const _mesesPt = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        const _mesesEn = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const _mesesEs = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        const _mLists = { pt: _mesesPt, en: _mesesEn, es: _mesesEs };
+        const nomeMes = (_mLists[i18n._lang] || _mesesPt)[mesAtual];
 
         // Atualiza títulos com o mês atual
         const tJJ = document.getElementById('titulo-ranking-jj');
@@ -7139,18 +7217,18 @@ Ele voltará a ser aluno normal.`)) return;
         } catch(e) {}
 
         const cards = [
-            { icon:'fa-qrcode',        label:'Check-in',     cor:'#10b981', fn:`academia._irParaCheckin()` },
-            { icon:'fa-users',         label:'Alunos',       cor:'#3b82f6', fn:`ui.showTab('tab-alunos')` },
-            { icon:'fa-clock',         label:'Horários',     cor:'#8b5cf6', fn:`ui.showTab('tab-horarios')` },
-            { icon:'fa-dollar-sign',   label:'Financeiro',   cor:'#22c55e', fn:`ui.showTab('tab-financeiro')` },
-            { icon:'fa-medal',         label:'Exame',        cor:'#f59e0b', fn:`ui.showTab('tab-exame'); exame.carregarExameAluno()` },
-            { icon:'fa-chart-bar',     label:'Relatórios',   cor:'#06b6d4', fn:`ui.showTab('tab-relatorios')` },
-            { icon:'fa-shopping-bag',  label:'Loja',         cor:'#ec4899', fn:`ui.showTab('tab-loja')` },
-            { icon:'fa-calendar-alt',  label:'Eventos',      cor:'#f97316', fn:`ui.showTab('tab-eventos')` },
-            { icon:'fa-stopwatch',     label:'Cronômetro',   cor:'#38bdf8', fn:`cronometro.abrir()` },
-            { icon:'fa-satellite-dish',label:'Sumidos',      cor:'#ef4444', fn:`ui.showTab('tab-relatorios'); setTimeout(()=>treinoPost.renderRadarSumidos(),300)` },
-            { icon:'fa-star',          label:'Avaliações',   cor:'#facc15', fn:`ui.showTab('tab-relatorios'); setTimeout(()=>treinoPost.renderAvaliacoesPainel(),300)` },
-            { icon:'fa-birthday-cake', label:'Aniversários', cor:'#a78bfa', fn:`academia._irParaAniversarios()` },
+            { icon:'fa-qrcode',        label:i18n.t('adm_checkin'),   cor:'#10b981', fn:`academia._irParaCheckin()` },
+            { icon:'fa-users',         label:i18n.t('adm_students'),  cor:'#3b82f6', fn:`ui.showTab('tab-alunos')` },
+            { icon:'fa-clock',         label:i18n.t('adm_schedule'),  cor:'#8b5cf6', fn:`ui.showTab('tab-horarios')` },
+            { icon:'fa-dollar-sign',   label:i18n.t('adm_financial'), cor:'#22c55e', fn:`ui.showTab('tab-financeiro')` },
+            { icon:'fa-medal',         label:i18n.t('adm_exam'),      cor:'#f59e0b', fn:`ui.showTab('tab-exame'); exame.carregarExameAluno()` },
+            { icon:'fa-chart-bar',     label:i18n.t('adm_reports'),   cor:'#06b6d4', fn:`ui.showTab('tab-relatorios')` },
+            { icon:'fa-shopping-bag',  label:i18n.t('adm_store'),     cor:'#ec4899', fn:`ui.showTab('tab-loja')` },
+            { icon:'fa-calendar-alt',  label:i18n.t('adm_events'),    cor:'#f97316', fn:`ui.showTab('tab-eventos')` },
+            { icon:'fa-stopwatch',     label:i18n.t('adm_timer'),     cor:'#38bdf8', fn:`cronometro.abrir()` },
+            { icon:'fa-satellite-dish',label:i18n.t('adm_missing'),   cor:'#ef4444', fn:`ui.showTab('tab-relatorios'); setTimeout(()=>treinoPost.renderRadarSumidos(),300)` },
+            { icon:'fa-star',          label:i18n.t('adm_surveys'),   cor:'#facc15', fn:`ui.showTab('tab-relatorios'); setTimeout(()=>treinoPost.renderAvaliacoesPainel(),300)` },
+            { icon:'fa-birthday-cake', label:i18n.t('adm_birthdays'), cor:'#a78bfa', fn:`academia._irParaAniversarios()` },
         ];
 
         const cardsHtml = cards.map(c => `
@@ -7180,7 +7258,7 @@ Ele voltará a ser aluno normal.`)) return;
             <!-- Resumo do dia -->
             <div style="background:#1e293b;border:1px solid #f59e0b22;border-radius:16px;padding:14px;margin-bottom:16px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                    <div style="font-size:0.62rem;font-weight:800;color:#f59e0b;letter-spacing:0.5px;">📋 RESUMO DO DIA</div>
+                    <div style="font-size:0.62rem;font-weight:800;color:#f59e0b;letter-spacing:0.5px;">📋 ${i18n.t('adm_daily_summary')}</div>
                     <div style="font-size:0.55rem;color:#475569;">${new Date().toLocaleDateString('pt-BR')}</div>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
@@ -7190,11 +7268,11 @@ Ele voltará a ser aluno normal.`)) return;
                     </div>
                     <div style="background:#0f172a;border-radius:10px;padding:10px;text-align:center;border:1px solid #3b82f622;">
                         <div style="font-size:1.6rem;font-weight:900;color:#3b82f6;">${aulasHoje}</div>
-                        <div style="font-size:0.52rem;color:#64748b;font-weight:700;margin-top:2px;">PRESENTES</div>
+                        <div style="font-size:0.52rem;color:#64748b;font-weight:700;margin-top:2px;">${i18n.t('adm_present')}</div>
                     </div>
                     <div style="background:#0f172a;border-radius:10px;padding:10px;text-align:center;border:1px solid #f59e0b22;">
                         <div style="font-size:1.6rem;font-weight:900;color:#f59e0b;">${totalAlunos}</div>
-                        <div style="font-size:0.52rem;color:#64748b;font-weight:700;margin-top:2px;">ALUNOS ATIVOS</div>
+                        <div style="font-size:0.52rem;color:#64748b;font-weight:700;margin-top:2px;">${i18n.t('adm_active_students')}</div>
                     </div>
                 </div>
             </div>`;
@@ -11300,8 +11378,8 @@ const planoCal = {
         if (!card) return;
         if (this._planos === null) {
             card.innerHTML = `<div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;margin-top:0;">
-                <div style="font-size:0.75rem;font-weight:800;color:#8b5cf6;margin-bottom:8px;">📋 PLANO DE AULA — HISTÓRICO</div>
-                <div style="font-size:0.7rem;color:#64748b;">Carregando...</div></div>`;
+                <div style="font-size:0.75rem;font-weight:800;color:#8b5cf6;margin-bottom:8px;">📋 ${i18n.t('adm_lesson_history')}</div>
+                <div style="font-size:0.7rem;color:#64748b;">${i18n.t('loading')}</div></div>`;
             await this._carregarPlanos();
             return;
         }
@@ -11320,7 +11398,10 @@ const planoCal = {
     },
 
     _buildCard() {
-        const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const _mAbbrPt = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const _mAbbrEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const _mAbbrEs = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        const meses = i18n._lang === 'en' ? _mAbbrEn : i18n._lang === 'es' ? _mAbbrEs : _mAbbrPt;
         const mes = this._mes, ano = this._ano;
         const hoje = new Date();
         const primeiroDia = new Date(ano, mes, 1).getDay();
@@ -11346,14 +11427,14 @@ const planoCal = {
         const detalhe = this._dia ? this._buildDetalhe(this._dia) : '';
 
         return `<div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;margin-top:0;">
-            <div style="font-size:0.75rem;font-weight:800;color:#8b5cf6;margin-bottom:10px;">📋 PLANO DE AULA — HISTÓRICO</div>
+            <div style="font-size:0.75rem;font-weight:800;color:#8b5cf6;margin-bottom:10px;">📋 ${i18n.t('adm_lesson_history')}</div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <button onclick="planoCal.navMes(-1)" style="background:#0f172a;border:1px solid #334155;color:#94a3b8;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:700;">◄</button>
                 <span style="font-size:0.7rem;font-weight:800;color:#e2e8f0;">${meses[mes]} ${ano}</span>
                 <button onclick="planoCal.navMes(1)" style="background:#0f172a;border:1px solid #334155;color:#94a3b8;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:700;">►</button>
             </div>
             <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:3px;">
-                ${['D','S','T','Q','Q','S','S'].map(d=>`<div style="text-align:center;font-size:0.48rem;color:#475569;font-weight:700;">${d}</div>`).join('')}
+                ${(i18n._lang==='en'?['S','M','T','W','T','F','S']:i18n._lang==='es'?['D','L','M','X','J','V','S']:['D','S','T','Q','Q','S','S']).map(d=>`<div style="text-align:center;font-size:0.48rem;color:#475569;font-weight:700;">${d}</div>`).join('')}
             </div>
             <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">${cells}</div>
             ${detalhe}

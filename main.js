@@ -164,6 +164,34 @@ const i18n = {
             // Faixa colors (exibidas ao aluno)
             'belt_white': 'Branca', 'belt_blue': 'Azul', 'belt_purple': 'Roxa',
             'belt_brown': 'Marrom', 'belt_black': 'Preta',
+            // Check-in / plano de aula
+            'checkin_awaiting_prof': 'AGUARDANDO VALIDAÇÃO DO PROFESSOR:',
+            'lesson_plan_title': 'O QUE SERÁ MINISTRADO:',
+            'today': 'hoje',
+            'prof_label': 'Prof.',
+            // Conquistas / mural
+            'achievement_goal': 'atingiu a meta de aulas!',
+            'achievement_birthday': 'Hoje é o aniversário de',
+            'achievement_fire': 'está em brasa!',
+            'no_medals': 'Nenhuma medalha conquistada.',
+            'medals_timeline': 'LINHA DE TEMPO COLECIONÁVEL DE CONQUISTAS:',
+            // Perfil do aluno
+            'you_called': 'Você foi convocado!',
+            'apt_exam': 'Você está apto para o exame de faixa.',
+            'contact_academy': 'Entre em contato com a academia.',
+            'classes_computed': 'AULAS COMPUTADAS',
+            'classes_to_goal': 'FALTAM P/ META',
+            'classes_to_goal_jj': 'FALTAM P/ META JJ',
+            'classes_mt_label': 'AULAS MUAY THAI',
+            'classes_jj_label': 'AULAS JIU-JITSU',
+            'modality_label': 'MODALIDADE',
+            'cal_calendar': '📅 CALENDÁRIO',
+            'cal_list': '📋 LISTA',
+            'see_contract': 'VER MEU CONTRATO ✅',
+            'sign_contract': 'ASSINAR CONTRATO DIGITAL 📋',
+            'graduation_history': '🎖️ HISTÓRICO DE GRADUAÇÕES',
+            'training_diary': '📓 MEU DIÁRIO DE TREINO',
+            'hist_old_belt': 'Histórico Faixa Antiga',
         },
         en: {
             'oss_welcome': 'WELCOME!', 'oss': 'OSS!',
@@ -230,6 +258,31 @@ const i18n = {
             'contract_unsigned': 'You have not signed the contract yet.',
             'belt_white': 'White', 'belt_blue': 'Blue', 'belt_purple': 'Purple',
             'belt_brown': 'Brown', 'belt_black': 'Black',
+            'checkin_awaiting_prof': 'AWAITING INSTRUCTOR APPROVAL:',
+            'lesson_plan_title': 'WHAT WILL BE COVERED:',
+            'today': 'today',
+            'prof_label': 'Coach',
+            'achievement_goal': 'reached the class goal!',
+            'achievement_birthday': 'Today is the birthday of',
+            'achievement_fire': 'is on fire!',
+            'no_medals': 'No medals earned yet.',
+            'medals_timeline': 'COLLECTIBLE ACHIEVEMENT TIMELINE:',
+            'you_called': 'You have been called!',
+            'apt_exam': 'You are eligible for the belt exam.',
+            'contact_academy': 'Contact the academy.',
+            'classes_computed': 'TOTAL CLASSES',
+            'classes_to_goal': 'LEFT TO GOAL',
+            'classes_to_goal_jj': 'LEFT TO GOAL JJ',
+            'classes_mt_label': 'MUAY THAI CLASSES',
+            'classes_jj_label': 'JIU-JITSU CLASSES',
+            'modality_label': 'MODALITY',
+            'cal_calendar': '📅 CALENDAR',
+            'cal_list': '📋 LIST',
+            'see_contract': 'VIEW MY CONTRACT ✅',
+            'sign_contract': 'SIGN DIGITAL CONTRACT 📋',
+            'graduation_history': '🎖️ GRADUATION HISTORY',
+            'training_diary': '📓 MY TRAINING DIARY',
+            'hist_old_belt': 'Old Belt History',
         },
         es: {
             'oss_welcome': '¡BIENVENIDO(A)!', 'oss': '¡OSS!',
@@ -296,6 +349,31 @@ const i18n = {
             'contract_unsigned': 'Aún no has firmado el contrato.',
             'belt_white': 'Blanca', 'belt_blue': 'Azul', 'belt_purple': 'Morada',
             'belt_brown': 'Café', 'belt_black': 'Negra',
+            'checkin_awaiting_prof': 'ESPERANDO APROBACIÓN DEL PROFESOR:',
+            'lesson_plan_title': 'LO QUE SE TRABAJARÁ:',
+            'today': 'hoy',
+            'prof_label': 'Prof.',
+            'achievement_goal': '¡alcanzó la meta de clases!',
+            'achievement_birthday': 'Hoy es el cumpleaños de',
+            'achievement_fire': '¡está en llamas!',
+            'no_medals': 'Sin medallas aún.',
+            'medals_timeline': 'LÍNEA DE TIEMPO DE LOGROS COLECCIONABLES:',
+            'you_called': '¡Fuiste convocado!',
+            'apt_exam': 'Estás apto para el examen de cinturón.',
+            'contact_academy': 'Contacta a la academia.',
+            'classes_computed': 'CLASES COMPUTADAS',
+            'classes_to_goal': 'FALTAN PARA META',
+            'classes_to_goal_jj': 'FALTAN PARA META JJ',
+            'classes_mt_label': 'CLASES MUAY THAI',
+            'classes_jj_label': 'CLASES JIU-JITSU',
+            'modality_label': 'MODALIDAD',
+            'cal_calendar': '📅 CALENDARIO',
+            'cal_list': '📋 LISTA',
+            'see_contract': 'VER MI CONTRATO ✅',
+            'sign_contract': 'FIRMAR CONTRATO DIGITAL 📋',
+            'graduation_history': '🎖️ HISTORIAL DE GRADUACIONES',
+            'training_diary': '📓 MI DIARIO DE ENTRENAMIENTO',
+            'hist_old_belt': 'Historial Cinturón Anterior',
         }
     }
 };
@@ -1616,7 +1694,7 @@ const academia = {
                 if (metaIndex >= 0 && metaIndex < hist.length) {
                     const dataMeta = this._parsarDataHistorico(hist[metaIndex].data);
                     if (dataMeta && (agora - dataMeta.getTime()) <= LIMITE_48H) {
-                        html += `<div class="conquista-item" style="border-left:3px solid #10b981;">🎯 <b>${a.nome}</b> atingiu a meta de aulas!</div>`;
+                        html += `<div class="conquista-item" style="border-left:3px solid #10b981;">🎯 <b>${a.nome}</b> ${i18n.t('achievement_goal')}</div>`;
                     }
                 }
             }
@@ -1624,12 +1702,12 @@ const academia = {
             if (a.nascimento) {
                 const parts = a.nascimento.split('-');
                 if (parts.length === 3 && parseInt(parts[2]) === dH && parseInt(parts[1]) === mH)
-                    html += `<div class="conquista-item">🎂 Hoje é o aniversário de <b>${a.nome}</b>!</div>`;
+                    html += `<div class="conquista-item">🎂 ${i18n.t('achievement_birthday')} <b>${a.nome}</b>!</div>`;
             }
             // Em Brasa — mostra 2 dias, oculta 5, mostra 2...
             const emBrasa = this.calcularEngajamento(a.historico).label === "Em Brasa";
             if (this._deveExibirEmBrasa(doc.id, emBrasa))
-                html += `<div class="conquista-item">🔥 <b>${a.nome}</b> está em brasa!</div>`;
+                html += `<div class="conquista-item">🔥 <b>${a.nome}</b> ${i18n.t('achievement_fire')}</div>`;
         });
         const c = document.getElementById('mural-conquistas');
         if (html !== "") { document.getElementById('lista-conquistas').innerHTML = html; c.classList.remove('hidden'); } else { c.classList.add('hidden'); }
@@ -3872,8 +3950,8 @@ const academia = {
                 preview.innerHTML = `
                     <div style="background:#1e293b; border:1px solid #8b5cf644; border-left:3px solid #8b5cf6; border-radius:8px; padding:12px; margin-top:10px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                            <small style="color:#8b5cf6; font-weight:800; font-size:0.6rem; letter-spacing:0.5px;"><i class="fas fa-clipboard-list"></i> O QUE SERÁ MINISTRADO:</small>
-                            <small style="color:#64748b; font-size:0.6rem; font-weight:700;">${profNome ? 'Prof. ' + profNome : ''}</small>
+                            <small style="color:#8b5cf6; font-weight:800; font-size:0.6rem; letter-spacing:0.5px;"><i class="fas fa-clipboard-list"></i> ${i18n.t('lesson_plan_title')}</small>
+                            <small style="color:#64748b; font-size:0.6rem; font-weight:700;">${profNome ? i18n.t('prof_label') + ' ' + profNome : ''}</small>
                         </div>
                         <div style="color:#e2e8f0; font-size:0.85rem; font-weight:500; line-height:1.6;">${conteudo}</div>
                     </div>`;
@@ -3894,7 +3972,7 @@ const academia = {
         const nomesDisplay = (this.gradeFirebase || {}).nomesDisplay || {};
         container.innerHTML = `
             <small style="color:#f59e0b; font-weight:800; font-size:0.6rem; display:block; margin:8px 0 6px 0; letter-spacing:0.5px;">
-                <i class="fas fa-clock"></i> AGUARDANDO VALIDAÇÃO DO PROFESSOR:
+                <i class="fas fa-clock"></i> ${i18n.t('checkin_awaiting_prof')}
             </small>` +
             snap.docs.map(doc => {
                 const c = doc.data();
@@ -11623,9 +11701,9 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                 if(bDisciplina) bDisciplina.className = `leao-icon-circle ${lDisciplina > 0 ? 'bg-leao-amarelo' : 'leao-desativado'}`;
                 const htmlHistLeoes = histLeoes.map(item => `
                     <div style="font-size: 0.7rem; color: #cbd5e1; background: #0f172a; padding: 6px 8px; border-radius: 6px; margin-bottom: 4px; border-left: 2px solid ${item.faixa === d.faixa ? 'var(--accent-gold)' : '#4b5563'}; opacity: ${item.faixa === d.faixa ? '1' : '0.5'}">
-                        <b>${item.data}</b> - ${item.mensagem} ${item.faixa !== d.faixa ? `<span style="font-size:0.55rem; color:var(--text-muted);">[Histórico Faixa Antiga]</span>` : ''}
-                    </div>`).join('') || `<p style="color:var(--text-muted); font-size:0.7rem; text-align:center; margin:5px 0;">Nenhuma medalha conquistada.</p>`;
-                document.getElementById('historico-leoes-aluno').innerHTML = `<small style="color:var(--accent-gold); font-weight:800; display:block; margin-bottom:5px; font-size:0.55rem; letter-spacing:0.3px;">LINHA DE TEMPO COLECIONÁVEL DE CONQUISTAS:</small>${htmlHistLeoes}`;
+                        <b>${item.data}</b> - ${item.mensagem} ${item.faixa !== d.faixa ? `<span style="font-size:0.55rem; color:var(--text-muted);">[${i18n.t('hist_old_belt')}]</span>` : ''}
+                    </div>`).join('') || `<p style="color:var(--text-muted); font-size:0.7rem; text-align:center; margin:5px 0;">${i18n.t('no_medals')}</p>`;
+                document.getElementById('historico-leoes-aluno').innerHTML = `<small style="color:var(--accent-gold); font-weight:800; display:block; margin-bottom:5px; font-size:0.55rem; letter-spacing:0.3px;">${i18n.t('medals_timeline')}</small>${htmlHistLeoes}`;
             } else {
                 cardLeoes.classList.add('hidden');
             }
@@ -11660,20 +11738,20 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             // Bloco de estatísticas (contadores separados por modalidade)
             const statsHtml = modPerfil === 'muaythai'
                 ? `<div style="display:flex; gap:10px; margin-bottom:15px;">
-                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:#f43f5e; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">🥊 AULAS MUAY THAI</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulasMT || 0}</span></div>
-                       <div style="flex:1; background:#4c0519; padding:12px; border-radius:10px; text-align:center; border:1px solid #f43f5e44;"><small style="font-size:0.55rem; color:#f43f5e; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:4px;">MODALIDADE</small><span style="font-size:0.7rem; font-weight:800; color:#f43f5e;">MUAY THAI</span></div>
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:#f43f5e; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">🥊 ${i18n.t('classes_mt_label')}</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulasMT || 0}</span></div>
+                       <div style="flex:1; background:#4c0519; padding:12px; border-radius:10px; text-align:center; border:1px solid #f43f5e44;"><small style="font-size:0.55rem; color:#f43f5e; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:4px;">${i18n.t('modality_label')}</small><span style="font-size:0.7rem; font-weight:800; color:#f43f5e;">MUAY THAI</span></div>
                    </div>`
                 : modPerfil === 'ambos'
                 ? `<div style="display:flex; gap:10px; margin-bottom:8px;">
-                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid #3b82f644;"><small style="font-size:0.55rem; color:#60a5fa; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">🥋 AULAS JIU-JITSU</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulas || 0}</span></div>
-                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid #f43f5e44;"><small style="font-size:0.55rem; color:#f43f5e; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">🥊 AULAS MUAY THAI</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulasMT || 0}</span></div>
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid #3b82f644;"><small style="font-size:0.55rem; color:#60a5fa; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">🥋 ${i18n.t('classes_jj_label')}</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulas || 0}</span></div>
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid #f43f5e44;"><small style="font-size:0.55rem; color:#f43f5e; display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">🥊 ${i18n.t('classes_mt_label')}</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulasMT || 0}</span></div>
                    </div>
                    <div style="display:flex; gap:10px; margin-bottom:15px;">
-                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">FALTAM P/ META JJ</small><span style="font-size:1.1rem; font-weight:800; color:var(--accent-gold);">${f}</span></div>
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">${i18n.t('classes_to_goal_jj')}</small><span style="font-size:1.1rem; font-weight:800; color:var(--accent-gold);">${f}</span></div>
                    </div>`
                 : `<div style="display:flex; gap:10px; margin-bottom:15px;">
-                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">AULAS COMPUTADAS</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulas || 0}</span></div>
-                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">FALTAM P/ META</small><span style="font-size:1.1rem; font-weight:800; color:var(--accent-gold);">${f}</span></div>
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">${i18n.t('classes_computed')}</small><span style="font-size:1.1rem; font-weight:800; color:white;">${d.aulas || 0}</span></div>
+                       <div style="flex:1; background:#0f172a; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border-light);"><small style="font-size:0.55rem; color:var(--text-muted); display:block; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">${i18n.t('classes_to_goal')}</small><span style="font-size:1.1rem; font-weight:800; color:var(--accent-gold);">${f}</span></div>
                    </div>`;
 
             // Barra de progresso (só JJ/ambos)
@@ -11685,8 +11763,8 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
             const bannerConvocado = d.aspiranteGraduacao === true
                 ? `<div style="background:linear-gradient(135deg,#052e16,#064e3b); border:2px solid #10b981; border-radius:14px; padding:16px 14px; margin-bottom:14px; text-align:center;">
                        <div style="font-size:1.6rem; margin-bottom:4px;">🥋✅</div>
-                       <div style="color:#10b981; font-size:0.95rem; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">Você foi convocado!</div>
-                       <div style="color:#a7f3d0; font-size:0.75rem; margin-top:6px; line-height:1.5;">Você está apto para o exame de faixa.<br>Entre em contato com a academia. <strong>OSS! 🙏</strong></div>
+                       <div style="color:#10b981; font-size:0.95rem; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">${i18n.t('you_called')}</div>
+                       <div style="color:#a7f3d0; font-size:0.75rem; margin-top:6px; line-height:1.5;">${i18n.t('apt_exam')}<br>${i18n.t('contact_academy')} <strong>OSS! 🙏</strong></div>
                    </div>`
                 : '';
 
@@ -11705,11 +11783,11 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                         <div style="display:flex; gap:6px; margin-bottom:12px;">
                             <button id="cal-btn-cal" onclick="ui.mudarVistaCalendario('calendario')"
                                 style="flex:1; padding:8px; background:#1e3a8a; border:1px solid #3b82f6; color:#93c5fd; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">
-                                📅 CALENDÁRIO
+                                ${i18n.t('cal_calendar')}
                             </button>
                             <button id="cal-btn-lista" onclick="ui.mudarVistaCalendario('lista')"
                                 style="flex:1; padding:8px; background:#0f172a; border:1px solid #334155; color:#64748b; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">
-                                📋 LISTA
+                                ${i18n.t('cal_list')}
                             </button>
                         </div>
                         <div id="cal-treinos-container"></div>
@@ -11719,21 +11797,21 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
                         <button id="btn-meu-contrato" onclick="contrato.abrir()"
                             style="width:100%; padding:11px; background:${d.contrato?.assinaturaImg ? '#064e3b' : '#1e293b'}; border:1px solid ${d.contrato?.assinaturaImg ? '#10b981' : '#334155'}; color:${d.contrato?.assinaturaImg ? '#10b981' : '#94a3b8'}; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; gap:8px;">
                             <i class="fas fa-file-contract"></i>
-                            ${d.contrato?.assinaturaImg ? 'VER MEU CONTRATO ✅' : 'ASSINAR CONTRATO DIGITAL 📋'}
+                            ${d.contrato?.assinaturaImg ? i18n.t('see_contract') : i18n.t('sign_contract')}
                         </button>
                     </div>
                     <!-- Botão histórico de graduações -->
                     <div style="margin-top:8px;">
                         <button onclick="graduacaoHistorico.abrirModal('${auth.currentUser.id}')"
                             style="width:100%; padding:11px; background:#1e1040; border:1px solid #7c3aed55; color:#a78bfa; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; gap:8px;">
-                            🎖️ HISTÓRICO DE GRADUAÇÕES
+                            ${i18n.t('graduation_history')}
                         </button>
                     </div>
                     <!-- Diário de Treino -->
                     <div style="margin-top:8px;">
                         <button onclick="treinoPost.abrirDiario()"
                             style="width:100%; padding:11px; background:#0f172a; border:1px solid #33415555; color:#94a3b8; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; gap:8px;">
-                            📓 MEU DIÁRIO DE TREINO
+                            ${i18n.t('training_diary')}
                         </button>
                     </div>
                 </div>`;

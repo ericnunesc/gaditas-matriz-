@@ -3048,13 +3048,14 @@ const academia = {
         if (auth.role === 'professor' && auth.currentUser?.id) {
             try {
                 const snapSubs = await db.collection('substituicoes')
-                    .where('status', '==', 'ativo')
                     .where('dataInicio', '<=', hojeISO)
                     .get();
                 snapSubs.docs.forEach(d => {
                     const s = d.data();
+                    if (s.status !== 'ativo') return;
+                    if (s.dataFim < hojeISO) return;
                     const cob = (s.coberturaDiaria || {})[hojeISO];
-                    if (s.dataFim >= hojeISO && cob?.profId === auth.currentUser.id) {
+                    if (cob?.profId === auth.currentUser.id) {
                         turmasSubstituicaoHoje.push(s.turmaLabel);
                     }
                 });

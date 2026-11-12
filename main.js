@@ -22770,8 +22770,11 @@ const substituicaoProf = {
             <select id="asm-prof" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.75rem;margin-bottom:10px;">
                 <option value="">— Selecione —</option>${opcoes}
             </select>
-            <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">TURMA / DESCRIÇÃO</div>
-            <input id="asm-turma" type="text" placeholder="Ex: Jiu-Jitsu Segunda 19h" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.75rem;margin-bottom:10px;box-sizing:border-box;" />
+            <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">TURMA / HORÁRIO</div>
+            <select id="asm-turma" style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.75rem;margin-bottom:10px;box-sizing:border-box;">
+                <option value="">— Selecione a turma —</option>
+                ${[...new Set(Object.values(academia.getGrade()).filter(Array.isArray).flat())].filter(t => t && !t.includes('Sem treinos')).sort().map(t => `<option value="${t.replace(/"/g,'&quot;')}">${t}</option>`).join('')}
+            </select>
             <div style="display:flex;gap:8px;margin-bottom:12px;">
                 <div style="flex:1;">
                     <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">DATA</div>

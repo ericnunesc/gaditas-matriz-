@@ -55,6 +55,16 @@ const i18n = {
 
     _applyStatic() {
         const set = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = this.t(key); };
+        // Menu inferior (bottom nav)
+        set('nav-txt-training',  'nav_training');
+        set('nav-txt-events',    'nav_events_tab');
+        set('nav-txt-schedule',  'nav_schedule_tab');
+        set('nav-txt-store',     'nav_store_tab');
+        set('nav-txt-services',  'nav_services');
+        set('nav-txt-exam',      'nav_exam_tab');
+        set('nav-txt-reports',   'nav_reports');
+        set('nav-txt-blacks',    'nav_blacks');
+        set('nav-txt-logout',    'nav_logout');
         // Check-in area
         const cp = document.getElementById('txt-confirm-presence');
         if (cp) cp.innerHTML = `<i class="fas fa-qrcode"></i> ${this.t('confirm_presence')}`;
@@ -93,6 +103,8 @@ const i18n = {
             'checkin_cancel_error': 'Erro ao cancelar check-in.',
             'checkin_kids_block': 'Alunos até 13 anos não podem fazer check-in nas turmas adulto.',
             'checkin_pending': 'Check-in pendente',
+            'checkin_event_pending': 'Presença em evento pendente',
+            'checkin_none_pending': 'Nenhum check-in pendente.',
             'presence_confirmed': '✅ Presença confirmada!',
             'presence_already': 'Presença já registrada hoje',
             'who_trains': 'Ver quem vai treinar',
@@ -113,6 +125,12 @@ const i18n = {
             'confirm': 'Confirmar', 'save': 'Salvar', 'back': 'Voltar',
             'attendance': 'Presenças', 'active': 'Ativo', 'inactive': 'Inativo',
             'month': 'mês', 'lang_label': '🇧🇷 Português',
+            // Menu inferior (bottom nav)
+            'nav_training': 'TREINO', 'nav_events_tab': 'EVENTOS',
+            'nav_schedule_tab': 'HORÁRIOS', 'nav_store_tab': 'LOJA',
+            'nav_services': 'SERVIÇOS', 'nav_exam_tab': 'EXAME',
+            'nav_reports': 'RELATÓRIOS', 'nav_blacks': 'PRETAS',
+            'nav_logout': 'SAIR',
             // Grid de atalhos do aluno
             'nav_checkin': 'Check-in', 'nav_qr': 'QR Code',
             'nav_schedule': 'Horários', 'nav_financial': 'Financeiro',
@@ -159,6 +177,8 @@ const i18n = {
             'checkin_cancel_error': 'Error cancelling check-in.',
             'checkin_kids_block': 'Students under 13 cannot check in to adult classes.',
             'checkin_pending': 'Check-in pending',
+            'checkin_event_pending': 'Event attendance pending',
+            'checkin_none_pending': 'No pending check-ins.',
             'presence_confirmed': '✅ Attendance confirmed!',
             'presence_already': 'Attendance already recorded today',
             'who_trains': 'See who\'s training today',
@@ -179,6 +199,11 @@ const i18n = {
             'confirm': 'Confirm', 'save': 'Save', 'back': 'Back',
             'attendance': 'Attendance', 'active': 'Active', 'inactive': 'Inactive',
             'month': 'month', 'lang_label': '🇺🇸 English',
+            'nav_training': 'TRAINING', 'nav_events_tab': 'EVENTS',
+            'nav_schedule_tab': 'SCHEDULE', 'nav_store_tab': 'STORE',
+            'nav_services': 'SERVICES', 'nav_exam_tab': 'EXAM',
+            'nav_reports': 'REPORTS', 'nav_blacks': 'BLACK BELTS',
+            'nav_logout': 'LOGOUT',
             'nav_checkin': 'Check-in', 'nav_qr': 'QR Code',
             'nav_schedule': 'Schedule', 'nav_financial': 'Financial',
             'nav_store': 'Store', 'nav_events': 'Events',
@@ -218,6 +243,8 @@ const i18n = {
             'checkin_cancel_error': 'Error al cancelar check-in.',
             'checkin_kids_block': 'Alumnos menores de 13 años no pueden hacer check-in en clases de adultos.',
             'checkin_pending': 'Check-in pendiente',
+            'checkin_event_pending': 'Asistencia a evento pendiente',
+            'checkin_none_pending': 'Sin check-ins pendientes.',
             'presence_confirmed': '✅ ¡Asistencia confirmada!',
             'presence_already': 'Asistencia ya registrada hoy',
             'who_trains': 'Ver quién va a entrenar',
@@ -238,6 +265,11 @@ const i18n = {
             'confirm': 'Confirmar', 'save': 'Guardar', 'back': 'Volver',
             'attendance': 'Asistencias', 'active': 'Activo', 'inactive': 'Inactivo',
             'month': 'mes', 'lang_label': '🇪🇸 Español',
+            'nav_training': 'ENTRENO', 'nav_events_tab': 'EVENTOS',
+            'nav_schedule_tab': 'HORARIOS', 'nav_store_tab': 'TIENDA',
+            'nav_services': 'SERVICIOS', 'nav_exam_tab': 'EXAMEN',
+            'nav_reports': 'INFORMES', 'nav_blacks': 'CINTURONES',
+            'nav_logout': 'SALIR',
             'nav_checkin': 'Check-in', 'nav_qr': 'QR Code',
             'nav_schedule': 'Horarios', 'nav_financial': 'Financiero',
             'nav_store': 'Tienda', 'nav_events': 'Eventos',
@@ -3396,7 +3428,7 @@ const academia = {
                 return `<div class="item-card" style="border-left:4px solid ${cor};display:flex;align-items:center;gap:10px;">${foto}<div style="flex:1;min-width:0;"><span style="font-size:0.85rem;color:#e2e8f0;font-weight:600;display:block;">${c.alunoNome}</span>${dataExib}</div><div style="display:flex;gap:6px;"><button onclick="academia.aprovar('${c.id}','${c.alunoId}','${c.turma}')" style="background:#062f1d;color:#10b981;border:none;padding:8px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;"><i class="fas fa-check"></i></button><button onclick="academia.recusarCheckin('${c.id}')" style="background:#3b0707;color:#ef4444;border:none;padding:8px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;"><i class="fas fa-times"></i></button></div></div>`;
             }).join('');
         }
-        l.innerHTML = h || "<p style='color:var(--text-muted); text-align:center; font-size:0.8rem; padding:10px;'>Nenhum check-in pendente.</p>";
+        l.innerHTML = h || `<p style='color:var(--text-muted); text-align:center; font-size:0.8rem; padding:10px;'>${i18n.t('checkin_none_pending')}</p>`;
     },
 
     // Detecta se a turma é Muay Thai pelo nome
@@ -3451,7 +3483,7 @@ const academia = {
             upd.feedbackPendente = { turma: t, data: dataOriginal };
             await r.update(upd);
             // Push para o aluno
-            push.paraAluno(aId, '✅ Presença confirmada!', `Sua presença na turma ${t} foi registrada. OSS! 🥋`);
+            push.paraAluno(aId, i18n.t('push_presence_title'), i18n.t('push_presence_body'));
         }
         await db.collection("checkins").doc(cId).delete();
         this.renderCheckins(); academia.renderRanking(); academia.carregarConquistas();
@@ -3475,7 +3507,7 @@ const academia = {
                 </div>
                 <div style="font-size:0.72rem;color:#94a3b8;margin-bottom:12px;">${nomeAluno}</div>
                 ${checkins.length === 0
-                    ? `<p style="color:#64748b;text-align:center;font-size:0.8rem;padding:16px;">Nenhum check-in pendente.</p>`
+                    ? `<p style="color:#64748b;text-align:center;font-size:0.8rem;padding:16px;">${i18n.t('checkin_none_pending')}</p>`
                     : checkins.map(c => `
                         <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
                             <div>
@@ -3872,10 +3904,10 @@ const academia = {
                 return `<div style="background:#0f172a; border:1px solid ${isEvento?'#7c3aed44':'#f59e0b44'}; border-left:3px solid ${isEvento?'#8b5cf6':'#f59e0b'}; border-radius:8px; padding:10px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <div style="font-size:0.8rem; font-weight:700; color:#e2e8f0;">${isEvento?'🎟️':'⏳'} ${nomeExib}</div>
-                        <div style="font-size:0.6rem; color:#64748b; margin-top:2px;">${isEvento?'Presença em evento pendente':'Check-in pendente'}</div>
+                        <div style="font-size:0.6rem; color:#64748b; margin-top:2px;">${isEvento?i18n.t('checkin_event_pending'):i18n.t('checkin_pending')}</div>
                     </div>
                     <button onclick="academia.cancelarMeuCheckin('${doc.id}')" style="background:#4c0519; border:none; color:#f43f5e; padding:7px 12px; border-radius:6px; font-size:0.7rem; font-weight:800; cursor:pointer; white-space:nowrap;">
-                        <i class="fas fa-times"></i> CANCELAR
+                        <i class="fas fa-times"></i> ${i18n.t('cancel').toUpperCase()}
                     </button>
                 </div>`;
             }).join('');
@@ -12026,7 +12058,7 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
     _buildLista() {
         const hist = this._calHistorico || [];
         if (hist.length === 0) {
-            return `<p style="color:var(--text-muted); text-align:center; font-size:0.75rem; padding:10px;">Nenhum treino registrado.</p>`;
+            return `<p style="color:var(--text-muted); text-align:center; font-size:0.75rem; padding:10px;">${i18n.t('no_history')}</p>`;
         }
         return `<div style="max-height:220px; overflow-y:auto; padding-right:4px;">` +
             hist.map(t => {

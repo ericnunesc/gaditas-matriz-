@@ -1228,25 +1228,25 @@
         </main>
 
         <nav class="bottom-nav">
-            <button onclick="ui.showTab('tab-checkin')" class="nav-item active"><i class="fas fa-home"></i><span>TREINO</span></button>
+            <button onclick="ui.showTab('tab-checkin')" class="nav-item active"><i class="fas fa-home"></i><span id="nav-txt-training">TREINO</span></button>
             <button onclick="ui.showTab('tab-alunos')" id="menu-alunos" class="nav-item" style="display:none;"><i class="fas fa-users-cog"></i><span>GESTÃO</span></button>
-            <button onclick="ui.showTab('tab-eventos')" class="nav-item"><i class="fas fa-calendar-alt"></i><span>EVENTOS</span></button>
-            <button onclick="ui.showTab('tab-horarios')" id="menu-horarios" class="nav-item"><i class="fas fa-clock"></i><span>HORÁRIOS</span></button>
-            <button onclick="ui.showTab('tab-loja')" id="menu-loja" class="nav-item" style="position:relative;"><i class="fas fa-shopping-bag"></i><span>LOJA</span></button>
-            <button onclick="ui.showTab('tab-servicos'); comunidade.carregar()" class="nav-item"><i class="fas fa-handshake"></i><span>SERVIÇOS</span></button>
+            <button onclick="ui.showTab('tab-eventos')" class="nav-item"><i class="fas fa-calendar-alt"></i><span id="nav-txt-events">EVENTOS</span></button>
+            <button onclick="ui.showTab('tab-horarios')" id="menu-horarios" class="nav-item"><i class="fas fa-clock"></i><span id="nav-txt-schedule">HORÁRIOS</span></button>
+            <button onclick="ui.showTab('tab-loja')" id="menu-loja" class="nav-item" style="position:relative;"><i class="fas fa-shopping-bag"></i><span id="nav-txt-store">LOJA</span></button>
+            <button onclick="ui.showTab('tab-servicos'); comunidade.carregar()" class="nav-item"><i class="fas fa-handshake"></i><span id="nav-txt-services">SERVIÇOS</span></button>
             <button onclick="ui.showTab('tab-exame'); exame.carregarExameAluno()" id="menu-exame" class="nav-item" style="display:none; position:relative;">
                 <i class="fas fa-medal"></i>
-                <span>EXAME</span>
+                <span id="nav-txt-exam">EXAME</span>
                 <span style="position:absolute; top:2px; right:4px; width:8px; height:8px; background:#f59e0b; border-radius:50%; animation:pulse 1.5s infinite;"></span>
             </button>
             <button onclick="ui.showTab('tab-relatorios')" id="menu-relatorios" class="nav-item" style="display:none; position:relative;">
                 <i class="fas fa-file-invoice"></i>
-                <span>RELATÓRIOS</span>
+                <span id="nav-txt-reports">RELATÓRIOS</span>
                 <span id="badge-solic-avaliacao" style="display:none;position:absolute;top:0;right:4px;background:#10b981;color:white;font-size:0.5rem;font-weight:800;padding:2px 5px;border-radius:999px;min-width:16px;text-align:center;"></span>
             </button>
             <button onclick="ui.showTab('tab-midia'); publicidade.renderAdmin()" id="menu-midia" class="nav-item" style="display:none;"><i class="fas fa-bullhorn"></i><span>MÍDIA</span></button>
-            <button onclick="ui.showTab('tab-pretas'); pretas.render()" class="nav-item"><i class="fas fa-award"></i><span>PRETAS</span></button>
-            <button onclick="auth.logout()" class="nav-item logout-item"><i class="fas fa-sign-out-alt"></i><span>SAIR</span></button>
+            <button onclick="ui.showTab('tab-pretas'); pretas.render()" class="nav-item"><i class="fas fa-award"></i><span id="nav-txt-blacks">PRETAS</span></button>
+            <button onclick="auth.logout()" class="nav-item logout-item"><i class="fas fa-sign-out-alt"></i><span id="nav-txt-logout">SAIR</span></button>
         </nav>
     </div>
 

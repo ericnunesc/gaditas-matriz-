@@ -41,6 +41,7 @@ const i18n = {
         try { localStorage.removeItem('app_lang'); } catch(_) {}
         this._lang = lang;
         this._applyStatic();
+        if (typeof academia !== 'undefined') { academia.renderDashboardAluno?.(); academia.renderRanking?.(); }
     },
 
     setLang(lang) {

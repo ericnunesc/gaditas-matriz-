@@ -386,6 +386,61 @@ const i18n = {
             'adm_fin_retry': 'TENTAR NOVAMENTE',
             'adm_plan_monthly': 'Mensal', 'adm_plan_quarterly': 'Trimestral',
             'adm_plan_semiannual': 'Semestral', 'adm_plan_annual': 'Anual',
+            // Painel financeiro admin — seções accordion
+            'adm_configure_plans': 'CONFIGURAR VALORES DOS PLANOS',
+            'adm_edit_site_content': 'EDITAR CONTEÚDO DO SITE',
+            'adm_generate_charge': 'GERAR COBRANÇA AVULSA',
+            'adm_send_charge_wa': 'ENVIAR COBRANÇA VIA WHATSAPP',
+            'adm_notify_overdue_push': 'NOTIFICAR INADIMPLENTES VIA PUSH',
+            'adm_notify_overdue_desc': 'Envia notificação push para todos os alunos com fatura vencida há 1+ dia (requer token FCM salvo).',
+            'adm_send_push_now': '🔔 ENVIAR PUSH PARA INADIMPLENTES AGORA',
+            'adm_migrate_pix': 'MIGRAR ASSINATURAS PARA PIX',
+            'adm_migrate_pix_desc': 'Atualiza todas as assinaturas ativas no Asaas com forma "Pix, Boleto ou Cartão" para <strong style="color:#10b981;">Pix puro</strong>. Resolve o erro QR124E no Nubank/Inter.',
+            'adm_migrate_pix_now': '⚡ MIGRAR ASSINATURAS PARA PIX AGORA',
+            'adm_change_student_plan': 'MUDAR PLANO DO ALUNO',
+            'adm_link_dependent': 'VINCULAR DEPENDENTE — PLANO FAMÍLIA',
+            'adm_dependent_hint': 'O dependente não verá o financeiro. O titular é o responsável pelo pagamento.',
+            'adm_create_plan': 'CRIAR PLANO / ASSINATURA RECORRENTE',
+            'adm_overdue_title': 'INADIMPLÊNCIA — FATURAS VENCIDAS',
+            'adm_consulting_asaas': 'Consultando Asaas...',
+            // Labels de campos admin
+            'adm_student_lbl': 'ALUNO:', 'adm_description_lbl': 'DESCRIÇÃO:',
+            'adm_value_lbl': 'VALOR (R$):', 'adm_due_date_lbl': 'VENCIMENTO:',
+            'adm_payment_method_lbl': 'FORMA DE PAGAMENTO:', 'adm_payment_method': 'FORMA DE PAGAMENTO',
+            'adm_generate_charge_btn': 'GERAR COBRANÇA',
+            'adm_client_lbl': 'CLIENTE (nome, e-mail ou telefone):',
+            'adm_whatsapp_lbl': 'WHATSAPP (com DDD, só números):',
+            'adm_new_or_send': '⚡ OU GERAR NOVA E ENVIAR:',
+            'adm_gen_send_wa_btn': 'GERAR COBRANÇA E ENVIAR VIA WHATSAPP',
+            'adm_new_plan_lbl': 'NOVO PLANO:', 'adm_new_value_lbl': 'NOVO VALOR (R$/mês):',
+            'adm_save_new_plan': 'SALVAR NOVO PLANO',
+            'adm_holder_lbl': 'TITULAR (quem paga):',
+            'adm_dependent_lbl': 'DEPENDENTE (quem treina junto):',
+            'adm_link_dependent_btn': 'VINCULAR DEPENDENTE AO TITULAR',
+            'adm_unlink_btn': 'DESVINCULAR (tornar independente)',
+            'adm_plan_type_lbl': 'TIPO DE PLANO:',
+            'adm_monthly_value_lbl': 'VALOR MENSAL (R$):', 'adm_first_due_lbl': '1º VENCIMENTO:',
+            'adm_create_plan_btn': 'CRIAR PLANO E GERAR 1ª COBRANÇA',
+            'adm_save_values': 'SALVAR VALORES', 'adm_view_site': 'VER SITE',
+            'adm_enrollment_fee': 'TAXA DE MATRÍCULA (R$) — coloque 0 para não cobrar',
+            'adm_contact_lbl': 'CONTATO', 'adm_hero_txt_lbl': 'TEXTO PRINCIPAL',
+            'adm_plans_lbl': 'PLANOS — DESCRIÇÃO E ITENS',
+            'adm_featured_plan_lbl': 'PLANO DESTAQUE (MAIS POPULAR)',
+            'adm_short_desc_lbl': 'DESCRIÇÃO CURTA',
+            'adm_items_lbl': 'O QUE ESTÁ INCLUSO (um item por linha)',
+            'adm_hero_subtitle_lbl': 'SUBTÍTULO DO HERO',
+            // Planos buttons
+            'adm_plan_free': 'LIVRE', 'adm_plan_family': 'FAMÍLIA',
+            // Dynamic result strings
+            'adm_trial_classes': 'AULAS EXPERIMENTAIS', 'adm_page_link': 'Link da página',
+            'adm_charge_success': 'COBRANÇA GERADA COM SUCESSO!',
+            'adm_value_short': 'Valor:', 'adm_due_short': 'Vence em:', 'adm_method_short': 'Forma:',
+            'adm_copy_link': 'COPIAR LINK DE PAGAMENTO', 'adm_open_link': 'ABRIR LINK',
+            'adm_charge_id': 'ID da cobrança:', 'adm_current_plan': 'Plano atual:',
+            'adm_no_plan': 'Sem plano cadastrado',
+            'adm_plan_lbl_short': 'Plano:', 'adm_monthly_value_short': 'Valor mensal:',
+            'adm_push_sent': 'Push enviado para', 'adm_students_lbl': 'aluno(s).',
+            'adm_students_names': 'Alunos:',
         },
         en: {
             'oss_welcome': 'WELCOME!', 'oss': 'OSS!',
@@ -648,6 +703,61 @@ const i18n = {
             'adm_fin_retry': 'TRY AGAIN',
             'adm_plan_monthly': 'Monthly', 'adm_plan_quarterly': 'Quarterly',
             'adm_plan_semiannual': 'Semi-annual', 'adm_plan_annual': 'Annual',
+            // Financial admin panel — accordion sections
+            'adm_configure_plans': 'CONFIGURE PLAN PRICES',
+            'adm_edit_site_content': 'EDIT SITE CONTENT',
+            'adm_generate_charge': 'GENERATE ONE-TIME CHARGE',
+            'adm_send_charge_wa': 'SEND CHARGE VIA WHATSAPP',
+            'adm_notify_overdue_push': 'NOTIFY OVERDUE VIA PUSH',
+            'adm_notify_overdue_desc': 'Sends push notification to all students with overdue invoices for 1+ day (requires saved FCM token).',
+            'adm_send_push_now': '🔔 SEND PUSH TO OVERDUE NOW',
+            'adm_migrate_pix': 'MIGRATE SUBSCRIPTIONS TO PIX',
+            'adm_migrate_pix_desc': 'Updates all active Asaas subscriptions with "Pix, Boleto or Card" payment to <strong style="color:#10b981;">pure Pix</strong>. Fixes QR124E error on Nubank/Inter.',
+            'adm_migrate_pix_now': '⚡ MIGRATE TO PIX NOW',
+            'adm_change_student_plan': 'CHANGE STUDENT PLAN',
+            'adm_link_dependent': 'LINK DEPENDENT — FAMILY PLAN',
+            'adm_dependent_hint': 'The dependent will not see finances. The account holder is responsible for payment.',
+            'adm_create_plan': 'CREATE PLAN / RECURRING SUBSCRIPTION',
+            'adm_overdue_title': 'OVERDUE — PAST DUE INVOICES',
+            'adm_consulting_asaas': 'Consulting Asaas...',
+            // Field labels
+            'adm_student_lbl': 'STUDENT:', 'adm_description_lbl': 'DESCRIPTION:',
+            'adm_value_lbl': 'VALUE (R$):', 'adm_due_date_lbl': 'DUE DATE:',
+            'adm_payment_method_lbl': 'PAYMENT METHOD:', 'adm_payment_method': 'PAYMENT METHOD',
+            'adm_generate_charge_btn': 'GENERATE CHARGE',
+            'adm_client_lbl': 'CLIENT (name, email or phone):',
+            'adm_whatsapp_lbl': 'WHATSAPP (with area code, numbers only):',
+            'adm_new_or_send': '⚡ OR CREATE NEW AND SEND:',
+            'adm_gen_send_wa_btn': 'GENERATE CHARGE AND SEND VIA WHATSAPP',
+            'adm_new_plan_lbl': 'NEW PLAN:', 'adm_new_value_lbl': 'NEW VALUE (R$/mo):',
+            'adm_save_new_plan': 'SAVE NEW PLAN',
+            'adm_holder_lbl': 'HOLDER (who pays):',
+            'adm_dependent_lbl': 'DEPENDENT (who trains together):',
+            'adm_link_dependent_btn': 'LINK DEPENDENT TO HOLDER',
+            'adm_unlink_btn': 'UNLINK (make independent)',
+            'adm_plan_type_lbl': 'PLAN TYPE:',
+            'adm_monthly_value_lbl': 'MONTHLY VALUE (R$):', 'adm_first_due_lbl': '1ST DUE DATE:',
+            'adm_create_plan_btn': 'CREATE PLAN AND GENERATE 1ST CHARGE',
+            'adm_save_values': 'SAVE VALUES', 'adm_view_site': 'VIEW SITE',
+            'adm_enrollment_fee': 'ENROLLMENT FEE (R$) — set 0 to not charge',
+            'adm_contact_lbl': 'CONTACT', 'adm_hero_txt_lbl': 'MAIN TEXT',
+            'adm_plans_lbl': 'PLANS — DESCRIPTION AND ITEMS',
+            'adm_featured_plan_lbl': 'FEATURED PLAN (MOST POPULAR)',
+            'adm_short_desc_lbl': 'SHORT DESCRIPTION',
+            'adm_items_lbl': "WHAT'S INCLUDED (one item per line)",
+            'adm_hero_subtitle_lbl': 'HERO SUBTITLE',
+            // Plan buttons
+            'adm_plan_free': 'FREE', 'adm_plan_family': 'FAMILY',
+            // Dynamic result strings
+            'adm_trial_classes': 'TRIAL CLASSES', 'adm_page_link': 'Page link',
+            'adm_charge_success': 'CHARGE GENERATED SUCCESSFULLY!',
+            'adm_value_short': 'Amount:', 'adm_due_short': 'Due date:', 'adm_method_short': 'Method:',
+            'adm_copy_link': 'COPY PAYMENT LINK', 'adm_open_link': 'OPEN LINK',
+            'adm_charge_id': 'Charge ID:', 'adm_current_plan': 'Current plan:',
+            'adm_no_plan': 'No plan registered',
+            'adm_plan_lbl_short': 'Plan:', 'adm_monthly_value_short': 'Monthly amount:',
+            'adm_push_sent': 'Push sent to', 'adm_students_lbl': 'student(s).',
+            'adm_students_names': 'Students:',
         },
         es: {
             'oss_welcome': '¡BIENVENIDO(A)!', 'oss': '¡OSS!',
@@ -910,6 +1020,61 @@ const i18n = {
             'adm_fin_retry': 'INTENTAR DE NUEVO',
             'adm_plan_monthly': 'Mensual', 'adm_plan_quarterly': 'Trimestral',
             'adm_plan_semiannual': 'Semestral', 'adm_plan_annual': 'Anual',
+            // Panel financiero admin — secciones acordeón
+            'adm_configure_plans': 'CONFIGURAR PRECIOS DE PLANES',
+            'adm_edit_site_content': 'EDITAR CONTENIDO DEL SITIO',
+            'adm_generate_charge': 'GENERAR COBRO',
+            'adm_send_charge_wa': 'ENVIAR COBRO POR WHATSAPP',
+            'adm_notify_overdue_push': 'NOTIFICAR MOROSOS VÍA PUSH',
+            'adm_notify_overdue_desc': 'Envía notificación push a todos los alumnos con factura vencida hace 1+ día (requiere token FCM guardado).',
+            'adm_send_push_now': '🔔 ENVIAR PUSH A MOROSOS AHORA',
+            'adm_migrate_pix': 'MIGRAR SUSCRIPCIONES A PIX',
+            'adm_migrate_pix_desc': 'Actualiza todas las suscripciones activas en Asaas con forma "Pix, Boleto o Tarjeta" a <strong style="color:#10b981;">Pix puro</strong>. Resuelve el error QR124E en Nubank/Inter.',
+            'adm_migrate_pix_now': '⚡ MIGRAR A PIX AHORA',
+            'adm_change_student_plan': 'CAMBIAR PLAN DEL ALUMNO',
+            'adm_link_dependent': 'VINCULAR DEPENDIENTE — PLAN FAMILIA',
+            'adm_dependent_hint': 'El dependiente no verá el financiero. El titular es el responsable del pago.',
+            'adm_create_plan': 'CREAR PLAN / SUSCRIPCIÓN RECURRENTE',
+            'adm_overdue_title': 'MOROSIDAD — FACTURAS VENCIDAS',
+            'adm_consulting_asaas': 'Consultando Asaas...',
+            // Etiquetas de campos
+            'adm_student_lbl': 'ALUMNO:', 'adm_description_lbl': 'DESCRIPCIÓN:',
+            'adm_value_lbl': 'VALOR (R$):', 'adm_due_date_lbl': 'VENCIMIENTO:',
+            'adm_payment_method_lbl': 'MÉTODO DE PAGO:', 'adm_payment_method': 'MÉTODO DE PAGO',
+            'adm_generate_charge_btn': 'GENERAR COBRO',
+            'adm_client_lbl': 'CLIENTE (nombre, correo o teléfono):',
+            'adm_whatsapp_lbl': 'WHATSAPP (con código de área, solo números):',
+            'adm_new_or_send': '⚡ O GENERAR NUEVO Y ENVIAR:',
+            'adm_gen_send_wa_btn': 'GENERAR COBRO Y ENVIAR POR WHATSAPP',
+            'adm_new_plan_lbl': 'NUEVO PLAN:', 'adm_new_value_lbl': 'NUEVO VALOR (R$/mes):',
+            'adm_save_new_plan': 'GUARDAR NUEVO PLAN',
+            'adm_holder_lbl': 'TITULAR (quién paga):',
+            'adm_dependent_lbl': 'DEPENDIENTE (quién entrena junto):',
+            'adm_link_dependent_btn': 'VINCULAR DEPENDIENTE AL TITULAR',
+            'adm_unlink_btn': 'DESVINCULAR (hacer independiente)',
+            'adm_plan_type_lbl': 'TIPO DE PLAN:',
+            'adm_monthly_value_lbl': 'VALOR MENSUAL (R$):', 'adm_first_due_lbl': '1er VENCIMIENTO:',
+            'adm_create_plan_btn': 'CREAR PLAN Y GENERAR 1er COBRO',
+            'adm_save_values': 'GUARDAR VALORES', 'adm_view_site': 'VER SITIO',
+            'adm_enrollment_fee': 'TASA DE MATRÍCULA (R$) — ponga 0 para no cobrar',
+            'adm_contact_lbl': 'CONTACTO', 'adm_hero_txt_lbl': 'TEXTO PRINCIPAL',
+            'adm_plans_lbl': 'PLANES — DESCRIPCIÓN E ÍTEMS',
+            'adm_featured_plan_lbl': 'PLAN DESTACADO (MÁS POPULAR)',
+            'adm_short_desc_lbl': 'DESCRIPCIÓN CORTA',
+            'adm_items_lbl': 'QUÉ INCLUYE (un ítem por línea)',
+            'adm_hero_subtitle_lbl': 'SUBTÍTULO DEL HERO',
+            // Botones de planes
+            'adm_plan_free': 'LIBRE', 'adm_plan_family': 'FAMILIA',
+            // Strings de resultados dinámicos
+            'adm_trial_classes': 'CLASES DE PRUEBA', 'adm_page_link': 'Enlace de página',
+            'adm_charge_success': '¡COBRO GENERADO EXITOSAMENTE!',
+            'adm_value_short': 'Valor:', 'adm_due_short': 'Vence el:', 'adm_method_short': 'Forma:',
+            'adm_copy_link': 'COPIAR ENLACE DE PAGO', 'adm_open_link': 'ABRIR ENLACE',
+            'adm_charge_id': 'ID del cobro:', 'adm_current_plan': 'Plan actual:',
+            'adm_no_plan': 'Sin plan registrado',
+            'adm_plan_lbl_short': 'Plan:', 'adm_monthly_value_short': 'Valor mensual:',
+            'adm_push_sent': 'Push enviado a', 'adm_students_lbl': 'alumno(s).',
+            'adm_students_names': 'Alumnos:',
         }
     }
 };
@@ -1650,7 +1815,7 @@ const academia = {
     async renderRankingGeral() {
         const container = document.getElementById('ranking-geral-container');
         if (!container) return;
-        container.innerHTML = '<small style="color:#64748b;font-size:0.72rem;">⏳ Carregando...</small>';
+        container.innerHTML = '<small style="color:#64748b;font-size:0.72rem;">⏳ ' + i18n.t('loading') + '</small>';
 
         const filtro = this._rankingFiltroAtual || 'todos';
         const anoAtual = new Date().getFullYear();
@@ -1961,7 +2126,7 @@ const academia = {
                 <div onclick="const b=this.nextElementSibling;const open=b.style.display!=='none';b.style.display=open?'none':'block';this.querySelector('.cfg-chv').style.transform=open?'rotate(0)':'rotate(180deg)'"
                     style="padding:13px 15px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
                     <span style="font-size:0.7rem; font-weight:800; color:#f59e0b; letter-spacing:0.5px;">
-                        <i class="fas fa-cog"></i> CONFIGURAR VALORES DOS PLANOS
+                        <i class="fas fa-cog"></i> ${i18n.t('adm_configure_plans')}
                     </span>
                     <i class="fas fa-chevron-down cfg-chv" style="color:#f59e0b; font-size:0.8rem; transition:transform 0.25s;"></i>
                 </div>
@@ -1972,7 +2137,7 @@ const academia = {
                                 <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${planos[key].label.toUpperCase()} (R$/mês)</small>
                                 <input type="number" id="plano-val-${key}" value="${planos[key].valor}" step="0.01"
                                     style="width:100%; padding:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.85rem; font-weight:700; box-sizing:border-box;"/>
-                                <small style="color:#64748b; font-size:0.55rem; font-weight:800; display:block; margin:6px 0 3px;">FORMA DE PAGAMENTO</small>
+                                <small style="color:#64748b; font-size:0.55rem; font-weight:800; display:block; margin:6px 0 3px;">${i18n.t('adm_payment_method')}</small>
                                 <select id="plano-billing-${key}" style="width:100%; padding:8px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.72rem;">
                                     <option value="UNDEFINED" ${(planos[key].billingType||'UNDEFINED')==='UNDEFINED'?'selected':''}>🔀 Pix, Boleto ou Cartão</option>
                                     <option value="PIX" ${(planos[key].billingType||'')==='PIX'?'selected':''}>⚡ Pix</option>
@@ -1982,17 +2147,17 @@ const academia = {
                             </div>`).join('')}
                     </div>
                     <div style="margin-top:14px; padding-top:12px; border-top:1px solid #1e293b;">
-                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">TAXA DE MATRÍCULA (R$) — coloque 0 para não cobrar</small>
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_enrollment_fee')}</small>
                         <input type="number" id="plano-taxa-matricula" value="${planos.taxaMatricula ?? ''}" min="0" step="0.01" placeholder="0,00"
                             style="width:100%; padding:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.85rem; font-weight:700; box-sizing:border-box;"/>
                         <small style="color:#475569; font-size:0.55rem; display:block; margin-top:4px;">Cobrada automaticamente no Asaas quando um aluno se cadastra no cadastro.html</small>
                     </div>
                     <div style="display:flex; gap:8px; margin-top:12px;">
                         <button onclick="academia.salvarConfiguracaoPlanos()" style="flex:1; padding:12px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem;">
-                            <i class="fas fa-save"></i> SALVAR VALORES
+                            <i class="fas fa-save"></i> ${i18n.t('adm_save_values')}
                         </button>
                         <button onclick="window.open('index.html','_blank')" style="padding:12px 14px; background:#1e293b; border:1px solid #334155; color:#e2e8f0; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.8rem; white-space:nowrap;">
-                            <i class="fas fa-external-link-alt"></i> VER SITE
+                            <i class="fas fa-external-link-alt"></i> ${i18n.t('adm_view_site')}
                         </button>
                     </div>
                 </div>
@@ -2057,9 +2222,9 @@ const academia = {
         const planoRow = (key, label_) => `
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:12px;margin-top:8px;">
                 <div style="font-size:0.65rem;font-weight:900;color:#3b82f6;letter-spacing:1px;margin-bottom:8px;">${label_.toUpperCase()}</div>
-                ${label('DESCRIÇÃO CURTA')}
+                ${label(i18n.t('adm_short_desc_lbl'))}
                 <input id="lnd-desc-${key}" value="${(cfg.planos_desc?.[key] || '').replace(/"/g,'&quot;')}" style="${inputStyle}" placeholder="Ex: Renovação mensal, sem fidelidade."/>
-                ${label('O QUE ESTÁ INCLUSO (um item por linha)')}
+                ${label(i18n.t('adm_items_lbl'))}
                 <textarea id="lnd-itens-${key}" style="${taStyle}" placeholder="Item 1&#10;Item 2&#10;Item 3">${cfg.planos_itens?.[key] || ''}</textarea>
             </div>`;
 
@@ -2068,14 +2233,14 @@ const academia = {
             <div onclick="const b=this.nextElementSibling;const o=b.style.display!=='none';b.style.display=o?'none':'block';this.querySelector('.lnd-chv').style.transform=o?'rotate(0)':'rotate(180deg)'"
                 style="padding:13px 15px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
                 <span style="font-size:0.7rem;font-weight:800;color:#3b82f6;letter-spacing:0.5px;">
-                    <i class="fas fa-globe"></i> EDITAR CONTEÚDO DO SITE
+                    <i class="fas fa-globe"></i> ${i18n.t('adm_edit_site_content')}
                 </span>
                 <i class="fas fa-chevron-down lnd-chv" style="color:#3b82f6;font-size:0.8rem;transition:transform 0.25s;"></i>
             </div>
             <div style="display:none;padding:0 15px 15px;">
 
                 <!-- CONTATO -->
-                <div style="font-size:0.65rem;font-weight:900;color:#10b981;letter-spacing:1px;margin-top:4px;">CONTATO</div>
+                <div style="font-size:0.65rem;font-weight:900;color:#10b981;letter-spacing:1px;margin-top:4px;">${i18n.t('adm_contact_lbl')}</div>
                 ${label('WHATSAPP (só números, ex: 79912345678)')}
                 <input id="lnd-whatsapp" value="${cfg.whatsapp||''}" style="${inputStyle}" placeholder="79912345678" type="tel"/>
                 ${label('ENDEREÇO')}
@@ -2084,13 +2249,13 @@ const academia = {
                 <input id="lnd-instagram" value="${cfg.instagram||''}" style="${inputStyle}" placeholder="@gaditasacademy"/>
 
                 <!-- HERO -->
-                <div style="font-size:0.65rem;font-weight:900;color:#10b981;letter-spacing:1px;margin-top:16px;">TEXTO PRINCIPAL</div>
-                ${label('SUBTÍTULO DO HERO')}
+                <div style="font-size:0.65rem;font-weight:900;color:#10b981;letter-spacing:1px;margin-top:16px;">${i18n.t('adm_hero_txt_lbl')}</div>
+                ${label(i18n.t('adm_hero_subtitle_lbl'))}
                 <textarea id="lnd-hero-desc" style="${taStyle}" placeholder="Jiu-Jitsu, Muay Thai e programa Kids.&#10;Aqui o tatame transforma vidas.">${cfg.hero_descricao||''}</textarea>
 
                 <!-- PLANOS -->
-                <div style="font-size:0.65rem;font-weight:900;color:#10b981;letter-spacing:1px;margin-top:16px;">PLANOS — DESCRIÇÃO E ITENS</div>
-                ${label('PLANO DESTAQUE (MAIS POPULAR)')}
+                <div style="font-size:0.65rem;font-weight:900;color:#10b981;letter-spacing:1px;margin-top:16px;">${i18n.t('adm_plans_lbl')}</div>
+                ${label(i18n.t('adm_featured_plan_lbl'))}
                 <select id="lnd-mais-popular" style="${inputStyle}">
                     ${['mensal','trimestral','semestral','anual'].map(k =>
                         `<option value="${k}" ${(cfg.mais_popular||'semestral')===k?'selected':''}>${k.charAt(0).toUpperCase()+k.slice(1)}</option>`
@@ -2103,10 +2268,10 @@ const academia = {
 
                 <div style="display:flex;gap:8px;margin-top:14px;">
                     <button onclick="academia.salvarLandingConfig()" style="flex:1;padding:12px;background:#3b82f6;border:none;color:#fff;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;">
-                        <i class="fas fa-save"></i> SALVAR CONTEÚDO DO SITE
+                        <i class="fas fa-save"></i> ${i18n.t('adm_save_values')}
                     </button>
                     <button onclick="window.open('index.html','_blank')" style="padding:12px 14px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;white-space:nowrap;">
-                        <i class="fas fa-external-link-alt"></i> VER SITE
+                        <i class="fas fa-external-link-alt"></i> ${i18n.t('adm_view_site')}
                     </button>
                 </div>
             </div>
@@ -2301,7 +2466,7 @@ const academia = {
     async carregarVideosPendentesAdmin() {
         const container = document.getElementById('lista-videos-pendentes-admin');
         if (!container) return;
-        container.innerHTML = '<small style="color:#64748b;">Carregando...</small>';
+        container.innerHTML = '<small style="color:#64748b;">' + i18n.t('loading') + '</small>';
         try {
             const snap = await db.collection("videos_pendentes")
                 .where("status", "==", "pendente").get();
@@ -2401,7 +2566,7 @@ const academia = {
         if (!container) return;
         if (container._carregando) return;
         container._carregando = true;
-        container.innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+        container.innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> ' + i18n.t('loading') + '</div>';
         try {
             const snap = await db.collection('alunos').get();
             const agora = new Date();
@@ -2481,7 +2646,7 @@ const academia = {
     async renderRelatPlanos() {
         const container = document.getElementById('resultado-relat-planos') || document.getElementById('resultado-relatorios');
         if (!container) return;
-        container.innerHTML = '<div style="text-align:center;padding:20px;color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:#64748b;"><i class="fas fa-spinner fa-spin"></i> ' + i18n.t('loading') + '</div>';
 
         const snap = await db.collection('alunos').orderBy('nome').get();
 
@@ -2633,7 +2798,7 @@ const academia = {
 
         // Variável de cache no escopo do módulo (evita problemas com 'this')
         if (!window._relatIdadesCacheGaditas || aplicarFiltros === 'reload') {
-            container.innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+            container.innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;font-size:0.7rem;"><i class="fas fa-spinner fa-spin"></i> ' + i18n.t('loading') + '</div>';
             try {
                 const snap = await db.collection("alunos").get();
                 const anoAtual = new Date().getFullYear();
@@ -4116,7 +4281,7 @@ const academia = {
         modal.innerHTML = `
             <div style="background:#1e293b;border-radius:16px;padding:20px;width:100%;max-width:400px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                    <span style="font-size:0.9rem;font-weight:800;color:#fbbf24;">⏱ Check-ins Pendentes</span>
+                    <span style="font-size:0.9rem;font-weight:800;color:#fbbf24;">⏱ ${i18n.t('pending_checkins_mat')}</span>
                     <button onclick="document.getElementById('modal-checkins-aluno').remove()" style="background:#334155;border:none;color:white;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:700;">✕</button>
                 </div>
                 <div style="font-size:0.72rem;color:#94a3b8;margin-bottom:12px;">${nomeAluno}</div>
@@ -6875,7 +7040,7 @@ Ele voltará a ser aluno normal.`)) return;
         const lista = document.getElementById('lista-historico-avisos-aluno');
         if (!container || !lista) return;
         container.classList.remove('hidden');
-        lista.innerHTML = '<small style="color:#64748b;">Carregando...</small>';
+        lista.innerHTML = '<small style="color:#64748b;">' + i18n.t('loading') + '</small>';
 
         const snap = await db.collection("mural_avisos").orderBy("data", "desc").limit(20).get();
         const anoAtual = new Date().getFullYear();
@@ -10263,12 +10428,12 @@ Qualquer dúvida, entre em contato conosco. 🙏`;
                 <div style="background:#0c1a3a; border:1px solid #3b82f644; border-radius:16px; padding:16px; margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                         <div style="font-size:0.8rem; font-weight:800; color:#60a5fa;">
-                            🆕 AULAS EXPERIMENTAIS
+                            🆕 ${i18n.t('adm_trial_classes')}
                             ${pendentesHoje > 0 ? `<span style="background:#3b82f6; color:white; font-size:0.55rem; padding:2px 7px; border-radius:999px; margin-left:6px;">${pendentesHoje} hoje</span>` : ''}
                         </div>
                         <a href="experimental.html" target="_blank"
                             style="font-size:0.65rem; color:#60a5fa; background:#1e3a8a55; border:1px solid #3b82f644; padding:5px 10px; border-radius:8px; text-decoration:none; font-weight:700;">
-                            🔗 Link da página
+                            🔗 ${i18n.t('adm_page_link')}
                         </a>
                     </div>`;
 
@@ -10739,7 +10904,7 @@ const profComms = {
                 <button id="tab-agenda-grade" onclick="profComms._mostrarAbaAgenda('grade')" style="flex:1;padding:8px;border-radius:8px;border:none;font-size:0.72rem;font-weight:800;cursor:pointer;background:#8b5cf6;color:white;">🗓️ Grade</button>
                 <button id="tab-agenda-cal" onclick="profComms._mostrarAbaAgenda('calendario')" style="flex:1;padding:8px;border-radius:8px;border:none;font-size:0.72rem;font-weight:800;cursor:pointer;background:#1e293b;color:#64748b;border:1px solid #334155;">📆 Calendário</button>
             </div>
-            <div id="agenda-content"><div style="text-align:center;padding:20px;color:#64748b;font-size:0.8rem;">⏳ Carregando...</div></div>
+            <div id="agenda-content"><div style="text-align:center;padding:20px;color:#64748b;font-size:0.8rem;">⏳ '</div></div>
         </div>`;
 
         const [snapProfs, snapAlunos] = await Promise.all([
@@ -11092,7 +11257,7 @@ const profComms = {
                 <button onclick="profComms._carregarDispensasAdmin('hoje',this)" style="flex:1;padding:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Hoje</button>
                 <button onclick="profComms._carregarDispensasAdmin('todas',this)" style="flex:1;padding:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Todas</button>
             </div>
-            <div id="dispensas-admin-lista"><div style="text-align:center;padding:20px;color:#64748b;font-size:0.8rem;">⏳ Carregando...</div></div>
+            <div id="dispensas-admin-lista"><div style="text-align:center;padding:20px;color:#64748b;font-size:0.8rem;">⏳ '</div></div>
         </div>`;
         this._carregarDispensasAdmin('futuras', modal.querySelector('button'));
     },
@@ -11167,7 +11332,7 @@ const profComms = {
                 <button onclick="profComms._carregarRanking('ano',this)" style="flex:1;padding:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Este ano</button>
                 <button onclick="profComms._carregarRanking('total',this)" style="flex:1;padding:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Total</button>
             </div>
-            <div id="ranking-profs-lista"><div style="text-align:center;padding:20px;color:#64748b;font-size:0.8rem;">⏳ Carregando...</div></div>
+            <div id="ranking-profs-lista"><div style="text-align:center;padding:20px;color:#64748b;font-size:0.8rem;">⏳ '</div></div>
         </div>`;
         this._carregarRanking('mes', modal.querySelector('button'));
     },
@@ -11460,7 +11625,7 @@ const planoCal = {
         if (this._planos === null) {
             card.innerHTML = `<div style="background:#1e293b;border:1px solid #8b5cf644;border-left:3px solid #8b5cf6;border-radius:12px;padding:15px;margin-top:0;">
                 <div style="font-size:0.75rem;font-weight:800;color:#8b5cf6;margin-bottom:8px;">📋 ${i18n.t('adm_lesson_history')}</div>
-                <div style="font-size:0.7rem;color:#64748b;">${i18n.t('loading')}</div></div>`;
+                <div style="font-size:0.7rem;color:#64748b;">'</div></div>`;
             await this._carregarPlanos();
             return;
         }
@@ -14201,7 +14366,7 @@ const exame = {
                 </button>`).join('')}
             </div>
             <div style="font-size:0.55rem;color:#475569;margin-bottom:10px;">💡 Toque na linha para marcar presença (risca o nome). Toque na foto para ampliar. <span style="color:#f59e0b;">Amarelo = 14-29d sem treinar.</span> <span style="color:#ef4444;">Vermelho = 30+ dias afastado.</span></div>
-            <div id="chamada-corpo" style="color:#94a3b8;text-align:center;padding:20px;">⏳ Carregando...</div>
+            <div id="chamada-corpo" style="color:#94a3b8;text-align:center;padding:20px;">⏳ '</div>
         </div>`;
 
         try {
@@ -14874,7 +15039,7 @@ const exame = {
                     <span id="chev-convocados" style="color:#64748b;font-size:0.7rem;transition:transform 0.2s;">▼</span>
                 </div>
                 <div id="acc-convocados" style="display:none;padding:0 14px 14px;">
-                    <div id="lista-confirmados-exame"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>
+                    <div id="lista-confirmados-exame"><small style="color:#475569;font-size:0.65rem;">'</small></div>
                 </div>
             </div>`;
 
@@ -14905,10 +15070,10 @@ const exame = {
             </button>`);
 
         const prereqsAccordion = accordion('prereqs', '📋 PRÉ-REQUISITOS DO EXAME', '#818cf8',
-            `<div id="prereqs-painel"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>`);
+            `<div id="prereqs-painel"><small style="color:#475569;font-size:0.65rem;">'</small></div>`);
 
         const provaAccordion = accordion('prova-regras', '📝 PROVA DE REGRAS', '#f97316',
-            `<div id="prova-regras-painel"><small style="color:#475569;font-size:0.65rem;">Carregando...</small></div>`);
+            `<div id="prova-regras-painel"><small style="color:#475569;font-size:0.65rem;">'</small></div>`);
 
         const secoesPorMod = _modAtual === 'muaythai'
             ? secao('🥊 MUAY THAI', '#ef4444', 'muaythai', mt)
@@ -16761,7 +16926,7 @@ const tecnicasExame = {
 
         const conteudo = document.getElementById('tec-conteudo');
         if (!conteudo) return;
-        conteudo.innerHTML = `<small style="color:#475569;font-size:0.65rem;">Carregando...</small>`;
+        conteudo.innerHTML = `<small style="color:#475569;font-size:0.65rem;">'</small>`;
 
         const info    = this._GRUPOS[grupo];
         const bib     = info.bib === 'kids' ? this._BIB_KIDS : this._BIB_ADULTO;
@@ -17259,7 +17424,7 @@ const treinoPost = {
                     <span id="chev-acc-radar" style="color:#ef4444;font-size:0.7rem;transition:transform 0.2s;transform:rotate(180deg);">▼</span>
                 </div>
                 <div id="acc-radar" style="display:block;padding:0 12px 12px;">
-                    <div id="radar-sumidos-lista"><small style="color:#475569;font-size:0.65rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small></div>
+                    <div id="radar-sumidos-lista"><small style="color:#475569;font-size:0.65rem;"><i class="fas fa-spinner fa-spin"></i> '</small></div>
                 </div>
             </div>`;
         this._carregarRadarLista();
@@ -17268,7 +17433,7 @@ const treinoPost = {
     async _carregarRadarLista() {
         const el = document.getElementById('radar-sumidos-lista');
         if (!el) return;
-        el.innerHTML = `<small style="color:#475569;font-size:0.65rem;"><i class="fas fa-spinner fa-spin"></i> Carregando...</small>`;
+        el.innerHTML = `<small style="color:#475569;font-size:0.65rem;"><i class="fas fa-spinner fa-spin"></i> '</small>`;
         try {
             const snap = await db.collection('alunos').get();
             const agora = Date.now();
@@ -22737,7 +22902,7 @@ const comissaoProf = {
                     <div id="comissao-mes-label" style="font-size:0.7rem;font-weight:800;color:#94a3b8;min-width:120px;text-align:center;"></div>
                     <button id="comissao-btn-prox" onclick="comissaoProf._navMes(1)" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:800;font-size:0.8rem;">Próximo ›</button>
                 </div>
-                <div id="comissao-corpo" style="color:#94a3b8;text-align:center;padding:20px;">⏳ Carregando...</div>
+                <div id="comissao-corpo" style="color:#94a3b8;text-align:center;padding:20px;">⏳ '</div>
             </div>`;
         document.body.appendChild(modal);
         this._mesOffset = 0;
@@ -23055,7 +23220,7 @@ const substituicaoProf = {
                     <div id="sub-mes-label" style="font-size:0.7rem;font-weight:800;color:#94a3b8;min-width:120px;text-align:center;"></div>
                     <button id="sub-btn-prox" onclick="substituicaoProf._navMes(1)" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:800;font-size:0.8rem;">Próximo ›</button>
                 </div>
-                <div id="sub-corpo" style="color:#94a3b8;text-align:center;padding:20px;">⏳ Carregando...</div>
+                <div id="sub-corpo" style="color:#94a3b8;text-align:center;padding:20px;">⏳ '</div>
             </div>`;
         document.body.appendChild(modal);
         this._mesOffset = 0;
@@ -26293,7 +26458,7 @@ const pretas = {
     async render() {
         const el = document.getElementById('pretas-container');
         if (!el) return;
-        el.innerHTML = `<div style="text-align:center;padding:40px;color:#475569;font-size:0.75rem;">${i18n.t('loading')}</div>`;
+        el.innerHTML = `<div style="text-align:center;padding:40px;color:#475569;font-size:0.75rem;">'</div>`;
         try {
             const snap = await db.collection('faixas_pretas').orderBy('dataGraduacao', 'asc').get();
             this._lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));

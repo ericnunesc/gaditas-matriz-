@@ -35,11 +35,11 @@ const GaditasPainelAdm = {
             <!-- ══ COBRANÇA AVULSA ══ -->
             <div id="fin-card-avulsa" class="card" style="background:#1e293b; border:1px solid #f59e0b44; padding:15px; border-radius:12px; margin-top:4px;">
                 <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#f59e0b; margin-bottom:14px; letter-spacing:0.5px;">
-                    <i class="fas fa-bolt"></i> GERAR COBRANÇA AVULSA
+                    <i class="fas fa-bolt"></i> ${i18n.t('adm_generate_charge')}
                 </div>
 
                 <!-- Busca de aluno -->
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">ALUNO:</small>
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_student_lbl')}</small>
                 <input type="text" id="cobranca-busca-aluno" placeholder="🔍 Digite o nome do aluno..."
                     oninput="GaditasPainelAdm.buscarAlunoCobranca()"
                     style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;"/>
@@ -49,26 +49,26 @@ const GaditasPainelAdm = {
                 </div>
 
                 <!-- Descrição -->
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">DESCRIÇÃO:</small>
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_description_lbl')}</small>
                 <input type="text" id="cobranca-descricao" placeholder="Ex: Taxa de evento, Kimono, Mensalidade extra..."
                     style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:10px; box-sizing:border-box;"/>
 
                 <!-- Valor + Vencimento -->
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
                     <div style="flex:1;">
-                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">VALOR (R$):</small>
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_value_lbl')}</small>
                         <input type="number" id="cobranca-valor" placeholder="0,00" step="0.01" min="0.01"
                             style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.9rem; font-weight:700; box-sizing:border-box;"/>
                     </div>
                     <div style="flex:1;">
-                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">VENCIMENTO:</small>
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_due_date_lbl')}</small>
                         <input type="date" id="cobranca-vencimento" value="${dataVencStr}"
                             style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
                     </div>
                 </div>
 
                 <!-- Forma de pagamento -->
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">FORMA DE PAGAMENTO:</small>
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_payment_method_lbl')}</small>
                 <select id="cobranca-tipo"
                     style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:14px; box-sizing:border-box;">
                     <option value="PIX">⚡ Pix</option>
@@ -79,7 +79,7 @@ const GaditasPainelAdm = {
 
                 <button onclick="GaditasPainelAdm.gerarCobrancaAvulsa()"
                     style="width:100%; padding:13px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.85rem; letter-spacing:0.3px;">
-                    <i class="fas fa-bolt"></i> GERAR COBRANÇA
+                    <i class="fas fa-bolt"></i> ${i18n.t('adm_generate_charge_btn')}
                 </button>
 
                 <div id="cobranca-resultado" style="margin-top:12px;"></div>
@@ -88,10 +88,10 @@ const GaditasPainelAdm = {
             <!-- ══ ENVIAR COBRANÇA VIA WHATSAPP ══ -->
             <div id="fin-card-whats" class="card" style="background:#1e293b; border:1px solid #25d36644; padding:15px; border-radius:12px; margin-top:4px;">
                 <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#25d366; margin-bottom:14px; letter-spacing:0.5px;">
-                    <i class="fab fa-whatsapp"></i> ENVIAR COBRANÇA VIA WHATSAPP
+                    <i class="fab fa-whatsapp"></i> ${i18n.t('adm_send_charge_wa')}
                 </div>
 
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">CLIENTE (nome, e-mail ou telefone):</small>
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_client_lbl')}</small>
                 <input type="text" id="wpp-busca-cliente" placeholder="🔍 Buscar no app ou Asaas..."
                     oninput="GaditasPainelAdm.buscarClienteWpp()"
                     style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;"/>
@@ -102,7 +102,7 @@ const GaditasPainelAdm = {
                     <div id="wpp-cliente-info" style="background:#0f172a; border:1px solid #25d36644; border-radius:8px; padding:10px 12px; margin-bottom:10px;"></div>
 
                     <!-- Telefone -->
-                    <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">WHATSAPP (com DDD, só números):</small>
+                    <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_whatsapp_lbl')}</small>
                     <div style="display:flex; gap:6px; margin-bottom:12px;">
                         <input type="text" id="wpp-telefone" placeholder="Ex: 79999998888" maxlength="13"
                             oninput="this.value=this.value.replace(/\\D/g,'')"
@@ -118,17 +118,17 @@ const GaditasPainelAdm = {
 
                     <!-- Ou gerar nova -->
                     <div style="margin-top:12px; border-top:1px solid #334155; padding-top:12px;">
-                        <small style="color:#64748b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">⚡ OU GERAR NOVA E ENVIAR:</small>
+                        <small style="color:#64748b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:8px; letter-spacing:0.5px;">${i18n.t('adm_new_or_send')}</small>
                         <input type="text" id="wpp-nova-desc" placeholder="Descrição (ex: Mensalidade Julho)"
                             style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:8px; box-sizing:border-box;"/>
                         <div style="display:flex; gap:8px; margin-bottom:10px;">
                             <div style="flex:1;">
-                                <small style="color:#94a3b8; font-size:0.58rem; font-weight:800; display:block; margin-bottom:4px;">VALOR (R$):</small>
+                                <small style="color:#94a3b8; font-size:0.58rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_value_lbl')}</small>
                                 <input type="number" id="wpp-nova-valor" placeholder="0,00" step="0.01"
                                     style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.9rem; font-weight:700; box-sizing:border-box;"/>
                             </div>
                             <div style="flex:1;">
-                                <small style="color:#94a3b8; font-size:0.58rem; font-weight:800; display:block; margin-bottom:4px;">VENCIMENTO:</small>
+                                <small style="color:#94a3b8; font-size:0.58rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_due_date_lbl')}</small>
                                 <input type="date" id="wpp-nova-venc" value="${dataVencStr}"
                                     style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
                             </div>
@@ -141,7 +141,7 @@ const GaditasPainelAdm = {
                         </select>
                         <button onclick="GaditasPainelAdm.gerarEEnviarWpp()"
                             style="width:100%; padding:12px; background:#25d366; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.82rem; letter-spacing:0.3px;">
-                            <i class="fab fa-whatsapp"></i> GERAR COBRANÇA E ENVIAR VIA WHATSAPP
+                            <i class="fab fa-whatsapp"></i> ${i18n.t('adm_gen_send_wa_btn')}
                         </button>
                     </div>
                 </div>
@@ -152,12 +152,12 @@ const GaditasPainelAdm = {
             <!-- ══ PUSH INADIMPLÊNCIA ══ -->
             <div class="card" style="background:#1e293b; border:1px solid #f43f5e44; padding:15px; border-radius:12px; margin-top:4px;">
                 <div style="font-size:0.7rem; font-weight:800; color:#f43f5e; margin-bottom:10px; letter-spacing:0.5px;">
-                    <i class="fas fa-bell"></i> NOTIFICAR INADIMPLENTES VIA PUSH
+                    <i class="fas fa-bell"></i> ${i18n.t('adm_notify_overdue_push')}
                 </div>
-                <p style="font-size:0.7rem; color:#94a3b8; margin:0 0 12px 0;">Envia notificação push para todos os alunos com fatura vencida há 1+ dia (requer token FCM salvo).</p>
+                <p style="font-size:0.7rem; color:#94a3b8; margin:0 0 12px 0;">${i18n.t('adm_notify_overdue_desc')}</p>
                 <button onclick="GaditasPainelAdm.enviarPushInadimplentes()" id="btn-push-inadimp"
                     style="width:100%; padding:12px; background:#f43f5e; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.82rem;">
-                    🔔 ENVIAR PUSH PARA INADIMPLENTES AGORA
+                    ${i18n.t('adm_send_push_now')}
                 </button>
                 <div id="push-inadimp-resultado" style="margin-top:10px;"></div>
             </div>
@@ -165,12 +165,12 @@ const GaditasPainelAdm = {
             <!-- ══ MIGRAR ASSINATURAS PARA PIX ══ -->
             <div class="card" style="background:#1e293b; border:1px solid #10b98144; padding:15px; border-radius:12px; margin-top:4px;">
                 <div style="font-size:0.7rem; font-weight:800; color:#10b981; margin-bottom:8px; letter-spacing:0.5px;">
-                    <i class="fas fa-exchange-alt"></i> MIGRAR ASSINATURAS PARA PIX
+                    <i class="fas fa-exchange-alt"></i> ${i18n.t('adm_migrate_pix')}
                 </div>
-                <p style="font-size:0.68rem; color:#94a3b8; margin:0 0 10px 0;">Atualiza todas as assinaturas ativas no Asaas com forma "Pix, Boleto ou Cartão" para <strong style="color:#10b981;">Pix puro</strong>. Resolve o erro QR124E no Nubank/Inter.</p>
+                <p style="font-size:0.68rem; color:#94a3b8; margin:0 0 10px 0;">${i18n.t('adm_migrate_pix_desc')}</p>
                 <button onclick="GaditasPainelAdm.migrarAssinaturasParaPix()" id="btn-migrar-pix"
                     style="width:100%; padding:12px; background:#10b981; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.82rem;">
-                    ⚡ MIGRAR ASSINATURAS PARA PIX AGORA
+                    ${i18n.t('adm_migrate_pix_now')}
                 </button>
                 <div id="migrar-pix-resultado" style="margin-top:10px;"></div>
             </div>
@@ -178,34 +178,34 @@ const GaditasPainelAdm = {
             <!-- ══ MUDAR PLANO ══ -->
             <div id="fin-card-mudar-plano" class="card" style="background:#1e293b; border:1px solid #8b5cf644; padding:15px; border-radius:12px; margin-top:4px;">
                 <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#a78bfa; margin-bottom:14px; letter-spacing:0.5px;">
-                    <i class="fas fa-exchange-alt"></i> MUDAR PLANO DO ALUNO
+                    <i class="fas fa-exchange-alt"></i> ${i18n.t('adm_change_student_plan')}
                 </div>
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">ALUNO:</small>
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_student_lbl')}</small>
                 <input type="text" id="mudar-plano-busca" placeholder="🔍 Digite o nome do aluno..."
                     oninput="GaditasPainelAdm.buscarAlunoMudarPlano()"
                     style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;"/>
                 <div id="mudar-plano-lista" style="margin-bottom:6px;"></div>
                 <div id="mudar-plano-aluno-selecionado" class="hidden" style="background:#0f172a; border:1px solid #8b5cf6; border-radius:8px; padding:10px 12px; margin-bottom:12px;"></div>
 
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">NOVO PLANO:</small>
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">${i18n.t('adm_new_plan_lbl')}</small>
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px;">
-                    <button id="mp-btn-mensal"     onclick="GaditasPainelAdm._selecionarMudarPlano('mensal')"     style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 MENSAL</button>
-                    <button id="mp-btn-trimestral" onclick="GaditasPainelAdm._selecionarMudarPlano('trimestral')" style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 TRIMESTRAL</button>
-                    <button id="mp-btn-semestral"  onclick="GaditasPainelAdm._selecionarMudarPlano('semestral')"  style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 SEMESTRAL</button>
-                    <button id="mp-btn-anual"      onclick="GaditasPainelAdm._selecionarMudarPlano('anual')"      style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 ANUAL</button>
-                    <button id="mp-btn-livre"      onclick="GaditasPainelAdm._selecionarMudarPlano('livre')"      style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">🔓 LIVRE</button>
-                    <button id="mp-btn-familia"    onclick="GaditasPainelAdm._selecionarMudarPlano('familia')"    style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">👨‍👩‍👧 FAMÍLIA</button>
+                    <button id="mp-btn-mensal"     onclick="GaditasPainelAdm._selecionarMudarPlano('mensal')"     style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 ${i18n.t('adm_plan_monthly')}</button>
+                    <button id="mp-btn-trimestral" onclick="GaditasPainelAdm._selecionarMudarPlano('trimestral')" style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 ${i18n.t('adm_plan_quarterly')}</button>
+                    <button id="mp-btn-semestral"  onclick="GaditasPainelAdm._selecionarMudarPlano('semestral')"  style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 ${i18n.t('adm_plan_semiannual')}</button>
+                    <button id="mp-btn-anual"      onclick="GaditasPainelAdm._selecionarMudarPlano('anual')"      style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 ${i18n.t('adm_plan_annual')}</button>
+                    <button id="mp-btn-livre"      onclick="GaditasPainelAdm._selecionarMudarPlano('livre')"      style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">🔓 ${i18n.t('adm_plan_free')}</button>
+                    <button id="mp-btn-familia"    onclick="GaditasPainelAdm._selecionarMudarPlano('familia')"    style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">👨‍👩‍👧 ${i18n.t('adm_plan_family')}</button>
                 </div>
                 <div style="display:flex; gap:10px; margin-bottom:14px;">
                     <div style="flex:1;">
-                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">NOVO VALOR (R$/mês):</small>
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_new_value_lbl')}</small>
                         <input type="number" id="mudar-plano-valor" placeholder="0,00" step="0.01"
                             style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #8b5cf6; color:white; border-radius:8px; outline:none; font-size:0.9rem; font-weight:700; box-sizing:border-box;"/>
                     </div>
                 </div>
                 <button onclick="GaditasPainelAdm.confirmarMudancaPlano()"
                     style="width:100%; padding:12px; background:#8b5cf6; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.82rem;">
-                    <i class="fas fa-exchange-alt"></i> SALVAR NOVO PLANO
+                    <i class="fas fa-exchange-alt"></i> ${i18n.t('adm_save_new_plan')}
                 </button>
                 <small style="color:#475569; font-size:0.58rem; display:block; margin-top:6px; line-height:1.4;">
                     Atualiza apenas o plano no sistema. Para cancelar a assinatura antiga no Asaas, acesse o painel Asaas diretamente.
@@ -216,20 +216,20 @@ const GaditasPainelAdm = {
             <!-- ══ VINCULAR DEPENDENTE (PLANO FAMÍLIA) ══ -->
             <div id="fin-card-vincular" class="card" style="background:#1e293b; border:1px solid #f43f5e44; padding:15px; border-radius:12px; margin-top:4px;">
                 <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#f43f5e; margin-bottom:4px; letter-spacing:0.5px;">
-                    <i class="fas fa-users"></i> VINCULAR DEPENDENTE — PLANO FAMÍLIA
+                    <i class="fas fa-users"></i> ${i18n.t('adm_link_dependent')}
                 </div>
                 <small style="color:#64748b; font-size:0.58rem; display:block; margin-bottom:12px; line-height:1.4;">
-                    O dependente não verá o financeiro. O titular é o responsável pelo pagamento.
+                    ${i18n.t('adm_dependent_hint')}
                 </small>
 
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">TITULAR (quem paga):</small>
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_holder_lbl')}</small>
                 <input type="text" id="dep-busca-titular" placeholder="🔍 Nome do titular do plano..."
                     oninput="GaditasPainelAdm.buscarTitularFamilia()"
                     style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;"/>
                 <div id="dep-lista-titular" style="margin-bottom:6px;"></div>
                 <div id="dep-titular-selecionado" class="hidden" style="background:#0f172a; border:1px solid #10b981; border-radius:8px; padding:10px 12px; margin-bottom:12px;"></div>
 
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">DEPENDENTE (quem treina junto):</small>
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_dependent_lbl')}</small>
                 <input type="text" id="dep-busca-dependente" placeholder="🔍 Nome do dependente..."
                     oninput="GaditasPainelAdm.buscarDependente()"
                     style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;"/>
@@ -238,11 +238,11 @@ const GaditasPainelAdm = {
 
                 <button onclick="GaditasPainelAdm.vincularDependente()"
                     style="width:100%; padding:12px; background:#f43f5e; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.82rem; margin-bottom:8px;">
-                    <i class="fas fa-link"></i> VINCULAR DEPENDENTE AO TITULAR
+                    <i class="fas fa-link"></i> ${i18n.t('adm_link_dependent_btn')}
                 </button>
                 <button onclick="GaditasPainelAdm.desvincularDependente()"
                     style="width:100%; padding:11px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.78rem;">
-                    <i class="fas fa-unlink"></i> DESVINCULAR (tornar independente)
+                    <i class="fas fa-unlink"></i> ${i18n.t('adm_unlink_btn')}
                 </button>
                 <div id="dep-resultado" style="margin-top:10px;"></div>
             </div>
@@ -250,11 +250,11 @@ const GaditasPainelAdm = {
             <!-- ══ CRIAR PLANO / ASSINATURA ══ -->
             <div id="fin-card-criar-plano" class="card" style="background:#1e293b; border:1px solid #10b98144; padding:15px; border-radius:12px; margin-top:4px;">
                 <div class="fin-titulo" style="font-size:0.7rem; font-weight:800; color:#10b981; margin-bottom:14px; letter-spacing:0.5px;">
-                    <i class="fas fa-file-contract"></i> CRIAR PLANO / ASSINATURA RECORRENTE
+                    <i class="fas fa-file-contract"></i> ${i18n.t('adm_create_plan')}
                 </div>
 
                 <!-- Busca de aluno -->
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">ALUNO:</small>
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_student_lbl')}</small>
                 <input type="text" id="plano-busca-aluno" placeholder="🔍 Digite o nome do aluno..."
                     oninput="GaditasPainelAdm.buscarAlunoPlano()"
                     style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:6px; box-sizing:border-box;"/>
@@ -264,32 +264,32 @@ const GaditasPainelAdm = {
                 </div>
 
                 <!-- Tipo de plano -->
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">TIPO DE PLANO:</small>
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">${i18n.t('adm_plan_type_lbl')}</small>
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:12px;">
-                    <button id="plano-btn-mensal"      onclick="GaditasPainelAdm._selecionarTipoPlano('mensal')"      style="padding:9px 4px; background:#10b981; border:none; color:white; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 MENSAL</button>
-                    <button id="plano-btn-trimestral"  onclick="GaditasPainelAdm._selecionarTipoPlano('trimestral')"  style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 TRIMESTRAL</button>
-                    <button id="plano-btn-semestral"   onclick="GaditasPainelAdm._selecionarTipoPlano('semestral')"   style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 SEMESTRAL</button>
-                    <button id="plano-btn-anual"       onclick="GaditasPainelAdm._selecionarTipoPlano('anual')"       style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 ANUAL</button>
-                    <button id="plano-btn-livre"       onclick="GaditasPainelAdm._selecionarTipoPlano('livre')"       style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">🔓 LIVRE</button>
-                    <button id="plano-btn-familia"     onclick="GaditasPainelAdm._selecionarTipoPlano('familia')"     style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">👨‍👩‍👧 FAMÍLIA</button>
+                    <button id="plano-btn-mensal"      onclick="GaditasPainelAdm._selecionarTipoPlano('mensal')"      style="padding:9px 4px; background:#10b981; border:none; color:white; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 ${i18n.t('adm_plan_monthly')}</button>
+                    <button id="plano-btn-trimestral"  onclick="GaditasPainelAdm._selecionarTipoPlano('trimestral')"  style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 ${i18n.t('adm_plan_quarterly')}</button>
+                    <button id="plano-btn-semestral"   onclick="GaditasPainelAdm._selecionarTipoPlano('semestral')"   style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 ${i18n.t('adm_plan_semiannual')}</button>
+                    <button id="plano-btn-anual"       onclick="GaditasPainelAdm._selecionarTipoPlano('anual')"       style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">📅 ${i18n.t('adm_plan_annual')}</button>
+                    <button id="plano-btn-livre"       onclick="GaditasPainelAdm._selecionarTipoPlano('livre')"       style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">🔓 ${i18n.t('adm_plan_free')}</button>
+                    <button id="plano-btn-familia"     onclick="GaditasPainelAdm._selecionarTipoPlano('familia')"     style="padding:9px 4px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">👨‍👩‍👧 ${i18n.t('adm_plan_family')}</button>
                 </div>
 
                 <!-- Valor + 1º Vencimento -->
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
                     <div style="flex:1;">
-                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">VALOR MENSAL (R$):</small>
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_monthly_value_lbl')}</small>
                         <input type="number" id="plano-valor" placeholder="0,00" step="0.01" min="0.01"
                             style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #10b981; color:white; border-radius:8px; outline:none; font-size:0.9rem; font-weight:700; box-sizing:border-box;"/>
                     </div>
                     <div style="flex:1;">
-                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">1º VENCIMENTO:</small>
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_first_due_lbl')}</small>
                         <input type="date" id="plano-vencimento" value="${dataVencStr}"
                             style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; box-sizing:border-box;"/>
                     </div>
                 </div>
 
                 <!-- Forma de pagamento -->
-                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">FORMA DE PAGAMENTO:</small>
+                <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:4px;">${i18n.t('adm_payment_method_lbl')}</small>
                 <select id="plano-tipo"
                     style="width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:14px; box-sizing:border-box;">
                     <option value="PIX">⚡ Pix</option>
@@ -300,7 +300,7 @@ const GaditasPainelAdm = {
 
                 <button onclick="GaditasPainelAdm.criarPlanoAsaas()"
                     style="width:100%; padding:13px; background:#10b981; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.85rem; letter-spacing:0.3px;">
-                    <i class="fas fa-file-contract"></i> CRIAR PLANO E GERAR 1ª COBRANÇA
+                    <i class="fas fa-file-contract"></i> ${i18n.t('adm_create_plan_btn')}
                 </button>
 
                 <div id="plano-resultado" style="margin-top:12px;"></div>
@@ -309,11 +309,11 @@ const GaditasPainelAdm = {
             <!-- ══ INADIMPLÊNCIA ══ -->
             <div class="card" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-top:4px;">
                 <div style="font-size:0.7rem; font-weight:800; color:#f43f5e; margin-bottom:12px; letter-spacing:0.5px;">
-                    <i class="fas fa-exclamation-triangle"></i> INADIMPLÊNCIA — FATURAS VENCIDAS
+                    <i class="fas fa-exclamation-triangle"></i> ${i18n.t('adm_overdue_title')}
                 </div>
                 <div id="adm-financeiro-loading" style="text-align:center; color:#64748b; font-size:0.85rem; padding:20px;">
                     <i class="fas fa-spinner fa-spin" style="font-size:1.5rem; color:#3b82f6; display:block; margin-bottom:8px;"></i>
-                    Consultando Asaas...
+                    ${i18n.t('adm_consulting_asaas')}
                 </div>
                 <div id="adm-financeiro-conteudo" class="hidden"></div>
             </div>
@@ -619,26 +619,26 @@ const GaditasPainelAdm = {
 
             resultado.innerHTML =
                 '<div style="background:#064e3b; border:1px solid #10b981; border-radius:10px; padding:14px; margin-top:4px;">' +
-                    '<div style="font-size:0.7rem; font-weight:800; color:#10b981; margin-bottom:10px;">✅ COBRANÇA GERADA COM SUCESSO!</div>' +
+                    '<div style="font-size:0.7rem; font-weight:800; color:#10b981; margin-bottom:10px;">✅ ' + i18n.t('adm_charge_success') + '</div>' +
                     '<div style="font-size:0.8rem; color:#e2e8f0; margin-bottom:4px;"><strong>' + nome.toUpperCase() + '</strong></div>' +
                     '<div style="font-size:0.75rem; color:#94a3b8; margin-bottom:2px;">' + descricao + '</div>' +
                     '<div style="display:flex; justify-content:space-between; margin:8px 0; font-size:0.8rem;">' +
-                        '<span style="color:#94a3b8;">Valor:</span><strong style="color:#10b981;">' + valorFmt + '</strong>' +
+                        '<span style="color:#94a3b8;">' + i18n.t('adm_value_short') + '</span><strong style="color:#10b981;">' + valorFmt + '</strong>' +
                     '</div>' +
                     '<div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.8rem;">' +
-                        '<span style="color:#94a3b8;">Vence em:</span><span style="color:#e2e8f0;">' + vencFmt + '</span>' +
+                        '<span style="color:#94a3b8;">' + i18n.t('adm_due_short') + '</span><span style="color:#e2e8f0;">' + vencFmt + '</span>' +
                     '</div>' +
                     '<div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:0.8rem;">' +
-                        '<span style="color:#94a3b8;">Forma:</span><span style="color:#e2e8f0;">' + tipoLabel + '</span>' +
+                        '<span style="color:#94a3b8;">' + i18n.t('adm_method_short') + '</span><span style="color:#e2e8f0;">' + tipoLabel + '</span>' +
                     '</div>' +
                     (linkPag
                         ? '<button onclick="navigator.clipboard.writeText(\'' + linkPag + '\').then(()=>alert(\'✅ Link copiado!\'))" ' +
                           'style="width:100%; padding:11px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem; margin-bottom:6px;">' +
-                          '<i class="fas fa-copy"></i> COPIAR LINK DE PAGAMENTO</button>' +
+                          '<i class="fas fa-copy"></i> ' + i18n.t('adm_copy_link') + '</button>' +
                           '<button onclick="window.open(\'' + linkPag + '\', \'_blank\')" ' +
                           'style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:#60a5fa; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.7rem;">' +
-                          '<i class="fas fa-external-link-alt"></i> ABRIR LINK</button>'
-                        : '<small style="color:#64748b; font-size:0.65rem;">ID da cobrança: ' + dadosPag.id + '</small>'
+                          '<i class="fas fa-external-link-alt"></i> ' + i18n.t('adm_open_link') + '</button>'
+                        : '<small style="color:#64748b; font-size:0.65rem;">' + i18n.t('adm_charge_id') + ' ' + dadosPag.id + '</small>'
                     ) +
                 '</div>';
 
@@ -937,7 +937,7 @@ const GaditasPainelAdm = {
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <div>
                     <div style="font-size:0.85rem;font-weight:800;color:white;">${nome.toUpperCase()}</div>
-                    <div style="font-size:0.62rem;color:#a78bfa;margin-top:2px;">Plano atual: ${planoAtual || '—'} ${valorAtual > 0 ? '(R$ ' + valorAtual.toFixed(2) + '/mês)' : ''}</div>
+                    <div style="font-size:0.62rem;color:#a78bfa;margin-top:2px;">${i18n.t('adm_current_plan')} ${planoAtual || '—'} ${valorAtual > 0 ? '(R$ ' + valorAtual.toFixed(2) + '/mês)' : ''}</div>
                 </div>
                 <button onclick="GaditasPainelAdm._limparMudarPlano()" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.9rem;font-weight:700;padding:4px 8px;">✕</button>
             </div>`;
@@ -1255,7 +1255,7 @@ const GaditasPainelAdm = {
                     <div style="font-size:0.85rem;font-weight:800;color:white;">✅ ${nome.toUpperCase()}</div>
                     <div style="font-size:0.6rem;color:#64748b;margin-top:2px;">${email}</div>
                     ${cpfFinal ? `<div style="font-size:0.6rem;color:#10b981;margin-top:2px;">CPF: ${cpfFinal.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4')}</div>` : ''}
-                    ${planoAtual ? `<div style="font-size:0.6rem;color:#f59e0b;margin-top:2px;">Plano atual: ${planoAtual}</div>` : '<div style="font-size:0.6rem;color:#f43f5e;margin-top:2px;">⚠️ Sem plano cadastrado</div>'}
+                    ${planoAtual ? `<div style="font-size:0.6rem;color:#f59e0b;margin-top:2px;">${i18n.t('adm_current_plan')} ${planoAtual}</div>` : `<div style="font-size:0.6rem;color:#f43f5e;margin-top:2px;">⚠️ ${i18n.t('adm_no_plan')}</div>`}
                 </div>
                 <button onclick="GaditasPainelAdm._limparAlunoPlano()" style="background:none;border:none;color:#f43f5e;cursor:pointer;font-size:0.9rem;font-weight:700;padding:4px 8px;">✕</button>
             </div>
@@ -1382,10 +1382,10 @@ const GaditasPainelAdm = {
                     <div style="font-size:0.7rem;font-weight:800;color:#10b981;margin-bottom:10px;">✅ PLANO CRIADO COM SUCESSO!</div>
                     <div style="font-size:0.85rem;font-weight:800;color:white;margin-bottom:4px;">${nome.toUpperCase()}</div>
                     <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:4px;">
-                        <span style="color:#94a3b8;">Plano:</span><strong style="color:#10b981;">${label}</strong>
+                        <span style="color:#94a3b8;">${i18n.t('adm_plan_lbl_short')}</span><strong style="color:#10b981;">${label}</strong>
                     </div>
                     <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:4px;">
-                        <span style="color:#94a3b8;">Valor mensal:</span><strong style="color:#10b981;">${valorFmt}</strong>
+                        <span style="color:#94a3b8;">${i18n.t('adm_monthly_value_short')}</span><strong style="color:#10b981;">${valorFmt}</strong>
                     </div>
                     <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:4px;">
                         <span style="color:#94a3b8;">1º vencimento:</span><span style="color:#e2e8f0;">${vencFmt}</span>
@@ -1828,7 +1828,7 @@ const GaditasPainelAdm = {
                 })
             });
             const rDados = await r.json();
-            if (res) res.innerHTML = `<small style="color:#10b981;">✅ Push enviado para ${rDados.sucesso || tokens.length} aluno(s).<br><span style="color:#64748b;">Alunos: ${nomes.join(', ')}</span></small>`;
+            if (res) res.innerHTML = `<small style="color:#10b981;">✅ ${i18n.t('adm_push_sent')} ${rDados.sucesso || tokens.length} ${i18n.t('adm_students_lbl')}<br><span style="color:#64748b;">${i18n.t('adm_students_names')} ${nomes.join(', ')}</span></small>`;
         } catch(e) {
             if (res) res.innerHTML = `<small style="color:#f43f5e;">❌ Erro: ${e.message}</small>`;
         } finally {

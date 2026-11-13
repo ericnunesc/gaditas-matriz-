@@ -654,7 +654,7 @@
 
                 <div id="admin-mural-editor" class="card hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-bottom:15px;">
                     <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-edit"></i> Publicar Comunicado Oficial no Mural</div>
-                    <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px;">DESTINATÁRIOS:</small>
+                    <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px;" id="adm-txt-recipients">DESTINATÁRIOS:</small>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px;">
                         <button id="mural-btn-todos" onclick="academia.selecionarPublicoMural('todos')" style="padding:9px; background:#3b82f6; border:none; color:white; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">👥 TODOS</button>
                         <button id="mural-btn-individual" onclick="academia.selecionarPublicoMural('individual')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.7rem; font-weight:800; cursor:pointer;">👤 INDIVIDUAL</button>
@@ -671,13 +671,13 @@
                         <div id="mural-lista-alunos" style="max-height:140px; overflow-y:auto;"></div>
                         <div id="mural-aluno-selecionado" class="hidden" style="background:#064e3b; border:1px solid #10b981; border-radius:8px; padding:10px; margin-top:6px; font-size:0.8rem; color:#fff; font-weight:700;"></div>
                     </div>
-                    <textarea id="input-mural" placeholder="Escreva o comunicado..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; margin-bottom:10px;"></textarea>
+                    <textarea id="input-mural" data-i18n-ph="adm_write_announcement" placeholder="Escreva o comunicado..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; padding:10px; border-radius:8px; color:white; font-size:0.8rem; outline:none; margin-bottom:10px;"></textarea>
 
                     <!-- Upload de imagem opcional -->
                     <div style="margin-bottom:10px;">
                         <label for="mural-imagem-input" style="display:flex; align-items:center; gap:8px; cursor:pointer; background:#0f172a; border:1px dashed #475569; border-radius:8px; padding:10px; color:#94a3b8; font-size:0.75rem; font-weight:700;">
                             <i class="fas fa-image" style="color:#60a5fa; font-size:1.1rem;"></i>
-                            <span id="mural-imagem-label">📎 Adicionar imagem (opcional)</span>
+                            <span id="mural-imagem-label" data-i18n="adm_add_image">📎 Adicionar imagem (opcional)</span>
                         </label>
                         <input type="file" id="mural-imagem-input" accept="image/*" style="display:none;" onchange="academia.previewImagemMural(this)"/>
                         <div id="mural-imagem-preview" style="display:none; margin-top:8px; position:relative;">
@@ -687,13 +687,13 @@
                     </div>
 
                     <div style="display:flex; gap:8px;">
-                        <button onclick="academia.salvarAvisoMural()" style="flex:2; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">LANÇAR COMUNICADO</button>
-                        <button onclick="academia.toggleHistoricoMural()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">HISTÓRICO</button>
+                        <button onclick="academia.salvarAvisoMural()" style="flex:2; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;" id="adm-txt-launch-announcement">LANÇAR COMUNICADO</button>
+                        <button onclick="academia.toggleHistoricoMural()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;" id="adm-txt-history-btn">HISTÓRICO</button>
                     </div>
                     <div id="secao-historico-mural" class="hidden" style="margin-top:15px; border-top:1px solid #334155; padding-top:12px;">
-                        <small style="color:#f43f5e; font-weight:800; display:block; margin-bottom:12px; font-size:0.55rem;">GERENCIAR COMUNICADOS ATIVOS:</small>
+                        <small style="color:#f43f5e; font-weight:800; display:block; margin-bottom:12px; font-size:0.55rem;" id="adm-txt-manage-active">GERENCIAR COMUNICADOS ATIVOS:</small>
                         <div id="lista-exclusao-mural" style="margin-bottom:12px;"></div>
-                        <small style="color:#94a3b8; font-weight:800; display:block; margin-bottom:12px; font-size:0.55rem;">HISTÓRICO DE AVISOS ANTERIORES:</small>
+                        <small style="color:#94a3b8; font-weight:800; display:block; margin-bottom:12px; font-size:0.55rem;" id="adm-txt-announcement-history">HISTÓRICO DE AVISOS ANTERIORES:</small>
                         <div id="lista-historico-avisos"></div>
                     </div>
                 </div>
@@ -703,23 +703,23 @@
                     <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-video"></i> Atualizar Posição da Semana</div>
                     <input type="text" id="input-tecnica-titulo" placeholder="Título da Posição" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <input type="text" id="input-tecnica-link" placeholder="Link Completo do Vídeo" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <button onclick="academia.salvarTecnica()" style="width:100%; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">PUBLICAR VÍDEO</button>
+                    <button onclick="academia.salvarTecnica()" style="width:100%; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;" id="adm-txt-publish-video">PUBLICAR VÍDEO</button>
                     <div id="lista-exclusao-tecnicas" style="margin-top:12px; border-top:1px solid #334155; padding-top:10px;"></div>
                     <!-- Vídeos pendentes de aprovação -->
                     <div style="margin-top:14px; border-top:1px solid #334155; padding-top:12px;">
-                        <small style="color:#f59e0b; font-weight:800; font-size:0.6rem; display:block; margin-bottom:8px; letter-spacing:0.5px;"><i class="fas fa-clock"></i> VÍDEOS AGUARDANDO APROVAÇÃO</small>
+                        <small style="color:#f59e0b; font-weight:800; font-size:0.6rem; display:block; margin-bottom:8px; letter-spacing:0.5px;" id="adm-txt-videos-pending"><i class="fas fa-clock"></i> VÍDEOS AGUARDANDO APROVAÇÃO</small>
                         <div id="lista-videos-pendentes-admin"></div>
                     </div>
                 </div>
 
                 <!-- PROFESSOR: Enviar vídeo para aprovação -->
                 <div id="prof-video-editor" class="card hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-bottom:15px;">
-                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-video"></i> Enviar Vídeo para Aprovação</div>
+                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-video"></i> <span id="adm-txt-send-video-approval">Enviar Vídeo para Aprovação</span></div>
                     <input type="text" id="input-video-prof-titulo" placeholder="Título da Posição/Técnica" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <input type="text" id="input-video-prof-link" placeholder="Link do Vídeo (YouTube, etc)" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <button onclick="academia.enviarVideoProf()" style="width:100%; padding:12px; background:#8b5cf6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;"><i class="fas fa-paper-plane"></i> ENVIAR PARA APROVAÇÃO</button>
+                    <button onclick="academia.enviarVideoProf()" style="width:100%; padding:12px; background:#8b5cf6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;" id="adm-txt-send-for-approval"><i class="fas fa-paper-plane"></i> ENVIAR PARA APROVAÇÃO</button>
                     <div style="margin-top:12px; border-top:1px solid #334155; padding-top:10px;">
-                        <small style="color:#94a3b8; font-weight:800; font-size:0.6rem; display:block; margin-bottom:8px;">MEUS VÍDEOS ENVIADOS:</small>
+                        <small style="color:#94a3b8; font-weight:800; font-size:0.6rem; display:block; margin-bottom:8px;" id="adm-txt-my-videos-sent">MEUS VÍDEOS ENVIADOS:</small>
                         <div id="lista-videos-prof-enviados"></div>
                     </div>
                 </div>
@@ -727,43 +727,43 @@
                 <!-- PROFESSOR: Alterar senha -->
                 <div id="prof-senha-section" class="hidden" style="background:#1e293b; border:1px solid #334155; border-radius:12px; margin-bottom:15px;">
                     <button onclick="alterarSenhaToggle()" style="width:100%; background:transparent; border:none; color:white; font-weight:700; padding:14px 15px; font-size:0.8rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center;">
-                        <span><i class="fas fa-key" style="color:#f59e0b; margin-right:8px;"></i> ALTERAR MINHA SENHA</span>
+                        <span><i class="fas fa-key" style="color:#f59e0b; margin-right:8px;"></i> <span id="adm-txt-change-password-prof">ALTERAR MINHA SENHA</span></span>
                         <i class="fas fa-chevron-down" style="color:#64748b; font-size:0.8rem;"></i>
                     </button>
                     <div id="card-alterar-senha-prof" class="hidden" style="padding:0 15px 15px 15px;">
-                        <input type="password" id="nova-senha-prof" placeholder="Nova senha (mínimo 6 caracteres)" style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:8px;"/>
-                        <input type="password" id="confirmar-senha-prof" placeholder="Confirmar nova senha" style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:12px;"/>
-                        <button onclick="executarAlterarSenhaProf()" style="width:100%; padding:13px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer;"><i class="fas fa-save"></i> SALVAR NOVA SENHA</button>
+                        <input type="password" id="nova-senha-prof" data-i18n-ph="adm_new_password_ph" placeholder="Nova senha (mínimo 6 caracteres)" style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:8px;"/>
+                        <input type="password" id="confirmar-senha-prof" data-i18n-ph="adm_confirm_password_ph" placeholder="Confirmar nova senha" style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:12px;"/>
+                        <button onclick="executarAlterarSenhaProf()" style="width:100%; padding:13px; background:#f59e0b; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer;" id="adm-txt-save-new-password-prof"><i class="fas fa-save"></i> SALVAR NOVA SENHA</button>
                     </div>
                 </div>
 
                 <div id="admin-prof-section" class="card hidden" style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:12px; margin-bottom:15px;">
-                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-user-shield"></i> Cadastrar Novo Professor da Equipe</div>
-                    <input type="text" id="nome-prof" placeholder="Nome do Professor" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <div class="card-title" style="color:white; font-weight:800; font-size:0.85rem; margin-bottom:10px;"><i class="fas fa-user-shield"></i> <span id="adm-txt-register-teacher">Cadastrar Novo Professor da Equipe</span></div>
+                    <input type="text" id="nome-prof" data-i18n-ph="adm_teacher_name_ph" placeholder="Nome do Professor" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <input type="email" id="email-prof" placeholder="E-mail (Login)" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <div style="margin:8px 0 12px;">
-                        <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:6px;letter-spacing:0.5px;">TIPO DE PROFESSOR:</small>
+                        <small style="color:#94a3b8;font-size:0.6rem;font-weight:800;display:block;margin-bottom:6px;letter-spacing:0.5px;" id="adm-txt-teacher-type-lbl">TIPO DE PROFESSOR:</small>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <label id="tipo-titular-label" onclick="academia._selecionarTipoProf('titular')" style="display:flex;align-items:center;gap:8px;background:#0f172a;border:2px solid #3b82f6;border-radius:8px;padding:10px;cursor:pointer;">
                                 <span style="font-size:1rem;">🧑‍🏫</span>
-                                <div><div style="color:#e2e8f0;font-size:0.72rem;font-weight:700;">Titular</div><div style="color:#64748b;font-size:0.55rem;">Tem turmas fixas</div></div>
+                                <div><div style="color:#e2e8f0;font-size:0.72rem;font-weight:700;" id="adm-txt-teacher-fulltime">Titular</div><div style="color:#64748b;font-size:0.55rem;" id="adm-txt-teacher-fulltime-desc">Tem turmas fixas</div></div>
                             </label>
                             <label id="tipo-reserva-label" onclick="academia._selecionarTipoProf('reserva')" style="display:flex;align-items:center;gap:8px;background:#0f172a;border:2px solid #334155;border-radius:8px;padding:10px;cursor:pointer;">
                                 <span style="font-size:1rem;">🔄</span>
-                                <div><div style="color:#e2e8f0;font-size:0.72rem;font-weight:700;">Reserva</div><div style="color:#64748b;font-size:0.55rem;">Convocado quando precisar</div></div>
+                                <div><div style="color:#e2e8f0;font-size:0.72rem;font-weight:700;" id="adm-txt-teacher-substitute">Reserva</div><div style="color:#64748b;font-size:0.55rem;" id="adm-txt-teacher-substitute-desc">Convocado quando precisar</div></div>
                             </label>
                         </div>
                         <input type="hidden" id="tipo-prof" value="titular"/>
                     </div>
-                    <div id="section-turmas-prof" style="margin:0 0 15px 2px;"><small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">TURMAS (acesso ao check-in):</small><div id="grid-turmas-prof" class="checkbox-grid"></div></div>
-                    <button onclick="academia.salvarProfessor()" style="width:100%; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">CADASTRAR PROFESSOR</button>
+                    <div id="section-turmas-prof" style="margin:0 0 15px 2px;"><small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;" id="adm-txt-classes-access">TURMAS (acesso ao check-in):</small><div id="grid-turmas-prof" class="checkbox-grid"></div></div>
+                    <button onclick="academia.salvarProfessor()" style="width:100%; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;" id="adm-txt-register-teacher-btn">CADASTRAR PROFESSOR</button>
                     <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
                         <div style="flex:1; height:1px; background:#334155;"></div>
                         <small style="color:#475569; font-size:0.6rem; font-weight:700;">OU</small>
                         <div style="flex:1; height:1px; background:#334155;"></div>
                     </div>
                     <button onclick="academia.abrirModalPromoverProfessor()" style="width:100%; padding:12px; background:#8b5cf6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer; margin-top:10px;">
-                        <i class="fas fa-graduation-cap"></i> PROMOVER ATLETA A PROFESSOR
+                        <i class="fas fa-graduation-cap"></i> <span id="adm-txt-promote-athlete">PROMOVER ATLETA A PROFESSOR</span>
                     </button>
                 </div>
                 <h4 id="title-professores" style="color: #94a3b8; font-size: 0.7rem; margin: 20px 0 8px 4px; font-weight: 800;" class="hidden">PROFESSORES ATIVOS</h4>
@@ -793,17 +793,17 @@
 
                 <div id="card-gestao-atleta" class="card" style="background:#1e293b; border:1px solid #334155; border-radius:12px; margin-bottom:15px; overflow:hidden;">
                     <div class="card-title" onclick="(()=>{const b=document.getElementById('form-matricula-body');const c=document.getElementById('chev-matricula');const open=b.style.display==='block';b.style.display=open?'none':'block';c.style.transform=open?'':'rotate(180deg)'})()" style="color:white; font-weight:800; font-size:0.85rem; padding:15px; margin:0; cursor:pointer; user-select:none; display:flex; justify-content:space-between; align-items:center;">
-                        <span><i class="fas fa-user-plus"></i> Matricular/Editar Atleta</span>
+                        <span><i class="fas fa-user-plus"></i> <span id="adm-txt-enroll-edit">Matricular/Editar Atleta</span></span>
                         <i id="chev-matricula" class="fas fa-chevron-down" style="font-size:0.75rem; color:#64748b; transition:transform 0.25s;"></i>
                     </div>
                     <div id="form-matricula-body" style="display:none; padding:0 15px 15px;">
                     <input type="hidden" id="edit-aluno-id"/>
-                    <input type="text" id="nome-aluno" placeholder="Nome Completo do Atleta" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
-                    <input type="email" id="email-aluno" placeholder="E-mail de Login do Atleta" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <input type="text" id="nome-aluno" data-i18n-ph="adm_athlete_name_ph" placeholder="Nome Completo do Atleta" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
+                    <input type="email" id="email-aluno" data-i18n-ph="adm_athlete_email_ph" placeholder="E-mail de Login do Atleta" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
 
                     <!-- MODALIDADE DO ATLETA -->
                     <div style="margin-bottom:10px;">
-                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">MODALIDADE:</small>
+                        <small style="color:#94a3b8; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;" id="adm-txt-modality-lbl">MODALIDADE:</small>
                         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
                             <button id="btn-modal-jj" onclick="academia.selecionarModalidade('jiujitsu')" style="padding:9px; background:#3b82f6; border:none; color:white; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥋 JIU-JITSU</button>
                             <button id="btn-modal-mt" onclick="academia.selecionarModalidade('muaythai')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥊 MUAY THAI</button>
@@ -828,11 +828,11 @@
                         <input type="text" id="estado-aluno" placeholder="UF" maxlength="2" style="flex: 1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; text-align: center; margin: 0; text-transform: uppercase;"/>
                     </div>
 
-                    <label style="color: #94a3b8; font-size: 0.7rem; margin-left: 2px; font-weight:700;">Data de Nascimento:</label>
+                    <label style="color: #94a3b8; font-size: 0.7rem; margin-left: 2px; font-weight:700;" id="adm-txt-dob-lbl">Data de Nascimento:</label>
                     <input type="date" id="nascimento-aluno" onchange="ui.atualizarFaixas()" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; outline:none; font-size:0.8rem;"/>
                     <!-- GRADUAÇÃO JIU-JITSU -->
                     <div id="section-grad-jj">
-                        <small style="color:#60a5fa; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">GRADUAÇÃO JIU-JITSU:</small>
+                        <small style="color:#60a5fa; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;" id="adm-txt-grad-jj">GRADUAÇÃO JIU-JITSU:</small>
                         <div style="display: flex; gap: 10px; margin-bottom:8px;">
                             <select id="select-faixa" onchange="ui.atualizarGraus()" style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"></select>
                             <select id="select-graus" style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem;"></select>
@@ -840,7 +840,7 @@
                     </div>
                     <!-- GRADUAÇÃO MUAY THAI — Sequência oficial -->
                     <div id="section-grad-mt" class="hidden">
-                        <small style="color:#f43f5e; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">GRADUAÇÃO MUAY THAI:</small>
+                        <small style="color:#f43f5e; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;" id="adm-txt-grad-mt">GRADUAÇÃO MUAY THAI:</small>
                         <select id="select-faixa-mt" style="width:100%; padding:10px; background:#0f172a; border:1px solid #f43f5e44; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:8px;">
                             <option value="Branco">🤍 Branco — Iniciante</option>
                             <option value="Branco ponta Vermelha">🤍❤️ Branco ponta Vermelha</option>
@@ -878,21 +878,21 @@
                     </div>
                     <!-- VALOR DO CONTRATO -->
                     <div style="background:#0f172a; border:1px solid #f59e0b44; border-radius:10px; padding:12px; margin-top:14px;">
-                        <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;">💰 VALOR NO CONTRATO (R$/mês)</small>
-                        <small style="color:#64748b; font-size:0.58rem; display:block; margin-bottom:8px; line-height:1.4;">Defina o valor real do plano. Aparece no contrato digital do aluno. Obrigatório para planos Livre e Família.</small>
+                        <small style="color:#f59e0b; font-size:0.6rem; font-weight:800; display:block; margin-bottom:6px; letter-spacing:0.5px;" id="adm-txt-contract-value-lbl">💰 VALOR NO CONTRATO (R$/mês)</small>
+                        <small style="color:#64748b; font-size:0.58rem; display:block; margin-bottom:8px; line-height:1.4;" id="adm-txt-contract-value-desc">Defina o valor real do plano. Aparece no contrato digital do aluno. Obrigatório para planos Livre e Família.</small>
                         <input type="number" id="planoValor-aluno" placeholder="Ex: 120.00" step="0.01" min="0"
                             style="width:100%; padding:10px; background:#1e293b; border:1px solid #f59e0b55; color:white; border-radius:8px; outline:none; font-size:0.9rem; font-weight:700;"/>
                     </div>
 
                     <div style="display: flex; gap: 8px; margin-top: 15px;">
-                        <button id="btn-salvar-atleta" onclick="academia.salvarAluno()" style="flex:2; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">SALVAR DADOS ATLETA</button>
-                        <button onclick="academia.limparAl()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">LIMPAR</button>
+                        <button id="btn-salvar-atleta" onclick="academia.salvarAluno()" style="flex:2; padding:12px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;"><span id="adm-txt-save-athlete">SALVAR DADOS ATLETA</span></button>
+                        <button onclick="academia.limparAl()" style="flex:1; padding:12px; background:#334155; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;" id="adm-txt-clear-btn">LIMPAR</button>
                     </div>
-                    <button id="btn-alterar-senha-aluno" onclick="academia.abrirAlterarSenha()" style="display:none; width:100%; margin-top:8px; padding:10px; background:#0f172a; border:1px solid #f59e0b55; color:#fbbf24; border-radius:8px; font-size:0.72rem; font-weight:700; cursor:pointer;">🔑 Alterar Senha do Aluno</button>
+                    <button id="btn-alterar-senha-aluno" onclick="academia.abrirAlterarSenha()" style="display:none; width:100%; margin-top:8px; padding:10px; background:#0f172a; border:1px solid #f59e0b55; color:#fbbf24; border-radius:8px; font-size:0.72rem; font-weight:700; cursor:pointer;" data-i18n="adm_change_student_password">🔑 Alterar Senha do Aluno</button>
                     </div><!-- /form-matricula-body -->
                 </div>
 
-                <h4 style="color: #94a3b8; font-size: 0.7rem; margin: 20px 0 8px 4px; font-weight: 800; text-transform:uppercase;">ATLETAS MATRICULADOS</h4>
+                <h4 style="color: #94a3b8; font-size: 0.7rem; margin: 20px 0 8px 4px; font-weight: 800; text-transform:uppercase;" id="adm-txt-enrolled-athletes">ATLETAS MATRICULADOS</h4>
 
                 <!-- FILTRO POR MODALIDADE -->
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:8px;">
@@ -908,10 +908,10 @@
                     <button id="filter-btn-adult" onclick="academia.filtrarCategoriaAlunos('adult')" style="padding:9px; background:#0f172a; border:1px solid #334155; color:#94a3b8; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🥋 ADULTO</button>
                 </div>
 
-                <input type="text" id="input-busca-aluno" placeholder="Buscar atleta por nome..." oninput="academia.filtrarPorNomeDigitado()" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:10px;"/>
+                <input type="text" id="input-busca-aluno" data-i18n-ph="adm_search_athlete_ph" placeholder="Buscar atleta por nome..." oninput="academia.filtrarPorNomeDigitado()" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-bottom:10px;"/>
                 
                 <select id="filtro-avancado-faixas" onchange="GaditasFiltros.faixaFiltroAtual = this.value; academia.renderAlunos();" style="width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; outline:none; font-size:0.8rem; margin-top: -4px; margin-bottom: 8px;">
-                    <option value="all">🥋 FILTRAR POR COR DE FAIXA</option>
+                    <option value="all" id="adm-txt-filter-belt">🥋 FILTRAR POR COR DE FAIXA</option>
                     <option value="Branca">FAIXA BRANCA</option>
                     <option value="Cinza/Branca">FAIXA CINZA/BRANCA</option>
                     <option value="Cinza">FAIXA CINZA</option>
@@ -948,7 +948,7 @@
                 <!-- ACORDEÃO: Dashboard -->
                 <div class="rel-acc" id="racc-dashboard">
                     <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-dashboard')">
-                        <span><i class="fas fa-tachometer-alt" style="margin-right:7px;color:#3b82f6;"></i>Dashboard</span><span class="rel-acc-arr">›</span>
+                        <span><i class="fas fa-tachometer-alt" style="margin-right:7px;color:#3b82f6;"></i><span id="adm-txt-rel-dashboard">Dashboard</span></span><span class="rel-acc-arr">›</span>
                     </button>
                     <div class="rel-acc-body">
                         <div id="dashboard-admin-container"></div>
@@ -958,7 +958,7 @@
                 <!-- ACORDEÃO: Idades por Modalidade -->
                 <div class="rel-acc" id="racc-idades">
                     <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-idades');academia.renderRelatIdades()">
-                        <span><i class="fas fa-birthday-cake" style="margin-right:7px;color:#f472b6;"></i>Idades por Modalidade</span><span class="rel-acc-arr">›</span>
+                        <span><i class="fas fa-birthday-cake" style="margin-right:7px;color:#f472b6;"></i><span id="adm-txt-rel-ages">Idades por Modalidade</span></span><span class="rel-acc-arr">›</span>
                     </button>
                     <div class="rel-acc-body">
                         <div id="resultado-relat-idades"></div>
@@ -968,7 +968,7 @@
                 <!-- ACORDEÃO: Boletim -->
                 <div class="rel-acc" id="racc-boletim">
                     <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-boletim')">
-                        <span><i class="fas fa-file-alt" style="margin-right:7px;color:#10b981;"></i>Boletim Mensal</span><span class="rel-acc-arr">›</span>
+                        <span><i class="fas fa-file-alt" style="margin-right:7px;color:#10b981;"></i><span id="adm-txt-rel-boletim">Boletim Mensal</span></span><span class="rel-acc-arr">›</span>
                     </button>
                     <div class="rel-acc-body">
                         <div id="painel-boletim-admin"></div>
@@ -978,7 +978,7 @@
                 <!-- ACORDEÃO: Alunos Sumidos -->
                 <div class="rel-acc" id="racc-sumidos">
                     <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-sumidos')">
-                        <span><i class="fas fa-user-slash" style="margin-right:7px;color:#f43f5e;"></i>Alunos Sumidos</span><span class="rel-acc-arr">›</span>
+                        <span><i class="fas fa-user-slash" style="margin-right:7px;color:#f43f5e;"></i><span id="adm-txt-rel-missing">Alunos Sumidos</span></span><span class="rel-acc-arr">›</span>
                     </button>
                     <div class="rel-acc-body">
                         <div id="radar-sumidos-container"></div>
@@ -988,7 +988,7 @@
                 <!-- ACORDEÃO: Avaliações -->
                 <div class="rel-acc" id="racc-avaliacoes">
                     <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-avaliacoes')">
-                        <span><i class="fas fa-star" style="margin-right:7px;color:#f59e0b;"></i>Avaliações</span><span class="rel-acc-arr">›</span>
+                        <span><i class="fas fa-star" style="margin-right:7px;color:#f59e0b;"></i><span id="adm-txt-rel-evaluations">Avaliações</span></span><span class="rel-acc-arr">›</span>
                     </button>
                     <div class="rel-acc-body">
                         <div id="avaliacoes-painel"></div>
@@ -998,14 +998,14 @@
                 <!-- ACORDEÃO: Performance & Promoção -->
                 <div class="rel-acc" id="racc-performance">
                     <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-performance')">
-                        <span><i class="fas fa-chart-line" style="margin-right:7px;color:#a78bfa;"></i>Performance & Promoção</span><span class="rel-acc-arr">›</span>
+                        <span><i class="fas fa-chart-line" style="margin-right:7px;color:#a78bfa;"></i><span id="adm-txt-rel-performance">Performance & Promoção</span></span><span class="rel-acc-arr">›</span>
                     </button>
                     <div class="rel-acc-body">
                         <div style="display:flex;gap:10px;margin-bottom:10px;">
-                            <button onclick="academia.generarRelatorioGraduacao()" style="flex:1;padding:12px;background:#f59e0b;border:none;color:white;border-radius:8px;font-weight:700;cursor:pointer;">🥋 QUEM GRADUA?</button>
-                            <button onclick="academia.exportarDadosBackup()" style="flex:1;padding:12px;background:#334155;border:none;color:white;border-radius:8px;font-weight:700;cursor:pointer;">BACKUP</button>
+                            <button onclick="academia.generarRelatorioGraduacao()" style="flex:1;padding:12px;background:#f59e0b;border:none;color:white;border-radius:8px;font-weight:700;cursor:pointer;" id="adm-txt-who-graduates">🥋 QUEM GRADUA?</button>
+                            <button onclick="academia.exportarDadosBackup()" style="flex:1;padding:12px;background:#334155;border:none;color:white;border-radius:8px;font-weight:700;cursor:pointer;" id="adm-txt-backup-btn">BACKUP</button>
                         </div>
-                        <button onclick="academia.renderRelatPlanos()" style="width:100%;padding:12px;background:#1e3a8a;border:1px solid #3b82f655;color:#60a5fa;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;margin-bottom:15px;letter-spacing:0.3px;">
+                        <button onclick="academia.renderRelatPlanos()" style="width:100%;padding:12px;background:#1e3a8a;border:1px solid #3b82f655;color:#60a5fa;border-radius:8px;font-weight:800;cursor:pointer;font-size:0.8rem;margin-bottom:15px;letter-spacing:0.3px;" id="adm-txt-plans-values-btn">
                             <i class="fas fa-wallet" style="margin-right:7px;"></i>💰 PLANOS & VALORES DO CONTRATO
                         </button>
                         <div id="resultado-relat-planos"></div>
@@ -1017,23 +1017,23 @@
                 <!-- ACORDEÃO: Prêmios do Ano -->
                 <div class="rel-acc" id="racc-premios">
                     <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-premios')">
-                        <span><i class="fas fa-award" style="margin-right:7px;color:#f59e0b;"></i>Prêmios do Ano</span><span class="rel-acc-arr">›</span>
+                        <span><i class="fas fa-award" style="margin-right:7px;color:#f59e0b;"></i><span id="adm-txt-rel-awards">Prêmios do Ano</span></span><span class="rel-acc-arr">›</span>
                     </button>
                     <div class="rel-acc-body">
                         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-                            <button onclick="premiosAno.abrirRegistrarMencao()" style="padding:8px 14px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🏅 + Menção</button>
-                            <button onclick="premiosAno.verResultado()" style="padding:8px 14px;background:#1a1a00;border:1px solid #f59e0b;color:#fcd34d;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🏆 Placar</button>
-                            <button onclick="premiosAno.abrirOverride()" style="padding:8px 12px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.7rem;font-weight:700;cursor:pointer;">✏️ Manual</button>
-                            <button onclick="premiosAno.abrirConfigVotacao()" style="padding:8px 14px;background:#8b5cf6;border:none;color:white;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">🗳️ Votação</button>
+                            <button onclick="premiosAno.abrirRegistrarMencao()" style="padding:8px 14px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;" id="adm-txt-add-mention">🏅 + Menção</button>
+                            <button onclick="premiosAno.verResultado()" style="padding:8px 14px;background:#1a1a00;border:1px solid #f59e0b;color:#fcd34d;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;" id="adm-txt-scoreboard">🏆 Placar</button>
+                            <button onclick="premiosAno.abrirOverride()" style="padding:8px 12px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;font-size:0.7rem;font-weight:700;cursor:pointer;" id="adm-txt-manual-btn">✏️ Manual</button>
+                            <button onclick="premiosAno.abrirConfigVotacao()" style="padding:8px 14px;background:#8b5cf6;border:none;color:white;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;" id="adm-txt-vote-btn">🗳️ Votação</button>
                         </div>
-                        <div id="premios-ano-resumo" style="font-size:0.7rem;color:#64748b;">Clique em <b style="color:#e2e8f0;">+ Menção</b> para nominar alunos ao longo do ano.</div>
+                        <div id="premios-ano-resumo" data-i18n-html="adm_rel_mention_hint" style="font-size:0.7rem;color:#64748b;">Clique em <b style="color:#e2e8f0;">+ Menção</b> para nominar alunos ao longo do ano.</div>
                     </div>
                 </div>
 
                 <!-- ACORDEÃO: Matrículas -->
                 <div class="rel-acc" id="racc-matriculas">
                     <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-matriculas');academia.renderRelatMatriculas()">
-                        <span><i class="fas fa-user-plus" style="margin-right:7px;color:#22c55e;"></i>Matrículas</span><span class="rel-acc-arr">›</span>
+                        <span><i class="fas fa-user-plus" style="margin-right:7px;color:#22c55e;"></i><span id="adm-txt-rel-enrollments">Matrículas</span></span><span class="rel-acc-arr">›</span>
                     </button>
                     <div class="rel-acc-body">
                         <div id="resultado-relat-matriculas"></div>
@@ -1043,7 +1043,7 @@
                 <!-- ACORDEÃO: Ranking de Presenças -->
                 <div class="rel-acc" id="racc-ranking">
                     <button class="rel-acc-hdr" onclick="ui.toggleRelAcc('racc-ranking')">
-                        <span><i class="fas fa-trophy" style="margin-right:7px;color:#f59e0b;"></i>Ranking de Presenças</span><span class="rel-acc-arr">›</span>
+                        <span><i class="fas fa-trophy" style="margin-right:7px;color:#f59e0b;"></i><span id="adm-txt-rel-ranking">Ranking de Presenças</span></span><span class="rel-acc-arr">›</span>
                     </button>
                     <div class="rel-acc-body">
                         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
@@ -1055,10 +1055,10 @@
                         </div>
                         <div style="margin-bottom:10px;">
                             <select id="ranking-mes-select" onchange="academia.renderRankingGeral()" style="width:100%;padding:8px 10px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;outline:none;">
-                                <option value="">📅 Todos os meses</option>
+                                <option value="" id="adm-txt-rel-all-months">📅 Todos os meses</option>
                             </select>
                         </div>
-                        <div id="ranking-geral-container"><small style="color:#475569;font-size:0.72rem;">Selecione um filtro acima.</small></div>
+                        <div id="ranking-geral-container"><small id="adm-txt-rel-select-filter" style="color:#475569;font-size:0.72rem;">Selecione um filtro acima.</small></div>
                     </div>
                 </div>
 
@@ -1075,11 +1075,11 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <div>
                         <div style="font-size:0.55rem; color:#475569; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:2px;">Gaditas Matriz</div>
-                        <div style="font-size:1.05rem; font-weight:800; color:#f8fafc; letter-spacing:-0.3px;"><i class="fas fa-shopping-bag" style="color:#3b82f6; margin-right:8px; font-size:0.9rem;"></i>LOJA</div>
+                        <div style="font-size:1.05rem; font-weight:800; color:#f8fafc; letter-spacing:-0.3px;"><i class="fas fa-shopping-bag" style="color:#3b82f6; margin-right:8px; font-size:0.9rem;"></i><span id="adm-txt-store-title">LOJA</span></div>
                     </div>
                     <!-- Botão meus pedidos (alunos) -->
                     <button id="btn-ver-meus-pedidos" onclick="loja.verMeusPedidos()" style="display:none; background:#1e3a8a; border:1px solid #3b82f644; color:#93c5fd; padding:9px 14px; border-radius:12px; font-size:0.6rem; font-weight:800; cursor:pointer; position:relative; letter-spacing:0.3px;">
-                        <i class="fas fa-box" style="margin-right:5px;"></i>MEUS PEDIDOS
+                        <i class="fas fa-box" style="margin-right:5px;"></i><span id="adm-txt-my-orders-btn">MEUS PEDIDOS</span>
                         <span id="badge-meus-pedidos" style="display:none; position:absolute; top:-5px; right:-5px; background:#f59e0b; color:#000; border-radius:10px; padding:0 5px; font-size:0.5rem; font-weight:800;"></span>
                     </button>
                 </div>
@@ -1091,11 +1091,11 @@
                 <div id="loja-admin-toggle" style="display:none; background:#0f172a; border:1px solid #334155; border-radius:10px; padding:4px; display:none; gap:4px; margin-bottom:14px;">
                     <button id="loja-toggle-vitrine" onclick="loja.mudarModoAdmin('vitrine')"
                         style="flex:1; padding:9px; background:#3b82f6; border:none; color:white; border-radius:7px; font-size:0.68rem; font-weight:800; cursor:pointer;">
-                        🛒 VITRINE
+                        <span id="adm-txt-storefront">🛒 VITRINE</span>
                     </button>
                     <button id="loja-toggle-gerenciar" onclick="loja.mudarModoAdmin('gerenciar')"
                         style="flex:1; padding:9px; background:transparent; border:none; color:#64748b; border-radius:7px; font-size:0.68rem; font-weight:800; cursor:pointer; position:relative;">
-                        ⚙️ GERENCIAR
+                        <span id="adm-txt-manage-store">⚙️ GERENCIAR</span>
                         <span id="badge-pedidos-loja" style="display:none; position:absolute; top:-4px; right:4px; background:#f59e0b; color:#000; border-radius:10px; padding:0 5px; font-size:0.5rem; font-weight:800;"></span>
                     </button>
                 </div>
@@ -1110,7 +1110,7 @@
                     </div>
                     <!-- Meus pedidos (collapsível — alunos) -->
                     <div id="loja-meus-pedidos" style="display:none; margin-top:16px; background:#1e293b; border:1px solid #334155; border-radius:12px; padding:15px;">
-                        <div style="font-size:0.8rem; font-weight:800; color:white; margin-bottom:12px;">📦 MEUS PEDIDOS</div>
+                        <div style="font-size:0.8rem; font-weight:800; color:white; margin-bottom:12px;"><span id="adm-txt-my-orders-section">📦 MEUS PEDIDOS</span></div>
                         <div id="loja-lista-meus-pedidos"><small style="color:#475569; font-size:0.65rem;">Carregando...</small></div>
                     </div>
                 </div>
@@ -1118,16 +1118,16 @@
                 <!-- ── GERENCIAR (admin) ── -->
                 <div id="loja-painel-gerenciar" style="display:none;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <span style="font-size:0.75rem; font-weight:800; color:#10b981;">⚙️ GERENCIAR LOJA</span>
+                        <span id="adm-txt-manage-store-title" style="font-size:0.75rem; font-weight:800; color:#10b981;">⚙️ GERENCIAR LOJA</span>
                         <div style="display:flex; gap:6px;">
-                            <button onclick="loja.abrirModalProduto(null)" style="background:#10b981; border:none; color:white; padding:7px 14px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">+ PRODUTO</button>
+                            <button onclick="loja.abrirModalProduto(null)" style="background:#10b981; border:none; color:white; padding:7px 14px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;" id="adm-txt-add-product">+ PRODUTO</button>
                             <button onclick="loja._refreshAdmin()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.8rem;"><i class="fas fa-sync-alt"></i></button>
                         </div>
                     </div>
                     <!-- sub-tabs: Produtos / Pedidos -->
                     <div style="display:flex; gap:6px; margin-bottom:12px;">
-                        <button id="loja-tab-btn-prods" onclick="loja.mostrarTabAdmin('prods')" style="flex:1; background:#10b981; border:none; color:white; padding:8px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">📦 PRODUTOS</button>
-                        <button id="loja-tab-btn-pedidos" onclick="loja.mostrarTabAdmin('pedidos')" style="flex:1; background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:8px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;">🛍️ PEDIDOS</button>
+                        <button id="loja-tab-btn-prods" onclick="loja.mostrarTabAdmin('prods')" style="flex:1; background:#10b981; border:none; color:white; padding:8px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;"><span id="adm-txt-products-tab">📦 PRODUTOS</span></button>
+                        <button id="loja-tab-btn-pedidos" onclick="loja.mostrarTabAdmin('pedidos')" style="flex:1; background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:8px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer;"><span id="adm-txt-orders-tab">🛍️ PEDIDOS</span></button>
                     </div>
                     <div id="loja-admin-prods"><small style="color:#475569; font-size:0.65rem;">Carregando...</small></div>
                     <div id="loja-admin-pedidos" style="display:none;"></div>
@@ -1150,24 +1150,24 @@
         <div id="tab-servicos" class="tab-content hidden" style="padding:15px 15px 100px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                 <div>
-                    <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:2px;">Comunidade</div>
+                    <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:2px;" id="adm-txt-services-community">Comunidade</div>
                     <div style="font-size:1.05rem;font-weight:800;color:#f8fafc;"><i class="fas fa-handshake" style="color:#10b981;margin-right:8px;font-size:0.9rem;"></i>SERVIÇOS</div>
                 </div>
                 <div style="display:flex;gap:8px;">
                     <button id="btn-srv-config" onclick="comunidade.abrirConfig()" style="display:none;background:#334155;border:none;color:#e2e8f0;padding:9px 12px;border-radius:12px;font-size:0.68rem;font-weight:800;cursor:pointer;">⚙️ Config</button>
-                    <button onclick="window.open('cadastro-servico.html','_blank')" style="background:#10b981;border:none;color:white;padding:9px 14px;border-radius:12px;font-size:0.68rem;font-weight:800;cursor:pointer;">+ ANUNCIAR</button>
+                    <button onclick="window.open('cadastro-servico.html','_blank')" style="background:#10b981;border:none;color:white;padding:9px 14px;border-radius:12px;font-size:0.68rem;font-weight:800;cursor:pointer;" id="adm-txt-advertise-btn">+ ANUNCIAR</button>
                 </div>
             </div>
-            <div style="font-size:0.65rem;color:#475569;margin-bottom:14px;">Serviços oferecidos por alunos da academia</div>
+            <div id="adm-txt-services-desc" style="font-size:0.65rem;color:#475569;margin-bottom:14px;">Serviços oferecidos por alunos da academia</div>
 
             <!-- Card publicidade -->
             <div onclick="window.open('publicidade.html','_blank')" style="background:linear-gradient(135deg,#1c1000,#2d1a00);border:1px solid #f59e0b;border-radius:14px;padding:14px 16px;margin-bottom:16px;cursor:pointer;display:flex;align-items:center;gap:12px;">
                 <div style="font-size:1.8rem;flex-shrink:0;">📢</div>
                 <div style="flex:1;min-width:0;">
-                    <div style="font-size:0.8rem;font-weight:800;color:#fbbf24;margin-bottom:2px;">Quer divulgar seu negócio?</div>
-                    <div style="font-size:0.68rem;color:#92400e;line-height:1.4;">Crie anúncios em story, popup ou banner e alcance todos os alunos do app.</div>
+                    <div id="adm-txt-advertise-title" style="font-size:0.8rem;font-weight:800;color:#fbbf24;margin-bottom:2px;">Quer divulgar seu negócio?</div>
+                    <div id="adm-txt-advertise-desc" style="font-size:0.68rem;color:#92400e;line-height:1.4;">Crie anúncios em story, popup ou banner e alcance todos os alunos do app.</div>
                 </div>
-                <div style="font-size:0.7rem;color:#f59e0b;font-weight:800;flex-shrink:0;">Ver →</div>
+                <div id="adm-txt-see-link" style="font-size:0.7rem;color:#f59e0b;font-weight:800;flex-shrink:0;">Ver →</div>
             </div>
 
             <!-- Filtros -->
@@ -1176,7 +1176,7 @@
                     style="flex:1;min-width:140px;padding:8px 12px;background:#1e293b;border:1px solid #334155;color:white;border-radius:8px;outline:none;font-size:0.78rem;"/>
                 <select id="srv-categoria" onchange="comunidade.filtrar()"
                     style="padding:8px 10px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;outline:none;font-size:0.78rem;cursor:pointer;">
-                    <option value="">Todas as categorias</option>
+                    <option value="" id="adm-txt-all-categories">Todas as categorias</option>
                 </select>
             </div>
 
@@ -1186,7 +1186,7 @@
 
             <!-- Seção admin: pendentes -->
             <div id="srv-admin-pendentes" style="display:none;margin-top:24px;">
-                <div style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">⏳ AGUARDANDO APROVAÇÃO</div>
+                <div id="adm-txt-waiting-approval" style="font-size:0.6rem;color:#f59e0b;font-weight:800;letter-spacing:0.8px;margin-bottom:10px;">⏳ AGUARDANDO APROVAÇÃO</div>
                 <div id="srv-pendentes-lista" style="display:flex;flex-direction:column;gap:8px;"></div>
             </div>
         </div>
@@ -1195,16 +1195,16 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <div>
                     <div style="font-size:0.55rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:2px;">Admin</div>
-                    <div style="font-size:1.05rem;font-weight:800;color:#f8fafc;letter-spacing:-0.3px;"><i class="fas fa-bullhorn" style="color:#f59e0b;margin-right:8px;font-size:0.9rem;"></i>PUBLICIDADE</div>
+                    <div style="font-size:1.05rem;font-weight:800;color:#f8fafc;letter-spacing:-0.3px;"><i class="fas fa-bullhorn" style="color:#f59e0b;margin-right:8px;font-size:0.9rem;"></i><span id="adm-txt-media-title">PUBLICIDADE</span></div>
                 </div>
-                <button onclick="publicidade.abrirNovaCampanha()" style="background:#f59e0b;border:none;color:#000;padding:9px 16px;border-radius:12px;font-size:0.68rem;font-weight:800;cursor:pointer;">+ NOVA CAMPANHA</button>
+                <button onclick="publicidade.abrirNovaCampanha()" style="background:#f59e0b;border:none;color:#000;padding:9px 16px;border-radius:12px;font-size:0.68rem;font-weight:800;cursor:pointer;" id="adm-txt-new-campaign">+ NOVA CAMPANHA</button>
             </div>
 
             <!-- Tabela de preços -->
             <div id="midia-tabela-precos" style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:14px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                    <span style="font-size:0.75rem;font-weight:800;color:#e2e8f0;">💰 Tabela de Preços</span>
-                    <button onclick="publicidade.editarPrecos()" style="background:#334155;border:none;color:#94a3b8;padding:5px 10px;border-radius:8px;font-size:0.62rem;font-weight:700;cursor:pointer;">✏️ Editar</button>
+                    <span id="adm-txt-price-table" style="font-size:0.75rem;font-weight:800;color:#e2e8f0;">💰 Tabela de Preços</span>
+                    <button onclick="publicidade.editarPrecos()" style="background:#334155;border:none;color:#94a3b8;padding:5px 10px;border-radius:8px;font-size:0.62rem;font-weight:700;cursor:pointer;" id="adm-txt-edit-prices">✏️ Editar</button>
                 </div>
                 <div id="midia-precos-lista" style="font-size:0.7rem;color:#64748b;">Carregando...</div>
             </div>
@@ -1216,7 +1216,7 @@
             <div id="midia-pedidos-pendentes"></div>
 
             <!-- Lista de campanhas -->
-            <div style="font-size:0.72rem;font-weight:800;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Campanhas Ativas</div>
+            <div id="adm-txt-active-campaigns" style="font-size:0.72rem;font-weight:800;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Campanhas Ativas</div>
             <div id="midia-campanhas-lista"><div style="text-align:center;padding:30px;color:#475569;font-size:0.75rem;">Nenhuma campanha cadastrada.</div></div>
         </div>
 

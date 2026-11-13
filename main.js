@@ -68,6 +68,13 @@ const i18n = {
 
     _applyStatic() {
         const set = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = this.t(key); };
+        const setHTML = (id, key) => { const el = document.getElementById(id); if (el) el.innerHTML = this.t(key); };
+        // data-i18n placeholders
+        document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = this.t(el.getAttribute('data-i18n-ph')); });
+        // data-i18n text content
+        document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = this.t(el.getAttribute('data-i18n')); });
+        // data-i18n-html innerHTML
+        document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = this.t(el.getAttribute('data-i18n-html')); });
         // Menu inferior (bottom nav)
         set('nav-txt-training',  'nav_training');
         set('nav-txt-events',    'nav_events_tab');
@@ -117,6 +124,85 @@ const i18n = {
         set('adm-txt-prof-area-sub',       'adm_prof_area_sub');
         set('adm-txt-student-area',        'adm_student_area');
         set('adm-txt-student-area-sub',    'adm_student_area_sub');
+        // Área do Professor
+        set('adm-txt-publish-video',       'adm_publish_video');
+        set('adm-txt-videos-pending',      'adm_videos_pending');
+        set('adm-txt-send-video-approval', 'adm_send_video_approval');
+        set('adm-txt-send-for-approval',   'adm_send_for_approval');
+        set('adm-txt-my-videos-sent',      'adm_my_videos_sent');
+        set('adm-txt-change-password-prof','adm_change_password');
+        set('adm-txt-save-new-password-prof','adm_save_new_password');
+        set('adm-txt-register-teacher',    'adm_register_teacher');
+        set('adm-txt-teacher-type-lbl',    'adm_teacher_type_lbl');
+        set('adm-txt-teacher-fulltime',    'adm_teacher_fulltime');
+        set('adm-txt-teacher-fulltime-desc','adm_teacher_fulltime_desc');
+        set('adm-txt-teacher-substitute',  'adm_teacher_substitute');
+        set('adm-txt-teacher-substitute-desc','adm_teacher_substitute_desc');
+        set('adm-txt-classes-access',      'adm_classes_access');
+        set('adm-txt-register-teacher-btn','adm_register_teacher_btn');
+        set('adm-txt-promote-athlete',     'adm_promote_athlete');
+        // Área do Aluno
+        set('adm-txt-enroll-edit',         'adm_enroll_edit_athlete');
+        set('adm-txt-modality-lbl',        'adm_modality_lbl');
+        set('adm-txt-dob-lbl',             'adm_dob_lbl');
+        set('adm-txt-grad-jj',             'adm_grad_jj');
+        set('adm-txt-grad-mt',             'adm_grad_mt');
+        set('adm-txt-contract-value-lbl',  'adm_contract_value_lbl');
+        set('adm-txt-contract-value-desc', 'adm_contract_value_desc');
+        set('adm-txt-save-athlete',        'adm_save_athlete');
+        set('adm-txt-clear-btn',           'adm_clear');
+        set('adm-txt-enrolled-athletes',   'adm_enrolled_athletes');
+        set('adm-txt-filter-belt',         'adm_filter_by_belt');
+        // Comunicados (Área do Professor / mural)
+        set('adm-txt-recipients',          'adm_recipients');
+        set('adm-txt-launch-announcement', 'adm_launch_announcement');
+        set('adm-txt-history-btn',         'adm_history');
+        set('adm-txt-manage-active',       'adm_manage_active');
+        set('adm-txt-announcement-history','adm_announcement_history');
+        // Relatórios
+        set('adm-txt-rel-dashboard',       'adm_rel_dashboard');
+        set('adm-txt-rel-ages',            'adm_rel_ages');
+        set('adm-txt-rel-boletim',         'adm_rel_boletim');
+        set('adm-txt-rel-missing',         'adm_rel_missing');
+        set('adm-txt-rel-evaluations',     'adm_rel_evaluations');
+        set('adm-txt-rel-performance',     'adm_rel_performance');
+        set('adm-txt-who-graduates',       'adm_rel_who_graduates');
+        set('adm-txt-backup-btn',          'adm_rel_backup');
+        set('adm-txt-plans-values-btn',    'adm_rel_plans_values');
+        set('adm-txt-rel-awards',          'adm_rel_awards');
+        set('adm-txt-add-mention',         'adm_rel_add_mention');
+        set('adm-txt-scoreboard',          'adm_rel_scoreboard');
+        set('adm-txt-manual-btn',          'adm_rel_manual');
+        set('adm-txt-vote-btn',            'adm_rel_vote');
+        set('adm-txt-rel-enrollments',     'adm_rel_enrollments');
+        set('adm-txt-rel-ranking',         'adm_rel_ranking');
+        set('adm-txt-rel-all-months',      'adm_rel_all_months');
+        set('adm-txt-rel-select-filter',   'adm_rel_select_filter');
+        // Loja
+        set('adm-txt-store-title',         'adm_store_title');
+        set('adm-txt-my-orders-btn',       'adm_my_orders_btn');
+        set('adm-txt-storefront',          'adm_storefront');
+        set('adm-txt-manage-store',        'adm_manage_store');
+        set('adm-txt-manage-store-title',  'adm_manage_store_title');
+        set('adm-txt-add-product',         'adm_add_product');
+        set('adm-txt-products-tab',        'adm_products_tab');
+        set('adm-txt-orders-tab',          'adm_orders_tab');
+        set('adm-txt-my-orders-section',   'adm_my_orders_section');
+        // Serviços
+        set('adm-txt-services-community',  'adm_services_community');
+        set('adm-txt-advertise-btn',       'adm_advertise_btn');
+        set('adm-txt-services-desc',       'adm_services_desc');
+        set('adm-txt-advertise-title',     'adm_advertise_title');
+        set('adm-txt-advertise-desc',      'adm_advertise_desc');
+        set('adm-txt-see-link',            'adm_see_link');
+        set('adm-txt-all-categories',      'adm_all_categories');
+        set('adm-txt-waiting-approval',    'adm_waiting_approval');
+        // Mídia
+        set('adm-txt-media-title',         'adm_media_title');
+        set('adm-txt-new-campaign',        'adm_new_campaign');
+        set('adm-txt-price-table',         'adm_price_table');
+        set('adm-txt-edit-prices',         'adm_edit_prices');
+        set('adm-txt-active-campaigns',    'adm_active_campaigns');
     },
 
     t(key) {
@@ -456,6 +542,69 @@ const i18n = {
             'adm_plan_lbl_short': 'Plano:', 'adm_monthly_value_short': 'Valor mensal:',
             'adm_push_sent': 'Push enviado para', 'adm_students_lbl': 'aluno(s).',
             'adm_students_names': 'Alunos:',
+            // Gestão — Área do Professor
+            'adm_recipients': 'DESTINATÁRIOS:', 'adm_write_announcement': 'Escreva o comunicado...',
+            'adm_add_image': '📎 Adicionar imagem (opcional)',
+            'adm_launch_announcement': 'LANÇAR COMUNICADO', 'adm_history': 'HISTÓRICO',
+            'adm_manage_active': 'GERENCIAR COMUNICADOS ATIVOS:', 'adm_announcement_history': 'HISTÓRICO DE AVISOS ANTERIORES:',
+            'adm_publish_video': 'PUBLICAR VÍDEO', 'adm_videos_pending': 'VÍDEOS AGUARDANDO APROVAÇÃO',
+            'adm_send_video_approval': 'Enviar Vídeo para Aprovação',
+            'adm_send_for_approval': 'ENVIAR PARA APROVAÇÃO', 'adm_my_videos_sent': 'MEUS VÍDEOS ENVIADOS:',
+            'adm_change_password': 'ALTERAR MINHA SENHA',
+            'adm_new_password_ph': 'Nova senha (mínimo 6 caracteres)', 'adm_confirm_password_ph': 'Confirmar nova senha',
+            'adm_save_new_password': 'SALVAR NOVA SENHA',
+            'adm_register_teacher': 'Cadastrar Novo Professor da Equipe',
+            'adm_teacher_name_ph': 'Nome do Professor', 'adm_teacher_type_lbl': 'TIPO DE PROFESSOR:',
+            'adm_teacher_fulltime': 'Titular', 'adm_teacher_fulltime_desc': 'Tem turmas fixas',
+            'adm_teacher_substitute': 'Reserva', 'adm_teacher_substitute_desc': 'Convocado quando precisar',
+            'adm_classes_access': 'TURMAS (acesso ao check-in):',
+            'adm_register_teacher_btn': 'CADASTRAR PROFESSOR',
+            'adm_promote_athlete': 'PROMOVER ATLETA A PROFESSOR',
+            'adm_active_teachers': 'PROFESSORES ATIVOS',
+            // Gestão — Área do Aluno
+            'adm_enroll_edit_athlete': 'Matricular/Editar Atleta',
+            'adm_athlete_name_ph': 'Nome Completo do Atleta',
+            'adm_athlete_email_ph': 'E-mail de Login do Atleta',
+            'adm_modality_lbl': 'MODALIDADE:',
+            'adm_dob_lbl': 'Data de Nascimento:',
+            'adm_grad_jj': 'GRADUAÇÃO JIU-JITSU:', 'adm_grad_mt': 'GRADUAÇÃO MUAY THAI:',
+            'adm_contract_value_lbl': '💰 VALOR NO CONTRATO (R$/mês)',
+            'adm_contract_value_desc': 'Defina o valor real do plano. Aparece no contrato digital do aluno. Obrigatório para planos Livre e Família.',
+            'adm_save_athlete': 'SALVAR DADOS ATLETA', 'adm_clear': 'LIMPAR',
+            'adm_change_student_password': '🔑 Alterar Senha do Aluno',
+            'adm_enrolled_athletes': 'ATLETAS MATRICULADOS',
+            'adm_search_athlete_ph': 'Buscar atleta por nome...',
+            'adm_filter_by_belt': '🥋 FILTRAR POR COR DE FAIXA',
+            // Relatórios
+            'adm_rel_dashboard': 'Dashboard', 'adm_rel_ages': 'Idades por Modalidade',
+            'adm_rel_boletim': 'Boletim Mensal', 'adm_rel_missing': 'Alunos Sumidos',
+            'adm_rel_evaluations': 'Avaliações', 'adm_rel_performance': 'Performance & Promoção',
+            'adm_rel_who_graduates': '🥋 QUEM GRADUA?', 'adm_rel_backup': 'BACKUP',
+            'adm_rel_plans_values': '💰 PLANOS & VALORES DO CONTRATO',
+            'adm_rel_awards': 'Prêmios do Ano',
+            'adm_rel_add_mention': '🏅 + Menção', 'adm_rel_scoreboard': '🏆 Placar',
+            'adm_rel_manual': '✏️ Manual', 'adm_rel_vote': '🗳️ Votação',
+            'adm_rel_mention_hint': 'Clique em <b style="color:#e2e8f0;">+ Menção</b> para nominar alunos ao longo do ano.',
+            'adm_rel_enrollments': 'Matrículas', 'adm_rel_ranking': 'Ranking de Presenças',
+            'adm_rel_all_months': '📅 Todos os meses', 'adm_rel_select_filter': 'Selecione um filtro acima.',
+            // Loja
+            'adm_store_title': 'LOJA', 'adm_my_orders_btn': 'MEUS PEDIDOS',
+            'adm_storefront': '🛒 VITRINE', 'adm_manage_store': '⚙️ GERENCIAR',
+            'adm_manage_store_title': '⚙️ GERENCIAR LOJA', 'adm_add_product': '+ PRODUTO',
+            'adm_products_tab': '📦 PRODUTOS', 'adm_orders_tab': '🛍️ PEDIDOS',
+            'adm_my_orders_section': '📦 MEUS PEDIDOS',
+            // Serviços
+            'adm_services_community': 'Comunidade',
+            'adm_advertise_btn': '+ ANUNCIAR',
+            'adm_services_desc': 'Serviços oferecidos por alunos da academia',
+            'adm_advertise_title': 'Quer divulgar seu negócio?',
+            'adm_advertise_desc': 'Crie anúncios em story, popup ou banner e alcance todos os alunos do app.',
+            'adm_see_link': 'Ver →', 'adm_all_categories': 'Todas as categorias',
+            'adm_waiting_approval': '⏳ AGUARDANDO APROVAÇÃO',
+            // Mídia
+            'adm_media_title': 'PUBLICIDADE', 'adm_new_campaign': '+ NOVA CAMPANHA',
+            'adm_price_table': '💰 Tabela de Preços', 'adm_edit_prices': '✏️ Editar',
+            'adm_active_campaigns': 'Campanhas Ativas', 'adm_no_campaigns': 'Nenhuma campanha cadastrada.',
         },
         en: {
             'oss_welcome': 'WELCOME!', 'oss': 'OSS!',
@@ -778,6 +927,69 @@ const i18n = {
             'adm_plan_lbl_short': 'Plan:', 'adm_monthly_value_short': 'Monthly amount:',
             'adm_push_sent': 'Push sent to', 'adm_students_lbl': 'student(s).',
             'adm_students_names': 'Students:',
+            // Gestão — Teacher Area
+            'adm_recipients': 'RECIPIENTS:', 'adm_write_announcement': 'Write the announcement...',
+            'adm_add_image': '📎 Add image (optional)',
+            'adm_launch_announcement': 'POST ANNOUNCEMENT', 'adm_history': 'HISTORY',
+            'adm_manage_active': 'MANAGE ACTIVE ANNOUNCEMENTS:', 'adm_announcement_history': 'PREVIOUS ANNOUNCEMENTS:',
+            'adm_publish_video': 'PUBLISH VIDEO', 'adm_videos_pending': 'VIDEOS AWAITING APPROVAL',
+            'adm_send_video_approval': 'Submit Video for Approval',
+            'adm_send_for_approval': 'SUBMIT FOR APPROVAL', 'adm_my_videos_sent': 'MY SUBMITTED VIDEOS:',
+            'adm_change_password': 'CHANGE MY PASSWORD',
+            'adm_new_password_ph': 'New password (minimum 6 characters)', 'adm_confirm_password_ph': 'Confirm new password',
+            'adm_save_new_password': 'SAVE NEW PASSWORD',
+            'adm_register_teacher': 'Register New Team Teacher',
+            'adm_teacher_name_ph': 'Teacher Name', 'adm_teacher_type_lbl': 'TEACHER TYPE:',
+            'adm_teacher_fulltime': 'Head', 'adm_teacher_fulltime_desc': 'Has fixed classes',
+            'adm_teacher_substitute': 'Sub', 'adm_teacher_substitute_desc': 'Called when needed',
+            'adm_classes_access': 'CLASSES (check-in access):',
+            'adm_register_teacher_btn': 'REGISTER TEACHER',
+            'adm_promote_athlete': 'PROMOTE ATHLETE TO TEACHER',
+            'adm_active_teachers': 'ACTIVE TEACHERS',
+            // Gestão — Student Area
+            'adm_enroll_edit_athlete': 'Enroll/Edit Athlete',
+            'adm_athlete_name_ph': 'Full Name of Athlete',
+            'adm_athlete_email_ph': 'Athlete Login Email',
+            'adm_modality_lbl': 'MODALITY:',
+            'adm_dob_lbl': 'Date of Birth:',
+            'adm_grad_jj': 'JIU-JITSU GRADUATION:', 'adm_grad_mt': 'MUAY THAI GRADUATION:',
+            'adm_contract_value_lbl': '💰 CONTRACT VALUE (R$/month)',
+            'adm_contract_value_desc': "Set the actual plan value. Appears on the student's digital contract. Required for Free and Family plans.",
+            'adm_save_athlete': 'SAVE ATHLETE DATA', 'adm_clear': 'CLEAR',
+            'adm_change_student_password': '🔑 Change Student Password',
+            'adm_enrolled_athletes': 'ENROLLED ATHLETES',
+            'adm_search_athlete_ph': 'Search athlete by name...',
+            'adm_filter_by_belt': '🥋 FILTER BY BELT COLOR',
+            // Reports
+            'adm_rel_dashboard': 'Dashboard', 'adm_rel_ages': 'Ages by Modality',
+            'adm_rel_boletim': 'Monthly Report', 'adm_rel_missing': 'Missing Students',
+            'adm_rel_evaluations': 'Evaluations', 'adm_rel_performance': 'Performance & Promotion',
+            'adm_rel_who_graduates': '🥋 WHO GRADUATES?', 'adm_rel_backup': 'BACKUP',
+            'adm_rel_plans_values': '💰 PLANS & CONTRACT VALUES',
+            'adm_rel_awards': 'Awards of the Year',
+            'adm_rel_add_mention': '🏅 + Mention', 'adm_rel_scoreboard': '🏆 Scoreboard',
+            'adm_rel_manual': '✏️ Manual', 'adm_rel_vote': '🗳️ Vote',
+            'adm_rel_mention_hint': 'Click <b style="color:#e2e8f0;">+ Mention</b> to nominate students throughout the year.',
+            'adm_rel_enrollments': 'Enrollments', 'adm_rel_ranking': 'Attendance Ranking',
+            'adm_rel_all_months': '📅 All months', 'adm_rel_select_filter': 'Select a filter above.',
+            // Store
+            'adm_store_title': 'STORE', 'adm_my_orders_btn': 'MY ORDERS',
+            'adm_storefront': '🛒 STOREFRONT', 'adm_manage_store': '⚙️ MANAGE',
+            'adm_manage_store_title': '⚙️ MANAGE STORE', 'adm_add_product': '+ PRODUCT',
+            'adm_products_tab': '📦 PRODUCTS', 'adm_orders_tab': '🛍️ ORDERS',
+            'adm_my_orders_section': '📦 MY ORDERS',
+            // Services
+            'adm_services_community': 'Community',
+            'adm_advertise_btn': '+ ADVERTISE',
+            'adm_services_desc': 'Services offered by academy members',
+            'adm_advertise_title': 'Want to promote your business?',
+            'adm_advertise_desc': 'Create story, popup or banner ads and reach all app students.',
+            'adm_see_link': 'See →', 'adm_all_categories': 'All categories',
+            'adm_waiting_approval': '⏳ AWAITING APPROVAL',
+            // Media
+            'adm_media_title': 'ADVERTISING', 'adm_new_campaign': '+ NEW CAMPAIGN',
+            'adm_price_table': '💰 Price Table', 'adm_edit_prices': '✏️ Edit',
+            'adm_active_campaigns': 'Active Campaigns', 'adm_no_campaigns': 'No campaigns registered.',
         },
         es: {
             'oss_welcome': '¡BIENVENIDO(A)!', 'oss': '¡OSS!',
@@ -1100,6 +1312,69 @@ const i18n = {
             'adm_plan_lbl_short': 'Plan:', 'adm_monthly_value_short': 'Valor mensual:',
             'adm_push_sent': 'Push enviado a', 'adm_students_lbl': 'alumno(s).',
             'adm_students_names': 'Alumnos:',
+            // Gestão — Área del Profesor
+            'adm_recipients': 'DESTINATARIOS:', 'adm_write_announcement': 'Escribe el comunicado...',
+            'adm_add_image': '📎 Agregar imagen (opcional)',
+            'adm_launch_announcement': 'PUBLICAR COMUNICADO', 'adm_history': 'HISTORIAL',
+            'adm_manage_active': 'GESTIONAR COMUNICADOS ACTIVOS:', 'adm_announcement_history': 'HISTORIAL DE AVISOS ANTERIORES:',
+            'adm_publish_video': 'PUBLICAR VIDEO', 'adm_videos_pending': 'VIDEOS EN ESPERA DE APROBACIÓN',
+            'adm_send_video_approval': 'Enviar Video para Aprobación',
+            'adm_send_for_approval': 'ENVIAR PARA APROBACIÓN', 'adm_my_videos_sent': 'MIS VIDEOS ENVIADOS:',
+            'adm_change_password': 'CAMBIAR MI CONTRASEÑA',
+            'adm_new_password_ph': 'Nueva contraseña (mínimo 6 caracteres)', 'adm_confirm_password_ph': 'Confirmar nueva contraseña',
+            'adm_save_new_password': 'GUARDAR NUEVA CONTRASEÑA',
+            'adm_register_teacher': 'Registrar Nuevo Profesor del Equipo',
+            'adm_teacher_name_ph': 'Nombre del Profesor', 'adm_teacher_type_lbl': 'TIPO DE PROFESOR:',
+            'adm_teacher_fulltime': 'Titular', 'adm_teacher_fulltime_desc': 'Tiene clases fijas',
+            'adm_teacher_substitute': 'Suplente', 'adm_teacher_substitute_desc': 'Convocado cuando se necesita',
+            'adm_classes_access': 'CLASES (acceso al check-in):',
+            'adm_register_teacher_btn': 'REGISTRAR PROFESOR',
+            'adm_promote_athlete': 'PROMOVER ATLETA A PROFESOR',
+            'adm_active_teachers': 'PROFESORES ACTIVOS',
+            // Gestão — Área del Alumno
+            'adm_enroll_edit_athlete': 'Matricular/Editar Atleta',
+            'adm_athlete_name_ph': 'Nombre Completo del Atleta',
+            'adm_athlete_email_ph': 'Correo de Login del Atleta',
+            'adm_modality_lbl': 'MODALIDAD:',
+            'adm_dob_lbl': 'Fecha de Nacimiento:',
+            'adm_grad_jj': 'GRADUACIÓN JIU-JITSU:', 'adm_grad_mt': 'GRADUACIÓN MUAY THAI:',
+            'adm_contract_value_lbl': '💰 VALOR EN CONTRATO (R$/mes)',
+            'adm_contract_value_desc': 'Define el valor real del plan. Aparece en el contrato digital del alumno. Obligatorio para planes Libre y Familia.',
+            'adm_save_athlete': 'GUARDAR DATOS DEL ATLETA', 'adm_clear': 'LIMPIAR',
+            'adm_change_student_password': '🔑 Cambiar Contraseña del Alumno',
+            'adm_enrolled_athletes': 'ATLETAS MATRICULADOS',
+            'adm_search_athlete_ph': 'Buscar atleta por nombre...',
+            'adm_filter_by_belt': '🥋 FILTRAR POR COLOR DE CINTURÓN',
+            // Informes
+            'adm_rel_dashboard': 'Dashboard', 'adm_rel_ages': 'Edades por Modalidad',
+            'adm_rel_boletim': 'Boletín Mensual', 'adm_rel_missing': 'Alumnos Ausentes',
+            'adm_rel_evaluations': 'Evaluaciones', 'adm_rel_performance': 'Rendimiento & Promoción',
+            'adm_rel_who_graduates': '🥋 ¿QUIÉN GRADÚA?', 'adm_rel_backup': 'RESPALDO',
+            'adm_rel_plans_values': '💰 PLANES & VALORES DEL CONTRATO',
+            'adm_rel_awards': 'Premios del Año',
+            'adm_rel_add_mention': '🏅 + Mención', 'adm_rel_scoreboard': '🏆 Marcador',
+            'adm_rel_manual': '✏️ Manual', 'adm_rel_vote': '🗳️ Votación',
+            'adm_rel_mention_hint': 'Haz clic en <b style="color:#e2e8f0;">+ Mención</b> para nominar alumnos durante el año.',
+            'adm_rel_enrollments': 'Matrículas', 'adm_rel_ranking': 'Ranking de Asistencia',
+            'adm_rel_all_months': '📅 Todos los meses', 'adm_rel_select_filter': 'Selecciona un filtro arriba.',
+            // Tienda
+            'adm_store_title': 'TIENDA', 'adm_my_orders_btn': 'MIS PEDIDOS',
+            'adm_storefront': '🛒 VITRINA', 'adm_manage_store': '⚙️ GESTIONAR',
+            'adm_manage_store_title': '⚙️ GESTIONAR TIENDA', 'adm_add_product': '+ PRODUCTO',
+            'adm_products_tab': '📦 PRODUCTOS', 'adm_orders_tab': '🛍️ PEDIDOS',
+            'adm_my_orders_section': '📦 MIS PEDIDOS',
+            // Servicios
+            'adm_services_community': 'Comunidad',
+            'adm_advertise_btn': '+ ANUNCIAR',
+            'adm_services_desc': 'Servicios ofrecidos por miembros de la academia',
+            'adm_advertise_title': '¿Quieres promover tu negocio?',
+            'adm_advertise_desc': 'Crea anuncios en story, popup o banner y llega a todos los alumnos de la app.',
+            'adm_see_link': 'Ver →', 'adm_all_categories': 'Todas las categorías',
+            'adm_waiting_approval': '⏳ EN ESPERA DE APROBACIÓN',
+            // Medios
+            'adm_media_title': 'PUBLICIDAD', 'adm_new_campaign': '+ NUEVA CAMPAÑA',
+            'adm_price_table': '💰 Tabla de Precios', 'adm_edit_prices': '✏️ Editar',
+            'adm_active_campaigns': 'Campañas Activas', 'adm_no_campaigns': 'Ninguna campaña registrada.',
         }
     }
 };

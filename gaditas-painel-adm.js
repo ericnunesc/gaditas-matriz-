@@ -20,7 +20,7 @@ const GaditasPainelAdm = {
         tab.innerHTML = `
             <div class="card" style="text-align: center; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(59, 130, 246, 0.2);">
                 <div style="font-size: 2.2rem; color: #f43f5e; margin-bottom: 8px;"><i class="fas fa-file-invoice-dollar"></i></div>
-                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #f8fafc;">PAINEL FINANCEIRO ADMIN</h3>
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #f8fafc;">${i18n.t('adm_fin_title')}</h3>
                 <p style="font-size: 0.75rem; color: #94a3b8; margin: 4px 0 0 0;">Gaditas Academy & Lotta</p>
             </div>
 
@@ -1411,12 +1411,13 @@ const GaditasPainelAdm = {
     async carregarResumoMensal() {
         const container = document.getElementById('painel-resumo-mensal');
         if (!container) return;
-        container.innerHTML = `<div style="text-align:center; padding:12px; color:#64748b; font-size:0.75rem;"><i class="fas fa-spinner fa-spin"></i> Calculando resumo do mês...</div>`;
+        container.innerHTML = `<div style="text-align:center; padding:12px; color:#64748b; font-size:0.75rem;"><i class="fas fa-spinner fa-spin"></i> ${i18n.t('adm_fin_calculating')}</div>`;
 
         try {
             const agora = new Date();
             const anoMes = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
-            const mesNome = agora.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            const locale = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' }[i18n._lang] || 'pt-BR';
+            const mesNome = agora.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
 
             const [resRecebidos, resOverdue] = await Promise.all([
                 fetch(`/api/asaas?endpoint=payments&status=RECEIVED&limit=200`),
@@ -1440,21 +1441,21 @@ const GaditasPainelAdm = {
             container.innerHTML = `
                 <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:14px;">
                     <div style="font-size:0.65rem; font-weight:800; color:#94a3b8; margin-bottom:10px; letter-spacing:0.5px;">
-                        📊 RESUMO FINANCEIRO — ${mesNome.toUpperCase()}
+                        📊 ${i18n.t('adm_fin_summary')} — ${mesNome.toUpperCase()}
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px;">
                         <div style="background:#064e3b22; border:1px solid #10b98133; border-radius:8px; padding:10px; text-align:center;">
-                            <span style="font-size:0.5rem; color:#34d399; font-weight:800; display:block; margin-bottom:3px;">✅ RECEBIDO</span>
+                            <span style="font-size:0.5rem; color:#34d399; font-weight:800; display:block; margin-bottom:3px;">✅ ${i18n.t('adm_fin_received')}</span>
                             <span style="font-size:0.75rem; font-weight:900; color:#10b981;">${totalRecebido.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
-                            <span style="font-size:0.5rem; color:#64748b; display:block;">${pagosEsteMes.length} pag.</span>
+                            <span style="font-size:0.5rem; color:#64748b; display:block;">${pagosEsteMes.length} ${i18n.t('adm_fin_payments')}</span>
                         </div>
                         <div style="background:#4c051922; border:1px solid #f43f5e33; border-radius:8px; padding:10px; text-align:center;">
-                            <span style="font-size:0.5rem; color:#f43f5e; font-weight:800; display:block; margin-bottom:3px;">⚠️ EM ATRASO</span>
+                            <span style="font-size:0.5rem; color:#f43f5e; font-weight:800; display:block; margin-bottom:3px;">⚠️ ${i18n.t('adm_fin_overdue')}</span>
                             <span style="font-size:0.75rem; font-weight:900; color:#f43f5e;">${totalOverdue.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
-                            <span style="font-size:0.5rem; color:#64748b; display:block;">${(overdue.data||[]).length} fat.</span>
+                            <span style="font-size:0.5rem; color:#64748b; display:block;">${(overdue.data||[]).length} ${i18n.t('adm_fin_invoices')}</span>
                         </div>
                         <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:10px; text-align:center;">
-                            <span style="font-size:0.5rem; color:#94a3b8; font-weight:800; display:block; margin-bottom:3px;">📈 ADIMPL.</span>
+                            <span style="font-size:0.5rem; color:#94a3b8; font-weight:800; display:block; margin-bottom:3px;">📈 ${i18n.t('adm_fin_compliance')}</span>
                             <span style="font-size:1.2rem; font-weight:900; color:${corPct};">${pct}%</span>
                         </div>
                     </div>
@@ -1493,8 +1494,8 @@ const GaditasPainelAdm = {
             if (loading) loading.classList.add('hidden');
             if (conteudo) {
                 conteudo.classList.remove('hidden');
-                conteudo.innerHTML = `<p style="color:#f43f5e; text-align:center; margin-bottom:10px;">⏱️ Tempo esgotado. Verifique a conexão com o Asaas.</p>
-                <button onclick="GaditasPainelAdm.buscarInadimplentes()" style="width:100%; padding:10px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">TENTAR NOVAMENTE</button>`;
+                conteudo.innerHTML = `<p style="color:#f43f5e; text-align:center; margin-bottom:10px;">⏱️ ${i18n.t('adm_fin_error_timeout')}</p>
+                <button onclick="GaditasPainelAdm.buscarInadimplentes()" style="width:100%; padding:10px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">${i18n.t('adm_fin_retry')}</button>`;
             }
         }, 15000);
         
@@ -1514,8 +1515,8 @@ const GaditasPainelAdm = {
                 conteudo.innerHTML = `
                     <div style="text-align:center; padding:20px; background:#064e3b; border:1px solid #10b981; border-radius:12px;">
                         <i class="fas fa-check-circle" style="color:#10b981; font-size:2rem; display:block; margin-bottom:8px;"></i>
-                        <h4 style="margin:0; color:#fff; font-size:0.95rem;">NENHUMA FATURA VENCIDA!</h4>
-                        <p style="color:#94a3b8; font-size:0.75rem; margin:4px 0 0 0;">Todos os alunos estão em dia.</p>
+                        <h4 style="margin:0; color:#fff; font-size:0.95rem;">${i18n.t('adm_fin_no_overdue')}</h4>
+                        <p style="color:#94a3b8; font-size:0.75rem; margin:4px 0 0 0;">${i18n.t('adm_fin_all_ok')}</p>
                     </div>`;
                 return;
             }
@@ -1573,21 +1574,21 @@ const GaditasPainelAdm = {
             let html = `
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px;">
                     <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; text-align:center;">
-                        <span style="font-size:0.55rem; color:#94a3b8; font-weight:800; display:block;">INADIMPLENTES</span>
+                        <span style="font-size:0.55rem; color:#94a3b8; font-weight:800; display:block;">${i18n.t('adm_fin_inadimplentes')}</span>
                         <span style="font-size:1.4rem; font-weight:900; color:#f43f5e;">${totalAlunos}</span>
                     </div>
                     <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; text-align:center;">
-                        <span style="font-size:0.55rem; color:#94a3b8; font-weight:800; display:block;">BLOQUEADOS</span>
+                        <span style="font-size:0.55rem; color:#94a3b8; font-weight:800; display:block;">${i18n.t('adm_fin_blocked')}</span>
                         <span style="font-size:1.4rem; font-weight:900; color:#f59e0b;">${bloqueados}</span>
                     </div>
                     <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; text-align:center;">
-                        <span style="font-size:0.55rem; color:#94a3b8; font-weight:800; display:block;">TOTAL</span>
+                        <span style="font-size:0.55rem; color:#94a3b8; font-weight:800; display:block;">${i18n.t('adm_fin_total')}</span>
                         <span style="font-size:0.85rem; font-weight:900; color:#10b981;">${totalValor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
                     </div>
                 </div>
 
                 <button onclick="GaditasPainelAdm.buscarInadimplentes()" style="width:100%; background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:10px; border-radius:8px; font-size:0.75rem; font-weight:700; cursor:pointer; margin-bottom:16px;">
-                    <i class="fas fa-sync-alt"></i> ATUALIZAR LISTA
+                    <i class="fas fa-sync-alt"></i> ${i18n.t('adm_fin_refresh')}
                 </button>
 
                 <div id="adm-lista-inadimplentes">
@@ -1602,11 +1603,12 @@ const GaditasPainelAdm = {
                     const bloqueado = maiorAtraso > 5;
                     const corBorda = bloqueado ? '#f43f5e' : '#f59e0b';
                     const corTag   = corBorda;
-                    const tagTexto = bloqueado ? `🔒 BLOQUEADO (${maiorAtraso} dias)` : `⚠️ ${maiorAtraso} dia${maiorAtraso > 1 ? 's' : ''} de atraso`;
+                    const _daysLabel = {'pt':'dias','en':'days','es':'días'}[i18n._lang]||'dias';
+                    const tagTexto = bloqueado ? `🔒 ${i18n.t('adm_fin_blocked_tag')} (${maiorAtraso} ${_daysLabel})` : `⚠️ ${maiorAtraso} ${i18n.t('adm_fin_days_overdue')}`;
                     
                     const faturasHtml = cliente.faturas.map(f => `
                         <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:8px 10px; border-radius:8px; margin-top:6px; gap:6px;">
-                            <span style="font-size:0.7rem; color:#94a3b8; flex:1;">Venc: ${f.vencimento}</span>
+                            <span style="font-size:0.7rem; color:#94a3b8; flex:1;">${i18n.t('adm_fin_due')} ${f.vencimento}</span>
                             <span style="font-size:0.75rem; font-weight:700; color:#fff;">${f.valor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
                             <span style="font-size:0.6rem; color:#f43f5e; font-weight:700; min-width:28px; text-align:right;">${f.diasAtraso}d</span>
                             <button onclick="GaditasPainelAdm.cancelarFatura('${f.id}')" title="Cancelar fatura no Asaas" style="background:#1e293b; border:1px solid #f43f5e; color:#f43f5e; border-radius:6px; padding:3px 7px; font-size:0.65rem; cursor:pointer; line-height:1;">🗑️</button>
@@ -1624,14 +1626,14 @@ const GaditasPainelAdm = {
                                     <span style="font-size:0.65rem; color:#64748b; display:block;">${cliente.email}</span>
                                 </div>
                                 <div style="text-align:right; flex-shrink:0; margin-left:10px;">
-                                    <span style="font-size:0.55rem; color:#94a3b8; display:block;">TOTAL DEVIDO</span>
+                                    <span style="font-size:0.55rem; color:#94a3b8; display:block;">${i18n.t('adm_fin_total_owed')}</span>
                                     <span style="font-size:1rem; font-weight:900; color:${corTag};">${totalDevido.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
                                 </div>
                             </div>
                             ${faturasHtml}
                             <button onclick="GaditasPainelAdm._enviarInadWpp('${cliente.asaasId}','${cliente.nome.replace(/'/g,"\\'")}','${(cliente.telefone||'').replace(/'/g,"\\'")}')"
                                 style="width:100%; margin-top:10px; padding:10px; background:#25d366; border:none; color:#000; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.78rem; letter-spacing:0.3px;">
-                                <i class="fab fa-whatsapp"></i> ENVIAR COBRANÇAS VIA WHATSAPP
+                                <i class="fab fa-whatsapp"></i> ${i18n.t('adm_fin_send_wpp')}
                             </button>
                         </div>`;
                 });
@@ -1646,7 +1648,7 @@ const GaditasPainelAdm = {
                 conteudo.classList.remove('hidden');
                 conteudo.innerHTML = `
                     <p style="color:#f43f5e; text-align:center; font-size:0.85rem; margin-bottom:10px;">❌ Erro: ${e.message}</p>
-                    <button onclick="GaditasPainelAdm.buscarInadimplentes()" style="width:100%; padding:10px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">TENTAR NOVAMENTE</button>`;
+                    <button onclick="GaditasPainelAdm.buscarInadimplentes()" style="width:100%; padding:10px; background:#3b82f6; border:none; color:white; border-radius:8px; font-weight:700; cursor:pointer;">${i18n.t('adm_fin_retry')}</button>`;
             }
         }
     },

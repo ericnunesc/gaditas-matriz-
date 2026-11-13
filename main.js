@@ -359,6 +359,33 @@ const i18n = {
             'adm_lesson_history': 'PLANO DE AULA — HISTÓRICO',
             'adm_roll_call': 'CHAMADA POR LISTA', 'adm_class_label': 'TURMA:',
             'adm_open_student_list': 'ABRIR LISTA DE ALUNOS',
+            'adm_fin_title': 'PAINEL FINANCEIRO ADMIN',
+            'adm_fin_summary': 'RESUMO FINANCEIRO',
+            'adm_fin_calculating': 'Calculando resumo do mês...',
+            'adm_fin_received': 'RECEBIDO', 'adm_fin_payments': 'pag.',
+            'adm_fin_overdue': 'EM ATRASO', 'adm_fin_invoices': 'fat.',
+            'adm_fin_compliance': 'ADIMPL.',
+            'adm_fin_new_registrations': 'NOVOS CADASTROS', 'adm_fin_new': 'NOVO',
+            'adm_fin_new_plural': 'NOVOS',
+            'adm_fin_mark_all_read': 'Marcar todos como lidos',
+            'adm_fin_read': '✓ Lido', 'adm_fin_at': 'às',
+            'adm_fin_per_month': '/mês',
+            'adm_fin_no_new': 'Nenhum novo cadastro ainda.',
+            'adm_fin_no_recent': 'Nenhum cadastro recente.',
+            'adm_fin_value_consult': 'Valor sob consulta',
+            'adm_fin_inadimplentes': 'INADIMPLENTES', 'adm_fin_blocked': 'BLOQUEADOS',
+            'adm_fin_total_owed': 'TOTAL DEVIDO', 'adm_fin_total': 'TOTAL',
+            'adm_fin_refresh': 'ATUALIZAR LISTA',
+            'adm_fin_no_overdue': 'NENHUMA FATURA VENCIDA!',
+            'adm_fin_all_ok': 'Todos os alunos estão em dia.',
+            'adm_fin_days_overdue': 'dia(s) de atraso',
+            'adm_fin_blocked_tag': 'BLOQUEADO',
+            'adm_fin_send_wpp': 'ENVIAR COBRANÇAS VIA WHATSAPP',
+            'adm_fin_due': 'Venc:',
+            'adm_fin_error_timeout': 'Tempo esgotado. Verifique a conexão com o Asaas.',
+            'adm_fin_retry': 'TENTAR NOVAMENTE',
+            'adm_plan_monthly': 'Mensal', 'adm_plan_quarterly': 'Trimestral',
+            'adm_plan_semiannual': 'Semestral', 'adm_plan_annual': 'Anual',
         },
         en: {
             'oss_welcome': 'WELCOME!', 'oss': 'OSS!',
@@ -594,6 +621,33 @@ const i18n = {
             'adm_lesson_history': 'LESSON PLAN — HISTORY',
             'adm_roll_call': 'ROLL CALL', 'adm_class_label': 'CLASS:',
             'adm_open_student_list': 'OPEN STUDENT LIST',
+            'adm_fin_title': 'FINANCIAL ADMIN PANEL',
+            'adm_fin_summary': 'FINANCIAL SUMMARY',
+            'adm_fin_calculating': 'Calculating monthly summary...',
+            'adm_fin_received': 'RECEIVED', 'adm_fin_payments': 'pay.',
+            'adm_fin_overdue': 'OVERDUE', 'adm_fin_invoices': 'inv.',
+            'adm_fin_compliance': 'PAID UP',
+            'adm_fin_new_registrations': 'NEW REGISTRATIONS', 'adm_fin_new': 'NEW',
+            'adm_fin_new_plural': 'NEW',
+            'adm_fin_mark_all_read': 'Mark all as read',
+            'adm_fin_read': '✓ Read', 'adm_fin_at': 'at',
+            'adm_fin_per_month': '/mo',
+            'adm_fin_no_new': 'No new registrations yet.',
+            'adm_fin_no_recent': 'No recent registrations.',
+            'adm_fin_value_consult': 'Price on request',
+            'adm_fin_inadimplentes': 'OVERDUE', 'adm_fin_blocked': 'BLOCKED',
+            'adm_fin_total_owed': 'TOTAL OWED', 'adm_fin_total': 'TOTAL',
+            'adm_fin_refresh': 'REFRESH LIST',
+            'adm_fin_no_overdue': 'NO OVERDUE INVOICES!',
+            'adm_fin_all_ok': 'All students are up to date.',
+            'adm_fin_days_overdue': 'day(s) overdue',
+            'adm_fin_blocked_tag': 'BLOCKED',
+            'adm_fin_send_wpp': 'SEND COLLECTIONS VIA WHATSAPP',
+            'adm_fin_due': 'Due:',
+            'adm_fin_error_timeout': 'Timed out. Check the Asaas connection.',
+            'adm_fin_retry': 'TRY AGAIN',
+            'adm_plan_monthly': 'Monthly', 'adm_plan_quarterly': 'Quarterly',
+            'adm_plan_semiannual': 'Semi-annual', 'adm_plan_annual': 'Annual',
         },
         es: {
             'oss_welcome': '¡BIENVENIDO(A)!', 'oss': '¡OSS!',
@@ -829,6 +883,33 @@ const i18n = {
             'adm_lesson_history': 'PLAN DE CLASE — HISTORIAL',
             'adm_roll_call': 'LISTA DE ASISTENCIA', 'adm_class_label': 'CLASE:',
             'adm_open_student_list': 'ABRIR LISTA DE ALUMNOS',
+            'adm_fin_title': 'PANEL FINANCIERO ADMIN',
+            'adm_fin_summary': 'RESUMEN FINANCIERO',
+            'adm_fin_calculating': 'Calculando resumen del mes...',
+            'adm_fin_received': 'RECIBIDO', 'adm_fin_payments': 'pag.',
+            'adm_fin_overdue': 'ATRASADO', 'adm_fin_invoices': 'fact.',
+            'adm_fin_compliance': 'AL DÍA',
+            'adm_fin_new_registrations': 'NUEVOS REGISTROS', 'adm_fin_new': 'NUEVO',
+            'adm_fin_new_plural': 'NUEVOS',
+            'adm_fin_mark_all_read': 'Marcar todos como leídos',
+            'adm_fin_read': '✓ Leído', 'adm_fin_at': 'a las',
+            'adm_fin_per_month': '/mes',
+            'adm_fin_no_new': 'Ningún registro nuevo todavía.',
+            'adm_fin_no_recent': 'Ningún registro reciente.',
+            'adm_fin_value_consult': 'Precio a consultar',
+            'adm_fin_inadimplentes': 'ATRASADOS', 'adm_fin_blocked': 'BLOQUEADOS',
+            'adm_fin_total_owed': 'TOTAL ADEUDADO', 'adm_fin_total': 'TOTAL',
+            'adm_fin_refresh': 'ACTUALIZAR LISTA',
+            'adm_fin_no_overdue': '¡SIN FACTURAS VENCIDAS!',
+            'adm_fin_all_ok': 'Todos los alumnos están al día.',
+            'adm_fin_days_overdue': 'día(s) de atraso',
+            'adm_fin_blocked_tag': 'BLOQUEADO',
+            'adm_fin_send_wpp': 'ENVIAR COBROS VIA WHATSAPP',
+            'adm_fin_due': 'Venc:',
+            'adm_fin_error_timeout': 'Tiempo agotado. Verifique la conexión con Asaas.',
+            'adm_fin_retry': 'INTENTAR DE NUEVO',
+            'adm_plan_monthly': 'Mensual', 'adm_plan_quarterly': 'Trimestral',
+            'adm_plan_semiannual': 'Semestral', 'adm_plan_annual': 'Anual',
         }
     }
 };
@@ -2039,7 +2120,7 @@ const academia = {
 
         db.collection('novos_cadastros').orderBy('data', 'desc').limit(50).onSnapshot(snap => {
             if (snap.empty) {
-                container.innerHTML = `<p style="color:#64748b; font-size:0.75rem; text-align:center; padding:10px;">Nenhum novo cadastro ainda.</p>`;
+                container.innerHTML = `<p style="color:#64748b; font-size:0.75rem; text-align:center; padding:10px;">${i18n.t('adm_fin_no_new')}</p>`;
                 return;
             }
 
@@ -2053,18 +2134,18 @@ const academia = {
             });
 
             if (docsVisiveis.length === 0) {
-                container.innerHTML = `<p style="color:#64748b; font-size:0.75rem; text-align:center; padding:10px;">Nenhum cadastro recente.</p>`;
+                container.innerHTML = `<p style="color:#64748b; font-size:0.75rem; text-align:center; padding:10px;">${i18n.t('adm_fin_no_recent')}</p>`;
                 return;
             }
 
             const naoLidos = docsVisiveis.filter(d => !d.data().lido).length;
-            const badge = naoLidos > 0 ? `<span style="background:#f43f5e; color:white; font-size:0.6rem; padding:2px 8px; border-radius:10px; font-weight:800; margin-left:8px;">${naoLidos} NOVO${naoLidos > 1 ? 'S' : ''}</span>` : '';
+            const badge = naoLidos > 0 ? `<span style="background:#f43f5e; color:white; font-size:0.6rem; padding:2px 8px; border-radius:10px; font-weight:800; margin-left:8px;">${naoLidos} ${naoLidos > 1 ? i18n.t('adm_fin_new_plural') : i18n.t('adm_fin_new')}</span>` : '';
             const cores = { mensal: '#3b82f6', trimestral: '#8b5cf6', semestral: '#10b981', anual: '#f59e0b' };
 
             container.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <span style="font-size:0.7rem; font-weight:800; color:#10b981;"><i class="fas fa-user-plus"></i> NOVOS CADASTROS ${badge}</span>
-                    ${naoLidos > 0 ? `<button onclick="academia.marcarTodosCadastrosLidos()" style="background:none; border:none; color:#64748b; font-size:0.65rem; cursor:pointer; font-weight:700;">Marcar todos como lidos</button>` : ''}
+                    <span style="font-size:0.7rem; font-weight:800; color:#10b981;"><i class="fas fa-user-plus"></i> ${i18n.t('adm_fin_new_registrations')} ${badge}</span>
+                    ${naoLidos > 0 ? `<button onclick="academia.marcarTodosCadastrosLidos()" style="background:none; border:none; color:#64748b; font-size:0.65rem; cursor:pointer; font-weight:700;">${i18n.t('adm_fin_mark_all_read')}</button>` : ''}
                 </div>
                 ${docsVisiveis.map(doc => {
                     const d = doc.data();
@@ -2076,21 +2157,21 @@ const academia = {
                         ? `<span style="background:#a78bfa22; color:#a78bfa; font-size:0.6rem; padding:2px 6px; border-radius:4px; font-weight:800;">🥋 ${d.qtdModalidades} modalidade${d.qtdModalidades > 1 ? 's' : ''}</span>`
                         : '';
                     const valorTexto = d.planoValor > 0
-                        ? `R$ ${parseFloat(d.planoValor).toFixed(2).replace('.', ',')}/mês`
-                        : 'Valor sob consulta';
+                        ? `R$ ${parseFloat(d.planoValor).toFixed(2).replace('.', ',')}${i18n.t('adm_fin_per_month')}`
+                        : i18n.t('adm_fin_value_consult');
                     return `
                         <div style="background:${isNovo ? '#0c1a0c' : '#0f172a'}; border:1px solid ${isNovo ? '#10b981' : '#334155'}; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
                             <div style="flex:1;">
-                                ${isNovo ? '<span style="background:#10b981; color:#000; font-size:0.5rem; padding:2px 6px; border-radius:4px; font-weight:800; display:inline-block; margin-bottom:4px;">NOVO</span>' : ''}
+                                ${isNovo ? `<span style="background:#10b981; color:#000; font-size:0.5rem; padding:2px 6px; border-radius:4px; font-weight:800; display:inline-block; margin-bottom:4px;">${i18n.t('adm_fin_new')}</span>` : ''}
                                 <div style="font-size:0.85rem; font-weight:800; color:white;">${d.nome.toUpperCase()}</div>
                                 <div style="font-size:0.65rem; color:#64748b;">${d.email}</div>
                                 <div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
-                                    <span style="background:${cor}22; color:${cor}; font-size:0.65rem; padding:3px 8px; border-radius:6px; font-weight:800;">${d.planoLabel} — ${valorTexto}</span>
+                                    <span style="background:${cor}22; color:${cor}; font-size:0.65rem; padding:3px 8px; border-radius:6px; font-weight:800;">${({'Mensal':i18n.t('adm_plan_monthly'),'Trimestral':i18n.t('adm_plan_quarterly'),'Semestral':i18n.t('adm_plan_semiannual'),'Anual':i18n.t('adm_plan_annual')}[d.planoLabel]||d.planoLabel)} — ${valorTexto}</span>
                                     ${infoExtra}
                                 </div>
                                 <div style="font-size:0.6rem; color:#475569; margin-top:3px;">${d.dataFormatada}</div>
                             </div>
-                            ${isNovo ? `<button onclick="academia.marcarCadastroLido('${doc.id}')" style="background:none; border:none; color:#64748b; cursor:pointer; padding:4px 8px; font-size:0.7rem;">✓ Lido</button>` : ''}
+                            ${isNovo ? `<button onclick="academia.marcarCadastroLido('${doc.id}')" style="background:none; border:none; color:#64748b; cursor:pointer; padding:4px 8px; font-size:0.7rem;">${i18n.t('adm_fin_read')}</button>` : ''}
                         </div>`;
                 }).join('')}`;
         });

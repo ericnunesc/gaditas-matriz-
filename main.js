@@ -107,6 +107,16 @@ const i18n = {
         set('txt-testimonials-btn', 'testimonials');
         const ah = document.getElementById('txt-attendance-hint');
         if (ah) ah.textContent = this.t('attendance_hint');
+        // Gestão admin — seções estáticas
+        set('adm-txt-birthdays',           'adm_birthdays_section');
+        set('adm-txt-health-reports',      'adm_health_reports');
+        set('adm-txt-pending-testimonials','adm_pending_testimonials');
+        set('adm-txt-polls',               'adm_polls');
+        set('adm-txt-new-poll',            'adm_new_poll');
+        set('adm-txt-prof-area',           'adm_prof_area');
+        set('adm-txt-prof-area-sub',       'adm_prof_area_sub');
+        set('adm-txt-student-area',        'adm_student_area');
+        set('adm-txt-student-area-sub',    'adm_student_area_sub');
     },
 
     t(key) {
@@ -359,6 +369,11 @@ const i18n = {
             'adm_lesson_history': 'PLANO DE AULA — HISTÓRICO',
             'adm_roll_call': 'CHAMADA POR LISTA', 'adm_class_label': 'TURMA:',
             'adm_open_student_list': 'ABRIR LISTA DE ALUNOS',
+            'adm_birthdays_section': 'ANIVERSARIANTES', 'adm_health_reports': 'RELATOS DE SAÚDE',
+            'adm_pending_testimonials': 'DEPOIMENTOS PENDENTES', 'adm_polls': 'ENQUETES',
+            'adm_new_poll': '+ ENQUETE', 'adm_prof_area': 'ÁREA DO PROFESSOR',
+            'adm_prof_area_sub': 'Comunicados · Técnica · Vídeos · Senha · Cadastro',
+            'adm_student_area': 'ÁREA DO ALUNO', 'adm_student_area_sub': 'Matrícula · Edição · Lista de Atletas',
             'adm_fin_title': 'PAINEL FINANCEIRO ADMIN',
             'adm_fin_summary': 'RESUMO FINANCEIRO',
             'adm_fin_calculating': 'Calculando resumo do mês...',
@@ -676,6 +691,11 @@ const i18n = {
             'adm_lesson_history': 'LESSON PLAN — HISTORY',
             'adm_roll_call': 'ROLL CALL', 'adm_class_label': 'CLASS:',
             'adm_open_student_list': 'OPEN STUDENT LIST',
+            'adm_birthdays_section': 'BIRTHDAYS', 'adm_health_reports': 'HEALTH REPORTS',
+            'adm_pending_testimonials': 'PENDING TESTIMONIALS', 'adm_polls': 'POLLS',
+            'adm_new_poll': '+ POLL', 'adm_prof_area': 'TEACHER AREA',
+            'adm_prof_area_sub': 'Announcements · Technique · Videos · Password · Register',
+            'adm_student_area': 'STUDENT AREA', 'adm_student_area_sub': 'Enrollment · Edit · Athlete List',
             'adm_fin_title': 'FINANCIAL ADMIN PANEL',
             'adm_fin_summary': 'FINANCIAL SUMMARY',
             'adm_fin_calculating': 'Calculating monthly summary...',
@@ -993,6 +1013,11 @@ const i18n = {
             'adm_lesson_history': 'PLAN DE CLASE — HISTORIAL',
             'adm_roll_call': 'LISTA DE ASISTENCIA', 'adm_class_label': 'CLASE:',
             'adm_open_student_list': 'ABRIR LISTA DE ALUMNOS',
+            'adm_birthdays_section': 'CUMPLEAÑEROS', 'adm_health_reports': 'REPORTES DE SALUD',
+            'adm_pending_testimonials': 'TESTIMONIOS PENDIENTES', 'adm_polls': 'ENCUESTAS',
+            'adm_new_poll': '+ ENCUESTA', 'adm_prof_area': 'ÁREA DEL PROFESOR',
+            'adm_prof_area_sub': 'Comunicados · Técnica · Videos · Contraseña · Registro',
+            'adm_student_area': 'ÁREA DEL ALUMNO', 'adm_student_area_sub': 'Matrícula · Edición · Lista de Atletas',
             'adm_fin_title': 'PANEL FINANCIERO ADMIN',
             'adm_fin_summary': 'RESUMEN FINANCIERO',
             'adm_fin_calculating': 'Calculando resumen del mes...',

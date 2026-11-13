@@ -596,7 +596,7 @@
 <!-- ══ ANIVERSARIANTES (admin) ══ -->
                 <div id="card-aniversariantes-admin" class="gestao-acc-fechado" style="display:none; background:linear-gradient(135deg,#1e1040,#1e293b); border:1px solid #f59e0b55; border-radius:12px; padding:15px; margin-bottom:15px;">
                     <div onclick="if(!event.target.closest('button')) ui.toggleCard('card-aniversariantes-admin')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; user-select:none;">
-                        <span style="font-size:0.8rem; font-weight:800; color:#f59e0b;">🎂 ANIVERSARIANTES</span>
+                        <span style="font-size:0.8rem; font-weight:800; color:#f59e0b;">🎂 <span id="adm-txt-birthdays">ANIVERSARIANTES</span></span>
                         <button onclick="aniversario.renderAdminAniversariantes()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem;"><i class="fas fa-sync-alt"></i></button>
                     </div>
                     <div id="lista-aniversariantes"><small style="color:#475569; font-size:0.65rem;">Carregando...</small></div>
@@ -606,7 +606,7 @@
                 <div id="card-alertas-saude" class="gestao-acc-fechado" style="background:#1e293b; border:1px solid #f43f5e55; border-radius:12px; padding:15px; margin-bottom:15px;">
                     <div onclick="if(!event.target.closest('button')) ui.toggleCard('card-alertas-saude')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; user-select:none;">
                         <span style="font-size:0.8rem; font-weight:800; color:#f43f5e;">
-                            <i class="fas fa-heartbeat"></i> RELATOS DE SAÚDE
+                            <i class="fas fa-heartbeat"></i> <span id="adm-txt-health-reports">RELATOS DE SAÚDE</span>
                             <span id="badge-relatos" style="background:#f43f5e; color:white; border-radius:10px; padding:1px 7px; font-size:0.6rem; margin-left:6px; font-weight:800;">0</span>
                         </span>
                         <button onclick="academia.carregarRelatosSaude()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem; font-weight:700;"><i class="fas fa-sync-alt"></i></button>
@@ -618,7 +618,7 @@
                 <div id="card-depoimentos-admin" class="gestao-acc-fechado" style="background:#1e293b; border:1px solid #f59e0b55; border-radius:12px; padding:15px; margin-bottom:15px; display:none;">
                     <div onclick="if(!event.target.closest('button')) ui.toggleCard('card-depoimentos-admin')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; user-select:none;">
                         <span style="font-size:0.8rem; font-weight:800; color:#f59e0b;">
-                            <i class="fas fa-star"></i> DEPOIMENTOS PENDENTES
+                            <i class="fas fa-star"></i> <span id="adm-txt-pending-testimonials">DEPOIMENTOS PENDENTES</span>
                             <span id="badge-dep-pendentes" style="background:#f59e0b; color:#000; border-radius:10px; padding:1px 7px; font-size:0.6rem; margin-left:6px; font-weight:800;">0</span>
                         </span>
                         <button onclick="academia.carregarDepoimentosPendentes()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem; font-weight:700;"><i class="fas fa-sync-alt"></i></button>
@@ -629,9 +629,9 @@
                 <!-- ══ ENQUETES (admin) ══ -->
                 <div id="card-enquetes-admin" class="gestao-acc-fechado" style="display:none; background:#1e293b; border:1px solid #8b5cf655; border-radius:12px; padding:15px; margin-bottom:15px;">
                     <div onclick="if(!event.target.closest('button')) ui.toggleCard('card-enquetes-admin')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; user-select:none;">
-                        <span style="font-size:0.8rem; font-weight:800; color:#a78bfa;">📋 ENQUETES</span>
+                        <span style="font-size:0.8rem; font-weight:800; color:#a78bfa;">📋 <span id="adm-txt-polls">ENQUETES</span></span>
                         <div style="display:flex; gap:6px;">
-                            <button onclick="enquetes.abrirModalCriarEnquete()" style="background:#8b5cf6; border:none; color:white; padding:6px 12px; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;">+ ENQUETE</button>
+                            <button onclick="enquetes.abrirModalCriarEnquete()" style="background:#8b5cf6; border:none; color:white; padding:6px 12px; border-radius:8px; font-size:0.62rem; font-weight:800; cursor:pointer;" id="adm-txt-new-poll">+ ENQUETE</button>
                             <button onclick="enquetes.renderAdminEnquetes()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem;"><i class="fas fa-sync-alt"></i></button>
                         </div>
                     </div>
@@ -643,8 +643,8 @@
                     <div style="display:flex; align-items:center; gap:10px;">
                         <i class="fas fa-chalkboard-teacher" style="color:#8b5cf6; font-size:1rem;"></i>
                         <div>
-                            <span style="color:#8b5cf6; font-size:0.7rem; font-weight:800; letter-spacing:1.2px; display:block;">ÁREA DO PROFESSOR</span>
-                            <span style="color:#a78bfa; font-size:0.55rem; font-weight:600;">Comunicados · Técnica · Vídeos · Senha · Cadastro</span>
+                            <span style="color:#8b5cf6; font-size:0.7rem; font-weight:800; letter-spacing:1.2px; display:block;" id="adm-txt-prof-area">ÁREA DO PROFESSOR</span>
+                            <span style="color:#a78bfa; font-size:0.55rem; font-weight:600;" id="adm-txt-prof-area-sub">Comunicados · Técnica · Vídeos · Senha · Cadastro</span>
                         </div>
                     </div>
                     <i id="chevron-prof" class="fas fa-chevron-down" style="color:#8b5cf6; font-size:0.8rem; transition:transform 0.25s; flex-shrink:0;"></i>
@@ -783,8 +783,8 @@
                     <div style="display:flex; align-items:center; gap:10px;">
                         <i class="fas fa-users" style="color:#3b82f6; font-size:1rem;"></i>
                         <div>
-                            <span style="color:#3b82f6; font-size:0.7rem; font-weight:800; letter-spacing:1.2px; display:block;">ÁREA DO ALUNO</span>
-                            <span style="color:#60a5fa; font-size:0.55rem; font-weight:600;">Matrícula · Edição · Lista de Atletas</span>
+                            <span style="color:#3b82f6; font-size:0.7rem; font-weight:800; letter-spacing:1.2px; display:block;" id="adm-txt-student-area">ÁREA DO ALUNO</span>
+                            <span style="color:#60a5fa; font-size:0.55rem; font-weight:600;" id="adm-txt-student-area-sub">Matrícula · Edição · Lista de Atletas</span>
                         </div>
                     </div>
                     <i id="chevron-aluno" class="fas fa-chevron-down" style="color:#3b82f6; font-size:0.8rem; transition:transform 0.25s; flex-shrink:0;"></i>

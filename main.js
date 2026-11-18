@@ -261,6 +261,9 @@ const i18n = {
             'know_the_blacks': '🥋 CONHEÇA OS PRETAS',
             'see_all': 'VER TODOS →',
             'my_dependents': '👨‍👧‍👦 MEUS DEPENDENTES',
+            'dep_exam_alert_title': '⚠️ CONVOCAÇÃO PARA EXAME',
+            'dep_exam_alert_msg': 'foi convocado(a) para o exame de graduação!',
+            'dep_exam_alert_tap': 'Toque para acessar a conta do dependente',
             'access': 'ACESSAR',
             'you': 'você',
             'students': 'alunos',
@@ -654,6 +657,9 @@ const i18n = {
             'know_the_blacks': '🥋 MEET THE BLACK BELTS',
             'see_all': 'SEE ALL →',
             'my_dependents': '👨‍👧‍👦 MY DEPENDENTS',
+            'dep_exam_alert_title': '⚠️ EXAM NOMINATION',
+            'dep_exam_alert_msg': 'has been nominated for the graduation exam!',
+            'dep_exam_alert_tap': 'Tap to access the dependent\'s account',
             'access': 'ACCESS',
             'you': 'you',
             'students': 'students',
@@ -1039,6 +1045,9 @@ const i18n = {
             'know_the_blacks': '🥋 CONOCE LOS CINTURONES NEGROS',
             'see_all': 'VER TODOS →',
             'my_dependents': '👨‍👧‍👦 MIS DEPENDIENTES',
+            'dep_exam_alert_title': '⚠️ CONVOCACIÓN AL EXAMEN',
+            'dep_exam_alert_msg': '¡fue convocado(a) al examen de graduación!',
+            'dep_exam_alert_tap': 'Toca para acceder a la cuenta del dependiente',
             'access': 'ACCEDER',
             'you': 'tú',
             'students': 'alumnos',
@@ -7577,15 +7586,35 @@ Ele voltará a ser aluno normal.`)) return;
                 const cont = document.getElementById('mini-mural-pretas-dash');
                 if (!snapDep || snapDep.empty || !cont) return;
                 const deps = snapDep.docs.map(d => ({ id: d.id, ...d.data() }));
+                // Banner de convocação para cada dependente convocado para exame
+                const convocados = deps.filter(d => d.aspiranteGraduacao === true);
+                convocados.forEach(d => {
+                    const alertEl = document.createElement('div');
+                    alertEl.style.marginBottom = '10px';
+                    const nome1 = d.nome.split(' ')[0];
+                    alertEl.innerHTML = `
+                        <div onclick="auth.acessarComoDependente('${d.id}')" style="cursor:pointer;background:linear-gradient(135deg,#1e1040,#1e3a1a);border:2px solid #f59e0b;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;animation:pulse-exam 2s infinite;">
+                            <div style="font-size:1.8rem;flex-shrink:0;">🥋</div>
+                            <div style="flex:1;">
+                                <div style="font-size:0.65rem;font-weight:800;color:#f59e0b;letter-spacing:1px;">${i18n.t('dep_exam_alert_title')}</div>
+                                <div style="font-size:0.78rem;font-weight:800;color:#fff;margin-top:2px;">${nome1} ${i18n.t('dep_exam_alert_msg')}</div>
+                                <div style="font-size:0.58rem;color:#94a3b8;margin-top:4px;">${i18n.t('dep_exam_alert_tap')}</div>
+                            </div>
+                            <div style="font-size:0.65rem;font-weight:800;color:#f59e0b;">→</div>
+                        </div>`;
+                    cont.parentNode.insertBefore(alertEl, cont);
+                });
                 const depCards = deps.map(d => {
                     const fotoEl = d.fotoPerfil
-                        ? `<img src="${d.fotoPerfil}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #3b82f6;">`
-                        : `<div style="width:52px;height:52px;border-radius:50%;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:2px solid #334155;">👤</div>`;
+                        ? `<img src="${d.fotoPerfil}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid ${d.aspiranteGraduacao ? '#f59e0b' : '#3b82f6'};">`
+                        : `<div style="width:52px;height:52px;border-radius:50%;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:2px solid ${d.aspiranteGraduacao ? '#f59e0b' : '#334155'};">👤</div>`;
+                    const badgeExame = d.aspiranteGraduacao ? `<div style="font-size:0.42rem;background:#f59e0b;color:#000;border-radius:4px;padding:1px 4px;font-weight:800;">🥋 EXAM</div>` : '';
                     return `<div onclick="auth.acessarComoDependente('${d.id}')"
                         style="flex-shrink:0;width:72px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;"
                         onmousedown="this.style.opacity='0.7'" onmouseup="this.style.opacity='1'" ontouchstart="this.style.opacity='0.7'" ontouchend="this.style.opacity='1'">
                         ${fotoEl}
                         <div style="font-size:0.52rem;font-weight:800;color:#e2e8f0;text-align:center;line-height:1.2;">${d.nome.split(' ')[0].toUpperCase()}</div>
+                        ${badgeExame}
                         <div style="font-size:0.45rem;color:#3b82f6;font-weight:700;">${i18n.t('access')}</div>
                     </div>`;
                 }).join('');

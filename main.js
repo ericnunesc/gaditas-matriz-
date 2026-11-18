@@ -7544,7 +7544,7 @@ Ele voltará a ser aluno normal.`)) return;
             const cont = document.getElementById('mini-mural-pretas-dash');
             if (!cont) return;
             const lista = [];
-            snapP.forEach(d => lista.push({ id: d.id, ...d.data() }));
+            snapP.forEach(d => { const dat = d.data(); if (!dat.ocultarAluno) lista.push({ id: d.id, ...dat }); });
             if (!lista.length) { cont.style.display = 'none'; return; }
             // Fixos: sem número (pinned) ou destaque — sempre aparecem
             const fixos = lista.filter(p => (p.numero == null || p.numero === '') || p.destaque);
@@ -26797,10 +26797,12 @@ const pretas = {
 
     _buildPage() {
         const isAdmin = auth.role === 'admin';
-        const total = (this._lista || []).length;
+        // Alunos não veem pretas ocultos pelo admin
+        const lista = isAdmin ? (this._lista || []) : (this._lista || []).filter(p => !p.ocultarAluno);
+        const total = lista.length;
 
         // Ordenação: sem número (pinned) → destaque → por número → resto
-        const sorted = [...(this._lista || [])].sort((a, b) => {
+        const sorted = [...lista].sort((a, b) => {
             const aPin = a.numero == null || a.numero === '', bPin = b.numero == null || b.numero === '';
             if (aPin !== bPin) return aPin ? -1 : 1;
             const aDest = !!a.destaque, bDest = !!b.destaque;
@@ -26842,8 +26844,10 @@ const pretas = {
                         <div style="font-size:0.5rem;color:#475569;font-weight:700;margin-top:3px;letter-spacing:0.5px;">${i18n.t('blacks_black_belt')}${p.graus > 0 ? ` — ${p.graus}${i18n.t('blacks_degree')}` : ''}</div>
                     </div>
                     ${isAdmin ? `
+                    ${p.ocultarAluno ? `<div style="font-size:0.5rem;background:#7c3aed22;border:1px solid #7c3aed66;color:#a78bfa;border-radius:5px;padding:3px 7px;font-weight:800;margin-bottom:6px;text-align:center;">🙈 OCULTO PARA ALUNOS</div>` : ''}
                     <div style="display:flex;gap:6px;margin-top:10px;">
                         <button onclick="pretas.abrirEditar('${p.id}')" style="flex:1;padding:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:7px;font-size:0.62rem;font-weight:700;cursor:pointer;">✏️ Editar</button>
+                        <button onclick="pretas.toggleOcultar('${p.id}',${!!p.ocultarAluno})" style="padding:6px 8px;background:${p.ocultarAluno?'#2e1065':'#1e293b'};border:1px solid ${p.ocultarAluno?'#7c3aed':'#334155'};color:${p.ocultarAluno?'#a78bfa':'#64748b'};border-radius:7px;font-size:0.62rem;cursor:pointer;" title="${p.ocultarAluno?'Tornar visível para alunos':'Ocultar para alunos'}">${p.ocultarAluno?'👁':'🙈'}</button>
                         <button onclick="pretas.excluir('${p.id}')" style="padding:6px 10px;background:#1a0404;border:1px solid #ef444444;color:#ef4444;border-radius:7px;font-size:0.62rem;cursor:pointer;">🗑</button>
                     </div>` : ''}
                 </div>
@@ -27027,6 +27031,17 @@ const pretas = {
             await db.collection('faixas_pretas').doc(id).delete();
             await this.render();
         } catch(e) { alert('Erro ao excluir.'); }
+    },
+
+    async toggleOcultar(id, ocultarAtual) {
+        const novoValor = !ocultarAtual;
+        try {
+            await db.collection('faixas_pretas').doc(id).update({ ocultarAluno: novoValor });
+            const idx = (this._lista || []).findIndex(x => x.id === id);
+            if (idx !== -1) this._lista[idx].ocultarAluno = novoValor;
+            const el = document.getElementById('pretas-container');
+            if (el) el.innerHTML = this._buildPage();
+        } catch(e) { alert('Erro ao atualizar visibilidade.'); }
     },
 
     async abrirDetalhe(id) {

@@ -247,7 +247,7 @@ const i18n = {
             // Menu inferior (bottom nav)
             'nav_training': 'TREINO', 'nav_events_tab': 'EVENTOS',
             'nav_schedule_tab': 'HORÁRIOS', 'nav_store_tab': 'LOJA',
-            'nav_services': 'SERVIÇOS', 'nav_exam_tab': 'GRAD.',
+            'nav_services': 'SERVIÇOS', 'nav_exam_tab': 'GRADUAÇÃO',
             'nav_reports': 'RELATÓRIOS', 'nav_blacks': 'PRETAS',
             'nav_logout': 'SAIR',
             // Grid de atalhos do aluno
@@ -645,7 +645,7 @@ const i18n = {
             'month': 'month', 'lang_label': '🇺🇸 English',
             'nav_training': 'TRAINING', 'nav_events_tab': 'EVENTS',
             'nav_schedule_tab': 'SCHEDULE', 'nav_store_tab': 'STORE',
-            'nav_services': 'SERVICES', 'nav_exam_tab': 'GRAD.',
+            'nav_services': 'SERVICES', 'nav_exam_tab': 'GRADUATION',
             'nav_reports': 'REPORTS', 'nav_blacks': 'BLACK BELTS',
             'nav_logout': 'LOGOUT',
             'nav_checkin': 'Check-in', 'nav_qr': 'QR Code',
@@ -1033,7 +1033,7 @@ const i18n = {
             'month': 'mes', 'lang_label': '🇪🇸 Español',
             'nav_training': 'ENTRENO', 'nav_events_tab': 'EVENTOS',
             'nav_schedule_tab': 'HORARIOS', 'nav_store_tab': 'TIENDA',
-            'nav_services': 'SERVICIOS', 'nav_exam_tab': 'GRAD.',
+            'nav_services': 'SERVICIOS', 'nav_exam_tab': 'GRADUACIÓN',
             'nav_reports': 'INFORMES', 'nav_blacks': 'CINTURONES',
             'nav_logout': 'SALIR',
             'nav_checkin': 'Check-in', 'nav_qr': 'QR Code',

@@ -15617,15 +15617,33 @@ const exame = {
                                     ${tamanhoOpts.map(t=>`<option value="${t}" ${tamanhoSel===t?'selected':''}>${t}</option>`).join('')}
                                 </select>
                             </div>`;
+                        const _confResp = a.confirmacaoPresencaExame;
+                        const _badgeResp = _confResp === 'confirmado'
+                            ? `<span style="font-size:0.48rem;background:#064e3b;border:1px solid #10b981;color:#10b981;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px;">✅ RESP. CONFIRMOU</span>`
+                            : _confResp === 'recusado'
+                            ? `<span style="font-size:0.48rem;background:#1a0404;border:1px solid #ef4444;color:#ef4444;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px;">❌ RESP. RECUSOU</span>`
+                            : `<span style="font-size:0.48rem;background:#1e293b;border:1px solid #475569;color:#64748b;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px;">⏳ AGUARD. RESP.</span>`;
+                        const _telAluno = (a.telefone||'').replace(/\D/g,'');
+                        const _linkConf = `https://gaditas-matriz.vercel.app/confirmar-exame.html?id=${id}`;
+                        const _msgWpp = encodeURIComponent(`Olá! 👋\n\n*${a.nome}* foi convocado(a) para o *Exame de Graduação* da Gaditas Academy! 🥋\n\nFaixa atual: *${a.faixa||'Branca'}*\nFaixa destino: *${faixaDestino}*\n\nPor favor, confirme a presença clicando no link abaixo:\n👉 ${_linkConf}\n\nOSS! 🙏`);
+                        const _btnWpp = _telAluno
+                            ? `<button onclick="window.open('https://wa.me/55${_telAluno}?text=${_msgWpp}','_blank')"
+                                style="padding:4px 8px;background:#064e3b;border:1px solid #25d36655;color:#25d366;border-radius:6px;font-size:0.65rem;font-weight:800;cursor:pointer;margin-left:6px;white-space:nowrap;">
+                                <i class="fab fa-whatsapp"></i> WPP</button>`
+                            : '';
                         return `<div id="card-conv-${id}" style="background:#0f172a;border:1px solid ${confirmou?'#10b98130':'#1e293b'};border-left:3px solid ${corNome};border-radius:8px;padding:10px 12px;margin-bottom:6px;">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <div style="flex:1;min-width:0;">
                                     <div id="nome-conv-${id}" style="font-size:0.82rem;font-weight:800;color:${corNome};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome}</div>
                                     <div id="sub-conv-${id}" data-faixa-atual="${_isMTConf?(a.faixaMT||''):(a.faixa||'')}" style="font-size:0.6rem;color:#64748b;margin-top:1px;">${_isMTConf?`🥊 ${faixaDestino}`:`${a.faixa||'Branca'} → <span style="color:${corNome};font-weight:700;">${faixaDestino}</span>`} • ${a.aulas||0} aulas</div>
+                                    <div style="margin-top:3px;">${_badgeResp}</div>
                                 </div>
-                                <button onclick="exame.togglePresencaAdmin('${id}',${confirmou})"
-                                    style="font-size:0.58rem;font-weight:800;color:${confirmou?'#10b981':'#f59e0b'};white-space:nowrap;margin-left:8px;background:${confirmou?'#05200f':'#1c1400'};border:1px solid ${confirmou?'#10b98155':'#f59e0b55'};border-radius:6px;padding:4px 8px;cursor:pointer;">
-                                    ${confirmou?'✅ CONF.':'⏳ PEND.'}</button>
+                                <div style="display:flex;align-items:center;gap:0;flex-shrink:0;margin-left:8px;">
+                                    ${_btnWpp}
+                                    <button onclick="exame.togglePresencaAdmin('${id}',${confirmou})"
+                                        style="font-size:0.58rem;font-weight:800;color:${confirmou?'#10b981':'#f59e0b'};white-space:nowrap;margin-left:6px;background:${confirmou?'#05200f':'#1c1400'};border:1px solid ${confirmou?'#10b98155':'#f59e0b55'};border-radius:6px;padding:4px 8px;cursor:pointer;">
+                                        ${confirmou?'✅ CONF.':'⏳ PEND.'}</button>
+                                </div>
                             </div>
                             ${seletorKids}
                             ${seletorTamanho}

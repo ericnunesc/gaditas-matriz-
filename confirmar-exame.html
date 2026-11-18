@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Confirmar Presença — Exame de Graduação</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #020617;
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 20px;
+            padding: 32px 24px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        .logo { font-size: 3rem; margin-bottom: 8px; }
+        .titulo { font-size: 1rem; font-weight: 800; color: #f59e0b; letter-spacing: 1px; margin-bottom: 4px; }
+        .subtitulo { font-size: 0.7rem; color: #64748b; margin-bottom: 24px; }
+        .nome { font-size: 1.3rem; font-weight: 900; color: white; margin-bottom: 8px; }
+        .faixa-info {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 24px;
+        }
+        .faixa-de { font-size: 0.65rem; color: #64748b; margin-bottom: 4px; }
+        .faixa-arrow { font-size: 1rem; font-weight: 800; color: white; }
+        .faixa-para { font-size: 0.65rem; color: #64748b; margin-top: 4px; }
+        .faixa-destino { font-size: 1rem; font-weight: 800; color: #f59e0b; }
+        .pergunta { font-size: 0.8rem; color: #94a3b8; margin-bottom: 20px; line-height: 1.5; }
+        .btns { display: flex; gap: 12px; }
+        .btn-sim {
+            flex: 1; padding: 16px; background: #064e3b; border: 2px solid #10b981;
+            color: #10b981; border-radius: 12px; font-size: 0.9rem; font-weight: 800;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-sim:hover { background: #10b981; color: #000; }
+        .btn-nao {
+            flex: 1; padding: 16px; background: #1a0404; border: 2px solid #ef4444;
+            color: #ef4444; border-radius: 12px; font-size: 0.9rem; font-weight: 800;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-nao:hover { background: #ef4444; color: white; }
+        .resultado {
+            display: none;
+            padding: 24px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 800;
+        }
+        .resultado.sim { background: #064e3b; border: 2px solid #10b981; color: #10b981; }
+        .resultado.nao { background: #1a0404; border: 2px solid #ef4444; color: #ef4444; }
+        .loading { color: #475569; font-size: 0.75rem; padding: 20px; }
+        .erro { color: #ef4444; font-size: 0.75rem; padding: 20px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">🥋</div>
+    <div class="titulo">EXAME DE GRADUAÇÃO</div>
+    <div class="subtitulo">Gaditas Academy</div>
+
+    <div id="conteudo">
+        <div class="loading">Carregando...</div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+        authDomain: "gaditasmatriz.firebaseapp.com",
+        projectId: "gaditasmatriz",
+        storageBucket: "gaditasmatriz.firebasestorage.app",
+        messagingSenderId: "166834416988",
+        appId: "1:166834416988:web:2921c95c87c42019282599"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const params = new URLSearchParams(window.location.search);
+    const alunoId = params.get('id');
+    const conteudo = document.getElementById('conteudo');
+
+    async function carregar() {
+        if (!alunoId) {
+            conteudo.innerHTML = '<div class="erro">Link inválido.</div>';
+            return;
+        }
+        try {
+            const doc = await db.collection('alunos').doc(alunoId).get();
+            if (!doc.exists) {
+                conteudo.innerHTML = '<div class="erro">Aluno não encontrado.</div>';
+                return;
+            }
+            const a = doc.data();
+            const confirmacao = a.confirmacaoPresencaExame;
+
+            const faixaAtual = a.faixa || 'Branca';
+            const faixaDestino = a.proxFaixaCustom || calcProxFaixa(a);
+
+            if (confirmacao === 'confirmado') {
+                conteudo.innerHTML = `
+                    <div class="nome">${a.nome}</div>
+                    <div class="resultado sim" style="display:block;">✅ Presença já confirmada!<br><small style="font-size:0.65rem;font-weight:400;margin-top:6px;display:block;">Obrigado! Até o exame 🥋</small></div>`;
+                return;
+            }
+            if (confirmacao === 'recusado') {
+                conteudo.innerHTML = `
+                    <div class="nome">${a.nome}</div>
+                    <div class="resultado nao" style="display:block;">❌ Presença não confirmada.<br><small style="font-size:0.65rem;font-weight:400;margin-top:6px;display:block;">Se mudou de ideia, entre em contato com a academia.</small></div>`;
+                return;
+            }
+
+            conteudo.innerHTML = `
+                <div class="nome">${a.nome}</div>
+                <div class="faixa-info">
+                    <div class="faixa-de">Faixa atual</div>
+                    <div class="faixa-arrow">${faixaAtual}</div>
+                    <div style="color:#64748b;font-size:1rem;margin:4px 0;">↓</div>
+                    <div class="faixa-para">Faixa destino</div>
+                    <div class="faixa-destino">${faixaDestino}</div>
+                </div>
+                <div class="pergunta">Você confirma a presença de <strong style="color:white;">${a.nome.split(' ')[0]}</strong> no exame de graduação?</div>
+                <div class="btns">
+                    <button class="btn-sim" onclick="confirmar('confirmado')">✅ SIM,<br>vou!</button>
+                    <button class="btn-nao" onclick="confirmar('recusado')">❌ NÃO<br>vou</button>
+                </div>
+                <div id="resultado-final" class="resultado"></div>`;
+        } catch(e) {
+            conteudo.innerHTML = '<div class="erro">Erro ao carregar. Tente novamente.</div>';
+        }
+    }
+
+    async function confirmar(resposta) {
+        document.querySelectorAll('.btn-sim,.btn-nao').forEach(b => b.disabled = true);
+        try {
+            await db.collection('alunos').doc(alunoId).update({
+                confirmacaoPresencaExame: resposta,
+                confirmacaoPresencaExameEm: new Date().toISOString()
+            });
+            const res = document.getElementById('resultado-final');
+            document.querySelector('.btns').style.display = 'none';
+            document.querySelector('.pergunta').style.display = 'none';
+            if (resposta === 'confirmado') {
+                res.className = 'resultado sim';
+                res.innerHTML = '✅ Presença confirmada!<br><small style="font-size:0.65rem;font-weight:400;margin-top:6px;display:block;">Obrigado! Até o exame 🥋</small>';
+            } else {
+                res.className = 'resultado nao';
+                res.innerHTML = '❌ Presença não confirmada.<br><small style="font-size:0.65rem;font-weight:400;margin-top:6px;display:block;">Se mudou de ideia, entre em contato com a academia.</small>';
+            }
+            res.style.display = 'block';
+        } catch(e) {
+            alert('Erro ao salvar. Tente novamente.');
+            document.querySelectorAll('.btn-sim,.btn-nao').forEach(b => b.disabled = false);
+        }
+    }
+
+    function calcProxFaixa(a) {
+        const ordemJJ = ['Branca','Cinza/Branca','Cinza','Cinza/Preta','Amarela/Branca','Amarela','Amarela/Preta','Laranja/Branca','Laranja','Laranja/Preta','Verde/Branca','Verde','Verde/Preta','Azul','Roxa','Marrom','Preta'];
+        const idx = ordemJJ.indexOf(a.faixa || 'Branca');
+        return idx >= 0 && idx + 1 < ordemJJ.length ? ordemJJ[idx + 1] : (a.faixa || 'Branca');
+    }
+
+    carregar();
+</script>
+</body>
+</html>

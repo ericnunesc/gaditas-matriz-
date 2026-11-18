@@ -15643,6 +15643,9 @@ const exame = {
                                     <button onclick="exame.togglePresencaAdmin('${id}',${confirmou})"
                                         style="font-size:0.58rem;font-weight:800;color:${confirmou?'#10b981':'#f59e0b'};white-space:nowrap;margin-left:6px;background:${confirmou?'#05200f':'#1c1400'};border:1px solid ${confirmou?'#10b98155':'#f59e0b55'};border-radius:6px;padding:4px 8px;cursor:pointer;">
                                         ${confirmou?'✅ CONF.':'⏳ PEND.'}</button>
+                                    <button onclick="exame.cancelarIndicacao('${id}','${a.nome.replace(/'/g,"\\'")}')"
+                                        style="font-size:0.58rem;font-weight:800;color:#ef4444;white-space:nowrap;margin-left:6px;background:#1a0404;border:1px solid #ef444455;border-radius:6px;padding:4px 8px;cursor:pointer;">
+                                        ✖</button>
                                 </div>
                             </div>
                             ${seletorKids}
@@ -15952,6 +15955,19 @@ const exame = {
 
     async salvarEtiquetaAdmin(alunoId, valor) {
         await db.collection('alunos').doc(alunoId).update({ nomeEtiqueta: valor });
+    },
+
+    async cancelarIndicacao(alunoId, nomeAluno) {
+        const nome1 = nomeAluno.split(' ')[0];
+        if (!confirm(`Remover a indicação de ${nome1} para o exame de graduação?`)) return;
+        await db.collection('alunos').doc(alunoId).update({
+            aspiranteGraduacao: false,
+            modalidadesConvocado: {},
+            convocacaoPendente: false,
+            confirmacaoPresencaExame: firebase.firestore.FieldValue.delete()
+        });
+        const card = document.getElementById(`card-conv-${alunoId}`);
+        if (card) card.remove();
     },
 
     // ── PRÉ-REQUISITOS DO EXAME ──────────────────────────────────────────────

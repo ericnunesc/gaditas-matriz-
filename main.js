@@ -15710,7 +15710,7 @@ const exame = {
                                     style="flex:1;padding:7px;background:#1e1b4b;border:1px solid #6366f1;color:#a5b4fc;font-weight:800;font-size:0.65rem;border-radius:8px;cursor:pointer;">
                                     ${temAvaliacao ? '✏️ Editar' : '🎯 Avaliar'}
                                 </button>
-                                <button onclick="exame.graduarAluno('${id}')" data-faixa-destino="${faixaDestino}" data-modalidade-grad="${_isMTConf ? 'muaythai' : 'jiujitsu'}"
+                                <button onclick="exame.graduarAluno('${id}','${faixaDestino.replace(/'/g,"\\'")}','${_isMTConf ? 'muaythai' : 'jiujitsu'}')"
                                     style="flex:2;padding:7px;background:linear-gradient(135deg,${corNome},${corNome}99);color:#000;font-weight:900;font-size:0.7rem;border:none;border-radius:8px;cursor:pointer;letter-spacing:1px;">
                                     🥋 GRADUAR
                                 </button>
@@ -17037,11 +17037,7 @@ const exame = {
     },
 
     // ── Graduar aluno direto pela lista de convocados ────────
-    async graduarAluno(alunoId) {
-        const card = document.getElementById(`card-conv-${alunoId}`);
-        const btn = card?.querySelector('button[data-faixa-destino]');
-        const faixaDestino   = btn?.dataset.faixaDestino;
-        const modalidadeGrad = btn?.dataset.modalidadeGrad || 'jiujitsu';
+    async graduarAluno(alunoId, faixaDestino, modalidadeGrad = 'jiujitsu') {
         if (!faixaDestino) return;
 
         const nomeEl = document.getElementById(`nome-conv-${alunoId}`);
@@ -17049,8 +17045,6 @@ const exame = {
         if (!confirm(`Graduar ${nome} para ${faixaDestino}?`)) return;
 
         try {
-            btn.disabled = true;
-            btn.textContent = '⏳ Graduando...';
 
             const docRef = db.collection('alunos').doc(alunoId);
             const snap = await docRef.get();
@@ -17123,7 +17117,6 @@ const exame = {
             setTimeout(() => certificado.abrirEmitir(alunoId, nome, faixaDestino, dataGrad, 0), 300);
         } catch(e) {
             alert('Erro ao graduar: ' + e.message);
-            if (btn) { btn.disabled = false; btn.textContent = '🥋 GRADUAR'; }
         }
     },
 

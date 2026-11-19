@@ -16020,6 +16020,7 @@ const exame = {
                 <div>
                     <div style="font-size:0.68rem;font-weight:800;color:white;">${a.nome}</div>
                     <div style="font-size:0.55rem;color:#64748b;">${pr.enviadaEm||''}</div>
+                    ${pr.saidasDaTela > 0 ? `<div style="font-size:0.52rem;font-weight:800;color:#ef4444;margin-top:2px;">⚠️ Saiu da tela: ${pr.saidasDaTela}x</div>` : ''}
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
                     <div style="font-size:1rem;font-weight:900;color:${corNota};">${pr.percentual??'—'}%</div>
@@ -16511,12 +16512,51 @@ const exame = {
     },
 
     iniciarProva(alunoId) {
+        // Popup de aviso anti-cola
+        const overlay = document.createElement('div');
+        overlay.id = 'prova-aviso-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+        overlay.innerHTML = `
+            <div style="background:#0f172a;border:2px solid #ef4444;border-radius:16px;padding:28px 22px;max-width:360px;width:100%;text-align:center;">
+                <div style="font-size:2.2rem;margin-bottom:10px;">🚨</div>
+                <div style="font-size:0.85rem;font-weight:900;color:#ef4444;letter-spacing:1px;margin-bottom:12px;">ATENÇÃO!</div>
+                <div style="font-size:0.72rem;color:#e2e8f0;line-height:1.6;margin-bottom:18px;">
+                    A partir desse momento, <strong style="color:#f59e0b;">este aplicativo está sendo monitorado.</strong><br><br>
+                    Caso você <strong style="color:#ef4444;">saia desta tela</strong> durante a prova, o sistema registrará cada saída e essa informação será enviada junto com o seu resultado ao professor.<br><br>
+                    <span style="color:#94a3b8;font-size:0.65rem;">Mantenha o aplicativo aberto até finalizar.</span>
+                </div>
+                <button onclick="exame._confirmarInicioProva('${alunoId}')"
+                    style="width:100%;padding:14px;background:#ef4444;border:none;color:white;border-radius:10px;font-size:0.82rem;font-weight:900;cursor:pointer;letter-spacing:0.5px;">
+                    ENTENDI — INICIAR PROVA
+                </button>
+            </div>`;
+        document.body.appendChild(overlay);
+    },
+
+    _confirmarInicioProva(alunoId) {
+        const overlay = document.getElementById('prova-aviso-overlay');
+        if (overlay) overlay.remove();
+        // Inicializa contador de saídas
+        this._provaSaidasCount = 0;
+        this._provaVisibilityHandler = () => {
+            if (document.visibilityState === 'hidden') {
+                this._provaSaidasCount = (this._provaSaidasCount || 0) + 1;
+            }
+        };
+        document.addEventListener('visibilitychange', this._provaVisibilityHandler);
         localStorage.setItem(`prova_inicio_${alunoId}`, Date.now().toString());
         this._renderProvaAluno(alunoId, null);
     },
 
     async submeterProva(alunoId, force = false) {
         if (this._provaTimer) { clearInterval(this._provaTimer); this._provaTimer = null; }
+        // Para o monitoramento de saídas
+        if (this._provaVisibilityHandler) {
+            document.removeEventListener('visibilitychange', this._provaVisibilityHandler);
+            this._provaVisibilityHandler = null;
+        }
+        const saidasCount = this._provaSaidasCount || 0;
+        this._provaSaidasCount = 0;
         localStorage.removeItem(`prova_inicio_${alunoId}`);
         const prova = await this._loadProva();
         const pergs = prova.perguntas || [];
@@ -16536,10 +16576,11 @@ const exame = {
                 percentual,
                 enviadaEm: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
                 resultadoLiberado: false,
+                saidasDaTela: saidasCount,
             }
         });
         alert(`✅ Prova enviada! Aguarde o professor liberar o resultado.`);
-        this._renderProvaAluno(alunoId, { respostas, percentual, enviadaEm: new Date().toLocaleDateString('pt-BR'), resultadoLiberado: false });
+        this._renderProvaAluno(alunoId, { respostas, percentual, enviadaEm: new Date().toLocaleDateString('pt-BR'), resultadoLiberado: false, saidasDaTela: saidasCount });
     },
 
     async _loadPreReqs() {

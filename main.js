@@ -16536,11 +16536,16 @@ const exame = {
     _confirmarInicioProva(alunoId) {
         const overlay = document.getElementById('prova-aviso-overlay');
         if (overlay) overlay.remove();
-        // Inicializa contador de saídas
+        // Inicializa contador de saídas (só conta se ficou fora > 15s — ligação rápida não penaliza)
         this._provaSaidasCount = 0;
+        this._provaSaidaTs = null;
         this._provaVisibilityHandler = () => {
             if (document.visibilityState === 'hidden') {
-                this._provaSaidasCount = (this._provaSaidasCount || 0) + 1;
+                this._provaSaidaTs = Date.now();
+            } else if (this._provaSaidaTs) {
+                const seg = (Date.now() - this._provaSaidaTs) / 1000;
+                if (seg > 15) this._provaSaidasCount = (this._provaSaidasCount || 0) + 1;
+                this._provaSaidaTs = null;
             }
         };
         document.addEventListener('visibilitychange', this._provaVisibilityHandler);
@@ -16557,6 +16562,7 @@ const exame = {
         }
         const saidasCount = this._provaSaidasCount || 0;
         this._provaSaidasCount = 0;
+        this._provaSaidaTs = null;
         localStorage.removeItem(`prova_inicio_${alunoId}`);
         const prova = await this._loadProva();
         const pergs = prova.perguntas || [];

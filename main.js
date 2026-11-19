@@ -17077,10 +17077,13 @@ const exame = {
                 exameAvaliacao: firebase.firestore.FieldValue.delete(),
                 exameAvaliacaoPercentual: firebase.firestore.FieldValue.delete(),
                 convocacaoPendente: false,
+                examePreReqs: firebase.firestore.FieldValue.delete(),
             };
 
+            const preReqsSnapshot = dados.examePreReqs || {};
+
             if (modalidadeGrad === 'muaythai') {
-                historicoGrad.push({ faixaMT: faixaDestino, faixa: dados.faixa || '', grau: dados.grau || 0, modalidade: 'muaythai', data: dataFormatada });
+                historicoGrad.push({ faixaMT: faixaDestino, faixa: dados.faixa || '', grau: dados.grau || 0, modalidade: 'muaythai', data: dataFormatada, preReqs: preReqsSnapshot });
                 updateObj = {
                     faixaMT: faixaDestino,
                     aulasMT: 0,
@@ -17091,7 +17094,7 @@ const exame = {
                     ...resetExame,
                 };
             } else {
-                historicoGrad.push({ faixa: faixaDestino, grau: 0, faixaMT: dados.faixaMT || null, modalidade: 'jiujitsu', data: dataFormatada });
+                historicoGrad.push({ faixa: faixaDestino, grau: 0, faixaMT: dados.faixaMT || null, modalidade: 'jiujitsu', data: dataFormatada, preReqs: preReqsSnapshot });
                 updateObj = {
                     faixa: faixaDestino,
                     grau: 0,

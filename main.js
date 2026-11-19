@@ -17061,17 +17061,20 @@ const exame = {
 
             let updateObj;
             // Campos do exame que sempre zeram ao graduar
+            const _del = firebase.firestore.FieldValue.delete();
             const resetExame = {
-                taxaExamePaga: firebase.firestore.FieldValue.delete(),
-                examePresencaConfirmada: firebase.firestore.FieldValue.delete(),
-                confirmacaoPresencaExame: firebase.firestore.FieldValue.delete(),
-                confirmacaoPresencaExameEm: firebase.firestore.FieldValue.delete(),
-                provaRegras: firebase.firestore.FieldValue.delete(),
-                exameAvaliacaoLiberada: firebase.firestore.FieldValue.delete(),
-                exameAvaliacao: firebase.firestore.FieldValue.delete(),
-                exameAvaliacaoPercentual: firebase.firestore.FieldValue.delete(),
+                taxaExamePaga: false,
+                examePresencaConfirmada: false,
+                confirmacaoPresencaExame: _del,
+                confirmacaoPresencaExameEm: _del,
+                provaRegras: _del,
+                exameAvaliacaoLiberada: false,
+                exameAvaliacao: _del,
+                exameAvaliacaoPercentual: _del,
                 convocacaoPendente: false,
-                examePreReqs: firebase.firestore.FieldValue.delete(),
+                examePreReqs: _del,
+                tamanhoFaixa: _del,
+                nomeEtiqueta: _del,
             };
 
             const preReqsSnapshot = dados.examePreReqs || {};

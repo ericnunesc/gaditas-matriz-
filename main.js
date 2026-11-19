@@ -17066,6 +17066,19 @@ const exame = {
             const outrasAtivas = Object.entries({ ...mcs, [modalidadeGrad]: false }).filter(([,v]) => v === true);
 
             let updateObj;
+            // Campos do exame que sempre zeram ao graduar
+            const resetExame = {
+                taxaExamePaga: firebase.firestore.FieldValue.delete(),
+                examePresencaConfirmada: firebase.firestore.FieldValue.delete(),
+                confirmacaoPresencaExame: firebase.firestore.FieldValue.delete(),
+                confirmacaoPresencaExameEm: firebase.firestore.FieldValue.delete(),
+                provaRegras: firebase.firestore.FieldValue.delete(),
+                exameAvaliacaoLiberada: firebase.firestore.FieldValue.delete(),
+                exameAvaliacao: firebase.firestore.FieldValue.delete(),
+                exameAvaliacaoPercentual: firebase.firestore.FieldValue.delete(),
+                convocacaoPendente: false,
+            };
+
             if (modalidadeGrad === 'muaythai') {
                 historicoGrad.push({ faixaMT: faixaDestino, faixa: dados.faixa || '', grau: dados.grau || 0, modalidade: 'muaythai', data: dataFormatada });
                 updateObj = {
@@ -17075,6 +17088,7 @@ const exame = {
                     aspiranteGraduacao: outrasAtivas.length > 0,
                     graduacaoPendente: { faixaMT: faixaDestino, faixa: dados.faixa || '', grau: dados.grau || 0, modalidadeAlterada: 'muaythai' },
                     historicoGraduacao: historicoGrad,
+                    ...resetExame,
                 };
             } else {
                 historicoGrad.push({ faixa: faixaDestino, grau: 0, faixaMT: dados.faixaMT || null, modalidade: 'jiujitsu', data: dataFormatada });
@@ -17087,6 +17101,7 @@ const exame = {
                     proxFaixaCustom: firebase.firestore.FieldValue.delete(),
                     graduacaoPendente: { faixa: faixaDestino, grau: 0, faixaMT: dados.faixaMT || null, modalidadeAlterada: 'jiujitsu' },
                     historicoGraduacao: historicoGrad,
+                    ...resetExame,
                 };
             }
 

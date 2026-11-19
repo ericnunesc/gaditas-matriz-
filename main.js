@@ -16329,11 +16329,26 @@ const exame = {
             </div>`;
         }).join('');
         const cor = (pr.percentual||0) >= 70 ? '#10b981' : (pr.percentual||0) >= 50 ? '#f59e0b' : '#ef4444';
+        const label = (pr.percentual||0) >= 70 ? '🏆 APROVADO' : (pr.percentual||0) >= 50 ? '⚠️ PARCIAL' : '❌ REPROVADO';
+        const _tel = (a.telefone||'').replace(/\D/g,'');
+        const _wppLines = pergs.map((p,i) => {
+            const resp = respostas[p.id];
+            const acertou = resp === p.respostaCorreta;
+            const respTexto = p.opcoes.find(o => o.id === resp)?.texto || '—';
+            const corrTexto = p.opcoes.find(o => o.id === p.respostaCorreta)?.texto || '—';
+            const linha = `${acertou?'✅':'❌'} *${i+1}. ${p.enunciado}*\n   Sua resposta: ${resp?.toUpperCase()||'—'}) ${respTexto}${!acertou ? `\n   ✅ Correta: ${p.respostaCorreta?.toUpperCase()}) ${corrTexto}` : ''}`;
+            return linha;
+        }).join('\n\n');
+        const _msgWpp = encodeURIComponent(`📝 *PROVA DE REGRAS — GABARITO*\n${a.nome}\nNota: *${pr.percentual??'—'}% — ${label}*\nData: ${pr.enviadaEm||''}\n\n${_wppLines}\n\nOSS! 🥋 Gaditas Academy`);
+        const _btnWppGabarito = _tel
+            ? `<button onclick="window.open('https://wa.me/55${_tel}?text=${_msgWpp}','_blank')" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:#064e3b;border:1px solid #25d366;color:#25d366;border-radius:8px;font-size:0.65rem;font-weight:800;cursor:pointer;"><i class="fab fa-whatsapp"></i> Enviar gabarito</button>`
+            : '';
         m.innerHTML = `
             <div style="background:#0f172a;border-bottom:1px solid #1e293b;padding:14px 16px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;">
                 <div>
                     <div style="font-size:0.6rem;color:#f97316;font-weight:800;">📝 RESPOSTAS</div>
                     <div style="font-size:0.8rem;font-weight:900;color:white;">${a.nome}</div>
+                    ${_btnWppGabarito}
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;">
                     <div style="font-size:1.5rem;font-weight:900;color:${cor};">${pr.percentual??'—'}%</div>

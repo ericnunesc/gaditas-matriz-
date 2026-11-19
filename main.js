@@ -14290,7 +14290,7 @@ const exame = {
                 db.collection('configuracoes').doc('prova_regras').get(),
             ]);
             if (!doc.exists) { btn.classList.add('nav-item-hidden'); btn.style.display='none'; return; }
-            const aluno = doc.data();
+            const aluno = { id: alunoId, ...doc.data() };
             const convocado = aluno.aspiranteGraduacao === true;
             const provaConfig = provaDoc.exists ? provaDoc.data() : {};
             const provaAtiva = provaConfig.liberada && this._matchesProvaTarget(aluno, this._getProvaTargets(provaConfig));
@@ -14329,7 +14329,7 @@ const exame = {
                 db.collection('configuracoes').doc('prova_regras').get(),
             ]);
             if (!alunoDoc.exists) { container.innerHTML = `<p style="color:#64748b;text-align:center;padding:30px;font-size:0.8rem;">Dados não encontrados.</p>`; return; }
-            const aluno = alunoDoc.data();
+            const aluno = { id: alunoId, ...alunoDoc.data() };
             const provaConfig = provaDoc.exists ? provaDoc.data() : {};
             const provaAtiva = provaConfig.liberada && this._matchesProvaTarget(aluno, this._getProvaTargets(provaConfig));
             const temResultado = aluno.provaRegras?.resultadoLiberado === true;
@@ -16037,7 +16037,7 @@ const exame = {
         const targets = this._getProvaTargets(prova);
         const isSel = (tipo, valor) => targets.some(t => t.tipo === tipo && t.valor === valor);
         const targetLabel = targets.length
-            ? targets.map(t => t.tipo==='indicados'?'Todos os indicados':t.tipo==='categoria'?({adulto:'Adulto',kids:'Kids',preta:'Faixa Preta'}[t.valor]||t.valor):t.valor).join(', ')
+            ? targets.map(t => t.tipo==='indicados'?'Todos os indicados':t.tipo==='categoria'?({adulto:'Adulto',kids:'Kids',preta:'Faixa Preta'}[t.valor]||t.valor):t.tipo==='aluno'?(t.nome||t.valor):t.valor).join(', ')
             : '—';
         el.innerHTML = `
             <div style="margin-bottom:12px;">
@@ -16074,6 +16074,22 @@ const exame = {
                     }).join('')}
                 </div>`}
 
+                <div style="font-size:0.58rem;font-weight:800;color:#64748b;margin-bottom:6px;">OU POR ALUNO ESPECÍFICO:</div>
+                <div style="margin-bottom:8px;">
+                    <input id="prova-busca-aluno" type="text" placeholder="🔍 Pesquisar nome do aluno..."
+                        oninput="exame.buscarAlunoProva(this.value)"
+                        style="width:100%;padding:7px 10px;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.68rem;outline:none;margin-bottom:6px;">
+                    <div id="prova-busca-resultado" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                    ${targets.filter(t=>t.tipo==='aluno').length ? `
+                    <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">
+                        ${targets.filter(t=>t.tipo==='aluno').map(t=>`
+                        <div style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:#1c0f00;border:1px solid #f97316;border-radius:12px;">
+                            <span style="font-size:0.6rem;font-weight:700;color:#f97316;">${t.nome||t.valor}</span>
+                            <button onclick="exame.setProvaTarget('aluno','${t.valor}')" style="background:none;border:none;color:#ef4444;font-size:0.7rem;cursor:pointer;padding:0;line-height:1;">✕</button>
+                        </div>`).join('')}
+                    </div>` : ''}
+                </div>
+
                 <div style="font-size:0.6rem;font-weight:800;color:#f97316;letter-spacing:0.5px;margin-bottom:6px;">⚙️ STATUS</div>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <div style="flex:1;font-size:0.6rem;color:${liberada?'#10b981':'#64748b'};">
@@ -16108,14 +16124,37 @@ const exame = {
             <div>${respostasHtml}</div>`;
     },
 
-    async setProvaTarget(tipo, valor) {
+    async setProvaTarget(tipo, valor, nome) {
         const prova = await this._loadProva();
         const targets = Array.isArray(prova.targets) ? [...prova.targets] : [];
         const idx = targets.findIndex(t => t.tipo === tipo && t.valor === valor);
-        if (idx >= 0) targets.splice(idx, 1); else targets.push({ tipo, valor });
+        if (idx >= 0) targets.splice(idx, 1); else targets.push(nome ? { tipo, valor, nome } : { tipo, valor });
         await db.collection('configuracoes').doc(this._provaDocId()).set(
             { targets, target: firebase.firestore.FieldValue.delete() }, { merge: true });
         this.carregarPainelProvaRegras();
+    },
+
+    async buscarAlunoProva(termo) {
+        const el = document.getElementById('prova-busca-resultado');
+        if (!el) return;
+        const t = termo.trim().toLowerCase();
+        if (t.length < 2) { el.innerHTML = ''; return; }
+        const snap = await db.collection('alunos').orderBy('nome').get();
+        const prova = await this._loadProva();
+        const targets = this._getProvaTargets(prova);
+        const jaSel = new Set(targets.filter(x=>x.tipo==='aluno').map(x=>x.valor));
+        const res = snap.docs.filter(d => (d.data().nome||'').toLowerCase().includes(t) && !jaSel.has(d.id)).slice(0, 8);
+        el.innerHTML = res.map(d => {
+            const a = d.data();
+            return `<button onclick="exame.adicionarAlunoProva('${d.id}','${(a.nome||'').replace(/'/g,"\\'")}',this)"
+                style="padding:4px 10px;font-size:0.6rem;font-weight:800;border-radius:6px;cursor:pointer;border:1px solid #334155;background:#0f172a;color:#94a3b8;">
+                ${a.nome} <span style="color:#64748b;font-weight:400;">${a.faixa||'Branca'}</span>
+            </button>`;
+        }).join('');
+    },
+
+    async adicionarAlunoProva(alunoId, nomeAluno) {
+        await this.setProvaTarget('aluno', alunoId, nomeAluno);
     },
 
     async salvarTempoProva() {
@@ -16153,6 +16192,7 @@ const exame = {
         return targets.some(target => {
             if (target.tipo === 'indicados') return aluno.aspiranteGraduacao === true;
             if (target.tipo === 'categoria') return this._getCategoria(aluno) === target.valor;
+            if (target.tipo === 'aluno') return aluno.id === target.valor || aluno._id === target.valor;
             if (target.tipo === 'faixa') {
                 const f = aluno.faixa || 'Branca';
                 return f === target.valor || f.startsWith(target.valor + '/');

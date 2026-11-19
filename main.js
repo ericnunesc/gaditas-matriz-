@@ -16154,7 +16154,16 @@ const exame = {
     },
 
     async adicionarAlunoProva(alunoId, nomeAluno) {
-        await this.setProvaTarget('aluno', alunoId, nomeAluno);
+        const prova = await this._loadProva();
+        const targets = Array.isArray(prova.targets) ? [...prova.targets] : [];
+        // Mantém só alunos individuais já selecionados + adiciona o novo
+        const alunosAtuais = targets.filter(t => t.tipo === 'aluno');
+        if (!alunosAtuais.find(t => t.valor === alunoId)) {
+            alunosAtuais.push({ tipo: 'aluno', valor: alunoId, nome: nomeAluno });
+        }
+        await db.collection('configuracoes').doc(this._provaDocId()).set(
+            { targets: alunosAtuais, target: firebase.firestore.FieldValue.delete() }, { merge: true });
+        this.carregarPainelProvaRegras();
     },
 
     async salvarTempoProva() {

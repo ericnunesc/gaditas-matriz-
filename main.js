@@ -27263,11 +27263,30 @@ const staffModule = {
         const alunoId = auth.currentUser?.id;
 
         if (!podeGerenciar) {
-            // Aluno comum: só vê listas ativas para fazer escolha
-            const listasSnap = await db.collection('listas_staff').where('ativa','==',true).get();
-            const ativas = listasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            // Aluno comum: só vê listas ativas do seu público
+            const [listasSnap, alunoDoc] = await Promise.all([
+                db.collection('listas_staff').where('ativa','==',true).get(),
+                alunoId ? db.collection('alunos').doc(alunoId).get() : Promise.resolve(null)
+            ]);
+            const alunoData = alunoDoc?.data() || {};
+            const modAluno = alunoData.modalidade || 'jiujitsu';
+            const anoAtual = new Date().getFullYear();
+            const idadeAluno = alunoData.nascimento ? anoAtual - new Date(alunoData.nascimento).getFullYear() : 99;
+            const isKids = modAluno === 'jiujitsu' && idadeAluno <= 14;
+
+            const ativas = listasSnap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(l => {
+                    const p = l.publico || 'todos';
+                    if (p === 'todos') return true;
+                    if (p === 'muaythai') return modAluno === 'muaythai';
+                    if (p === 'jj_kids')  return modAluno === 'jiujitsu' && isKids;
+                    if (p === 'jj_adult') return modAluno === 'jiujitsu' && !isKids;
+                    return true;
+                });
+
             if (!ativas.length) {
-                el.innerHTML = '<div style="color:#475569;font-size:0.72rem;text-align:center;padding:30px 0;">Nenhuma lista ativa no momento.</div>';
+                el.innerHTML = '<div style="color:#475569;font-size:0.72rem;text-align:center;padding:30px 0;">Nenhuma lista ativa para você no momento.</div>';
                 return;
             }
             const baseUrl = 'https://gaditas-matriz.vercel.app/lista-staff.html';
@@ -27377,7 +27396,7 @@ const staffModule = {
                 <div>
                     <div style="font-size:0.78rem;font-weight:900;color:white;">${l.nome}</div>
                     <div style="font-size:0.58rem;color:#64748b;margin-top:2px;">${l.descricao||''}</div>
-                    <div style="font-size:0.55rem;color:#475569;margin-top:3px;">${(l.itens||[]).length} itens · ${total-restante}/${total} escolhidos</div>
+                    <div style="font-size:0.55rem;color:#475569;margin-top:3px;">${(l.itens||[]).length} itens · ${total-restante}/${total} escolhidos · ${this._publicoLabel(l.publico||'todos')}</div>
                 </div>
                 <span style="font-size:0.5rem;font-weight:800;padding:2px 7px;border-radius:999px;background:${l.ativa?'#052e16':'#1e293b'};color:${l.ativa?'#10b981':'#475569'};">${l.ativa?'ATIVA':'ENCERRADA'}</span>
             </div>
@@ -27405,6 +27424,7 @@ const staffModule = {
                     style="width:100%;padding:10px;background:#0a0f1a;border:1px solid #6366f1;color:white;border-radius:8px;font-size:0.72rem;outline:none;margin-bottom:8px;">
                 <input id="staff-edit-desc" type="text" value="${(lista.descricao||'').replace(/"/g,'&quot;')}" placeholder="Descrição (opcional)"
                     style="width:100%;padding:10px;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;margin-bottom:16px;">
+                ${this._publicoSelectorHtml(lista.publico||'todos','editar')}
                 <div style="font-size:0.6rem;font-weight:800;color:#f59e0b;margin-bottom:8px;">🍽️ ITENS</div>
                 <div id="staff-edit-itens-editor">
                     ${(lista.itens||[]).map((item,i) => `
@@ -27464,9 +27484,36 @@ const staffModule = {
             });
         });
         if (!itens.length) return alert('Adicione pelo menos um item.');
-        await db.collection('listas_staff').doc(listaId).update({ nome, descricao: desc || '', itens });
+        const publico = document.querySelector('input[name="staff-publico-editar"]:checked')?.value || 'todos';
+        await db.collection('listas_staff').doc(listaId).update({ nome, descricao: desc || '', itens, publico });
         document.getElementById('modal-editar-lista')?.remove();
         this.render();
+    },
+
+    _publicoOpts() {
+        return [
+            { val: 'todos',    label: '👥 Todos' },
+            { val: 'jj_adult', label: '🥋 JJ Adulto' },
+            { val: 'jj_kids',  label: '🥋 JJ Kids' },
+            { val: 'muaythai', label: '🥊 Muay Thai' },
+        ];
+    },
+
+    _publicoLabel(val) {
+        return this._publicoOpts().find(o => o.val === val)?.label || '👥 Todos';
+    },
+
+    _publicoSelectorHtml(selecionado = 'todos', idPrefix = 'criar') {
+        const opts = this._publicoOpts();
+        return `<div style="margin-bottom:16px;">
+            <div style="font-size:0.6rem;font-weight:800;color:#818cf8;margin-bottom:8px;">🎯 PÚBLICO-ALVO</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                ${opts.map(o => `
+                <label style="display:flex;align-items:center;gap:5px;padding:6px 10px;background:${selecionado===o.val?'#1e1b4b':'#0a0f1a'};border:1px solid ${selecionado===o.val?'#6366f1':'#334155'};border-radius:8px;cursor:pointer;font-size:0.65rem;color:${selecionado===o.val?'#a5b4fc':'#94a3b8'};">
+                    <input type="radio" name="staff-publico-${idPrefix}" value="${o.val}" ${selecionado===o.val?'checked':''} style="accent-color:#6366f1;"> ${o.label}
+                </label>`).join('')}
+            </div>
+        </div>`;
     },
 
     abrirCriarLista() {
@@ -27480,6 +27527,7 @@ const staffModule = {
                     style="width:100%;padding:10px;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;margin-bottom:8px;">
                 <input id="staff-desc-lista" type="text" placeholder="Descrição (opcional)"
                     style="width:100%;padding:10px;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;margin-bottom:16px;">
+                ${this._publicoSelectorHtml('todos','criar')}
                 <div style="font-size:0.6rem;font-weight:800;color:#f59e0b;margin-bottom:8px;">🍽️ ITENS</div>
                 <div id="staff-itens-editor"></div>
                 <button onclick="staffModule._adicionarItemEditor()" style="width:100%;padding:8px;background:#1c0f00;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.65rem;font-weight:800;cursor:pointer;margin-bottom:16px;">+ Adicionar Item</button>
@@ -27511,6 +27559,7 @@ const staffModule = {
         const nome = document.getElementById('staff-nome-lista')?.value.trim();
         const desc = document.getElementById('staff-desc-lista')?.value.trim();
         if (!nome) return alert('Informe o nome do evento.');
+        const publico = document.querySelector('input[name="staff-publico-criar"]:checked')?.value || 'todos';
         const rows = document.querySelectorAll('#staff-itens-editor > div');
         const itens = [];
         rows.forEach((row, i) => {
@@ -27520,7 +27569,7 @@ const staffModule = {
             if (nomeItem) itens.push({ id: `item${i}_${Date.now()}`, emoji, nome: nomeItem, quantidadeTotal: qtd, quantidadeRestante: qtd, participantes: [] });
         });
         if (!itens.length) return alert('Adicione pelo menos um item.');
-        await db.collection('listas_staff').add({ nome, descricao: desc, itens, ativa: true, criadoEm: new Date().toISOString() });
+        await db.collection('listas_staff').add({ nome, descricao: desc, itens, publico, ativa: true, criadoEm: new Date().toISOString() });
         document.getElementById('modal-criar-lista')?.remove();
         this.render();
     },
@@ -27562,10 +27611,25 @@ const staffModule = {
     },
 
     async enviarConvites(listaId) {
-        const snap = await db.collection('alunos').get();
+        const [listaDoc, snap] = await Promise.all([
+            db.collection('listas_staff').doc(listaId).get(),
+            db.collection('alunos').get()
+        ]);
+        const publico = listaDoc.data()?.publico || 'todos';
+        const anoAtual = new Date().getFullYear();
         const alunos = snap.docs
             .map(d => ({ id: d.id, ...d.data() }))
-            .filter(a => a.telefone && a.nome && a.role !== 'inativo')
+            .filter(a => {
+                if (!a.telefone || !a.nome || a.role === 'inativo') return false;
+                if (publico === 'todos') return true;
+                const mod = a.modalidade || 'jiujitsu';
+                const idade = a.nascimento ? anoAtual - new Date(a.nascimento).getFullYear() : 99;
+                const isKids = mod === 'jiujitsu' && idade <= 14;
+                if (publico === 'muaythai') return mod === 'muaythai';
+                if (publico === 'jj_kids')  return mod === 'jiujitsu' && isKids;
+                if (publico === 'jj_adult') return mod === 'jiujitsu' && !isKids;
+                return true;
+            })
             .sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
         const overlay = document.createElement('div');
         overlay.id = 'modal-enviar-convites';
@@ -27614,10 +27678,25 @@ const staffModule = {
     // Banner no dashboard do aluno
     async renderBannerAluno(alunoId, container) {
         try {
-            const snap = await db.collection('listas_staff').where('ativa','==',true).get();
-            if (snap.empty) return;
-            snap.docs.forEach(doc => {
+            const [listasSnap, alunoDoc] = await Promise.all([
+                db.collection('listas_staff').where('ativa','==',true).get(),
+                alunoId ? db.collection('alunos').doc(alunoId).get() : Promise.resolve(null)
+            ]);
+            if (listasSnap.empty) return;
+            const alunoData = alunoDoc?.data() || {};
+            const modAluno = alunoData.modalidade || 'jiujitsu';
+            const anoAtual = new Date().getFullYear();
+            const idadeAluno = alunoData.nascimento ? anoAtual - new Date(alunoData.nascimento).getFullYear() : 99;
+            const isKids = modAluno === 'jiujitsu' && idadeAluno <= 14;
+
+            listasSnap.docs.forEach(doc => {
                 const lista = { id: doc.id, ...doc.data() };
+                const p = lista.publico || 'todos';
+                if (p !== 'todos') {
+                    if (p === 'muaythai' && modAluno !== 'muaythai') return;
+                    if (p === 'jj_kids'  && !(modAluno === 'jiujitsu' && isKids)) return;
+                    if (p === 'jj_adult' && !(modAluno === 'jiujitsu' && !isKids)) return;
+                }
                 const link = `https://gaditas-matriz.vercel.app/lista-staff.html?lista=${lista.id}&aluno=${alunoId}`;
                 const banner = document.createElement('div');
                 banner.style.marginBottom = '10px';

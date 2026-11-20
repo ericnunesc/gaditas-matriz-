@@ -27338,7 +27338,11 @@ const staffModule = {
         el.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <div style="font-size:0.85rem;font-weight:900;color:white;">🤝 STAFF</div>
-                <button onclick="staffModule.abrirCriarLista()" style="padding:7px 14px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-size:0.65rem;font-weight:900;cursor:pointer;">+ Nova Lista</button>
+                <div style="display:flex;gap:6px;">
+                    ${isAdmin ? `<button onclick="staffModule.abrirGastosAdmin()" style="padding:7px 12px;background:#1c0f00;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.6rem;font-weight:900;cursor:pointer;">💰 Gastos</button>` : ''}
+                    ${isStaff && !isAdmin ? `<button onclick="staffModule.abrirMeusGastos()" style="padding:7px 12px;background:#1c0f00;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.6rem;font-weight:900;cursor:pointer;">💸 Meus Gastos</button>` : ''}
+                    <button onclick="staffModule.abrirCriarLista()" style="padding:7px 14px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-size:0.65rem;font-weight:900;cursor:pointer;">+ Nova Lista</button>
+                </div>
             </div>
             ${staffHtml}
             ${ativas.length ? `
@@ -27713,5 +27717,201 @@ const staffModule = {
                 container.parentNode.insertBefore(banner, container);
             });
         } catch(e) {}
+    },
+
+    // ── GASTOS DO STAFF ──────────────────────────────────────────
+    abrirMeusGastos() {
+        const alunoId = auth.currentUser?.id;
+        const nomeAluno = auth.currentUser?.nome || '';
+        if (!alunoId) return;
+        const overlay = document.createElement('div');
+        overlay.id = 'modal-meus-gastos';
+        overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+        overlay.innerHTML = `
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:500px;max-height:92vh;display:flex;flex-direction:column;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-shrink:0;">
+                    <div style="font-size:0.8rem;font-weight:900;color:white;">💸 Meus Gastos</div>
+                    <button onclick="document.getElementById('modal-meus-gastos').remove()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;width:30px;height:30px;border-radius:8px;cursor:pointer;">✕</button>
+                </div>
+                <div style="flex:1;overflow-y:auto;" id="meus-gastos-lista">
+                    <div style="color:#475569;font-size:0.7rem;text-align:center;padding:20px;">Carregando...</div>
+                </div>
+                <div style="flex-shrink:0;margin-top:12px;">
+                    <button onclick="staffModule._formNovoGasto()" style="width:100%;padding:12px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-size:0.72rem;font-weight:900;cursor:pointer;">+ Lançar Gasto</button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+        this._carregarMeusGastos(alunoId);
+    },
+
+    async _carregarMeusGastos(alunoId) {
+        const el = document.getElementById('meus-gastos-lista');
+        if (!el) return;
+        const snap = await db.collection('gastos_staff').where('alunoId','==',alunoId).orderBy('criadoEm','desc').get();
+        if (snap.empty) { el.innerHTML = '<div style="color:#475569;font-size:0.7rem;text-align:center;padding:20px;">Nenhum gasto lançado ainda.</div>'; return; }
+        el.innerHTML = snap.docs.map(doc => {
+            const g = doc.data();
+            const ressarcido = g.status === 'ressarcido';
+            const valorFmt = `R$ ${parseFloat(g.valor||0).toFixed(2).replace('.',',')}`;
+            return `<div style="background:#0a0f1a;border:1px solid ${ressarcido?'#1e293b':'#1e3a1a'};border-left:3px solid ${ressarcido?'#334155':'#f59e0b'};border-radius:10px;padding:12px;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div style="flex:1;">
+                        <div style="font-size:0.75rem;font-weight:800;color:white;">${g.descricao}</div>
+                        <div style="font-size:0.68rem;color:#f59e0b;font-weight:900;margin-top:2px;">${valorFmt}</div>
+                        ${g.chavePix ? `<div style="font-size:0.58rem;color:#64748b;margin-top:2px;">Pix: ${g.chavePix}</div>` : ''}
+                        <div style="font-size:0.52rem;color:#334155;margin-top:3px;">${new Date(g.criadoEm).toLocaleDateString('pt-BR')}</div>
+                    </div>
+                    <span style="font-size:0.5rem;font-weight:800;padding:2px 7px;border-radius:999px;background:${ressarcido?'#052e16':'#1c0f00'};color:${ressarcido?'#10b981':'#f59e0b'};">${ressarcido?'✅ RESSARCIDO':'⏳ PENDENTE'}</span>
+                </div>
+                ${g.fotoNota ? `<div style="margin-top:8px;"><img src="${g.fotoNota}" style="max-width:100%;border-radius:8px;max-height:160px;object-fit:cover;cursor:pointer;" onclick="window.open('${g.fotoNota}','_blank')"></div>` : ''}
+            </div>`;
+        }).join('');
+    },
+
+    _formNovoGasto() {
+        const inner = document.getElementById('meus-gastos-lista');
+        if (!inner) return;
+        inner.innerHTML = `
+            <div style="padding:4px 0;">
+                <div style="font-size:0.65rem;font-weight:800;color:#f59e0b;margin-bottom:10px;">📝 NOVO GASTO</div>
+                <input id="gasto-desc" type="text" placeholder="Descrição (ex: Bola de assopro)"
+                    style="width:100%;padding:10px;background:#020617;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;margin-bottom:8px;">
+                <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <input id="gasto-valor" type="number" step="0.01" min="0" placeholder="Valor R$"
+                        style="flex:1;padding:10px;background:#020617;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;">
+                    <input id="gasto-pix" type="text" placeholder="Chave Pix"
+                        style="flex:2;padding:10px;background:#020617;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:0.6rem;font-weight:800;color:#818cf8;display:block;margin-bottom:6px;">📷 FOTO DA NOTA (opcional)</label>
+                    <input id="gasto-foto-input" type="file" accept="image/*" capture="environment" style="display:none;" onchange="staffModule._previewFotoNota(this)">
+                    <button onclick="document.getElementById('gasto-foto-input').click()" id="gasto-foto-btn"
+                        style="width:100%;padding:10px;background:#0a0f1a;border:2px dashed #334155;color:#64748b;border-radius:8px;font-size:0.68rem;cursor:pointer;">
+                        📷 Tirar foto ou escolher da galeria
+                    </button>
+                    <div id="gasto-foto-preview" style="margin-top:6px;"></div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="staffModule.abrirMeusGastos()" style="flex:1;padding:11px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:10px;font-size:0.7rem;font-weight:800;cursor:pointer;">Cancelar</button>
+                    <button onclick="staffModule._salvarGasto()" style="flex:2;padding:11px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-size:0.72rem;font-weight:900;cursor:pointer;">💾 Salvar Gasto</button>
+                </div>
+            </div>`;
+    },
+
+    _previewFotoNota(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const btn = document.getElementById('gasto-foto-btn');
+        if (btn) btn.textContent = `✅ ${file.name.substring(0,30)}`;
+        const prev = document.getElementById('gasto-foto-preview');
+        if (!prev) return;
+        const reader = new FileReader();
+        reader.onload = e => { prev.innerHTML = `<img src="${e.target.result}" style="max-width:100%;border-radius:8px;max-height:120px;object-fit:cover;">`; };
+        reader.readAsDataURL(file);
+    },
+
+    async _salvarGasto() {
+        const desc = document.getElementById('gasto-desc')?.value.trim();
+        const valor = parseFloat(document.getElementById('gasto-valor')?.value);
+        const chavePix = document.getElementById('gasto-pix')?.value.trim();
+        const fotoInput = document.getElementById('gasto-foto-input');
+        if (!desc) return alert('Informe a descrição do gasto.');
+        if (!valor || valor <= 0) return alert('Informe um valor válido.');
+        const btn = document.querySelector('#meus-gastos-lista button[onclick*="salvarGasto"]');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+        try {
+            const alunoId = auth.currentUser?.id;
+            const nomeAluno = auth.currentUser?.nome || '';
+            let fotoNota = '';
+            const file = fotoInput?.files[0];
+            if (file) {
+                const ref = getStorage().ref().child(`gastos_staff/${alunoId}_${Date.now()}.jpg`);
+                await ref.put(file);
+                fotoNota = await ref.getDownloadURL();
+            }
+            await db.collection('gastos_staff').add({
+                alunoId, nomeAluno, descricao: desc, valor, chavePix: chavePix || '',
+                fotoNota, status: 'pendente', criadoEm: new Date().toISOString()
+            });
+            this.abrirMeusGastos();
+        } catch(e) {
+            alert('Erro ao salvar. Tente novamente.');
+            if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar Gasto'; }
+        }
+    },
+
+    async abrirGastosAdmin() {
+        const overlay = document.createElement('div');
+        overlay.id = 'modal-gastos-admin';
+        overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+        overlay.innerHTML = `
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:500px;max-height:92vh;display:flex;flex-direction:column;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-shrink:0;">
+                    <div style="font-size:0.8rem;font-weight:900;color:white;">💰 Gastos do Staff</div>
+                    <button onclick="document.getElementById('modal-gastos-admin').remove()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;width:30px;height:30px;border-radius:8px;cursor:pointer;">✕</button>
+                </div>
+                <div id="gastos-admin-filtro" style="display:flex;gap:6px;margin-bottom:12px;flex-shrink:0;">
+                    <button onclick="staffModule._filtroGastos('pendente',this)" style="flex:1;padding:7px;background:#1c0f00;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.65rem;font-weight:800;cursor:pointer;" id="btn-filtro-pendente">⏳ Pendentes</button>
+                    <button onclick="staffModule._filtroGastos('ressarcido',this)" style="flex:1;padding:7px;background:#0a0f1a;border:1px solid #334155;color:#64748b;border-radius:8px;font-size:0.65rem;font-weight:800;cursor:pointer;" id="btn-filtro-ressarcido">✅ Ressarcidos</button>
+                    <button onclick="staffModule._filtroGastos('todos',this)" style="flex:1;padding:7px;background:#0a0f1a;border:1px solid #334155;color:#64748b;border-radius:8px;font-size:0.65rem;font-weight:800;cursor:pointer;" id="btn-filtro-todos">👥 Todos</button>
+                </div>
+                <div style="flex:1;overflow-y:auto;" id="gastos-admin-lista">
+                    <div style="color:#475569;font-size:0.7rem;text-align:center;padding:20px;">Carregando...</div>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+        this._filtroGastos('pendente', document.getElementById('btn-filtro-pendente'));
+    },
+
+    async _filtroGastos(status, btnEl) {
+        document.querySelectorAll('#gastos-admin-filtro button').forEach(b => {
+            b.style.background = '#0a0f1a'; b.style.borderColor = '#334155'; b.style.color = '#64748b';
+        });
+        if (btnEl) { btnEl.style.background = '#1c0f00'; btnEl.style.borderColor = '#f59e0b'; btnEl.style.color = '#f59e0b'; }
+        const el = document.getElementById('gastos-admin-lista');
+        if (!el) return;
+        el.innerHTML = '<div style="color:#475569;font-size:0.7rem;text-align:center;padding:20px;">Carregando...</div>';
+        let query = db.collection('gastos_staff').orderBy('criadoEm','desc');
+        if (status !== 'todos') query = query.where('status','==',status);
+        const snap = await query.get();
+        if (snap.empty) { el.innerHTML = '<div style="color:#475569;font-size:0.7rem;text-align:center;padding:20px;">Nenhum gasto encontrado.</div>'; return; }
+        let totalPendente = 0;
+        const html = snap.docs.map(doc => {
+            const g = doc.data();
+            const ressarcido = g.status === 'ressarcido';
+            if (!ressarcido) totalPendente += parseFloat(g.valor||0);
+            const valorFmt = `R$ ${parseFloat(g.valor||0).toFixed(2).replace('.',',')}`;
+            return `<div style="background:#0a0f1a;border:1px solid ${ressarcido?'#1e293b':'#1e3a1a'};border-left:3px solid ${ressarcido?'#334155':'#f59e0b'};border-radius:10px;padding:12px;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:0.65rem;font-weight:800;color:#818cf8;">${g.nomeAluno}</div>
+                        <div style="font-size:0.75rem;font-weight:800;color:white;margin-top:1px;">${g.descricao}</div>
+                        <div style="font-size:0.72rem;color:#f59e0b;font-weight:900;margin-top:2px;">${valorFmt}</div>
+                        ${g.chavePix ? `<div style="font-size:0.58rem;color:#64748b;margin-top:2px;">Pix: <strong style="color:#a5b4fc;">${g.chavePix}</strong></div>` : ''}
+                        <div style="font-size:0.52rem;color:#334155;margin-top:2px;">${new Date(g.criadoEm).toLocaleDateString('pt-BR')}</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+                        <span style="font-size:0.5rem;font-weight:800;padding:2px 7px;border-radius:999px;background:${ressarcido?'#052e16':'#1c0f00'};color:${ressarcido?'#10b981':'#f59e0b'};">${ressarcido?'✅ RESSARCIDO':'⏳ PENDENTE'}</span>
+                        ${!ressarcido ? `<button onclick="staffModule._marcarRessarcido('${doc.id}',this)" style="padding:4px 10px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:7px;font-size:0.58rem;font-weight:800;cursor:pointer;">✅ Ressarcido</button>` : ''}
+                    </div>
+                </div>
+                ${g.fotoNota ? `<div style="margin-top:8px;"><img src="${g.fotoNota}" style="max-width:100%;border-radius:8px;max-height:140px;object-fit:cover;cursor:pointer;" onclick="window.open('${g.fotoNota}','_blank')"></div>` : ''}
+            </div>`;
+        }).join('');
+        const totalHtml = status !== 'ressarcido' && totalPendente > 0
+            ? `<div style="background:#1c0f00;border:1px solid #f59e0b;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:0.65rem;color:#f59e0b;font-weight:800;">💰 TOTAL PENDENTE</div>
+                <div style="font-size:1rem;font-weight:900;color:#f59e0b;">R$ ${totalPendente.toFixed(2).replace('.',',')}</div>
+              </div>` : '';
+        el.innerHTML = totalHtml + html;
+    },
+
+    async _marcarRessarcido(gastoId, btnEl) {
+        if (!confirm('Marcar este gasto como ressarcido?')) return;
+        if (btnEl) btnEl.disabled = true;
+        await db.collection('gastos_staff').doc(gastoId).update({ status: 'ressarcido', ressarcidoEm: new Date().toISOString() });
+        this._filtroGastos('pendente', document.getElementById('btn-filtro-pendente'));
     },
 };

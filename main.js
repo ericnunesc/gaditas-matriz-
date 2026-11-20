@@ -7629,6 +7629,12 @@ Ele voltará a ser aluno normal.`)) return;
             }).catch(() => {});
         }
 
+        // Banner de listas de contribuição do staff (para todos os alunos)
+        if (alunoId) {
+            const _contBanner = document.getElementById('mini-mural-pretas-dash');
+            if (_contBanner) staffModule.renderBannerAluno(alunoId, _contBanner);
+        }
+
         // Convocações pendentes para professor
         if (auth.role === 'professor' && alunoId) {
             db.collection('convocacoes_prof')
@@ -12289,6 +12295,13 @@ const ui = {
         document.body.classList.toggle('role-prof', isProf);
         document.getElementById('menu-alunos').style.display = (isAdmin || isProf) ? "flex" : "none";
         document.getElementById('menu-relatorios').style.display = isAdmin ? "flex" : "none";
+        // Staff: admin sempre vê; alunos com isStaff:true também
+        const menuStaff = document.getElementById('menu-staff');
+        if (menuStaff) {
+            if (isAdmin) { menuStaff.style.display = 'flex'; }
+            else if (auth.currentUser?.isStaff) { menuStaff.style.display = 'flex'; }
+            else { menuStaff.style.display = 'none'; }
+        }
         document.getElementById('area-professor-checkin').classList.toggle('hidden', !isAdmin && !isProf);
         const planoProfDiv = document.getElementById('plano-aula-professor');
         if (planoProfDiv) planoProfDiv.classList.toggle('hidden', !isAdmin && !isProf);
@@ -27233,5 +27246,207 @@ const pretas = {
         </div>`;
         document.body.appendChild(modal);
         modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    },
+};
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO STAFF — Listas de Contribuição
+// ══════════════════════════════════════════════════════════════
+const staffModule = {
+    async render() {
+        const el = document.getElementById('staff-container');
+        if (!el) return;
+        el.innerHTML = '<div style="text-align:center;color:#475569;padding:30px;font-size:0.75rem;">Carregando...</div>';
+        const snap = await db.collection('listas_staff').orderBy('criadoEm','desc').get();
+        const listas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const ativas = listas.filter(l => l.ativa);
+        const encerradas = listas.filter(l => !l.ativa);
+        el.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <div style="font-size:0.85rem;font-weight:900;color:white;">🤝 STAFF — Listas</div>
+                <button onclick="staffModule.abrirCriarLista()" style="padding:7px 14px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-size:0.65rem;font-weight:900;cursor:pointer;">+ Nova Lista</button>
+            </div>
+            ${ativas.length ? `
+            <div style="font-size:0.58rem;font-weight:800;color:#10b981;letter-spacing:1px;margin-bottom:8px;">✅ ATIVAS</div>
+            ${ativas.map(l => this._cardLista(l)).join('')}` : ''}
+            ${encerradas.length ? `
+            <div style="font-size:0.58rem;font-weight:800;color:#475569;letter-spacing:1px;margin:14px 0 8px;">🔒 ENCERRADAS</div>
+            ${encerradas.map(l => this._cardLista(l)).join('')}` : ''}
+            ${!listas.length ? '<div style="color:#475569;font-size:0.72rem;text-align:center;padding:30px;">Nenhuma lista criada ainda.</div>' : ''}`;
+    },
+
+    _cardLista(l) {
+        const total = (l.itens||[]).reduce((s,i)=>s+(i.quantidadeTotal||0),0);
+        const restante = (l.itens||[]).reduce((s,i)=>s+((i.quantidadeRestante??i.quantidadeTotal)||0),0);
+        return `<div style="background:#0f172a;border:1px solid ${l.ativa?'#1e3a1a':'#1e293b'};border-left:3px solid ${l.ativa?'#10b981':'#334155'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                    <div style="font-size:0.78rem;font-weight:900;color:white;">${l.nome}</div>
+                    <div style="font-size:0.58rem;color:#64748b;margin-top:2px;">${l.descricao||''}</div>
+                    <div style="font-size:0.55rem;color:#475569;margin-top:3px;">${(l.itens||[]).length} itens · ${total-restante}/${total} escolhidos</div>
+                </div>
+                <span style="font-size:0.5rem;font-weight:800;padding:2px 7px;border-radius:999px;background:${l.ativa?'#052e16':'#1e293b'};color:${l.ativa?'#10b981':'#475569'};">${l.ativa?'ATIVA':'ENCERRADA'}</span>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+                <button onclick="staffModule.verLista('${l.id}')" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">👁 Ver</button>
+                <button onclick="staffModule.enviarConvites('${l.id}')" style="padding:5px 10px;background:#064e3b;border:1px solid #10b981;color:#10b981;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">📤 Enviar</button>
+                ${l.ativa
+                    ? `<button onclick="staffModule.toggleAtiva('${l.id}',true)" style="padding:5px 10px;background:#1a0404;border:1px solid #ef4444;color:#ef4444;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">🔒 Encerrar</button>`
+                    : `<button onclick="staffModule.toggleAtiva('${l.id}',false)" style="padding:5px 10px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">🔓 Reabrir</button>`}
+            </div>
+        </div>`;
+    },
+
+    abrirCriarLista() {
+        const overlay = document.createElement('div');
+        overlay.id = 'modal-criar-lista';
+        overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+        overlay.innerHTML = `
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;">
+                <div style="font-size:0.8rem;font-weight:900;color:white;margin-bottom:16px;">➕ Nova Lista de Contribuição</div>
+                <input id="staff-nome-lista" type="text" placeholder="Nome do evento (ex: Graduação Dez/26)"
+                    style="width:100%;padding:10px;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;margin-bottom:8px;">
+                <input id="staff-desc-lista" type="text" placeholder="Descrição (opcional)"
+                    style="width:100%;padding:10px;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;margin-bottom:16px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#f59e0b;margin-bottom:8px;">🍽️ ITENS</div>
+                <div id="staff-itens-editor"></div>
+                <button onclick="staffModule._adicionarItemEditor()" style="width:100%;padding:8px;background:#1c0f00;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.65rem;font-weight:800;cursor:pointer;margin-bottom:16px;">+ Adicionar Item</button>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="document.getElementById('modal-criar-lista').remove()" style="flex:1;padding:12px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;">Cancelar</button>
+                    <button onclick="staffModule.salvarNovaLista()" style="flex:2;padding:12px;background:#f59e0b;border:none;color:#000;border-radius:10px;font-size:0.72rem;font-weight:900;cursor:pointer;">💾 Criar Lista</button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+        this._adicionarItemEditor();
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    },
+
+    _adicionarItemEditor() {
+        const cont = document.getElementById('staff-itens-editor');
+        if (!cont) return;
+        const idx = cont.children.length;
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px;';
+        div.innerHTML = `
+            <input type="text" placeholder="🍰 Emoji" style="width:46px;padding:8px 4px;text-align:center;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.85rem;outline:none;" data-role="emoji">
+            <input type="text" placeholder="Nome do item" style="flex:1;padding:8px;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.68rem;outline:none;" data-role="nome">
+            <input type="number" placeholder="Qtd" min="1" value="1" style="width:52px;padding:8px 4px;text-align:center;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.68rem;outline:none;" data-role="qtd">
+            <button onclick="this.parentElement.remove()" style="background:transparent;border:none;color:#ef4444;font-size:1rem;cursor:pointer;padding:4px;">✕</button>`;
+        cont.appendChild(div);
+    },
+
+    async salvarNovaLista() {
+        const nome = document.getElementById('staff-nome-lista')?.value.trim();
+        const desc = document.getElementById('staff-desc-lista')?.value.trim();
+        if (!nome) return alert('Informe o nome do evento.');
+        const rows = document.querySelectorAll('#staff-itens-editor > div');
+        const itens = [];
+        rows.forEach((row, i) => {
+            const emoji = row.querySelector('[data-role="emoji"]')?.value.trim() || '🍽️';
+            const nomeItem = row.querySelector('[data-role="nome"]')?.value.trim();
+            const qtd = parseInt(row.querySelector('[data-role="qtd"]')?.value) || 1;
+            if (nomeItem) itens.push({ id: `item${i}_${Date.now()}`, emoji, nome: nomeItem, quantidadeTotal: qtd, quantidadeRestante: qtd, participantes: [] });
+        });
+        if (!itens.length) return alert('Adicione pelo menos um item.');
+        await db.collection('listas_staff').add({ nome, descricao: desc, itens, ativa: true, criadoEm: new Date().toISOString() });
+        document.getElementById('modal-criar-lista')?.remove();
+        this.render();
+    },
+
+    async verLista(listaId) {
+        const [listaDoc, escolhasSnap] = await Promise.all([
+            db.collection('listas_staff').doc(listaId).get(),
+            db.collection('listas_staff').doc(listaId).collection('escolhas').get()
+        ]);
+        const lista = { id: listaDoc.id, ...listaDoc.data() };
+        const escolhas = escolhasSnap.docs.map(d => d.data());
+        const overlay = document.createElement('div');
+        overlay.id = 'modal-ver-lista';
+        overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+        const itensHtml = (lista.itens||[]).map(item => {
+            const restante = item.quantidadeRestante ?? item.quantidadeTotal;
+            const pct = Math.round((restante / item.quantidadeTotal) * 100);
+            const corBar = restante === 0 ? '#ef4444' : restante <= Math.ceil(item.quantidadeTotal * 0.3) ? '#f59e0b' : '#10b981';
+            const participantes = escolhas.filter(e => (e.itens||[]).some(ei=>ei.itemId===item.id));
+            return `<div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div style="font-size:0.75rem;font-weight:800;color:white;">${item.emoji||'🍽️'} ${item.nome}</div>
+                    <div style="font-size:0.65rem;font-weight:900;color:${corBar};">${restante}/${item.quantidadeTotal}</div>
+                </div>
+                <div style="height:4px;background:#1e293b;border-radius:2px;margin:6px 0;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${corBar};border-radius:2px;"></div></div>
+                ${participantes.length ? `<div style="font-size:0.55rem;color:#64748b;">${participantes.map(p=>{const q=(p.itens||[]).find(ei=>ei.itemId===item.id)?.quantidade||0;return `${p.nomeAluno} (${q})`;}).join(' · ')}</div>` : '<div style="font-size:0.55rem;color:#334155;">Ninguém escolheu ainda</div>'}
+            </div>`;
+        }).join('');
+        overlay.innerHTML = `
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <div><div style="font-size:0.8rem;font-weight:900;color:white;">${lista.nome}</div><div style="font-size:0.58rem;color:#475569;">${escolhas.length} aluno(s) responderam</div></div>
+                    <button onclick="document.getElementById('modal-ver-lista').remove()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;width:30px;height:30px;border-radius:8px;cursor:pointer;">✕</button>
+                </div>
+                ${itensHtml}
+            </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    },
+
+    async enviarConvites(listaId) {
+        const snap = await db.collection('alunos').where('ativo','==',true).get();
+        const alunos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const overlay = document.createElement('div');
+        overlay.id = 'modal-enviar-convites';
+        overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+        const baseUrl = 'https://gaditas-matriz.vercel.app/lista-staff.html';
+        overlay.innerHTML = `
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:500px;max-height:85vh;display:flex;flex-direction:column;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-shrink:0;">
+                    <div style="font-size:0.8rem;font-weight:900;color:white;">📤 Enviar Convites</div>
+                    <button onclick="document.getElementById('modal-enviar-convites').remove()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;width:30px;height:30px;border-radius:8px;cursor:pointer;">✕</button>
+                </div>
+                <div style="flex:1;overflow-y:auto;">
+                    ${alunos.filter(a=>a.telefone).map(a => {
+                        const link = `${baseUrl}?lista=${listaId}&aluno=${a.id}`;
+                        const tel = (a.telefone||'').replace(/\D/g,'');
+                        const msg = encodeURIComponent(`Olá ${a.nome.split(' ')[0]}! 🤝\n\nVocê está convidado(a) a contribuir para o nosso evento!\n\nAcesse a lista e escolha o que você vai trazer:\n👉 ${link}\n\nOSS! 🥋 Gaditas Academy`);
+                        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1e293b;">
+                            <div style="font-size:0.68rem;font-weight:700;color:white;">${a.nome}</div>
+                            <button onclick="window.open('https://wa.me/55${tel}?text=${msg}','_blank')" style="padding:5px 10px;background:#064e3b;border:1px solid #25d366;color:#25d366;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fab fa-whatsapp"></i> Enviar</button>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    },
+
+    async toggleAtiva(listaId, atual) {
+        const msg = atual ? 'Encerrar esta lista? Os alunos não poderão mais escolher.' : 'Reabrir esta lista?';
+        if (!confirm(msg)) return;
+        await db.collection('listas_staff').doc(listaId).update({ ativa: !atual });
+        this.render();
+    },
+
+    // Banner no dashboard do aluno
+    async renderBannerAluno(alunoId, container) {
+        try {
+            const snap = await db.collection('listas_staff').where('ativa','==',true).get();
+            if (snap.empty) return;
+            snap.docs.forEach(doc => {
+                const lista = { id: doc.id, ...doc.data() };
+                const link = `https://gaditas-matriz.vercel.app/lista-staff.html?lista=${lista.id}&aluno=${alunoId}`;
+                const banner = document.createElement('div');
+                banner.style.marginBottom = '10px';
+                banner.innerHTML = `
+                    <div onclick="window.open('${link}','_blank')" style="cursor:pointer;background:linear-gradient(135deg,#1c0f00,#1a2e0a);border:2px solid #f59e0b;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+                        <div style="font-size:1.8rem;flex-shrink:0;">🤝</div>
+                        <div style="flex:1;">
+                            <div style="font-size:0.65rem;font-weight:800;color:#f59e0b;letter-spacing:1px;">LISTA DE CONTRIBUIÇÃO</div>
+                            <div style="font-size:0.78rem;font-weight:800;color:#fff;margin-top:2px;">${lista.nome}</div>
+                            <div style="font-size:0.58rem;color:#94a3b8;margin-top:4px;">Toque para ver e escolher sua contribuição</div>
+                        </div>
+                        <div style="font-size:0.65rem;font-weight:800;color:#f59e0b;">→</div>
+                    </div>`;
+                container.parentNode.insertBefore(banner, container);
+            });
+        } catch(e) {}
     },
 };

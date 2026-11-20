@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lista de Contribuições — Gaditas Academy</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background:#020617; color:#e2e8f0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height:100vh; padding:20px; }
+        .card { background:#0f172a; border:1px solid #1e293b; border-radius:20px; padding:24px 20px; max-width:420px; margin:0 auto; }
+        .logo { text-align:center; font-size:2.5rem; margin-bottom:6px; }
+        .titulo { text-align:center; font-size:0.75rem; font-weight:800; color:#f59e0b; letter-spacing:1px; margin-bottom:2px; }
+        .subtitulo { text-align:center; font-size:0.62rem; color:#475569; margin-bottom:20px; }
+        .evento-nome { font-size:1rem; font-weight:900; color:white; margin-bottom:4px; }
+        .evento-desc { font-size:0.65rem; color:#64748b; margin-bottom:20px; }
+        .item-card { background:#0a0f1a; border:1px solid #1e293b; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; transition:border-color 0.2s; }
+        .item-card:hover { border-color:#f59e0b55; }
+        .item-card.selecionado { border-color:#f59e0b; background:#1c1400; }
+        .item-card.esgotado { opacity:0.4; cursor:not-allowed; }
+        .item-nome { font-size:0.82rem; font-weight:800; color:white; }
+        .item-disponivel { font-size:0.6rem; color:#64748b; margin-top:3px; }
+        .item-disponivel.baixo { color:#f59e0b; }
+        .item-disponivel.zero { color:#ef4444; }
+        .qtd-row { display:flex; align-items:center; gap:10px; margin-top:10px; }
+        .qtd-btn { width:32px; height:32px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:white; font-size:1rem; font-weight:900; cursor:pointer; }
+        .qtd-val { font-size:1.1rem; font-weight:900; color:#f59e0b; min-width:24px; text-align:center; }
+        .btn-confirmar { width:100%; padding:14px; background:#f59e0b; border:none; color:#000; border-radius:12px; font-size:0.85rem; font-weight:900; cursor:pointer; margin-top:20px; letter-spacing:0.5px; }
+        .btn-confirmar:disabled { background:#334155; color:#64748b; cursor:not-allowed; }
+        .resultado { text-align:center; padding:30px 20px; }
+        .loading { text-align:center; color:#475569; font-size:0.75rem; padding:40px; }
+        .erro { text-align:center; color:#ef4444; font-size:0.75rem; padding:40px; }
+        .minha-escolha { background:#052e16; border:1px solid #10b981; border-radius:10px; padding:10px 14px; margin-bottom:16px; font-size:0.68rem; color:#10b981; font-weight:800; }
+        .barra { height:5px; border-radius:3px; background:#1e293b; margin-top:6px; overflow:hidden; }
+        .barra-fill { height:100%; border-radius:3px; background:#f59e0b; transition:width 0.3s; }
+        .barra-fill.baixo { background:#f59e0b; }
+        .barra-fill.zero { background:#ef4444; }
+        .participantes { font-size:0.55rem; color:#475569; margin-top:4px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">🤝</div>
+    <div class="titulo">GADITAS TEAM</div>
+    <div class="subtitulo">Lista de Contribuições</div>
+    <div id="conteudo"><div class="loading">Carregando...</div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script>
+    const firebaseConfig = {
+        apiKey:"AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+        authDomain:"gaditasmatriz.firebaseapp.com",
+        projectId:"gaditasmatriz",
+        storageBucket:"gaditasmatriz.firebasestorage.app",
+        messagingSenderId:"166834416988",
+        appId:"1:166834416988:web:2921c95c87c42019282599"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const params = new URLSearchParams(location.search);
+    const listaId = params.get('lista');
+    const alunoId = params.get('aluno');
+    const el = document.getElementById('conteudo');
+
+    let _lista = null;
+    let _escolhaAtual = null;
+    let _qtdSelecionada = {};
+
+    async function carregar() {
+        if (!listaId || !alunoId) { el.innerHTML = '<div class="erro">Link inválido.</div>'; return; }
+        try {
+            const [listaDoc, alunoDoc, escolhaDoc] = await Promise.all([
+                db.collection('listas_staff').doc(listaId).get(),
+                db.collection('alunos').doc(alunoId).get(),
+                db.collection('listas_staff').doc(listaId).collection('escolhas').doc(alunoId).get()
+            ]);
+            if (!listaDoc.exists) { el.innerHTML = '<div class="erro">Lista não encontrada.</div>'; return; }
+            if (!alunoDoc.exists) { el.innerHTML = '<div class="erro">Aluno não encontrado.</div>'; return; }
+            _lista = { id: listaDoc.id, ...listaDoc.data() };
+            const aluno = alunoDoc.data();
+            _escolhaAtual = escolhaDoc.exists ? escolhaDoc.data() : null;
+
+            if (!_lista.ativa) {
+                el.innerHTML = `<div class="resultado"><div style="font-size:2rem;margin-bottom:12px;">🔒</div><div style="font-size:0.8rem;color:#64748b;">Esta lista não está mais ativa.</div></div>`;
+                return;
+            }
+
+            renderLista(aluno);
+        } catch(e) {
+            el.innerHTML = '<div class="erro">Erro ao carregar. Tente novamente.</div>';
+        }
+    }
+
+    function renderLista(aluno) {
+        const nome1 = aluno.nome?.split(' ')[0] || 'Olá';
+        const itens = _lista.itens || [];
+
+        // Inicializa qtd com escolha atual se existir
+        if (_escolhaAtual) {
+            (_escolhaAtual.itens || []).forEach(e => { _qtdSelecionada[e.itemId] = e.quantidade; });
+        }
+
+        const minhaEscolhaHtml = _escolhaAtual ? `
+            <div class="minha-escolha">✅ Você já escolheu! Pode alterar abaixo.<br>
+            ${(_escolhaAtual.itens||[]).map(e => {
+                const item = itens.find(i=>i.id===e.itemId);
+                return item ? `${item.nome}: ${e.quantidade}` : '';
+            }).filter(Boolean).join(' · ')}</div>` : '';
+
+        el.innerHTML = `
+            <div class="evento-nome">${_lista.nome}</div>
+            <div class="evento-desc">${_lista.descricao||''}</div>
+            <div style="font-size:0.65rem;color:#94a3b8;margin-bottom:14px;">Olá, <strong style="color:white;">${nome1}</strong>! Escolha o que você vai contribuir:</div>
+            ${minhaEscolhaHtml}
+            <div id="itens-lista">
+                ${itens.map(item => renderItem(item)).join('')}
+            </div>
+            <button class="btn-confirmar" id="btn-confirmar" onclick="confirmar()">✅ CONFIRMAR ESCOLHA</button>`;
+
+        atualizarBotao();
+    }
+
+    function renderItem(item) {
+        const restante = item.quantidadeRestante ?? item.quantidadeTotal;
+        const total = item.quantidadeTotal || 1;
+        const pct = Math.round((restante / total) * 100);
+        const esgotado = restante <= 0 && !(_qtdSelecionada[item.id] > 0);
+        const selecionado = (_qtdSelecionada[item.id] || 0) > 0;
+        const classeDisp = restante <= 0 ? 'zero' : restante <= Math.ceil(total * 0.3) ? 'baixo' : '';
+        const dispTexto = esgotado ? '❌ Esgotado' : restante === 1 ? '⚠️ Último disponível!' : `${restante} disponível(is) de ${total}`;
+        const qtdAtual = _qtdSelecionada[item.id] || 0;
+
+        return `<div class="item-card${selecionado?' selecionado':''}${esgotado?' esgotado':''}" id="item-${item.id}">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="flex:1;">
+                    <div class="item-nome">${item.emoji||'🍽️'} ${item.nome}</div>
+                    <div class="item-disponivel ${classeDisp}">${dispTexto}</div>
+                    <div class="barra"><div class="barra-fill ${classeDisp}" style="width:${pct}%"></div></div>
+                    ${item.participantes?.length ? `<div class="participantes">Já escolheram: ${item.participantes.join(', ')}</div>` : ''}
+                </div>
+            </div>
+            ${!esgotado || selecionado ? `
+            <div class="qtd-row">
+                <button class="qtd-btn" onclick="alterarQtd('${item.id}',-1,${restante},${total})">−</button>
+                <span class="qtd-val">${qtdAtual}</span>
+                <button class="qtd-btn" onclick="alterarQtd('${item.id}',+1,${restante},${total})">+</button>
+                <span style="font-size:0.6rem;color:#64748b;">unid.</span>
+            </div>` : ''}
+        </div>`;
+    }
+
+    function alterarQtd(itemId, delta, restante, total) {
+        const atual = _qtdSelecionada[itemId] || 0;
+        const max = restante + (atual); // pode devolver o que já pegou
+        const novo = Math.max(0, Math.min(atual + delta, max));
+        _qtdSelecionada[itemId] = novo;
+        const item = (_lista.itens||[]).find(i=>i.id===itemId);
+        if (item) {
+            const el2 = document.getElementById(`item-${itemId}`);
+            if (el2) el2.outerHTML = renderItem({ ...item, quantidadeRestante: (item.quantidadeRestante ?? item.quantidadeTotal) - novo + ((_escolhaAtual?.itens||[]).find(e=>e.itemId===itemId)?.quantidade||0) });
+        }
+        atualizarBotao();
+    }
+
+    function atualizarBotao() {
+        const btn = document.getElementById('btn-confirmar');
+        if (!btn) return;
+        const temEscolha = Object.values(_qtdSelecionada).some(v => v > 0);
+        btn.disabled = !temEscolha;
+    }
+
+    async function confirmar() {
+        const btn = document.getElementById('btn-confirmar');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+        try {
+            const itensSel = Object.entries(_qtdSelecionada).filter(([,q])=>q>0).map(([itemId,quantidade])=>({itemId,quantidade}));
+            const alunoDoc = await db.collection('alunos').doc(alunoId).get();
+            const nomeAluno = alunoDoc.data()?.nome || 'Aluno';
+
+            // Transação para garantir estoque
+            await db.runTransaction(async t => {
+                const listaRef = db.collection('listas_staff').doc(listaId);
+                const escolhaRef = listaRef.collection('escolhas').doc(alunoId);
+                const listaSnap = await t.get(listaRef);
+                const escolhaSnap = await t.get(escolhaRef);
+                const dadosLista = listaSnap.data();
+                const itens = JSON.parse(JSON.stringify(dadosLista.itens || []));
+
+                // Devolve escolha anterior
+                const escolhaAnt = escolhaSnap.exists ? (escolhaSnap.data().itens || []) : [];
+                escolhaAnt.forEach(e => {
+                    const idx = itens.findIndex(i=>i.id===e.itemId);
+                    if (idx>=0) {
+                        itens[idx].quantidadeRestante = (itens[idx].quantidadeRestante ?? itens[idx].quantidadeTotal) + e.quantidade;
+                        itens[idx].participantes = (itens[idx].participantes||[]).filter(n=>n!==nomeAluno);
+                    }
+                });
+
+                // Aplica nova escolha
+                itensSel.forEach(e => {
+                    const idx = itens.findIndex(i=>i.id===e.itemId);
+                    if (idx>=0) {
+                        itens[idx].quantidadeRestante = (itens[idx].quantidadeRestante ?? itens[idx].quantidadeTotal) - e.quantidade;
+                        if (!itens[idx].participantes) itens[idx].participantes = [];
+                        if (!itens[idx].participantes.includes(nomeAluno)) itens[idx].participantes.push(nomeAluno);
+                    }
+                });
+
+                t.update(listaRef, { itens });
+                t.set(escolhaRef, { alunoId, nomeAluno, itens: itensSel, atualizadoEm: new Date().toISOString() });
+            });
+
+            const resumo = itensSel.map(e => {
+                const item = (_lista.itens||[]).find(i=>i.id===e.itemId);
+                return item ? `${item.emoji||'🍽️'} ${item.nome}: ${e.quantidade}` : '';
+            }).filter(Boolean).join('\n');
+
+            el.innerHTML = `<div class="resultado">
+                <div style="font-size:2.5rem;margin-bottom:12px;">🎉</div>
+                <div style="font-size:0.9rem;font-weight:900;color:#10b981;margin-bottom:8px;">Confirmado!</div>
+                <div style="font-size:0.68rem;color:#94a3b8;line-height:1.6;">${resumo}</div>
+                <div style="font-size:0.6rem;color:#475569;margin-top:14px;">Obrigado pela contribuição! OSS 🥋</div>
+            </div>`;
+        } catch(e) {
+            if (btn) { btn.disabled = false; btn.textContent = '✅ CONFIRMAR ESCOLHA'; }
+            alert('Erro ao salvar. Tente novamente.');
+        }
+    }
+
+    carregar();
+</script>
+</body>
+</html>

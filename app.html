@@ -1229,6 +1229,11 @@
                 <div id="pretas-container"></div>
             </div>
 
+            <!-- ══ STAFF ══ -->
+            <div id="tab-staff" class="tab-content hidden" style="padding:15px;">
+                <div id="staff-container"></div>
+            </div>
+
         </main>
 
         <nav class="bottom-nav">
@@ -1250,6 +1255,7 @@
                 <span id="badge-solic-avaliacao" style="display:none;position:absolute;top:0;right:4px;background:#10b981;color:white;font-size:0.5rem;font-weight:800;padding:2px 5px;border-radius:999px;min-width:16px;text-align:center;"></span>
             </button>
             <button onclick="ui.showTab('tab-pretas'); pretas.render()" class="nav-item"><i class="fas fa-award"></i><span id="nav-txt-blacks">PRETAS</span></button>
+            <button onclick="ui.showTab('tab-staff'); staffModule.render()" id="menu-staff" class="nav-item" style="display:none;position:relative;"><i class="fas fa-users"></i><span>STAFF</span></button>
             <button onclick="auth.logout()" class="nav-item logout-item"><i class="fas fa-sign-out-alt"></i><span id="nav-txt-logout">SAIR</span></button>
         </nav>
     </div>

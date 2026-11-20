@@ -16343,6 +16343,32 @@ const exame = {
         }).join('');
         const cor = (pr.percentual||0) >= 70 ? '#10b981' : (pr.percentual||0) >= 50 ? '#f59e0b' : '#ef4444';
         const label = (pr.percentual||0) >= 70 ? '🏆 APROVADO' : (pr.percentual||0) >= 50 ? '⚠️ PARCIAL' : '❌ REPROVADO';
+
+        // Linha do tempo de saídas
+        const saidasLog = pr.saidasLog || [];
+        const timelineHtml = saidasLog.length ? `
+            <div style="background:#1a0404;border:1px solid #ef444433;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#ef4444;letter-spacing:1px;margin-bottom:10px;">⚠️ SAÍDAS DA TELA (${saidasLog.length}x)</div>
+                ${saidasLog.map((s, i) => {
+                    const hrSaida = new Date(s.saidaTs).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                    const hrVoltou = new Date(s.voltouTs).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                    const resp = s.primeiraRespostaApos;
+                    let respostaHtml = '<span style="color:#475569;">Nenhuma resposta registrada após retorno</span>';
+                    if (resp) {
+                        const perg = pergs.find(p => p.id === resp.pergId);
+                        const numPerg = perg ? pergs.indexOf(perg) + 1 : '?';
+                        const textoOpcao = perg?.opcoes.find(o => o.id === resp.opcaoId)?.texto || '?';
+                        const correta = perg?.respostaCorreta === resp.opcaoId;
+                        respostaHtml = `<span style="color:${correta?'#10b981':'#f59e0b'};">${correta?'✅':'⚠️'} 1ª resposta após retorno: Q${numPerg} — <strong>${resp.opcaoId.toUpperCase()})</strong> ${textoOpcao.substring(0,40)}${textoOpcao.length>40?'…':''}</span>`;
+                    }
+                    return `<div style="border-left:2px solid #ef444455;padding-left:10px;margin-bottom:10px;">
+                        <div style="font-size:0.65rem;font-weight:800;color:#ef4444;">Saída #${i+1} — ${s.duracaoSeg}s fora</div>
+                        <div style="font-size:0.58rem;color:#64748b;margin-top:1px;">🚪 Saiu: ${hrSaida} · 🔙 Voltou: ${hrVoltou}</div>
+                        <div style="font-size:0.6rem;margin-top:4px;">${respostaHtml}</div>
+                    </div>`;
+                }).join('')}
+            </div>` : '';
+
         const _tel = (a.telefone||'').replace(/\D/g,'');
         const _wppLines = pergs.map((p,i) => {
             const resp = respostas[p.id];
@@ -16368,7 +16394,7 @@ const exame = {
                     <button onclick="document.getElementById('modal-resp-aluno').remove()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;width:30px;height:30px;border-radius:8px;cursor:pointer;">✕</button>
                 </div>
             </div>
-            <div style="flex:1;overflow-y:auto;padding:14px;">${linhas || '<div style="color:#475569;font-size:0.7rem;">Sem respostas.</div>'}</div>`;
+            <div style="flex:1;overflow-y:auto;padding:14px;">${timelineHtml}${linhas || '<div style="color:#475569;font-size:0.7rem;">Sem respostas.</div>'}</div>`;
         document.body.appendChild(m);
     },
 
@@ -16497,7 +16523,7 @@ const exame = {
                         ${p.opcoes.map(o => `
                         <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;margin-bottom:4px;cursor:pointer;background:#1e293b;border:1px solid #334155;" id="opt-lbl-${p.id}-${o.id}">
                             <input type="radio" name="prova-resp-${p.id}" value="${o.id}"
-                                onchange="document.querySelectorAll('[id^=opt-lbl-${p.id}-]').forEach(l=>l.style.borderColor='#334155');this.closest('label').style.borderColor='#f97316';"
+                                onchange="document.querySelectorAll('[id^=opt-lbl-${p.id}-]').forEach(l=>l.style.borderColor='#334155');this.closest('label').style.borderColor='#f97316';if(exame._provaRespostasLog)exame._provaRespostasLog['${p.id}']={opcaoId:'${o.id}',ts:Date.now()};"
                                 style="accent-color:#f97316;width:15px;height:15px;flex-shrink:0;cursor:pointer;">
                             <span style="font-size:0.68rem;color:#94a3b8;"><strong style="color:#f97316;">${o.id.toUpperCase()})</strong> ${o.texto}</span>
                         </label>`).join('')}
@@ -16567,12 +16593,18 @@ const exame = {
         // Inicializa contador de saídas (só conta se ficou fora > 15s — ligação rápida não penaliza)
         this._provaSaidasCount = 0;
         this._provaSaidaTs = null;
+        this._provaSaidasLog = []; // [{saidaTs, voltouTs, duracaoSeg}]
+        this._provaRespostasLog = {}; // {pergId: {opcaoId, ts}}
         this._provaVisibilityHandler = () => {
             if (document.visibilityState === 'hidden') {
                 this._provaSaidaTs = Date.now();
             } else if (this._provaSaidaTs) {
-                const seg = (Date.now() - this._provaSaidaTs) / 1000;
-                if (seg > 15) this._provaSaidasCount = (this._provaSaidasCount || 0) + 1;
+                const voltouTs = Date.now();
+                const seg = (voltouTs - this._provaSaidaTs) / 1000;
+                if (seg > 15) {
+                    this._provaSaidasCount = (this._provaSaidasCount || 0) + 1;
+                    this._provaSaidasLog.push({ saidaTs: this._provaSaidaTs, voltouTs, duracaoSeg: Math.round(seg) });
+                }
                 this._provaSaidaTs = null;
             }
         };
@@ -16589,7 +16621,23 @@ const exame = {
             this._provaVisibilityHandler = null;
         }
         const saidasCount = this._provaSaidasCount || 0;
+        const saidasLogRaw = this._provaSaidasLog || [];
+        const respostasLog = this._provaRespostasLog || {};
+        // Cruza: para cada saída, encontra a primeira resposta marcada APÓS o retorno
+        const saidasLog = saidasLogRaw.map(s => {
+            const primeiraAposRetorno = Object.entries(respostasLog)
+                .filter(([,v]) => v.ts >= s.voltouTs)
+                .sort((a,b) => a[1].ts - b[1].ts)[0];
+            return {
+                saidaTs: s.saidaTs,
+                voltouTs: s.voltouTs,
+                duracaoSeg: s.duracaoSeg,
+                primeiraRespostaApos: primeiraAposRetorno ? { pergId: primeiraAposRetorno[0], opcaoId: primeiraAposRetorno[1].opcaoId } : null
+            };
+        });
         this._provaSaidasCount = 0;
+        this._provaSaidasLog = [];
+        this._provaRespostasLog = {};
         this._provaSaidaTs = null;
         localStorage.removeItem(`prova_inicio_${alunoId}`);
         const prova = await this._loadProva();
@@ -16611,6 +16659,7 @@ const exame = {
                 enviadaEm: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
                 resultadoLiberado: false,
                 saidasDaTela: saidasCount,
+                saidasLog,
             }
         });
         alert(`✅ Prova enviada! Aguarde o professor liberar o resultado.`);

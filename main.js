@@ -27836,7 +27836,8 @@ const staffModule = {
             });
             this.abrirMeusGastos();
         } catch(e) {
-            alert('Erro ao salvar. Tente novamente.');
+            console.error('Erro ao salvar gasto:', e);
+            alert('Erro ao salvar: ' + (e?.message || e));
             if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar Gasto'; }
         }
     },

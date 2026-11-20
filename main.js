@@ -27533,32 +27533,46 @@ const staffModule = {
     },
 
     async enviarConvites(listaId) {
-        const snap = await db.collection('alunos').where('ativo','==',true).get();
-        const alunos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const snap = await db.collection('alunos').get();
+        const alunos = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(a => a.telefone && a.nome && a.role !== 'inativo')
+            .sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
         const overlay = document.createElement('div');
         overlay.id = 'modal-enviar-convites';
         overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
         const baseUrl = 'https://gaditas-matriz.vercel.app/lista-staff.html';
+        // Armazena dados para o onclick usar por índice (evita problema de aspas simples no HTML)
+        window._staffConvites = alunos.map(a => {
+            const tel = (a.telefone||'').replace(/\D/g,'');
+            const link = `${baseUrl}?lista=${listaId}&aluno=${a.id}`;
+            const nome1 = a.nome.split(' ')[0];
+            return { tel, msg: `Olá ${nome1}! 🤝\n\nVocê está convidado(a) a contribuir para o nosso evento!\n\nAcesse a lista e escolha o que você vai trazer:\n👉 ${link}\n\nOSS! 🥋 Gaditas Academy` };
+        });
         overlay.innerHTML = `
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:500px;max-height:85vh;display:flex;flex-direction:column;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-shrink:0;">
                     <div style="font-size:0.8rem;font-weight:900;color:white;">📤 Enviar Convites</div>
                     <button onclick="document.getElementById('modal-enviar-convites').remove()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;width:30px;height:30px;border-radius:8px;cursor:pointer;">✕</button>
                 </div>
+                ${alunos.length === 0 ? '<div style="font-size:0.68rem;color:#64748b;padding:16px;text-align:center;">Nenhum aluno com telefone cadastrado.</div>' : ''}
                 <div style="flex:1;overflow-y:auto;">
-                    ${alunos.filter(a=>a.telefone).map(a => {
-                        const link = `${baseUrl}?lista=${listaId}&aluno=${a.id}`;
-                        const tel = (a.telefone||'').replace(/\D/g,'');
-                        const msg = encodeURIComponent(`Olá ${a.nome.split(' ')[0]}! 🤝\n\nVocê está convidado(a) a contribuir para o nosso evento!\n\nAcesse a lista e escolha o que você vai trazer:\n👉 ${link}\n\nOSS! 🥋 Gaditas Academy`);
-                        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1e293b;">
+                    ${alunos.map((a, i) => `
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1e293b;">
                             <div style="font-size:0.68rem;font-weight:700;color:white;">${a.nome}</div>
-                            <button onclick="window.open('https://wa.me/55${tel}?text=${msg}','_blank')" style="padding:5px 10px;background:#064e3b;border:1px solid #25d366;color:#25d366;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fab fa-whatsapp"></i> Enviar</button>
-                        </div>`;
-                    }).join('')}
+                            <button onclick="staffModule._abrirWhatsappConvite(${i})" style="padding:5px 10px;background:#064e3b;border:1px solid #25d366;color:#25d366;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fab fa-whatsapp"></i> Enviar</button>
+                        </div>`).join('')}
                 </div>
             </div>`;
         document.body.appendChild(overlay);
         overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    },
+
+    _abrirWhatsappConvite(i) {
+        const c = window._staffConvites?.[i];
+        if (!c) return;
+        const tel = c.tel.startsWith('55') ? c.tel : '55' + c.tel;
+        window.open(`https://wa.me/${tel}?text=${encodeURIComponent(c.msg)}`, '_blank');
     },
 
     async toggleAtiva(listaId, atual) {

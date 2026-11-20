@@ -27724,6 +27724,7 @@ const staffModule = {
         const alunoId = auth.currentUser?.id;
         const nomeAluno = auth.currentUser?.nome || '';
         if (!alunoId) return;
+        document.getElementById('modal-meus-gastos')?.remove();
         const overlay = document.createElement('div');
         overlay.id = 'modal-meus-gastos';
         overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
@@ -27748,9 +27749,10 @@ const staffModule = {
     async _carregarMeusGastos(alunoId) {
         const el = document.getElementById('meus-gastos-lista');
         if (!el) return;
-        const snap = await db.collection('gastos_staff').where('alunoId','==',alunoId).orderBy('criadoEm','desc').get();
+        const snap = await db.collection('gastos_staff').where('alunoId','==',alunoId).get();
         if (snap.empty) { el.innerHTML = '<div style="color:#475569;font-size:0.7rem;text-align:center;padding:20px;">Nenhum gasto lançado ainda.</div>'; return; }
-        el.innerHTML = snap.docs.map(doc => {
+        const docs = snap.docs.slice().sort((a,b) => (b.data().criadoEm||'').localeCompare(a.data().criadoEm||''));
+        el.innerHTML = docs.map(doc => {
             const g = doc.data();
             const ressarcido = g.status === 'ressarcido';
             const valorFmt = `R$ ${parseFloat(g.valor||0).toFixed(2).replace('.',',')}`;
@@ -27893,12 +27895,14 @@ const staffModule = {
         const el = document.getElementById('gastos-admin-lista');
         if (!el) return;
         el.innerHTML = '<div style="color:#475569;font-size:0.7rem;text-align:center;padding:20px;">Carregando...</div>';
-        let query = db.collection('gastos_staff').orderBy('criadoEm','desc');
-        if (status !== 'todos') query = query.where('status','==',status);
+        let query = status !== 'todos'
+            ? db.collection('gastos_staff').where('status','==',status)
+            : db.collection('gastos_staff');
         const snap = await query.get();
         if (snap.empty) { el.innerHTML = '<div style="color:#475569;font-size:0.7rem;text-align:center;padding:20px;">Nenhum gasto encontrado.</div>'; return; }
+        const docsAdmin = snap.docs.slice().sort((a,b) => (b.data().criadoEm||'').localeCompare(a.data().criadoEm||''));
         let totalPendente = 0;
-        const html = snap.docs.map(doc => {
+        const html = docsAdmin.map(doc => {
             const g = doc.data();
             const ressarcido = g.status === 'ressarcido';
             if (!ressarcido) totalPendente += parseFloat(g.valor||0);

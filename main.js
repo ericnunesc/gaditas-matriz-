@@ -27826,9 +27826,28 @@ const staffModule = {
             let fotoNota = '';
             const file = fotoInput?.files[0];
             if (file) {
-                const ref = getStorage().ref().child(`gastos_staff/${alunoId}_${Date.now()}.jpg`);
-                await ref.put(file);
-                fotoNota = await ref.getDownloadURL();
+                fotoNota = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = ev => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const MAX = 900;
+                            let w = img.width, h = img.height;
+                            if (w > MAX || h > MAX) {
+                                if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                                else { w = Math.round(w * MAX / h); h = MAX; }
+                            }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = w; canvas.height = h;
+                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                            resolve(canvas.toDataURL('image/jpeg', 0.7));
+                        };
+                        img.onerror = reject;
+                        img.src = ev.target.result;
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
             }
             await db.collection('gastos_staff').add({
                 alunoId, nomeAluno, descricao: desc, valor, chavePix: chavePix || '',

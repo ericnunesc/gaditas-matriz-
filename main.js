@@ -27257,22 +27257,87 @@ const staffModule = {
         const el = document.getElementById('staff-container');
         if (!el) return;
         el.innerHTML = '<div style="text-align:center;color:#475569;padding:30px;font-size:0.75rem;">Carregando...</div>';
-        const snap = await db.collection('listas_staff').orderBy('criadoEm','desc').get();
-        const listas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const isAdmin = auth.role === 'admin';
+        const [listasSnap, staffSnap] = await Promise.all([
+            db.collection('listas_staff').orderBy('criadoEm','desc').get(),
+            db.collection('alunos').where('isStaff','==',true).get()
+        ]);
+        const listas = listasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const membrosStaff = staffSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const ativas = listas.filter(l => l.ativa);
         const encerradas = listas.filter(l => !l.ativa);
+
+        const staffHtml = isAdmin ? `
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:14px;margin-bottom:16px;">
+                <div style="font-size:0.65rem;font-weight:800;color:#818cf8;letter-spacing:1px;margin-bottom:10px;">👥 MEMBROS DO STAFF (${membrosStaff.length})</div>
+                ${membrosStaff.length ? membrosStaff.map(a => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e293b;">
+                        <div>
+                            <div style="font-size:0.72rem;font-weight:800;color:white;">${a.nome}</div>
+                            <div style="font-size:0.55rem;color:#475569;">${a.faixa||'—'}</div>
+                        </div>
+                        <button onclick="staffModule.removerStaff('${a.id}','${a.nome.replace(/'/g,"\\'")}')"
+                            style="padding:4px 10px;background:#1a0404;border:1px solid #ef444455;color:#ef4444;border-radius:7px;font-size:0.58rem;font-weight:800;cursor:pointer;">Remover</button>
+                    </div>`).join('') : '<div style="font-size:0.65rem;color:#475569;">Nenhum membro ainda.</div>'}
+                <div style="margin-top:12px;">
+                    <input id="staff-busca-input" type="text" placeholder="🔍 Adicionar aluno ao staff..."
+                        oninput="staffModule.buscarParaStaff(this.value)"
+                        style="width:100%;padding:8px 10px;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.68rem;outline:none;">
+                    <div id="staff-busca-resultado" style="margin-top:6px;display:flex;flex-direction:column;gap:4px;"></div>
+                </div>
+            </div>` : '';
+
         el.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <div style="font-size:0.85rem;font-weight:900;color:white;">🤝 STAFF — Listas</div>
+                <div style="font-size:0.85rem;font-weight:900;color:white;">🤝 STAFF</div>
                 <button onclick="staffModule.abrirCriarLista()" style="padding:7px 14px;background:#f59e0b;border:none;color:#000;border-radius:8px;font-size:0.65rem;font-weight:900;cursor:pointer;">+ Nova Lista</button>
             </div>
+            ${staffHtml}
             ${ativas.length ? `
             <div style="font-size:0.58rem;font-weight:800;color:#10b981;letter-spacing:1px;margin-bottom:8px;">✅ ATIVAS</div>
             ${ativas.map(l => this._cardLista(l)).join('')}` : ''}
             ${encerradas.length ? `
             <div style="font-size:0.58rem;font-weight:800;color:#475569;letter-spacing:1px;margin:14px 0 8px;">🔒 ENCERRADAS</div>
             ${encerradas.map(l => this._cardLista(l)).join('')}` : ''}
-            ${!listas.length ? '<div style="color:#475569;font-size:0.72rem;text-align:center;padding:30px;">Nenhuma lista criada ainda.</div>' : ''}`;
+            ${!listas.length ? '<div style="color:#475569;font-size:0.72rem;text-align:center;padding:20px 0;">Nenhuma lista criada ainda.</div>' : ''}`;
+    },
+
+    async buscarParaStaff(termo) {
+        const el = document.getElementById('staff-busca-resultado');
+        if (!el) return;
+        const t = termo.trim().toLowerCase();
+        if (t.length < 2) { el.innerHTML = ''; return; }
+        const snap = await db.collection('alunos').orderBy('nome').get();
+        const jaStaff = new Set();
+        snap.docs.filter(d=>d.data().isStaff).forEach(d=>jaStaff.add(d.id));
+        const res = snap.docs.filter(d => (d.data().nome||'').toLowerCase().includes(t) && !jaStaff.has(d.id)).slice(0,6);
+        el.innerHTML = res.map(d => {
+            const a = d.data();
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:#0a0f1a;border:1px solid #1e293b;border-radius:8px;">
+                <div>
+                    <div style="font-size:0.68rem;font-weight:800;color:white;">${a.nome}</div>
+                    <div style="font-size:0.55rem;color:#475569;">${a.faixa||'—'}</div>
+                </div>
+                <button onclick="staffModule.adicionarStaff('${d.id}','${(a.nome||'').replace(/'/g,"\\'")}')"
+                    style="padding:4px 10px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:7px;font-size:0.58rem;font-weight:800;cursor:pointer;">+ Staff</button>
+            </div>`;
+        }).join('') || '<div style="font-size:0.62rem;color:#475569;padding:4px;">Nenhum resultado.</div>';
+    },
+
+    async adicionarStaff(alunoId, nomeAluno) {
+        await db.collection('alunos').doc(alunoId).update({ isStaff: true });
+        const inp = document.getElementById('staff-busca-input');
+        if (inp) inp.value = '';
+        const res = document.getElementById('staff-busca-resultado');
+        if (res) res.innerHTML = '';
+        this.render();
+    },
+
+    async removerStaff(alunoId, nomeAluno) {
+        const nome1 = nomeAluno.split(' ')[0];
+        if (!confirm(`Remover ${nome1} do staff?`)) return;
+        await db.collection('alunos').doc(alunoId).update({ isStaff: false });
+        this.render();
     },
 
     _cardLista(l) {

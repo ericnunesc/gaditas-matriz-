@@ -27258,9 +27258,38 @@ const staffModule = {
         if (!el) return;
         el.innerHTML = '<div style="text-align:center;color:#475569;padding:30px;font-size:0.75rem;">Carregando...</div>';
         const isAdmin = auth.role === 'admin';
+        const isStaff = !!auth.currentUser?.isStaff;
+        const podeGerenciar = isAdmin || isStaff;
+        const alunoId = auth.currentUser?.id;
+
+        if (!podeGerenciar) {
+            // Aluno comum: só vê listas ativas para fazer escolha
+            const listasSnap = await db.collection('listas_staff').where('ativa','==',true).get();
+            const ativas = listasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (!ativas.length) {
+                el.innerHTML = '<div style="color:#475569;font-size:0.72rem;text-align:center;padding:30px 0;">Nenhuma lista ativa no momento.</div>';
+                return;
+            }
+            const baseUrl = 'https://gaditas-matriz.vercel.app/lista-staff.html';
+            el.innerHTML = `
+                <div style="font-size:0.85rem;font-weight:900;color:white;margin-bottom:16px;">🤝 STAFF</div>
+                <div style="font-size:0.62rem;color:#64748b;margin-bottom:14px;">Escolha o que você vai contribuir nas listas abaixo:</div>
+                ${ativas.map(l => `
+                    <div style="background:#0f172a;border:1px solid #1e3a1a;border-left:3px solid #10b981;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+                        <div style="font-size:0.78rem;font-weight:900;color:white;">${l.nome}</div>
+                        <div style="font-size:0.58rem;color:#64748b;margin-top:2px;">${l.descricao||''}</div>
+                        <div style="font-size:0.55rem;color:#475569;margin-top:3px;">${(l.itens||[]).length} itens disponíveis</div>
+                        <a href="${baseUrl}?lista=${l.id}&aluno=${alunoId}" target="_blank"
+                            style="display:inline-block;margin-top:10px;padding:7px 14px;background:#064e3b;border:1px solid #10b981;color:#10b981;border-radius:8px;font-size:0.62rem;font-weight:800;text-decoration:none;">
+                            👉 Ver e Escolher
+                        </a>
+                    </div>`).join('')}`;
+            return;
+        }
+
         const [listasSnap, staffSnap] = await Promise.all([
             db.collection('listas_staff').orderBy('criadoEm','desc').get(),
-            db.collection('alunos').where('isStaff','==',true).get()
+            isAdmin ? db.collection('alunos').where('isStaff','==',true).get() : Promise.resolve({ docs: [] })
         ]);
         const listas = listasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const membrosStaff = staffSnap.docs.map(d => ({ id: d.id, ...d.data() }));

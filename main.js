@@ -27354,12 +27354,90 @@ const staffModule = {
             </div>
             <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
                 <button onclick="staffModule.verLista('${l.id}')" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">👁 Ver</button>
+                <button onclick="staffModule.editarLista('${l.id}')" style="padding:5px 10px;background:#1e1b4b;border:1px solid #6366f1;color:#a5b4fc;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">✏️ Editar</button>
                 <button onclick="staffModule.enviarConvites('${l.id}')" style="padding:5px 10px;background:#064e3b;border:1px solid #10b981;color:#10b981;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">📤 Enviar</button>
                 ${l.ativa
                     ? `<button onclick="staffModule.toggleAtiva('${l.id}',true)" style="padding:5px 10px;background:#1a0404;border:1px solid #ef4444;color:#ef4444;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">🔒 Encerrar</button>`
                     : `<button onclick="staffModule.toggleAtiva('${l.id}',false)" style="padding:5px 10px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">🔓 Reabrir</button>`}
             </div>
         </div>`;
+    },
+
+    async editarLista(listaId) {
+        const doc = await db.collection('listas_staff').doc(listaId).get();
+        const lista = { id: doc.id, ...doc.data() };
+        const overlay = document.createElement('div');
+        overlay.id = 'modal-editar-lista';
+        overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+        overlay.innerHTML = `
+            <div style="background:#0f172a;border:1px solid #6366f1;border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;">
+                <div style="font-size:0.8rem;font-weight:900;color:white;margin-bottom:16px;">✏️ Editar Lista</div>
+                <input id="staff-edit-nome" type="text" value="${(lista.nome||'').replace(/"/g,'&quot;')}" placeholder="Nome do evento"
+                    style="width:100%;padding:10px;background:#0a0f1a;border:1px solid #6366f1;color:white;border-radius:8px;font-size:0.72rem;outline:none;margin-bottom:8px;">
+                <input id="staff-edit-desc" type="text" value="${(lista.descricao||'').replace(/"/g,'&quot;')}" placeholder="Descrição (opcional)"
+                    style="width:100%;padding:10px;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.72rem;outline:none;margin-bottom:16px;">
+                <div style="font-size:0.6rem;font-weight:800;color:#f59e0b;margin-bottom:8px;">🍽️ ITENS</div>
+                <div id="staff-edit-itens-editor">
+                    ${(lista.itens||[]).map((item,i) => `
+                    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+                        <input type="text" value="${item.emoji||'🍽️'}" style="width:46px;padding:8px 4px;text-align:center;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.85rem;outline:none;" data-role="emoji" data-item-id="${item.id}">
+                        <input type="text" value="${(item.nome||'').replace(/"/g,'&quot;')}" style="flex:1;padding:8px;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.68rem;outline:none;" data-role="nome">
+                        <input type="number" value="${item.quantidadeTotal||1}" min="1" style="width:52px;padding:8px 4px;text-align:center;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.68rem;outline:none;" data-role="qtd">
+                        <button onclick="this.parentElement.remove()" style="background:transparent;border:none;color:#ef4444;font-size:1rem;cursor:pointer;padding:4px;">✕</button>
+                    </div>`).join('')}
+                </div>
+                <button onclick="staffModule._adicionarItemEditorEdit()" style="width:100%;padding:8px;background:#1c0f00;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;font-size:0.65rem;font-weight:800;cursor:pointer;margin-bottom:16px;">+ Adicionar Item</button>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="document.getElementById('modal-editar-lista').remove()" style="flex:1;padding:12px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;">Cancelar</button>
+                    <button onclick="staffModule.salvarEdicaoLista('${listaId}')" style="flex:2;padding:12px;background:#6366f1;border:none;color:white;border-radius:10px;font-size:0.72rem;font-weight:900;cursor:pointer;">💾 Salvar</button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    },
+
+    _adicionarItemEditorEdit() {
+        const cont = document.getElementById('staff-edit-itens-editor');
+        if (!cont) return;
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px;';
+        div.innerHTML = `
+            <input type="text" placeholder="🍰" style="width:46px;padding:8px 4px;text-align:center;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.85rem;outline:none;" data-role="emoji">
+            <input type="text" placeholder="Nome do item" style="flex:1;padding:8px;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.68rem;outline:none;" data-role="nome">
+            <input type="number" placeholder="Qtd" min="1" value="1" style="width:52px;padding:8px 4px;text-align:center;background:#0a0f1a;border:1px solid #334155;color:white;border-radius:8px;font-size:0.68rem;outline:none;" data-role="qtd">
+            <button onclick="this.parentElement.remove()" style="background:transparent;border:none;color:#ef4444;font-size:1rem;cursor:pointer;padding:4px;">✕</button>`;
+        cont.appendChild(div);
+    },
+
+    async salvarEdicaoLista(listaId) {
+        const nome = document.getElementById('staff-edit-nome')?.value.trim();
+        const desc = document.getElementById('staff-edit-desc')?.value.trim();
+        if (!nome) return alert('Informe o nome do evento.');
+        const listaDoc = await db.collection('listas_staff').doc(listaId).get();
+        const itensAtuais = listaDoc.data()?.itens || [];
+        const rows = document.querySelectorAll('#staff-edit-itens-editor > div');
+        const itens = [];
+        rows.forEach((row, i) => {
+            const emoji = row.querySelector('[data-role="emoji"]')?.value.trim() || '🍽️';
+            const nomeItem = row.querySelector('[data-role="nome"]')?.value.trim();
+            const qtdTotal = parseInt(row.querySelector('[data-role="qtd"]')?.value) || 1;
+            const itemId = row.querySelector('[data-item-id]')?.dataset.itemId || `item${i}_${Date.now()}`;
+            if (!nomeItem) return;
+            // Preserva quantidadeRestante e participantes se item já existia
+            const existente = itensAtuais.find(it => it.id === itemId);
+            const diff = qtdTotal - (existente?.quantidadeTotal || qtdTotal);
+            const restanteAtual = existente?.quantidadeRestante ?? existente?.quantidadeTotal ?? qtdTotal;
+            itens.push({
+                id: itemId, emoji, nome: nomeItem,
+                quantidadeTotal: qtdTotal,
+                quantidadeRestante: Math.max(0, restanteAtual + diff),
+                participantes: existente?.participantes || [],
+            });
+        });
+        if (!itens.length) return alert('Adicione pelo menos um item.');
+        await db.collection('listas_staff').doc(listaId).update({ nome, descricao: desc || '', itens });
+        document.getElementById('modal-editar-lista')?.remove();
+        this.render();
     },
 
     abrirCriarLista() {

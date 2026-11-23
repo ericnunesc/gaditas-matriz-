@@ -14968,6 +14968,22 @@ const exame = {
             </tr>`;
         }).join('');
 
+        // Resumo agrupado por Faixa + Tamanho
+        const resumoMap = {};
+        comTamanho.forEach(l => {
+            const key = `${l.faixa}||${l.tamanho}`;
+            resumoMap[key] = (resumoMap[key] || 0) + 1;
+        });
+        const resumoRows = Object.entries(resumoMap)
+            .sort(([a],[b]) => a.localeCompare(b))
+            .map(([key, qtd]) => {
+                const [faixa, tam] = key.split('||');
+                const cor = corFaixaCSS(faixa);
+                return `<tr><td style="padding:5px 10px;font-weight:700;color:${cor};border-right:1px solid #e2e8f0;">${faixa}</td>
+                    <td style="padding:5px 10px;font-weight:800;text-align:center;border-right:1px solid #e2e8f0;">${tam}</td>
+                    <td style="padding:5px 10px;font-weight:900;font-size:1rem;text-align:center;">${qtd}</td></tr>`;
+            }).join('');
+
         const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pedido Costureira — Gaditas Academy</title>
         <style>body{font-family:Arial,sans-serif;padding:24px;color:#1e293b;}h2{margin-bottom:4px;}p{color:#64748b;font-size:0.85rem;margin-bottom:16px;}
         table{width:100%;border-collapse:collapse;border:1px solid #e2e8f0;}th{background:#1e293b;color:white;padding:8px 10px;text-align:left;font-size:0.8rem;}
@@ -14978,6 +14994,14 @@ const exame = {
         <p>Gerado em: ${new Date().toLocaleString('pt-BR')} · Total: ${linhas.length} atletas</p>
         <button onclick="window.print()" style="margin-bottom:16px;padding:10px 20px;background:#1e293b;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">🖨️ IMPRIMIR</button>
         <button onclick="window.close()" style="margin-bottom:16px;margin-left:8px;padding:10px 20px;background:#ef4444;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">✕ Fechar</button>
+
+        <h3 style="margin-bottom:8px;font-size:0.9rem;color:#334155;">📦 Resumo por tamanho</h3>
+        <table style="max-width:360px;margin-bottom:24px;">
+            <thead><tr><th>Faixa</th><th style="text-align:center;">Tamanho</th><th style="text-align:center;">Qtd</th></tr></thead>
+            <tbody>${resumoRows}</tbody>
+        </table>
+
+        <h3 style="margin-bottom:8px;font-size:0.9rem;color:#334155;">📋 Lista completa</h3>
         <table>
             <thead><tr><th>Faixa</th><th style="text-align:center;">Tamanho</th><th>Nome do Aluno</th><th>Nome na Etiqueta</th></tr></thead>
             <tbody>${rows}</tbody>

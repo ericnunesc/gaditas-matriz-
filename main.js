@@ -5950,6 +5950,7 @@ Ele voltará a ser aluno normal.`)) return;
                     const isPrimeira = idx === 0;
                     const btnExcluir = `<button onclick="academia._excluirFaturaModal('${f.id}')" style="background:#2a0808;border:1px solid #7f1d1d;color:#f43f5e;padding:4px 8px;border-radius:6px;font-size:0.6rem;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Excluir fatura do Asaas">🗑️</button>`;
                     const btnEspecie = `<button onclick="academia._receberEspecieModal('${f.id}',${f.value})" style="background:#052e16;border:1px solid #166534;color:#4ade80;padding:4px 8px;border-radius:6px;font-size:0.6rem;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Registrar recebimento em espécie">💵 ESPÉCIE</button>`;
+                    const btnPix = `<button onclick="academia._copiarPixFatura('${f.id}',this)" style="background:#0c1a3a;border:1px solid #3b82f6;color:#60a5fa;padding:4px 8px;border-radius:6px;font-size:0.6rem;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Copiar código PIX">📋 PIX</button>`;
                     if (isPrimeira) {
                         // Fatura mais urgente — destaque total
                         const bgDestaque = vencida ? '#3b000e' : hoje ? '#2d1800' : '#052e16';
@@ -5964,13 +5965,14 @@ Ele voltará a ser aluno normal.`)) return;
                                 </div>
                                 <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
                                     <span style="font-size:0.65rem; font-weight:900; color:${cor}; background:${cor}33; padding:5px 10px; border-radius:8px; text-align:center;">${tag}</span>
+                                    ${btnPix}
                                     ${btnEspecie}
                                     ${btnExcluir}
                                 </div>
                             </div>
                         </div>`;
                     } else {
-                        html += `<div style="background:#0f172a; border:1px solid ${cor}44; border-left:3px solid ${cor}; border-radius:8px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:6px;"><div style="flex:1;min-width:0;"><div style="font-size:0.85rem; font-weight:800; color:white;">${valor}</div><div style="font-size:0.62rem; color:#64748b;">Venc: ${vencStr} · ID: ${f.id.substring(0,12)}...</div></div><span style="font-size:0.6rem; font-weight:800; color:${cor}; background:${cor}22; padding:3px 8px; border-radius:6px;">${tag}</span>${btnEspecie}${btnExcluir}</div>`;
+                        html += `<div style="background:#0f172a; border:1px solid ${cor}44; border-left:3px solid ${cor}; border-radius:8px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:6px;"><div style="flex:1;min-width:0;"><div style="font-size:0.85rem; font-weight:800; color:white;">${valor}</div><div style="font-size:0.62rem; color:#64748b;">Venc: ${vencStr} · ID: ${f.id.substring(0,12)}...</div></div><span style="font-size:0.6rem; font-weight:800; color:${cor}; background:${cor}22; padding:3px 8px; border-radius:6px;">${tag}</span>${btnPix}${btnEspecie}${btnExcluir}</div>`;
                     }
                 });
             } else {
@@ -9146,6 +9148,29 @@ Ele voltará a ser aluno normal.`)) return;
             }
         } catch(e) {
             alert('❌ Erro ao cancelar assinatura: ' + e.message);
+        }
+    },
+
+    // ── COPIAR PIX DA FATURA ──
+    async _copiarPixFatura(faturaId, btn) {
+        const orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '⏳';
+        try {
+            const r = await fetch(`/api/asaas?endpoint=payments/${encodeURIComponent(faturaId)}/pixQrCode`);
+            const d = await r.json();
+            const payload = d.payload || d.encodedImage;
+            if (!payload) { alert('⚠️ PIX não disponível para esta fatura.'); return; }
+            await navigator.clipboard.writeText(payload);
+            btn.innerHTML = '✅ COPIADO!';
+            btn.style.background = '#052e16';
+            btn.style.borderColor = '#10b981';
+            btn.style.color = '#4ade80';
+            setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = ''; }, 2500);
+        } catch(e) {
+            alert('❌ Erro ao buscar PIX: ' + e.message);
+            btn.innerHTML = orig;
+            btn.disabled = false;
         }
     },
 

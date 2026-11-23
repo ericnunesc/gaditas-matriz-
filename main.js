@@ -16055,7 +16055,8 @@ const exame = {
         const respostasHtml = responderam.length ? responderam.map(d => {
             const a = d.data(); const pr = a.provaRegras || {};
             const liberadoR = pr.resultadoLiberado === true;
-            const corNota = pr.percentual >= 60 ? '#10b981' : pr.percentual >= 40 ? '#f59e0b' : '#ef4444';
+            const _minA = a.faixa === 'Branca' ? 60 : 70;
+            const corNota = pr.percentual >= _minA ? '#10b981' : pr.percentual >= 40 ? '#f59e0b' : '#ef4444';
             return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:#0a0f1a;border:1px solid #1e293b;border-radius:8px;margin-bottom:5px;">
                 <div>
                     <div style="font-size:0.68rem;font-weight:800;color:white;">${a.nome}</div>
@@ -16347,6 +16348,7 @@ const exame = {
         const pr = a.provaRegras || {};
         const respostas = pr.respostas || {};
         const pergs = prova.perguntas || [];
+        const _minAprov = a.faixa === 'Branca' ? 60 : 70;
         const m = document.createElement('div');
         m.id = 'modal-resp-aluno';
         m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#050a14;z-index:10030;display:flex;flex-direction:column;overflow:hidden;';
@@ -16368,8 +16370,8 @@ const exame = {
                 }).join('')}
             </div>`;
         }).join('');
-        const cor = (pr.percentual||0) >= 60 ? '#10b981' : (pr.percentual||0) >= 40 ? '#f59e0b' : '#ef4444';
-        const label = (pr.percentual||0) >= 60 ? '🏆 APROVADO' : (pr.percentual||0) >= 40 ? '⚠️ PARCIAL' : '❌ REPROVADO';
+        const cor = (pr.percentual||0) >= _minAprov ? '#10b981' : (pr.percentual||0) >= 40 ? '#f59e0b' : '#ef4444';
+        const label = (pr.percentual||0) >= _minAprov ? '🏆 APROVADO' : (pr.percentual||0) >= 40 ? '⚠️ PARCIAL' : '❌ REPROVADO';
 
         // Linha do tempo de saídas
         const saidasLog = pr.saidasLog || [];
@@ -16441,8 +16443,9 @@ const exame = {
         // Já respondeu e resultado liberado → mostra correção
         if (pr.enviadaEm && pr.resultadoLiberado) {
             const respostas = pr.respostas || {};
-            const cor = (pr.percentual||0) >= 60 ? '#10b981' : (pr.percentual||0) >= 40 ? '#f59e0b' : '#ef4444';
-            const label = (pr.percentual||0) >= 60 ? '🏆 APROVADO' : (pr.percentual||0) >= 40 ? '⚠️ PARCIAL' : '❌ REPROVADO';
+            const _minAprovAluno = aluno?.faixa === 'Branca' ? 60 : 70;
+            const cor = (pr.percentual||0) >= _minAprovAluno ? '#10b981' : (pr.percentual||0) >= 40 ? '#f59e0b' : '#ef4444';
+            const label = (pr.percentual||0) >= _minAprovAluno ? '🏆 APROVADO' : (pr.percentual||0) >= 40 ? '⚠️ PARCIAL' : '❌ REPROVADO';
             el.innerHTML = `
             <div style="background:#0f172a;border:1px solid ${cor}44;border-radius:14px;overflow:hidden;margin-bottom:12px;">
                 <div style="background:${cor}22;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
@@ -16959,7 +16962,7 @@ const exame = {
         });
         const nota = total > 0 ? ((acertos + parciais * 0.5) / total * 100) : 0;
         const pct = respondidas > 0 ? Math.round(nota) : null;
-        const corNota = pct === null ? '#64748b' : pct >= 60 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#ef4444';
+        const corNota = pct === null ? '#64748b' : pct >= 70 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
         const el = id => document.getElementById(id);
         if (el('av-cnt-acerto'))  el('av-cnt-acerto').textContent  = acertos;
         if (el('av-cnt-parcial')) el('av-cnt-parcial').textContent = parciais;
@@ -17000,9 +17003,9 @@ const exame = {
         const av = aluno.exameAvaliacao;
         const pct = aluno.exameAvaliacaoPercentual;
         if (!av || pct === undefined || !aluno.exameAvaliacaoLiberada) return;
-        const cor = pct >= 60 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#ef4444';
-        const icone = pct >= 60 ? '🏆' : pct >= 40 ? '⚠️' : '❌';
-        const label = pct >= 60 ? 'APROVADO' : pct >= 40 ? 'PARCIAL' : 'REPROVADO';
+        const cor = pct >= 70 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+        const icone = pct >= 70 ? '🏆' : pct >= 50 ? '⚠️' : '❌';
+        const label = pct >= 70 ? 'APROVADO' : pct >= 50 ? 'PARCIAL' : 'REPROVADO';
         const data = aluno.exameAvaliacaoData || '';
         const acertos  = Object.values(av).filter(v => v === 'acerto').length;
         const parciais = Object.values(av).filter(v => v === 'parcial').length;

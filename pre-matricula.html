@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pré-matrícula — Gaditas Academy</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #020617;
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 20px;
+            padding: 32px 24px;
+            max-width: 420px;
+            width: 100%;
+        }
+        .logo { font-size: 2.5rem; text-align: center; margin-bottom: 6px; }
+        .academia { font-size: 0.6rem; font-weight: 800; color: #475569; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 20px; }
+        .titulo-turma { font-size: 1.1rem; font-weight: 900; color: #818cf8; text-align: center; margin-bottom: 6px; }
+        .descricao { font-size: 0.72rem; color: #64748b; text-align: center; margin-bottom: 24px; line-height: 1.5; }
+        .vagas-badge { display: inline-block; padding: 3px 12px; background: #1e1b4b; border: 1px solid #4338ca; border-radius: 999px; font-size: 0.6rem; font-weight: 800; color: #818cf8; margin-bottom: 20px; }
+        .form-group { margin-bottom: 14px; }
+        label { font-size: 0.65rem; color: #64748b; display: block; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        input, textarea {
+            width: 100%;
+            padding: 11px 14px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            color: white;
+            font-size: 0.8rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus { border-color: #6366f1; }
+        textarea { resize: none; height: 70px; }
+        .btn-reservar {
+            width: 100%;
+            padding: 13px;
+            background: #4338ca;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 800;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: background 0.2s;
+        }
+        .btn-reservar:hover { background: #3730a3; }
+        .btn-reservar:disabled { background: #1e293b; color: #475569; cursor: not-allowed; }
+        .sucesso {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .sucesso .check { font-size: 3rem; margin-bottom: 12px; }
+        .sucesso .msg { font-size: 0.95rem; font-weight: 800; color: #4ade80; margin-bottom: 8px; }
+        .sucesso .sub { font-size: 0.7rem; color: #64748b; }
+        .fechada-msg { text-align: center; padding: 20px 0; }
+        .fechada-msg .icon { font-size: 2.5rem; margin-bottom: 10px; }
+        .fechada-msg p { font-size: 0.75rem; color: #64748b; }
+        #status-msg { font-size: 0.65rem; color: #ef4444; margin-top: 8px; text-align: center; display: none; }
+        .loading { text-align: center; padding: 40px 0; color: #334155; font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">🥋</div>
+    <div class="academia">Gaditas Academy</div>
+    <div id="conteudo"><div class="loading">Carregando...</div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCMTBh3za1b7JGQ9x9ECsG3VJNPF4hiHsI",
+        authDomain: "gaditasmatriz.firebaseapp.com",
+        projectId: "gaditasmatriz",
+        storageBucket: "gaditasmatriz.firebasestorage.app",
+        messagingSenderId: "166834416988",
+        appId: "1:166834416988:web:2921c95c87c42019282599"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const params = new URLSearchParams(location.search);
+    const campanhaId = params.get('id');
+    const el = document.getElementById('conteudo');
+
+    async function init() {
+        if (!campanhaId) {
+            el.innerHTML = '<div class="fechada-msg"><div class="icon">❌</div><p>Link inválido.</p></div>';
+            return;
+        }
+        const doc = await db.collection('pre_matriculas').doc(campanhaId).get();
+        if (!doc.exists) {
+            el.innerHTML = '<div class="fechada-msg"><div class="icon">❌</div><p>Campanha não encontrada.</p></div>';
+            return;
+        }
+        const c = doc.data();
+        document.title = `Pré-matrícula — ${c.titulo}`;
+
+        if (c.status === 'fechada') {
+            el.innerHTML = `<div class="titulo-turma">${c.titulo}</div>
+                ${c.descricao ? `<div class="descricao">${c.descricao}</div>` : ''}
+                <div class="fechada-msg"><div class="icon">🔒</div><p>As reservas para esta turma estão encerradas.</p></div>`;
+            return;
+        }
+
+        const reservasSnap = await db.collection('pre_matriculas').doc(campanhaId).collection('reservas').get();
+        const totalReservas = reservasSnap.size;
+        const vagas = c.vagas ? parseInt(c.vagas) : null;
+        const lotado = vagas && totalReservas >= vagas;
+
+        el.innerHTML = `
+            <div class="titulo-turma">${c.titulo}</div>
+            ${c.descricao ? `<div class="descricao">${c.descricao}</div>` : ''}
+            ${vagas ? `<div style="text-align:center;margin-bottom:16px;"><span class="vagas-badge">${totalReservas} / ${vagas} vagas preenchidas</span></div>` : ''}
+            ${lotado ? `<div class="fechada-msg"><div class="icon">😮</div><p>Todas as vagas já foram preenchidas. Fique de olho nas próximas turmas!</p></div>` : `
+            <div class="form-group">
+                <label>Seu nome completo *</label>
+                <input id="pm-nome" type="text" placeholder="Digite seu nome" autocomplete="name">
+            </div>
+            <div class="form-group">
+                <label>WhatsApp *</label>
+                <input id="pm-tel" type="tel" placeholder="(11) 99999-9999" autocomplete="tel">
+            </div>
+            <div class="form-group">
+                <label>Observação (opcional)</label>
+                <textarea id="pm-obs" placeholder="Idade, turma de interesse, dúvidas..."></textarea>
+            </div>
+            <button class="btn-reservar" id="btn-reservar" onclick="reservar()">Reservar minha vaga</button>
+            <div id="status-msg"></div>`}
+        `;
+        if (!lotado) setTimeout(() => document.getElementById('pm-nome')?.focus(), 100);
+    }
+
+    async function reservar() {
+        const nome = document.getElementById('pm-nome')?.value.trim();
+        const tel = document.getElementById('pm-tel')?.value.trim();
+        const obs = document.getElementById('pm-obs')?.value.trim();
+        const statusMsg = document.getElementById('status-msg');
+        const btn = document.getElementById('btn-reservar');
+
+        statusMsg.style.display = 'none';
+        if (!nome) { statusMsg.textContent = 'Por favor, informe seu nome.'; statusMsg.style.display = 'block'; return; }
+        if (!tel) { statusMsg.textContent = 'Por favor, informe seu WhatsApp.'; statusMsg.style.display = 'block'; return; }
+
+        btn.disabled = true;
+        btn.textContent = 'Enviando...';
+
+        try {
+            await db.collection('pre_matriculas').doc(campanhaId).collection('reservas').add({
+                nome,
+                telefone: tel,
+                observacao: obs || '',
+                criadoEm: new Date().toISOString(),
+            });
+            el.innerHTML = `<div class="sucesso">
+                <div class="check">✅</div>
+                <div class="msg">Vaga reservada!</div>
+                <div class="sub">Obrigado, <strong style="color:white;">${nome}</strong>!<br>Entraremos em contato pelo WhatsApp em breve.</div>
+            </div>`;
+        } catch(e) {
+            btn.disabled = false;
+            btn.textContent = 'Reservar minha vaga';
+            statusMsg.textContent = 'Erro ao enviar. Tente novamente.';
+            statusMsg.style.display = 'block';
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>

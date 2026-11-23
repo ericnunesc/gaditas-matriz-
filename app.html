@@ -597,6 +597,15 @@
 
             <div id="tab-alunos" class="tab-content hidden" style="padding:15px;">
 
+<!-- ══ PRÉ-MATRÍCULA (admin) ══ -->
+                <div id="card-turmas-admin" class="gestao-acc-fechado" style="display:none; background:#0f172a; border:1px solid #6366f155; border-radius:12px; padding:15px; margin-bottom:15px;">
+                    <div onclick="if(!event.target.closest('button')) ui.toggleCard('card-turmas-admin')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; user-select:none;">
+                        <span style="font-size:0.8rem; font-weight:800; color:#818cf8;">📋 PRÉ-MATRÍCULA</span>
+                        <button onclick="preMatricula.render()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.75rem;"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div id="pre-matricula-container"></div>
+                </div>
+
 <!-- ══ ANIVERSARIANTES (admin) ══ -->
                 <div id="card-aniversariantes-admin" class="gestao-acc-fechado" style="display:none; background:linear-gradient(135deg,#1e1040,#1e293b); border:1px solid #f59e0b55; border-radius:12px; padding:15px; margin-bottom:15px;">
                     <div onclick="if(!event.target.closest('button')) ui.toggleCard('card-aniversariantes-admin')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; user-select:none;">

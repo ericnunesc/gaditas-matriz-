@@ -12332,6 +12332,9 @@ const ui = {
         // Card aniversariantes admin
         const cardAniv = document.getElementById('card-aniversariantes-admin');
         if (cardAniv) cardAniv.style.display = isAdmin ? 'block' : 'none';
+        // Card turmas admin
+        const cardTurmas = document.getElementById('card-turmas-admin');
+        if (cardTurmas) cardTurmas.style.display = isAdmin ? 'block' : 'none';
         // Tab exame — admin sempre vê; aluno/professor só se convocado (verificarConvocacao cuida disso)
         const menuExame = document.getElementById('menu-exame');
         if (menuExame) {
@@ -12371,7 +12374,7 @@ if (cardId === 'card-aniversariantes-admin' && typeof aniversario !== 'undefined
 
     _aplicarAcordeoesGestao() {
         // Fecha todos ao (re)abrir a aba — o onclick inline no HTML cuida do toggle
-        ['card-aniversariantes-admin','card-alertas-saude','card-depoimentos-admin','card-enquetes-admin'].forEach(id => {
+        ['card-turmas-admin','card-aniversariantes-admin','card-alertas-saude','card-depoimentos-admin','card-enquetes-admin'].forEach(id => {
             const card = document.getElementById(id);
             if (card) card.classList.add('gestao-acc-fechado');
         });
@@ -27986,5 +27989,157 @@ const staffModule = {
         if (btnEl) btnEl.disabled = true;
         await db.collection('gastos_staff').doc(gastoId).update({ status: 'ressarcido', ressarcidoEm: new Date().toISOString() });
         this._filtroGastos('pendente', document.getElementById('btn-filtro-pendente'));
+    },
+};
+
+// ══════════════════════════════════════════════════════
+//  PRÉ-MATRÍCULA
+// ══════════════════════════════════════════════════════
+const preMatricula = {
+    async render() {
+        const el = document.getElementById('pre-matricula-container');
+        if (!el) return;
+        el.innerHTML = '<div style="color:#475569;font-size:0.7rem;text-align:center;padding:20px;">Carregando...</div>';
+        const snap = await db.collection('pre_matriculas').get();
+        const campanhas = snap.docs.slice().sort((a,b) => (b.data().criadoEm||'').localeCompare(a.data().criadoEm||''));
+        const btnNova = `<button onclick="preMatricula.abrirNovaCampanha()" style="width:100%;padding:9px;background:#1e1b4b;border:1px dashed #6366f1;color:#818cf8;border-radius:10px;font-size:0.7rem;font-weight:800;cursor:pointer;margin-bottom:12px;">+ Nova pré-matrícula</button>`;
+        if (campanhas.length === 0) {
+            el.innerHTML = btnNova + '<div style="color:#334155;font-size:0.7rem;text-align:center;padding:10px;">Nenhuma campanha criada.</div>';
+            return;
+        }
+        const cards = await Promise.all(campanhas.map(async doc => {
+            const c = doc.data();
+            const reservasSnap = await db.collection('pre_matriculas').doc(doc.id).collection('reservas').get();
+            const total = reservasSnap.size;
+            const vagas = c.vagas ? parseInt(c.vagas) : null;
+            const link = `${location.origin}/pre-matricula.html?id=${doc.id}`;
+            const fechada = c.status === 'fechada';
+            return `<div style="background:#0a0f1a;border:1px solid ${fechada?'#1e293b':'#312e81'};border-left:3px solid ${fechada?'#334155':'#6366f1'};border-radius:10px;padding:12px;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:0.75rem;font-weight:800;color:white;">${c.titulo}</div>
+                        ${c.descricao ? `<div style="font-size:0.62rem;color:#64748b;margin-top:2px;">${c.descricao}</div>` : ''}
+                        <div style="font-size:0.65rem;color:#818cf8;font-weight:800;margin-top:5px;">${total} reserva${total!==1?'s':''}${vagas ? ` / ${vagas} vagas` : ''}</div>
+                    </div>
+                    <span style="font-size:0.5rem;font-weight:800;padding:2px 7px;border-radius:999px;background:${fechada?'#1e293b':'#1e1b4b'};color:${fechada?'#64748b':'#818cf8'};flex-shrink:0;">${fechada?'FECHADA':'ABERTA'}</span>
+                </div>
+                <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+                    <button onclick="preMatricula.copiarLink('${link}',this)" style="flex:1;min-width:80px;padding:5px 8px;background:#1e1b4b;border:1px solid #4338ca;color:#818cf8;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">🔗 Link</button>
+                    <button onclick="preMatricula.verReservas('${doc.id}','${c.titulo.replace(/'/g,"\\'")}')" style="flex:1;min-width:80px;padding:5px 8px;background:#0a2010;border:1px solid #166534;color:#4ade80;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">📋 Ver reservas</button>
+                    <button onclick="preMatricula.toggleStatus('${doc.id}','${c.status||'aberta'}')" style="padding:5px 8px;background:#0a0f1a;border:1px solid #334155;color:#64748b;border-radius:7px;font-size:0.6rem;font-weight:800;cursor:pointer;">${fechada?'🔓':'🔒'}</button>
+                    <button onclick="preMatricula.excluirCampanha('${doc.id}')" style="padding:5px 8px;background:#0a0f1a;border:1px solid #450a0a;color:#ef4444;border-radius:7px;font-size:0.6rem;cursor:pointer;">🗑</button>
+                </div>
+            </div>`;
+        }));
+        el.innerHTML = btnNova + cards.join('');
+    },
+
+    abrirNovaCampanha() {
+        document.getElementById('modal-nova-campanha')?.remove();
+        const m = document.createElement('div');
+        m.id = 'modal-nova-campanha';
+        m.style.cssText = 'position:fixed;inset:0;background:#000a;z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+        m.innerHTML = `<div style="background:#0f172a;border:1px solid #6366f155;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;">
+            <div style="font-size:0.85rem;font-weight:800;color:#818cf8;margin-bottom:14px;">📋 Nova pré-matrícula</div>
+            <div style="margin-bottom:10px;">
+                <label style="font-size:0.65rem;color:#64748b;display:block;margin-bottom:4px;">Título (ex: JJ Kids - Ter/Qui 18h)</label>
+                <input id="pm-titulo" type="text" placeholder="Nome da turma / horário" style="width:100%;padding:9px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:white;font-size:0.75rem;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label style="font-size:0.65rem;color:#64748b;display:block;margin-bottom:4px;">Descrição (opcional)</label>
+                <textarea id="pm-descricao" placeholder="Detalhes sobre a turma, horários, faixa etária..." style="width:100%;padding:9px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:white;font-size:0.75rem;box-sizing:border-box;resize:none;height:70px;"></textarea>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-size:0.65rem;color:#64748b;display:block;margin-bottom:4px;">Vagas (opcional)</label>
+                <input id="pm-vagas" type="number" min="1" placeholder="Ex: 20" style="width:100%;padding:9px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:white;font-size:0.75rem;box-sizing:border-box;">
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button onclick="document.getElementById('modal-nova-campanha').remove()" style="flex:1;padding:10px;background:transparent;border:1px solid #334155;color:#64748b;border-radius:10px;font-size:0.75rem;cursor:pointer;">Cancelar</button>
+                <button onclick="preMatricula.salvarNovaCampanha()" style="flex:2;padding:10px;background:#4338ca;border:none;color:white;border-radius:10px;font-size:0.75rem;font-weight:800;cursor:pointer;">Criar campanha</button>
+            </div>
+        </div>`;
+        document.body.appendChild(m);
+        m.addEventListener('click', e => { if (e.target === m) m.remove(); });
+        setTimeout(() => document.getElementById('pm-titulo')?.focus(), 100);
+    },
+
+    async salvarNovaCampanha() {
+        const titulo = document.getElementById('pm-titulo')?.value.trim();
+        const descricao = document.getElementById('pm-descricao')?.value.trim();
+        const vagas = document.getElementById('pm-vagas')?.value.trim();
+        if (!titulo) { alert('Digite o título da turma.'); return; }
+        const btn = document.querySelector('#modal-nova-campanha button:last-child');
+        if (btn) btn.disabled = true;
+        await db.collection('pre_matriculas').add({
+            titulo,
+            descricao: descricao || '',
+            vagas: vagas || '',
+            status: 'aberta',
+            criadoEm: new Date().toISOString(),
+        });
+        document.getElementById('modal-nova-campanha')?.remove();
+        this.render();
+    },
+
+    async verReservas(campanhaId, titulo) {
+        document.getElementById('modal-ver-reservas')?.remove();
+        const snap = await db.collection('pre_matriculas').doc(campanhaId).collection('reservas').get();
+        const reservas = snap.docs.slice().sort((a,b) => (a.data().criadoEm||'').localeCompare(b.data().criadoEm||''));
+        const rows = reservas.length === 0
+            ? '<div style="color:#334155;font-size:0.7rem;text-align:center;padding:20px;">Nenhuma reserva ainda.</div>'
+            : reservas.map((doc,i) => {
+                const r = doc.data();
+                const fone = r.telefone ? `<a href="https://wa.me/55${r.telefone.replace(/\D/g,'')}" target="_blank" style="color:#4ade80;font-size:0.6rem;">${r.telefone}</a>` : '';
+                return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#0a0f1a;border-radius:8px;margin-bottom:5px;">
+                    <div style="font-size:0.7rem;font-weight:900;color:#4338ca;min-width:20px;">${i+1}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:0.72rem;font-weight:800;color:white;">${r.nome||'—'}</div>
+                        <div>${fone}${r.observacao?`<span style="font-size:0.58rem;color:#64748b;margin-left:6px;">${r.observacao}</span>`:''}</div>
+                    </div>
+                    <div style="font-size:0.52rem;color:#334155;">${r.criadoEm?new Date(r.criadoEm).toLocaleDateString('pt-BR'):''}</div>
+                </div>`;
+            }).join('');
+        const m = document.createElement('div');
+        m.id = 'modal-ver-reservas';
+        m.style.cssText = 'position:fixed;inset:0;background:#000a;z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+        m.innerHTML = `<div style="background:#0f172a;border:1px solid #6366f155;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <div>
+                    <div style="font-size:0.85rem;font-weight:800;color:#818cf8;">📋 Reservas</div>
+                    <div style="font-size:0.65rem;color:#64748b;">${titulo} · ${reservas.length} pessoa${reservas.length!==1?'s':''}</div>
+                </div>
+                <button onclick="document.getElementById('modal-ver-reservas').remove()" style="background:none;border:none;color:#475569;cursor:pointer;font-size:1.1rem;">✕</button>
+            </div>
+            ${rows}
+        </div>`;
+        document.body.appendChild(m);
+        m.addEventListener('click', e => { if (e.target === m) m.remove(); });
+    },
+
+    async copiarLink(link, btn) {
+        try {
+            await navigator.clipboard.writeText(link);
+            const orig = btn.textContent;
+            btn.textContent = '✅ Copiado!';
+            setTimeout(() => btn.textContent = orig, 2000);
+        } catch {
+            prompt('Copie o link:', link);
+        }
+    },
+
+    async toggleStatus(campanhaId, statusAtual) {
+        const novoStatus = statusAtual === 'fechada' ? 'aberta' : 'fechada';
+        await db.collection('pre_matriculas').doc(campanhaId).update({ status: novoStatus });
+        this.render();
+    },
+
+    async excluirCampanha(campanhaId) {
+        if (!confirm('Excluir esta campanha e todas as reservas? Essa ação não pode ser desfeita.')) return;
+        const reservasSnap = await db.collection('pre_matriculas').doc(campanhaId).collection('reservas').get();
+        const batch = db.batch();
+        reservasSnap.docs.forEach(d => batch.delete(d.ref));
+        batch.delete(db.collection('pre_matriculas').doc(campanhaId));
+        await batch.commit();
+        this.render();
     },
 };

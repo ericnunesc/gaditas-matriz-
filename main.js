@@ -16714,7 +16714,7 @@ const exame = {
         if (!force && !respondeuTudo) return alert('Responda todas as perguntas antes de enviar.');
         const acertos = pergs.filter(p => respostas[p.id] === p.respostaCorreta).length;
         const percentualBruto = (acertos / pergs.length) * 100;
-        const penalidade = saidasCount * 0.5;
+        const penalidade = saidasCount * 5;
         const percentual = Math.max(0, Math.round(percentualBruto - penalidade));
         await db.collection('alunos').doc(alunoId).update({
             provaRegras: {

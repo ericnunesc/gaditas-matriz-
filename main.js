@@ -16060,6 +16060,23 @@ const exame = {
         const snapAlunos = await db.collection('alunos').get();
         const responderam = snapAlunos.docs.filter(d => d.data().provaRegras?.enviadaEm);
 
+        // Migração retroativa: aplica penalidade em provas antigas que ainda não têm o campo
+        const migracoes = responderam.filter(d => {
+            const pr = d.data().provaRegras || {};
+            return (pr.saidasDaTela > 0) && (pr.penalidade === undefined);
+        });
+        await Promise.all(migracoes.map(d => {
+            const pr = d.data().provaRegras;
+            const bruto = pr.percentual; // percentual original = bruto (sem penalidade ainda)
+            const penalidade = pr.saidasDaTela * 5;
+            const novoPercentual = Math.max(0, bruto - penalidade);
+            return db.collection('alunos').doc(d.id).update({
+                'provaRegras.percentualBruto': bruto,
+                'provaRegras.penalidade': penalidade,
+                'provaRegras.percentual': novoPercentual,
+            });
+        }));
+
         const listPergs = pergs.length ? pergs.map((p, i) => `
             <div style="background:#0a0f1a;border:1px solid #334155;border-radius:8px;padding:10px 12px;margin-bottom:6px;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">

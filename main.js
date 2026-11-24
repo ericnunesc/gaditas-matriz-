@@ -16397,6 +16397,9 @@ const exame = {
         }).join('');
         const cor = (pr.percentual||0) >= _minAprov ? '#10b981' : (pr.percentual||0) >= 40 ? '#f59e0b' : '#ef4444';
         const label = (pr.percentual||0) >= _minAprov ? '🏆 APROVADO' : (pr.percentual||0) >= 40 ? '⚠️ PARCIAL' : '❌ REPROVADO';
+        const penHtml = pr.penalidade > 0
+            ? `<div style="font-size:0.58rem;color:#ef4444;font-weight:700;margin-top:4px;">⚠️ Penalidade saídas: −${pr.penalidade}% (${pr.saidasDaTela}x saiu) · Bruto: ${pr.percentualBruto}%</div>`
+            : '';
 
         // Linha do tempo de saídas
         const saidasLog = pr.saidasLog || [];
@@ -16444,7 +16447,10 @@ const exame = {
                     ${_btnWppGabarito}
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;">
-                    <div style="font-size:1.5rem;font-weight:900;color:${cor};">${pr.percentual??'—'}%</div>
+                    <div style="text-align:right;">
+                        <div style="font-size:1.5rem;font-weight:900;color:${cor};">${pr.percentual??'—'}%</div>
+                        ${penHtml}
+                    </div>
                     <button onclick="document.getElementById('modal-resp-aluno').remove()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;width:30px;height:30px;border-radius:8px;cursor:pointer;">✕</button>
                 </div>
             </div>
@@ -16481,6 +16487,7 @@ const exame = {
                     <div style="text-align:right;">
                         <div style="font-size:2rem;font-weight:900;color:${cor};">${pr.percentual}%</div>
                         <div style="font-size:0.6rem;color:${cor};font-weight:800;">${label}</div>
+                        ${pr.penalidade > 0 ? `<div style="font-size:0.55rem;color:#ef4444;margin-top:2px;">−${pr.penalidade}% (${pr.saidasDaTela}x saiu da tela)</div>` : ''}
                     </div>
                 </div>
                 <div style="padding:12px 16px;">
@@ -16706,11 +16713,15 @@ const exame = {
         });
         if (!force && !respondeuTudo) return alert('Responda todas as perguntas antes de enviar.');
         const acertos = pergs.filter(p => respostas[p.id] === p.respostaCorreta).length;
-        const percentual = Math.round((acertos / pergs.length) * 100);
+        const percentualBruto = (acertos / pergs.length) * 100;
+        const penalidade = saidasCount * 0.5;
+        const percentual = Math.max(0, Math.round(percentualBruto - penalidade));
         await db.collection('alunos').doc(alunoId).update({
             provaRegras: {
                 respostas,
                 percentual,
+                percentualBruto: Math.round(percentualBruto),
+                penalidade,
                 enviadaEm: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
                 resultadoLiberado: false,
                 saidasDaTela: saidasCount,

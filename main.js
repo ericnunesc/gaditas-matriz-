@@ -27402,18 +27402,20 @@ const staffModule = {
             ]);
             const alunoData = alunoDoc?.data() || {};
             const modAluno = alunoData.modalidade || 'jiujitsu';
+            const fazJJ = modAluno === 'jiujitsu' || modAluno === 'ambos';
+            const fazMT = modAluno === 'muaythai' || modAluno === 'ambos';
             const anoAtual = new Date().getFullYear();
             const idadeAluno = alunoData.nascimento ? anoAtual - new Date(alunoData.nascimento).getFullYear() : 99;
-            const isKids = modAluno === 'jiujitsu' && idadeAluno <= 14;
+            const isKids = fazJJ && idadeAluno <= 14;
 
             const ativas = listasSnap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(l => {
                     const p = l.publico || 'todos';
-                    if (p === 'todos') return true;
-                    if (p === 'muaythai') return modAluno === 'muaythai';
-                    if (p === 'jj_kids')  return modAluno === 'jiujitsu' && isKids;
-                    if (p === 'jj_adult') return modAluno === 'jiujitsu' && !isKids;
+                    if (p === 'todos')    return true;
+                    if (p === 'muaythai') return fazMT;
+                    if (p === 'jj_kids')  return fazJJ && isKids;
+                    if (p === 'jj_adult') return fazJJ && !isKids;
                     return true;
                 });
 
